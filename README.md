@@ -109,7 +109,7 @@ let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
 for (x, z) in region.chunkCoordinates {
     guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures) else { continue }
     for start in StructureStart.starts(inChunk: nbt) {
-        print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shportalroom"
+        print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shpr"
     }
 }
 ```
