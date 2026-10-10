@@ -7,6 +7,7 @@ usage:
   mcworld <world> chunk <cx> <cz> [dimension]       chunk summary
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
+  mcworld <world> time [dimension]                  chunks where players spent the most time
   mcworld <world> maps                              maps made in the game, with where they cover
   mcworld <world> rules                             game rules
   mcworld <world> players                           players' positions, deaths, respawn points and status
@@ -88,6 +89,27 @@ do {
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }
+
+    case "time":
+        // Chunks where players spent the most time; regions are read in parallel.
+        let dim = dimension(1)
+        let chunks = await withTaskGroup(of: [(x: Int, z: Int, ticks: Int)].self) { group in
+            for region in dim.regionFiles() {
+                group.addTask {
+                    // Read into a local first: Swift 6.4 release builds can misread values captured
+                    // next to an awaited call in task-group children (see MCWorld#6).
+                    let times = (try? dim.inhabitedTimes(regionX: region.x, regionZ: region.z)) ?? []
+                    return times.enumerated().filter { $0.element > 0 }.map { (region.x * 32 + $0.offset % 32, region.z * 32 + $0.offset / 32, $0.element) }
+                }
+            }
+            var all: [(x: Int, z: Int, ticks: Int)] = []
+            for await found in group { all += found }
+            return all
+        }
+        print("\(chunks.count) chunks with time recorded")
+        for chunk in chunks.sorted(by: { $0.ticks > $1.ticks }).prefix(10) {
+            print("  chunk \(chunk.x), \(chunk.z) (blocks \(chunk.x * 16), \(chunk.z * 16)): \(chunk.ticks / 72_000) hours")
+        }
 
     case "maps":
         for map in world.mapItems() {

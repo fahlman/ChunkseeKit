@@ -255,6 +255,7 @@ Other commands:
 | `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
+| `mcworld <world> time [dimension]` | Chunks where players spent the most time (`InhabitedTime`) |
 | `mcworld <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
 | `mcworld <world> rules` | Game rules and their values |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
