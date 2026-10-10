@@ -7,6 +7,7 @@ usage:
   mcworld <world> chunk <cx> <cz> [dimension]       chunk summary
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
+  mcworld <world> rules                             game rules
   mcworld <world> players                           players' positions, deaths, respawn points and status
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
   mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
@@ -49,8 +50,19 @@ do {
         if let p = l.spawnPosition { print("Spawn:           \(p.x) \(p.y) \(p.z) in \(l.spawnDimension ?? "?")") }
         if let uuid = l.singleplayerUUID { print("Player:          \(uuid.uuidString.lowercased())") }
         if let date = l.lastPlayed { print("Last played:     \(date)") }
+        if let time = l.time { print("World age:       \(time / 72_000) hours (\(time) ticks)") }
+        if let day = try? world.dayTime() { print("Day:             \(day / 24_000 + 1), time of day \(day % 24_000)") }
+        if let w = try? world.weather() { print("Weather:         \(w.isThundering ? "thunder" : w.isRaining ? "rain" : "clear")") }
+        if let fight = try? world.enderDragonFight() {
+            print("Ender Dragon:    \(fight.previouslyKilled ? "defeated" : "not defeated"), \(fight.remainingGateways) of 20 gateways unopened")
+        }
+        if l.wasModded { print("Modded:          yes (\(l.serverBrands.joined(separator: ", ")))") }
         print("Dimensions:")
-        for d in world.dimensions() { print("  \(d.id): \(d.regionFiles().count) region files") }
+        for d in world.dimensions() {
+            let border = (try? world.worldBorder(of: d)).flatMap { $0?.isLimited == true ? $0 : nil }
+                .map { ", border \(Int($0.size)) blocks around \(Int($0.centerX)), \(Int($0.centerZ))" } ?? ""
+            print("  \(d.id): \(d.regionFiles().count) region files\(border)")
+        }
         print("Players with data: \(world.playerUUIDs().count)")
 
     case "chunk":
@@ -75,6 +87,14 @@ do {
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }
+
+    case "rules":
+        for (rule, value) in try world.gameRules().sorted(by: { $0.key < $1.key }) {
+            switch value {
+            case .bool(let b): print("\(rule) \(b)")
+            case .int(let i): print("\(rule) \(i)")
+            }
+        }
 
     case "players":
         func show(_ location: PlayerInfo.Location?) -> String {
