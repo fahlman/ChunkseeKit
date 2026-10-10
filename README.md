@@ -124,6 +124,19 @@ for (x, z) in overworld.pointOfInterestRegions() {
 }
 ```
 
+### Items
+
+```swift
+for (x, z, _) in overworld.regionFiles() {
+    for container in try overworld.containers(regionX: x, regionZ: z) {
+        // allItems includes the contents of shulker boxes and bundles.
+        let diamonds = container.allItems.filter { $0.id == "minecraft:diamond" }.reduce(0) { $0 + $1.count }
+        if diamonds > 0 { print(container.kind, container.x, container.y, container.z, diamonds) }
+    }
+}
+let pockets = player.inventory + player.enderChest   // PlayerInfo
+```
+
 ### Nether portals
 
 ```swift
@@ -208,6 +221,7 @@ Other commands:
 | `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
 | `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
 | `mcworld <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
+| `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 

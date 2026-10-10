@@ -11,6 +11,7 @@ usage:
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
   mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
   mcworld <world> portals                           Nether portals and where each one leads
+  mcworld <world> find <text> [dimension]           containers and players holding matching items
 """
 
 func fail(_ message: String) -> Never {
@@ -92,6 +93,38 @@ do {
             print("  respawn:  \(show(player.respawn))")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
         }
+
+    case "find":
+        guard rest.count > 1 else { fail(usage) }
+        let query = rest[1].lowercased()
+        func matches(_ item: ItemStack) -> Bool {
+            item.id.lowercased().contains(query) || (item.customName?.lowercased().contains(query) ?? false)
+        }
+        func summary(_ items: [ItemStack]) -> String {
+            let hits = items.flatMap(\.allItems).filter(matches)
+            let byID = Dictionary(grouping: hits, by: { $0.customName.map { "\"\($0)\"" } ?? $0.id }).mapValues { $0.reduce(0) { $0 + $1.count } }
+            return byID.sorted { $0.key < $1.key }.map { "\($0.value) \($0.key)" }.joined(separator: ", ")
+        }
+        for player in world.players() {
+            for (label, items) in [("inventory", player.inventory + Array(player.equipment.values)), ("ender chest", player.enderChest)] {
+                let found = summary(items)
+                if !found.isEmpty { print("player \(player.uuid.uuidString.prefix(8).lowercased()) \(label): \(found)") }
+            }
+        }
+        let dims = rest.count > 2 ? [dimension(2)] : world.dimensions()
+        var total = 0
+        for dim in dims {
+            for (rx, rz, _) in dim.regionFiles() {
+                for container in (try? dim.containers(regionX: rx, regionZ: rz)) ?? [] {
+                    let found = summary(container.items)
+                    guard !found.isEmpty else { continue }
+                    total += 1
+                    let name = container.customName.map { " \"\($0)\"" } ?? ""
+                    print("\(dim.id) \(container.kind)\(name) at (\(container.x), \(container.y), \(container.z)): \(found)")
+                }
+            }
+        }
+        print("\(total) containers")
 
     case "portals":
         guard let overworld = world.dimension("overworld"), let nether = world.dimension("the_nether") else {
