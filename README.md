@@ -112,7 +112,11 @@ for uuid in world.playerUUIDs() {
 
 let gameRules = try world.savedData("game_rules")       // data/minecraft/game_rules.dat
 
+// Player files hold only UUIDs; Minecraft's usercache.json files map them to names.
+let names = UserCache.names(under: URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft"))
+
 for player in world.players() {                         // most recently saved first
+    print(names[player.uuid]?.name ?? "unknown name")
     print(player.uuid, player.position?.dimension ?? "?", player.position?.x ?? 0, player.position?.z ?? 0)
     print("  died at", player.lastDeath as Any, "respawns at", player.respawn as Any)
     if player.isFromBukkitServer { print("  locations may be in another world:", player.bukkitWorldName ?? "?") }
@@ -165,7 +169,7 @@ Other commands:
 | `mcworld <world> block <x> <y> <z> [dimension]` | Block, biome and block entity at a world position |
 | `mcworld <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
 | `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
-| `mcworld <world> players` | Each player's last position, last death and respawn point |
+| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 
 For example:
 

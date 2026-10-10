@@ -76,9 +76,13 @@ do {
             guard let l = location else { return "-" }
             return "\(l.dimension) \(Int(l.x.rounded(.down))) \(Int(l.y.rounded(.down))) \(Int(l.z.rounded(.down)))"
         }
+        // The game folder holding this world's saves folder keeps the local name cache.
+        let gameFolder = world.url.deletingLastPathComponent().deletingLastPathComponent()
+        let names = UserCache.names(under: gameFolder, depth: 0)
         for player in world.players() {
             let you = player.uuid == world.level.singleplayerUUID ? " (singleplayer)" : ""
-            print("\(player.uuid.uuidString.lowercased())\(you)")
+            let name = names[player.uuid].map { " \($0.name)" } ?? ""
+            print("\(player.uuid.uuidString.lowercased())\(name)\(you)")
             print("  saved:    \(player.lastSaved.map { "\($0)" } ?? "?")  data version \(player.dataVersion.map(String.init) ?? "none")")
             print("  position: \(player.position.map { show($0) } ?? "unknown dimension \(player.unrecognizedDimension ?? "?")")")
             print("  death:    \(show(player.lastDeath))")
