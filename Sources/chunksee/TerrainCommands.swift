@@ -1,5 +1,5 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
 /// Commands that read terrain: chunks, blocks, structures and time spent.
 
@@ -35,7 +35,7 @@ func timeCommand(_ world: World, _ arguments: Arguments) async {
             for region in dim.regionFiles() {
                 group.addTask {
                     // Read into a local first: Swift 6.4 release builds can misread values captured
-                    // next to an awaited call in task-group children (see MCWorld#6).
+                    // next to an awaited call in task-group children (see fahlman/Chunksee#6).
                     let times = (try? dim.inhabitedTimes(regionX: region.x, regionZ: region.z)) ?? []
                     return times.enumerated().filter { $0.element > 0 }.map { (region.x * 32 + $0.offset % 32, region.z * 32 + $0.offset / 32, $0.element) }
                 }

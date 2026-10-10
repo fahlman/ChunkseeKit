@@ -1,5 +1,5 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
 /// Commands about points of interest, portals and creatures.
 

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct MapItemTests {
     func colors(_ fill: Int8 = 0, at index: Int? = nil, _ value: Int8 = 0) -> NBT {

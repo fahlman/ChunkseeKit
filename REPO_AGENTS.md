@@ -1,21 +1,22 @@
-# MCWorldKit — Repository Instructions
+# ChunkseeKit — Repository Instructions
 
-Read with the shared `AGENTS.md`. Project record: fahlman/MCWorldKit#1.
+Read with the shared `AGENTS.md`. Project record: fahlman/ChunkseeKit#1.
 
 ## Project
 
-MCWorldKit is the engine for reading Minecraft: Java Edition world saves. Ryan intends to
+ChunkseeKit is the engine for reading Minecraft: Java Edition world saves. Ryan intends to
 open-source it so others can build their own GUIs on it. It owns the file formats and nothing
 else: NBT, Anvil region files, chunk decoding, and the world-folder layout. It has no UI and no
-app code. The Mac app **MCWorld** (`com.fahlsing.MCWorld`) will live in its own repository and
-depend on this package, the way Euchre depends on EuchreKit. Dependency direction:
-**MCWorld app → MCWorldKit**.
+app code. The Mac app **Chunksee** (`com.fahlsing.Chunksee`, fahlman/Chunksee) lives in its own
+repository and depends on this package, the way Euchre depends on EuchreKit. Dependency direction:
+**Chunksee app → ChunkseeKit**. Both were renamed from MCWorld and MCWorldKit on 2026-10-10
+(fahlman/Chunksee#75).
 
 - **Kind:** Swift package (a library plus a command-line tool). It is not a Mac app, so it has
   no `.xcodeproj`.
 - **Products:**
-  - `MCWorldKit`, the library.
-  - `mcworld`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
+  - `ChunkseeKit`, the library.
+  - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
 - **Dependencies:** Foundation, plus the system zlib through the `CZlib` module map. There are
@@ -26,9 +27,9 @@ depend on this package, the way Euchre depends on EuchreKit. Dependency directio
 | Module | Owns | May depend on |
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
-| `MCWorldKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `mcworld` | Command-line presentation only | `MCWorldKit` |
-| `MCWorldKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `MCWorldKit`, `CZlib` |
+| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
+| `chunksee` | Command-line presentation only | `ChunkseeKit` |
+| `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
@@ -57,7 +58,7 @@ To build the command-line tool:
 swift build -c release
 ```
 
-The tool is then at `.build/release/mcworld`.
+The tool is then at `.build/release/chunksee`.
 
 - **Required checks:** `swift build` and `swift test` must pass on the commit you publish.
   The tests need no Minecraft data.
@@ -86,8 +87,8 @@ Ryan approved this process on 2026-10-09.
   - Fixes that don't change the public API are a patch bump.
 - Before tagging, run the required checks on the exact commit being tagged.
 - Record the tag, its commit and the checks in the release's issue.
-- Release order: tag MCWorldKit first, then bump the MCWorld app's pin.
-- The first release is `v0.1.0`, made after fahlman/MCWorldKit#2 merges.
+- Release order: tag ChunkseeKit first, then bump the Chunksee app's pin.
+- The first release is `v0.1.0`, made after fahlman/ChunkseeKit#2 merges.
 
 ## Toolchain and platforms
 

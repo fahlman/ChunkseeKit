@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct TextTests {
     func side(_ lines: [NBT]) -> NBT { .compound(["messages": .list(lines), "color": .string("black")]) }

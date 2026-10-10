@@ -1,5 +1,5 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
 /// Commands about the world as a whole and its players.
 

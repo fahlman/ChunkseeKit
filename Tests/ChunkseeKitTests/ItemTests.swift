@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct ItemTests {
     func item(_ id: String, _ count: Int32, slot: Int8? = nil, components: [String: NBT]? = nil) -> NBT {

@@ -1,5 +1,5 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
 /// Commands that search containers, players, signs and books.
 

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct CodableTests {
     func roundTrip<T: Codable & Equatable>(_ value: T) throws -> Bool {

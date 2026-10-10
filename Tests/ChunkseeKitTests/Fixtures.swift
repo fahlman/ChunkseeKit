@@ -1,5 +1,5 @@
 import Foundation
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 /// Builders for synthetic world files. Packing is implemented independently of the library's decoder.
 enum Fixtures {
@@ -87,7 +87,7 @@ enum Fixtures {
     }
 
     static func tempDirectory() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("MCWorldKitTests-\(UUID().uuidString)")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ChunkseeKitTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

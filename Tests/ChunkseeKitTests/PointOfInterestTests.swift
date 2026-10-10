@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct PointOfInterestTests {
     func record(_ type: String, _ pos: [Int32], tickets: Int32) -> NBT {
