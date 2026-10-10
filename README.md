@@ -173,7 +173,10 @@ for uuid in world.playerUUIDs() {
     let stats = world.playerJSON(uuid, kind: "stats")   // URL of the stats JSON file
 }
 
-let gameRules = try world.savedData("game_rules")       // data/minecraft/game_rules.dat
+let rules = try world.gameRules()                       // ["minecraft:keep_inventory": .bool(false), …]
+let weather = try world.weather()
+let border = try world.worldBorder(of: overworld)       // isLimited is false for the default border
+let dragon = try world.enderDragonFight()               // previouslyKilled, remainingGateways
 
 // Player files hold only UUIDs; Minecraft's usercache.json files map them to names.
 let names = UserCache.names(under: URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft"))
@@ -238,6 +241,7 @@ Other commands:
 | `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
+| `mcworld <world> rules` | Game rules and their values |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level and items |
 
 For example:
