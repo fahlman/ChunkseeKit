@@ -85,8 +85,14 @@ public struct RegionFile: Sendable {
     /// Reads the decompressed NBT for a chunk, or `nil` if it hasn't been generated.
     /// Coordinates are region-local (0..<32); use `chunkX & 31` for absolute chunk coordinates.
     public func chunkNBT(localX: Int, localZ: Int) throws -> NBT? {
+        try chunkNBT(localX: localX, localZ: localZ, skipping: [])
+    }
+
+    /// Like `chunkNBT(localX:localZ:)`, leaving out compound entries named in `skipping` (see
+    /// `NBT.read(_:skipping:)` and `Chunk.keysNotNeededForTerrain`).
+    public func chunkNBT(localX: Int, localZ: Int, skipping: Set<String>) throws -> NBT? {
         guard let payload = try chunkPayload(localX: localX, localZ: localZ) else { return nil }
-        return try NBT.read(payload).value
+        return try NBT.read(payload, skipping: skipping).value
     }
 
     /// The decompressed (raw NBT) bytes for a chunk.

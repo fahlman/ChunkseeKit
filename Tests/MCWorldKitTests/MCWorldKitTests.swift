@@ -37,6 +37,23 @@ import Testing
         #expect(throws: NBTError.unexpectedEndOfData) { try NBT.read(Array(bytes.dropLast(5))) }
     }
 
+    @Test func skippingLeavesOutNamedEntriesAtAnyDepth() throws {
+        let value = NBT.compound([
+            "keep": .int(1),
+            "drop": .list([.compound(["deep": .longArray([1, 2, 3]), "s": .string("x")])]),
+            "nested": .compound(["drop": .byteArray([1, 2]), "kept": .string("yes")]),
+            "after": .longArray([.max]),
+        ])
+        let (_, decoded) = try NBT.read(value.serialized(), skipping: ["drop"])
+        #expect(decoded == .compound(["keep": .int(1), "nested": .compound(["kept": .string("yes")]), "after": .longArray([.max])]))
+        #expect(try NBT.read(value.serialized(), skipping: []).value == value)
+    }
+
+    @Test func skippingStillDetectsTruncation() {
+        let bytes = NBT.compound(["drop": .longArray([1, 2, 3, 4]), "keep": .int(1)]).serialized()
+        #expect(throws: NBTError.unexpectedEndOfData) { try NBT.read(Array(bytes.prefix(20)), skipping: ["drop"]) }
+    }
+
     @Test func uuidFromIntArray() {
         let uuid = NBT.intArray([0x01234567, -0x7654_3211, 0x0, 0x1]).uuid
         #expect(uuid?.uuidString == "01234567-89AB-CDEF-0000-000000000001")

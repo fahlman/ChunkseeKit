@@ -135,8 +135,17 @@ public enum NBTError: Error, Equatable {
 extension NBT {
     /// Decodes an uncompressed, named-root NBT payload (the on-disk format).
     public static func read(_ bytes: [UInt8]) throws -> (name: String, value: NBT) {
-        var reader = NBTReader(bytes: bytes)
-        return try reader.readRoot()
+        try read(bytes, skipping: [])
+    }
+
+    /// Decodes NBT, leaving out compound entries whose name is in `skipping`, at any depth. Skipped
+    /// entries are stepped over without building values, which is much faster when a caller needs
+    /// only part of a large payload (for example, terrain without block ticks or light).
+    public static func read(_ bytes: [UInt8], skipping: Set<String>) throws -> (name: String, value: NBT) {
+        try bytes.withUnsafeBytes { buffer in
+            var reader = NBTReader(bytes: buffer, skipping: skipping)
+            return try reader.readRoot()
+        }
     }
 
     /// Decodes an NBT file, transparently handling gzip/zlib compression (e.g. `level.dat`).
@@ -147,12 +156,19 @@ extension NBT {
     }
 }
 
+/// Reads NBT from a raw buffer. Numbers are loaded big-endian straight from memory and arrays are
+/// decoded in bulk: chunk payloads are mostly long and byte arrays, so per-byte reads dominated
+/// parsing. Every read is bounds-checked against the buffer before it happens.
 struct NBTReader {
-    private let bytes: [UInt8]
+    private let bytes: UnsafeRawBufferPointer
+    private let skipping: Set<String>
     private var pos = 0
     private static let maxDepth = 512
 
-    init(bytes: [UInt8]) { self.bytes = bytes }
+    init(bytes: UnsafeRawBufferPointer, skipping: Set<String> = []) {
+        self.bytes = bytes
+        self.skipping = skipping
+    }
 
     mutating func readRoot() throws -> (name: String, value: NBT) {
         let type = try u8()
@@ -176,8 +192,12 @@ struct NBTReader {
         case .byteArray:
             let n = try length()
             try need(n)
-            defer { pos += n }
-            return .byteArray(bytes[pos..<pos + n].map { Int8(bitPattern: $0) })
+            let start = pos
+            pos += n
+            return .byteArray([Int8](unsafeUninitializedCapacity: n) { buffer, count in
+                if n > 0 { UnsafeMutableRawBufferPointer(buffer).copyMemory(from: UnsafeRawBufferPointer(rebasing: bytes[start..<start + n])) }
+                count = n
+            })
         case .string: return .string(try readString())
         case .list:
             let rawType = try u8()
@@ -196,21 +216,71 @@ struct NBTReader {
                 if rawType == 0 { break }
                 guard let t = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
                 let name = try readString()
-                dict[name] = try payload(t, depth: depth + 1)
+                if !skipping.isEmpty, skipping.contains(name) {
+                    try skip(t, depth: depth + 1)
+                } else {
+                    dict[name] = try payload(t, depth: depth + 1)
+                }
             }
             return .compound(dict)
         case .intArray:
             let n = try length()
             try need(n * 4)
-            var out = [Int32](); out.reserveCapacity(n)
-            for _ in 0..<n { out.append(Int32(bitPattern: try be(UInt32.self))) }
-            return .intArray(out)
+            let start = pos
+            pos += n * 4
+            return .intArray([Int32](unsafeUninitializedCapacity: n) { buffer, count in
+                for i in 0..<n {
+                    buffer[i] = Int32(bitPattern: UInt32(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 4, as: UInt32.self)))
+                }
+                count = n
+            })
         case .longArray:
             let n = try length()
             try need(n * 8)
-            var out = [Int64](); out.reserveCapacity(n)
-            for _ in 0..<n { out.append(Int64(bitPattern: try be(UInt64.self))) }
-            return .longArray(out)
+            let start = pos
+            pos += n * 8
+            return .longArray([Int64](unsafeUninitializedCapacity: n) { buffer, count in
+                for i in 0..<n {
+                    buffer[i] = Int64(bitPattern: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 8, as: UInt64.self)))
+                }
+                count = n
+            })
+        }
+    }
+
+    /// Advances past a payload without decoding it, still validating its structure and bounds.
+    private mutating func skip(_ type: NBTTagType, depth: Int) throws {
+        guard depth < Self.maxDepth else { throw NBTError.nestingTooDeep }
+        func advance(_ n: Int) throws {
+            try need(n)
+            pos += n
+        }
+        switch type {
+        case .end: throw NBTError.invalidTagType(0)
+        case .byte: try advance(1)
+        case .short: try advance(2)
+        case .int, .float: try advance(4)
+        case .long, .double: try advance(8)
+        case .byteArray: try advance(try length())
+        case .intArray: try advance(try length() * 4)
+        case .longArray: try advance(try length() * 8)
+        case .string: try advance(Int(try be(UInt16.self)))
+        case .list:
+            let rawType = try u8()
+            let n = try length()
+            guard n > 0 else { return }
+            guard let elementType = NBTTagType(rawValue: rawType), elementType != .end else {
+                throw NBTError.invalidTagType(rawType)
+            }
+            for _ in 0..<n { try skip(elementType, depth: depth + 1) }
+        case .compound:
+            while true {
+                let rawType = try u8()
+                if rawType == 0 { return }
+                guard let t = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
+                try advance(Int(try be(UInt16.self)))
+                try skip(t, depth: depth + 1)
+            }
         }
     }
 
@@ -227,10 +297,8 @@ struct NBTReader {
     private mutating func be<T: FixedWidthInteger>(_: T.Type) throws -> T {
         let size = MemoryLayout<T>.size
         try need(size)
-        var v: T = 0
-        for i in 0..<size { v = v << 8 | T(bytes[pos + i]) }
-        pos += size
-        return v
+        defer { pos += size }
+        return T(bigEndian: bytes.loadUnaligned(fromByteOffset: pos, as: T.self))
     }
 
     private mutating func length() throws -> Int {
@@ -243,7 +311,10 @@ struct NBTReader {
         let n = Int(try be(UInt16.self))
         try need(n)
         defer { pos += n }
-        return try ModifiedUTF8.decode(bytes[pos..<pos + n])
+        let raw = UnsafeRawBufferPointer(rebasing: bytes[pos..<pos + n])
+        // Keys and IDs are almost always ASCII, which is the same in modified UTF-8 and UTF-8.
+        if !raw.contains(where: { $0 >= 0x80 }) { return String(decoding: raw, as: UTF8.self) }
+        return try ModifiedUTF8.decode(Array(raw)[...])
     }
 }
 
