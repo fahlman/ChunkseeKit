@@ -124,6 +124,20 @@ for (x, z) in overworld.pointOfInterestRegions() {
 }
 ```
 
+### Nether portals
+
+```swift
+let overworldPortals = try overworld.netherPortals()
+let netherPortals = try world.dimension("the_nether")!.netherPortals()
+for portal in overworldPortals {
+    switch portal.link(into: netherPortals) {
+    case .portal(let target, let block)?: print("leads to the portal at", target.centerX, target.centerZ, "arriving at", block)
+    case .wouldCreateNewPortal(let destination)?: print("would create a new portal near", destination)
+    case nil: break
+    }
+}
+```
+
 ### Players and saved data
 
 ```swift
@@ -194,6 +208,7 @@ Other commands:
 | `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
 | `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
 | `mcworld <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
+| `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 
 For example:
