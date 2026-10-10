@@ -73,4 +73,16 @@ import Testing
         #expect(players.first { $0.uuid == embedded }?.position?.dimension == "minecraft:the_end")
         #expect(players.first { $0.uuid == other }?.position?.x == 20)
     }
+
+    @Test func vitalsAndGameMode() {
+        let player = PlayerInfo(uuid: UUID(), nbt: .compound([
+            "Health": .float(17.5), "AbsorptionAmount": .float(4), "foodLevel": .int(19), "foodSaturationLevel": .float(0.5),
+            "XpLevel": .int(25), "XpP": .float(0.25), "XpTotal": .int(929), "playerGameType": .int(1), "SelectedItemSlot": .int(5),
+        ]))
+        #expect(player.health == 17.5 && player.absorption == 4 && player.foodLevel == 19 && player.saturation == 0.5)
+        #expect(player.experienceLevel == 25 && player.experienceProgress == 0.25 && player.experienceTotal == 929)
+        #expect(player.gameMode == .creative && player.selectedSlot == 5)
+        // Files from before 1.9 stored health as a short.
+        #expect(PlayerInfo(uuid: UUID(), nbt: .compound(["Health": .short(20)])).health == 20)
+    }
 }

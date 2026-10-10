@@ -7,7 +7,7 @@ usage:
   mcworld <world> chunk <cx> <cz> [dimension]       chunk summary
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
-  mcworld <world> players                           players' last positions, deaths and respawn points
+  mcworld <world> players                           players' positions, deaths, respawn points and status
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
   mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
   mcworld <world> portals                           Nether portals and where each one leads
@@ -92,6 +92,10 @@ do {
             print("  position: \(player.position.map { show($0) } ?? "unknown dimension \(player.unrecognizedDimension ?? "?")")")
             print("  death:    \(show(player.lastDeath))")
             print("  respawn:  \(show(player.respawn))")
+            func number(_ v: Double?) -> String { v.map { String(format: "%g", $0) } ?? "?" }
+            print("  status:   \(player.gameMode.map { "\($0)" } ?? "?"), health \(number(player.health)), food \(player.foodLevel.map(String.init) ?? "?"), level \(player.experienceLevel.map(String.init) ?? "?")")
+            let worn = player.equipment.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value.id)" }.joined(separator: ", ")
+            print("  items:    \(player.inventory.count) inventory stacks, \(player.enderChest.count) in the ender chest\(worn.isEmpty ? "" : "; wearing \(worn)")")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
         }
 

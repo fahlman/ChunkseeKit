@@ -67,4 +67,13 @@ import Testing
         #expect(player.enderChest.first?.count == 4)
         #expect(player.equipment["head"]?.id == "minecraft:turtle_helmet")
     }
+
+    @Test func legacyArmorSlotsAreEquipmentNotInventory() {
+        let player = PlayerInfo(uuid: UUID(), nbt: .compound([
+            "Inventory": .list([item("minecraft:torch", 64, slot: 0), item("minecraft:iron_boots", 1, slot: 100),
+                                item("minecraft:diamond_helmet", 1, slot: 103), item("minecraft:shield", 1, slot: -106)]),
+        ]))
+        #expect(player.inventory.map(\.id) == ["minecraft:torch"])
+        #expect(player.equipment.mapValues(\.id) == ["feet": "minecraft:iron_boots", "head": "minecraft:diamond_helmet", "offhand": "minecraft:shield"])
+    }
 }
