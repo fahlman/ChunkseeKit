@@ -71,3 +71,17 @@ func scanRegion(x rx: Int, z rz: Int, url: URL, in dimension: MCWorldKit.Dimensi
     }
     return tally
 }
+
+func scanCommand(_ world: World, _ arguments: Arguments) async {
+        let dims = arguments.dimensions(1, in: world)
+        for dim in dims {
+            let tally = await scan(dim)
+            print("\(dim.id): \(tally.chunks) chunks, \(tally.sections) sections, \(tally.entityChunks) chunks with entities")
+            // Ties sort by name so the output is the same on every run.
+            let byCount: ((key: String, value: Int), (key: String, value: Int)) -> Bool = {
+                $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
+            }
+            for (id, n) in tally.blockCounts.sorted(by: byCount).prefix(8) { print("  \(n)\t\(id)") }
+            for (e, n) in tally.errors.sorted(by: byCount) { print("  ERROR ×\(n): \(e)") }
+        }
+}
