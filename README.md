@@ -101,6 +101,19 @@ for (_, _, url) in overworld.regionFiles() {
 }
 ```
 
+### Structures
+
+```swift
+// Structures are recorded in the chunk they start in; skip block data for a fast scan.
+let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
+for (x, z) in region.chunkCoordinates {
+    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures) else { continue }
+    for start in StructureStart.starts(inChunk: nbt) {
+        print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shportalroom"
+    }
+}
+```
+
 ### Players and saved data
 
 ```swift
@@ -169,6 +182,7 @@ Other commands:
 | `mcworld <world> block <x> <y> <z> [dimension]` | Block, biome and block entity at a world position |
 | `mcworld <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
 | `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
+| `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 
 For example:
