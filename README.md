@@ -15,8 +15,8 @@ It is read-only apart from the NBT writer, and it never modifies world files.
 
 ## Requirements
 
-- Swift 6.0 or later
-- macOS 13 or later
+- Swift 6.4 or later (Xcode 27)
+- macOS 27 or later
 - zlib (included with macOS)
 
 ## Installation
@@ -189,3 +189,7 @@ swift test
 ```
 
 The tests use synthetic worlds and region files, so you don't need any Minecraft data to run them.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
