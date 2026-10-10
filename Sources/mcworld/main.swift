@@ -73,36 +73,14 @@ do {
     case "scan":
         let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
         for dim in dims {
-            var chunks = 0, sections = 0, entityChunks = 0
-            var errors = [String: Int]()
-            var counts = [String: Int]()
-            for (rx, rz, url) in dim.regionFiles() {
-                let region: RegionFile
-                do { region = try RegionFile(contentsOf: url) } catch { errors["\(error)", default: 0] += 1; continue }
-                for (lx, lz) in region.chunkCoordinates {
-                    do {
-                        guard let nbt = try region.chunkNBT(localX: lx, localZ: lz) else { continue }
-                        let chunk = try Chunk(nbt: nbt)
-                        guard chunk.x == rx * 32 + lx, chunk.z == rz * 32 + lz else {
-                            errors["position mismatch", default: 0] += 1; continue
-                        }
-                        chunks += 1
-                        for s in chunk.sections {
-                            guard let states = s.blockStates else { continue }
-                            sections += 1
-                            var perIndex = [Int](repeating: 0, count: states.palette.count)
-                            for i in states.allPaletteIndices() where i < perIndex.count { perIndex[i] += 1 }
-                            for (i, n) in perIndex.enumerated() { counts[states.palette[i].id, default: 0] += n }
-                        }
-                        entityChunks += try dim.entities(chunkX: chunk.x, chunkZ: chunk.z).isEmpty ? 0 : 1
-                    } catch {
-                        errors["\(error)", default: 0] += 1
-                    }
-                }
+            let tally = await scan(dim)
+            print("\(dim.id): \(tally.chunks) chunks, \(tally.sections) sections, \(tally.entityChunks) chunks with entities")
+            // Ties sort by name so the output is the same on every run.
+            let byCount: ((key: String, value: Int), (key: String, value: Int)) -> Bool = {
+                $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
             }
-            print("\(dim.id): \(chunks) chunks, \(sections) sections, \(entityChunks) chunks with entities")
-            for (id, n) in counts.sorted(by: { $0.value > $1.value }).prefix(8) { print("  \(n)\t\(id)") }
-            for (e, n) in errors.sorted(by: { $0.value > $1.value }) { print("  ERROR ×\(n): \(e)") }
+            for (id, n) in tally.blockCounts.sorted(by: byCount).prefix(8) { print("  \(n)\t\(id)") }
+            for (e, n) in tally.errors.sorted(by: byCount) { print("  ERROR ×\(n): \(e)") }
         }
 
     default:
