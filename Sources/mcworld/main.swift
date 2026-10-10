@@ -267,7 +267,7 @@ do {
         let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
         for dim in dims {
             var byType: [String: [PointOfInterest]] = [:]
-            for (x, z) in dim.pointOfInterestRegions() {
+            for (x, z, _) in dim.regionFiles(.pointsOfInterest) {
                 for poi in (try? dim.pointsOfInterest(regionX: x, regionZ: z)) ?? [] { byType[poi.type, default: []].append(poi) }
             }
             print("\(dim.id): \(byType.values.reduce(0) { $0 + $1.count }) points of interest")

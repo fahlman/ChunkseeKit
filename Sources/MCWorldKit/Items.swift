@@ -61,43 +61,6 @@ public struct ItemStack: Sendable, Equatable, Codable {
     public static func list(_ nbt: NBT?) -> [ItemStack] { (nbt?.list ?? []).compactMap(ItemStack.init) }
 }
 
-/// Minecraft text components (custom names, sign text, book pages) reduced to plain text.
-public enum TextComponent {
-    /// Accepts a literal string, a JSON-encoded component (older worlds), an NBT compound with
-    /// `text`/`translate` and `extra`, or a list of components.
-    public static func plainText(_ nbt: NBT) -> String? {
-        let text: String
-        switch nbt {
-        case .string(let s):
-            let trimmed = s.trimmingCharacters(in: .whitespaces)
-            if let first = trimmed.first, "{[\"".contains(first),
-               let json = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8), options: [.fragmentsAllowed]) {
-                text = plainText(json: json)
-            } else {
-                text = s
-            }
-        case .compound:
-            text = (nbt["text"]?.string ?? nbt["translate"]?.string ?? "") + (nbt["extra"]?.list ?? []).compactMap(plainText).joined()
-        case .list(_, let items):
-            text = items.compactMap(plainText).joined()
-        default:
-            return nil
-        }
-        return text.isEmpty ? nil : text
-    }
-
-    private static func plainText(json: Any) -> String {
-        switch json {
-        case let s as String: return s
-        case let array as [Any]: return array.map(plainText(json:)).joined()
-        case let dict as [String: Any]:
-            let base = (dict["text"] as? String) ?? (dict["translate"] as? String) ?? ""
-            return base + ((dict["extra"] as? [Any]) ?? []).map(plainText(json:)).joined()
-        default: return ""
-        }
-    }
-}
-
 /// Something that holds items at a place in the world: a chest, barrel, hopper, furnace, chest
 /// minecart, chest boat, item frame and so on.
 public struct ItemContainer: Sendable, Equatable, Codable {
@@ -159,30 +122,6 @@ extension Chunk {
     /// Keeps `block_entities`, which `keysNotNeededForTerrain` drops.
     public static let keysNotNeededForContainers: Set<String> =
         keysNotNeededForTerrain.subtracting(["block_entities"]).union(["sections", "Heightmaps", "structures"])
-}
-
-extension PlayerInfo {
-    /// Slots of armor and the offhand in the `Inventory` list of files from before 1.21.5.
-    static let legacyEquipmentSlots = [100: "feet", 101: "legs", 102: "chest", 103: "head", -106: "offhand"]
-
-    /// The main inventory (slots 9–35) and hotbar (slots 0–8).
-    public var inventory: [ItemStack] {
-        ItemStack.list(nbt["Inventory"]).filter { ($0.slot ?? 0) >= 0 && ($0.slot ?? 0) < 36 }
-    }
-
-    /// Worn armor and the offhand item, keyed by slot name (`head`, `chest`, `legs`, `feet`,
-    /// `offhand`, and `body`/`saddle` where present): the `equipment` compound in 1.21.5+, or the
-    /// special inventory slots before that.
-    public var equipment: [String: ItemStack] {
-        var found = (nbt["equipment"]?.compound ?? [:]).compactMapValues(ItemStack.init)
-        for item in ItemStack.list(nbt["Inventory"]) {
-            if let slot = item.slot, let name = Self.legacyEquipmentSlots[slot], found[name] == nil { found[name] = item }
-        }
-        return found
-    }
-
-    /// The player's ender chest, which every ender chest in the world opens for them.
-    public var enderChest: [ItemStack] { ItemStack.list(nbt["EnderItems"]) }
 }
 
 extension Dimension {

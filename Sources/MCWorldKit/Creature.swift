@@ -29,22 +29,10 @@ public struct Creature: Sendable, Equatable, Codable {
         guard let id = nbt["id"]?.string, nbt["Health"] != nil,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
-                  customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(Self.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
+                  customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
                   // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
                   owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
                   villager: Villager(nbt))
-    }
-
-    /// Strips `§` formatting codes, which server plugins put in names (`§aSummer` → `Summer`).
-    static func removingFormattingCodes(_ text: String) -> String {
-        var result = ""
-        var skipNext = false
-        for character in text {
-            if skipNext { skipNext = false; continue }
-            if character == "§" { skipNext = true; continue }
-            result.append(character)
-        }
-        return result.trimmingCharacters(in: .whitespaces)
     }
 
     /// Living mobs among an entity chunk's entities.
@@ -99,12 +87,6 @@ public struct Trade: Sendable, Equatable, Codable {
 extension Dimension {
     /// Living mobs in one region's entity file.
     public func creatures(regionX: Int, regionZ: Int) throws -> [Creature] {
-        guard let entities = try Self.region(in: entitiesDirectory, x: regionX, z: regionZ) else { return [] }
-        var found: [Creature] = []
-        for (x, z) in entities.chunkCoordinates {
-            guard let nbt = try? entities.chunkNBT(localX: x, localZ: z) else { continue }
-            found += Creature.creatures(inEntityChunk: nbt)
-        }
-        return found
+        try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt) }
     }
 }

@@ -57,6 +57,7 @@ if let spawn = world.level.spawnPosition {
 ```swift
 for dimension in world.dimensions() {
     print(dimension.id, dimension.regionFiles().count)  // "minecraft:overworld 357"
+    // regionFiles(.entities) and regionFiles(.pointsOfInterest) list the other two folders.
 }
 
 let overworld = world.dimension("overworld")!   // or "minecraft:the_nether", "mymod:custom"
@@ -117,7 +118,7 @@ for (x, z) in region.chunkCoordinates {
 ### Points of interest
 
 ```swift
-for (x, z) in overworld.pointOfInterestRegions() {
+for (x, z, _) in overworld.regionFiles(.pointsOfInterest) {
     for poi in try overworld.pointsOfInterest(regionX: x, regionZ: z) where poi.type == "minecraft:nether_portal" {
         print("portal block at", poi.x, poi.y, poi.z)
     }
