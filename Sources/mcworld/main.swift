@@ -10,6 +10,7 @@ usage:
   mcworld <world> players                           players' last positions, deaths and respawn points
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
   mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
+  mcworld <world> portals                           Nether portals and where each one leads
 """
 
 func fail(_ message: String) -> Never {
@@ -91,6 +92,31 @@ do {
             print("  respawn:  \(show(player.respawn))")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
         }
+
+    case "portals":
+        guard let overworld = world.dimension("overworld"), let nether = world.dimension("the_nether") else {
+            fail("this world needs both an Overworld and a Nether")
+        }
+        let overworldPortals = try overworld.netherPortals(), netherPortals = try nether.netherPortals()
+        func describe(_ p: NetherPortal) -> String { "(\(Int(p.centerX.rounded(.down))), \(p.minY), \(Int(p.centerZ.rounded(.down))))" }
+        func show(_ portals: [NetherPortal], _ candidates: [NetherPortal], back: [NetherPortal], label: String) {
+            print("\(label): \(portals.count) portals")
+            for portal in portals {
+                switch portal.link(into: candidates) {
+                case .portal(let target, _)?:
+                    // Does the target lead back here?
+                    var note = ""
+                    if case .portal(let returns, _)? = target.link(into: back), returns != portal { note = "  (one-way: it leads back to \(describe(returns)))" }
+                    print("  \(describe(portal)) -> \(describe(target))\(note)")
+                case .wouldCreateNewPortal(let destination)?:
+                    print("  \(describe(portal)) -> no portal in range; would create one near (\(destination.x), \(destination.y), \(destination.z))")
+                case nil:
+                    print("  \(describe(portal)) -> ?")
+                }
+            }
+        }
+        show(overworldPortals, netherPortals, back: overworldPortals, label: "Overworld")
+        show(netherPortals, overworldPortals, back: netherPortals, label: "Nether")
 
     case "poi":
         let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
