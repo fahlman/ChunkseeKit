@@ -150,6 +150,17 @@ for item in contents.containers.flatMap(\.allItems) {
 }
 ```
 
+### Creatures
+
+```swift
+for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
+    if let owner = creature.owner { print(creature.id, creature.customName ?? "", "tamed by", owner) }
+    if let villager = creature.villager {
+        print(villager.profession ?? "?", villager.level ?? 0, villager.trades.map { "\($0.buy.count) \($0.buy.id) → \($0.sell.id)" })
+    }
+}
+```
+
 ### Nether portals
 
 ```swift
@@ -256,6 +267,7 @@ Other commands:
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `mcworld <world> time [dimension]` | Chunks where players spent the most time (`InhabitedTime`) |
+| `mcworld <world> creatures [dimension]` | Named and tamed creatures with owners, then counts by kind |
 | `mcworld <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
 | `mcworld <world> rules` | Game rules and their values |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |

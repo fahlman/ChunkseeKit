@@ -84,15 +84,18 @@ extension ItemStack {
     }
 }
 
-/// What a region holds that people search for: containers with their items, and signs.
+/// What a region holds that people search for: containers with their items, signs, and
+/// creatures with names.
 public struct RegionContents: Sendable, Equatable {
     public var containers: [ItemContainer]
     public var signs: [Sign]
+    public var namedCreatures: [Creature] = []
 }
 
 extension Dimension {
-    /// Every container and sign with text in one region, read in one pass: block entities from
-    /// `region/` and container entities from `entities/`. Chunks that can't be read are skipped.
+    /// Every container, sign with text and named creature in one region, read in one pass: block
+    /// entities from `region/`, and container entities and creatures from `entities/`. Chunks that
+    /// can't be read are skipped.
     public func contents(regionX: Int, regionZ: Int) throws -> RegionContents {
         var found = RegionContents(containers: [], signs: [])
         if let region = try Self.region(in: regionDirectory, x: regionX, z: regionZ) {
@@ -106,6 +109,7 @@ extension Dimension {
             for (x, z) in entities.chunkCoordinates {
                 guard let nbt = try? entities.chunkNBT(localX: x, localZ: z) else { continue }
                 found.containers += ItemContainer.containers(inEntityChunk: nbt)
+                found.namedCreatures += Creature.creatures(inEntityChunk: nbt).filter { $0.customName != nil }
             }
         }
         return found
