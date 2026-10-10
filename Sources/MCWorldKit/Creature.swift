@@ -2,7 +2,7 @@ import Foundation
 
 /// A living mob from an entity chunk (`entities/` region files): its kind, position, name, owner
 /// and, for villagers, their job and trades.
-public struct Creature: Sendable, Equatable {
+public struct Creature: Sendable, Equatable, Codable {
     /// Entity id, e.g. `minecraft:wolf`.
     public var id: String
     public var x: Double
@@ -54,7 +54,7 @@ public struct Creature: Sendable, Equatable {
 }
 
 /// A villager's (or wandering trader's) job and trades.
-public struct Villager: Sendable, Equatable {
+public struct Villager: Sendable, Equatable, Codable {
     /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
     public var profession: String?
     /// 1 (novice) to 5 (master).
@@ -75,7 +75,7 @@ public struct Villager: Sendable, Equatable {
 }
 
 /// One trade a villager offers.
-public struct Trade: Sendable, Equatable {
+public struct Trade: Sendable, Equatable, Codable {
     public var buy: ItemStack
     /// A second item some trades also ask for.
     public var buyB: ItemStack?

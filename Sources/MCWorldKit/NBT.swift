@@ -318,6 +318,25 @@ struct NBTReader {
     }
 }
 
+// MARK: - Codable
+
+/// Encoded as binary NBT, so values survive exactly, including tag and list types. NBT's root must
+/// be a compound, so the value is stored as its only entry.
+extension NBT: Codable {
+    public init(from decoder: any Decoder) throws {
+        let data = try decoder.singleValueContainer().decode(Data.self)
+        guard let value = try NBT.read([UInt8](data), skipping: []).value["v"] else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "No NBT value"))
+        }
+        self = value
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Data(NBT.compound(["v": self]).serialized()))
+    }
+}
+
 // MARK: - Writing
 
 extension NBT {

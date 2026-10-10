@@ -1,7 +1,7 @@
 import Foundation
 
 /// A sign or hanging sign with its text.
-public struct Sign: Sendable, Equatable {
+public struct Sign: Sendable, Equatable, Codable {
     /// Block entity id: `minecraft:sign` or `minecraft:hanging_sign`.
     public var kind: String
     public var x: Int
@@ -44,7 +44,7 @@ public struct Sign: Sendable, Equatable {
 }
 
 /// A written book's or book and quill's contents, as plain text.
-public struct BookContent: Sendable, Equatable {
+public struct BookContent: Sendable, Equatable, Codable {
     /// Only written (signed) books have a title and author.
     public var title: String?
     public var author: String?
@@ -86,7 +86,7 @@ extension ItemStack {
 
 /// What a region holds that people search for: containers with their items, signs, and
 /// creatures with names.
-public struct RegionContents: Sendable, Equatable {
+public struct RegionContents: Sendable, Equatable, Codable {
     public var containers: [ItemContainer]
     public var signs: [Sign]
     public var namedCreatures: [Creature] = []
