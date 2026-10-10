@@ -64,6 +64,7 @@ The tool is then at `.build/release/mcworld`.
 - **Automated GitHub checks:** none exist. Ryan's projects run no hosted macOS CI, and the
   repository is private on a plan without branch protection. This was recorded on 2026-10-09;
   revisit it if the repository goes public.
+
 ## Releases
 
 Ryan approved this process on 2026-10-09.
