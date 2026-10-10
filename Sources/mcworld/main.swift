@@ -7,6 +7,7 @@ usage:
   mcworld <world> chunk <cx> <cz> [dimension]       chunk summary
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
+  mcworld <world> maps                              maps made in the game, with where they cover
   mcworld <world> rules                             game rules
   mcworld <world> players                           players' positions, deaths, respawn points and status
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
@@ -87,6 +88,13 @@ do {
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }
+
+    case "maps":
+        for map in world.mapItems() {
+            let place = map.dimension ?? "unknown dimension \(map.unrecognizedDimension ?? "?")"
+            let state = map.isBlank ? "blank" : map.isLocked ? "locked" : "drawn"
+            print("map \(map.id): \(place) centered \(map.centerX), \(map.centerZ), scale 1:\(map.blocksPerPixel), \(state)\(map.banners.isEmpty ? "" : ", \(map.banners.count) banners")")
+        }
 
     case "rules":
         for (rule, value) in try world.gameRules().sorted(by: { $0.key < $1.key }) {

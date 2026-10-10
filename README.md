@@ -194,6 +194,16 @@ for player in world.players() {                         // most recently saved f
 }
 ```
 
+### Maps made in the game
+
+```swift
+for map in world.mapItems() where !map.isBlank {
+    // 128×128 color ids; pixel (0, 0) is at world (map.minX, map.minZ), each covering map.blocksPerPixel blocks.
+    let pixels = map.colors.map { MapItem.rgb(forColor: $0) }   // nil is transparent
+    print(map.id, map.dimension ?? "?", map.centerX, map.centerZ, pixels.count)
+}
+```
+
 ### Raw NBT
 
 ```swift
@@ -245,6 +255,7 @@ Other commands:
 | `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
+| `mcworld <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
 | `mcworld <world> rules` | Game rules and their values |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
