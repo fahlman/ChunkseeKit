@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "MCWorldKit",
+    name: "ChunkseeKit",
     platforms: [.macOS(.v27)],
     products: [
-        .library(name: "MCWorldKit", targets: ["MCWorldKit"]),
-        .executable(name: "mcworld", targets: ["mcworld"]),
+        .library(name: "ChunkseeKit", targets: ["ChunkseeKit"]),
+        .executable(name: "chunksee", targets: ["chunksee"]),
     ],
     targets: [
         .systemLibrary(name: "CZlib", path: "Sources/CZlib"),
-        .target(name: "MCWorldKit", dependencies: ["CZlib"]),
-        .executableTarget(name: "mcworld", dependencies: ["MCWorldKit"]),
-        .testTarget(name: "MCWorldKitTests", dependencies: ["MCWorldKit", "CZlib"]),
+        .target(name: "ChunkseeKit", dependencies: ["CZlib"]),
+        .executableTarget(name: "chunksee", dependencies: ["ChunkseeKit"]),
+        .testTarget(name: "ChunkseeKitTests", dependencies: ["ChunkseeKit", "CZlib"]),
     ],
     swiftLanguageModes: [.v6]
 )

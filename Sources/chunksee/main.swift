@@ -1,7 +1,7 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
-/// A subcommand: `mcworld <world> <name> <arguments>`.
+/// A subcommand: `chunksee <world> <name> <arguments>`.
 struct Command {
     var name: String
     var arguments = ""
@@ -14,14 +14,14 @@ struct Arguments {
     let words: [String]
 
     /// The dimension named at `index`, or the Overworld when there's none.
-    func dimension(_ index: Int, in world: World) -> MCWorldKit.Dimension {
+    func dimension(_ index: Int, in world: World) -> ChunkseeKit.Dimension {
         let id = words.count > index ? words[index] : "minecraft:overworld"
         guard let dimension = world.dimension(id) else { fail("no such dimension: \(id)") }
         return dimension
     }
 
     /// The dimension named at `index`, or every dimension when there's none.
-    func dimensions(_ index: Int, in world: World) -> [MCWorldKit.Dimension] {
+    func dimensions(_ index: Int, in world: World) -> [ChunkseeKit.Dimension] {
         words.count > index ? [dimension(index, in: world)] : world.dimensions()
     }
 
@@ -53,7 +53,7 @@ let commands: [Command] = [
 ]
 
 let usage = "usage:\n" + ([("", "world summary")] + commands.map { ("\($0.name) \($0.arguments)", $0.summary) })
-    .map { "  " + "mcworld <world> \($0.0)".padding(toLength: 50, withPad: " ", startingAt: 0) + $0.1 }
+    .map { "  " + "chunksee <world> \($0.0)".padding(toLength: 50, withPad: " ", startingAt: 0) + $0.1 }
     .joined(separator: "\n")
 
 func fail(_ message: String) -> Never {

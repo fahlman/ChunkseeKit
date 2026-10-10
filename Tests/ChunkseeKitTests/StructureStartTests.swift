@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct StructureStartTests {
     func piece(_ id: String, _ box: [Int32]) -> NBT { .compound(["id": .string(id), "BB": .intArray(box), "GD": .int(0)]) }

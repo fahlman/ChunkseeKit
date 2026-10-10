@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct NetherPortalTests {
     typealias Block = NetherPortal.Block

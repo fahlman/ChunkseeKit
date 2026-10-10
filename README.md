@@ -1,4 +1,4 @@
-# MCWorldKit
+# ChunkseeKit
 
 A Swift library and command-line tool for reading Minecraft: Java Edition world saves, including the 26.x format changes.
 
@@ -25,10 +25,10 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/MCWorldKit.git", branch: "main"),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", branch: "main"),
 ],
 targets: [
-    .target(name: "MyApp", dependencies: ["MCWorldKit"]),
+    .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
 
@@ -37,7 +37,7 @@ targets: [
 ### Open a world
 
 ```swift
-import MCWorldKit
+import ChunkseeKit
 
 let world = try World(contentsOf: URL(fileURLWithPath: "/path/to/saves/My World"))
 
@@ -242,7 +242,7 @@ swift build -c release
 Print a world summary:
 
 ```bash
-.build/release/mcworld "$HOME/Library/Application Support/minecraft/saves/My World"
+.build/release/chunksee "$HOME/Library/Application Support/minecraft/saves/My World"
 ```
 
 ```
@@ -262,28 +262,28 @@ Other commands:
 
 | Command | Output |
 |---|---|
-| `mcworld <world> block <x> <y> <z> [dimension]` | Block, biome and block entity at a world position |
-| `mcworld <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
-| `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
-| `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
-| `mcworld <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
-| `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
-| `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
-| `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
-| `mcworld <world> time [dimension]` | Chunks where players spent the most time (`InhabitedTime`) |
-| `mcworld <world> creatures [dimension]` | Named and tamed creatures with owners, then counts by kind |
-| `mcworld <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
-| `mcworld <world> rules` | Game rules and their values |
-| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
+| `chunksee <world> block <x> <y> <z> [dimension]` | Block, biome and block entity at a world position |
+| `chunksee <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
+| `chunksee <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
+| `chunksee <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
+| `chunksee <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
+| `chunksee <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
+| `chunksee <world> text <text> [dimension]` | Signs and books whose text matches |
+| `chunksee <world> portals` | Nether portals and where each one leads, flagging one-way links |
+| `chunksee <world> time [dimension]` | Chunks where players spent the most time (`InhabitedTime`) |
+| `chunksee <world> creatures [dimension]` | Named and tamed creatures with owners, then counts by kind |
+| `chunksee <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
+| `chunksee <world> rules` | Game rules and their values |
+| `chunksee <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
 For example:
 
 ```bash
-.build/release/mcworld "<world>" block 10 68 -2
+.build/release/chunksee "<world>" block 10 68 -2
 ```
 
 ```bash
-.build/release/mcworld "<world>" scan minecraft:the_nether
+.build/release/chunksee "<world>" scan minecraft:the_nether
 ```
 
 ## Format notes

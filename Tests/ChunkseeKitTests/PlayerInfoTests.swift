@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct PlayerInfoTests {
     let uuid = UUID(uuidString: "52DFB519-DE9C-47E6-BC6C-BB053CC423E7")!

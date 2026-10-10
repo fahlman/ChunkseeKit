@@ -1,5 +1,5 @@
 import Foundation
-import MCWorldKit
+import ChunkseeKit
 
 /// Totals from decoding chunks, mergeable so regions can be scanned independently.
 struct ScanTally: Sendable {
@@ -20,7 +20,7 @@ struct ScanTally: Sendable {
 
 /// Decodes every chunk in a dimension. Region files are independent, so up to one per core is
 /// scanned at a time; each region is read and decoded on a single task.
-func scan(_ dimension: MCWorldKit.Dimension) async -> ScanTally {
+func scan(_ dimension: ChunkseeKit.Dimension) async -> ScanTally {
     let regions = dimension.regionFiles()
     let width = max(1, ProcessInfo.processInfo.activeProcessorCount)
     return await withTaskGroup(of: ScanTally.self) { group in
@@ -41,7 +41,7 @@ func scan(_ dimension: MCWorldKit.Dimension) async -> ScanTally {
     }
 }
 
-func scanRegion(x rx: Int, z rz: Int, url: URL, in dimension: MCWorldKit.Dimension) -> ScanTally {
+func scanRegion(x rx: Int, z rz: Int, url: URL, in dimension: ChunkseeKit.Dimension) -> ScanTally {
     var tally = ScanTally()
     let region: RegionFile
     do { region = try RegionFile(contentsOf: url) } catch {

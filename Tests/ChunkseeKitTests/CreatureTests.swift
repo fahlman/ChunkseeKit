@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MCWorldKit
+@testable import ChunkseeKit
 
 @Suite struct CreatureTests {
     let owner = UUID(uuidString: "06D119DA-BC79-410F-8F7B-062CE442A86D")!
