@@ -181,8 +181,9 @@ public struct ChunkSection: Sendable {
             biomes = nil
         }
 
-        blockLight = nbt["BlockLight"]?.byteArray.map { $0.map { UInt8(bitPattern: $0) } }
-        skyLight = nbt["SkyLight"]?.byteArray.map { $0.map { UInt8(bitPattern: $0) } }
+        // Byte-for-byte reinterpretation; a per-element map over 4 KB per section was measurable.
+        blockLight = nbt["BlockLight"]?.byteArray.map { $0.withUnsafeBytes { [UInt8]($0) } }
+        skyLight = nbt["SkyLight"]?.byteArray.map { $0.withUnsafeBytes { [UInt8]($0) } }
     }
 
     /// Index within the section's 4096 blocks; blocks are ordered YZX.
@@ -226,6 +227,14 @@ public struct Chunk: Sendable {
     public let blockEntities: [NBT]
     /// The undecoded NBT, for fields this type doesn't model.
     public let nbt: NBT
+
+    /// Chunk entries that terrain readers (blocks, biomes, heightmaps) don't use: ticks, light,
+    /// structures, entities and generation bookkeeping. Pass to `RegionFile.chunkNBT(localX:localZ:skipping:)`
+    /// to decode faster; the resulting `Chunk` has no light data, block entities or proto-chunk data.
+    public static let keysNotNeededForTerrain: Set<String> = [
+        "block_ticks", "fluid_ticks", "PostProcessing", "structures", "blending_data", "block_entities",
+        "BlockLight", "SkyLight", "entities", "CarvingMasks", "Lights", "UpgradeData", "isLightOn",
+    ]
 
     public var isFullyGenerated: Bool { status == "minecraft:full" || status == "full" }
 
