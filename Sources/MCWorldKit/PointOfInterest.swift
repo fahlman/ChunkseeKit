@@ -2,7 +2,7 @@ import Foundation
 
 /// A point of interest from a dimension's `poi/` region files: beds, villager workstations, bells,
 /// Nether portal blocks, lodestones, bee nests and so on.
-public struct PointOfInterest: Sendable, Equatable {
+public struct PointOfInterest: Sendable, Equatable, Codable {
     /// Type id, e.g. `minecraft:home` (a bed), `minecraft:nether_portal`, `minecraft:meeting` (a bell).
     public var type: String
     public var x: Int

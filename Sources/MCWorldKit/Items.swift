@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Reads the current format (`{id, count, components}`, 1.20.5+) and the older one
 /// (`{id, Count, tag}`), since items are only upgraded when their chunk or player is loaded.
-public struct ItemStack: Sendable, Equatable {
+public struct ItemStack: Sendable, Equatable, Codable {
     /// Item id, e.g. `minecraft:diamond_sword`.
     public var id: String
     public var count: Int
@@ -100,7 +100,7 @@ public enum TextComponent {
 
 /// Something that holds items at a place in the world: a chest, barrel, hopper, furnace, chest
 /// minecart, chest boat, item frame and so on.
-public struct ItemContainer: Sendable, Equatable {
+public struct ItemContainer: Sendable, Equatable, Codable {
     /// Block entity or entity id, e.g. `minecraft:chest`, `minecraft:chest_minecart`.
     public var kind: String
     public var x: Int

@@ -225,6 +225,8 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
+`ItemStack`, `ItemContainer`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` are `Codable`, so an app can cache scan results; `NBT` encodes as binary NBT.
+
 Every decoded type keeps its source NBT (`chunk.nbt` and `world.level.nbt`), so you can read fields the typed API doesn't cover.
 
 ## Command-line tool
