@@ -115,6 +115,9 @@ do {
             func number(_ v: Double?) -> String { v.map { String(format: "%g", $0) } ?? "?" }
             print("  status:   \(player.gameMode.map { "\($0)" } ?? "?"), health \(number(player.health)), food \(player.foodLevel.map(String.init) ?? "?"), level \(player.experienceLevel.map(String.init) ?? "?")")
             let worn = player.equipment.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value.id)" }.joined(separator: ", ")
+            let stats = (try? world.statistics(for: player.uuid)) ?? names[player.uuid].flatMap { try? world.statistics(forName: $0.name) }
+            let done = ((try? world.advancements(for: player.uuid)) ?? nil)?.filter { $0.isDone && !$0.isRecipe }.count
+            print("  played:   \(stats?.playTime.map { "\($0 / 72_000) hours" } ?? "?"), \(done.map { "\($0) advancements" } ?? "no advancements file")")
             print("  items:    \(player.inventory.count) inventory stacks, \(player.enderChest.count) in the ender chest\(worn.isEmpty ? "" : "; wearing \(worn)")")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
         }

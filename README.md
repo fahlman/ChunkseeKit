@@ -187,6 +187,10 @@ for player in world.players() {                         // most recently saved f
     print("  died at", player.lastDeath as Any, "respawns at", player.respawn as Any)
     print("  ", player.gameMode as Any, player.health ?? 0, player.foodLevel ?? 0, player.experienceLevel ?? 0)
     if player.isFromBukkitServer { print("  locations may be in another world:", player.bukkitWorldName ?? "?") }
+    let stats = try world.statistics(for: player.uuid)            // statistics(forName:) for files from before 1.7.6
+    print("  played", (stats?.playTime ?? 0) / 72_000, "hours, mined", stats?.value("minecraft:stone", in: "minecraft:mined") ?? 0, "stone")
+    let advancements = try world.advancements(for: player.uuid) ?? []
+    print("  ", advancements.filter { $0.isDone && !$0.isRecipe }.count, "advancements")
 }
 ```
 
@@ -242,7 +246,7 @@ Other commands:
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `mcworld <world> rules` | Game rules and their values |
-| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level and items |
+| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
 For example:
 
