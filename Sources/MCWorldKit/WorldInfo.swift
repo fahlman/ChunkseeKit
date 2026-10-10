@@ -44,6 +44,14 @@ public struct EnderDragonFight: Sendable, Equatable {
     public var remainingGateways: Int
 }
 
+/// When the game next tries to spawn a wandering trader.
+public struct WanderingTraderTimer: Sendable, Equatable {
+    /// Ticks of play until the next attempt (20 a second).
+    public var spawnDelay: Int
+    /// Percent chance that attempt succeeds; it rises after each failed attempt.
+    public var spawnChance: Int
+}
+
 extension LevelInfo {
     /// Whether the world has ever been opened with a modded client or server.
     public var wasModded: Bool { nbt["WasModded"]?.bool ?? false }
@@ -109,6 +117,16 @@ extension World {
                            targetSize: d["BorderSizeLerpTarget"]?.double ?? size, lerpTime: d["BorderSizeLerpTime"]?.int ?? 0,
                            damagePerBlock: d["BorderDamagePerBlock"]?.double ?? 0.2, safeZone: d["BorderSafeZone"]?.double ?? 5,
                            warningBlocks: d["BorderWarningBlocks"]?.int ?? 5, warningTime: d["BorderWarningTime"]?.int ?? 15)
+    }
+
+    /// The wandering trader timer, from `data/minecraft/wandering_trader.dat` (26.1+) or
+    /// `level.dat` before.
+    public func wanderingTrader() throws -> WanderingTraderTimer? {
+        if let data = try savedData("wandering_trader")?["data"] {
+            return WanderingTraderTimer(spawnDelay: data["spawn_delay"]?.int ?? 0, spawnChance: data["spawn_chance"]?.int ?? 0)
+        }
+        guard let delay = level.nbt["WanderingTraderSpawnDelay"]?.int else { return nil }
+        return WanderingTraderTimer(spawnDelay: delay, spawnChance: level.nbt["WanderingTraderSpawnChance"]?.int ?? 0)
     }
 
     /// The Ender Dragon fight, from the End's `ender_dragon_fight.dat` (26.1+) or `level.dat`'s

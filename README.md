@@ -188,6 +188,7 @@ let rules = try world.gameRules()                       // ["minecraft:keep_inve
 let weather = try world.weather()
 let border = try world.worldBorder(of: overworld)       // isLimited is false for the default border
 let dragon = try world.enderDragonFight()               // previouslyKilled, remainingGateways
+let trader = try world.wanderingTrader()                // spawnDelay (ticks of play), spawnChance (%)
 
 // Player files hold only UUIDs; Minecraft's usercache.json files map them to names.
 let names = UserCache.names(under: URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft"))

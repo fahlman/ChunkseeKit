@@ -55,6 +55,9 @@ do {
         if let date = l.lastPlayed { print("Last played:     \(date)") }
         if let time = l.time { print("World age:       \(time / 72_000) hours (\(time) ticks)") }
         if let day = try? world.dayTime() { print("Day:             \(day / 24_000 + 1), time of day \(day % 24_000)") }
+        if let trader = try? world.wanderingTrader() {
+            print("Trader:          next try in \(trader.spawnDelay / 1200) min of play, \(trader.spawnChance)% chance")
+        }
         if let w = try? world.weather() { print("Weather:         \(w.isThundering ? "thunder" : w.isRaining ? "rain" : "clear")") }
         if let fight = try? world.enderDragonFight() {
             print("Ender Dragon:    \(fight.previouslyKilled ? "defeated" : "not defeated"), \(fight.remainingGateways) of 20 gateways unopened")
