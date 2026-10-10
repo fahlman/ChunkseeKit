@@ -12,11 +12,9 @@ extension Dimension {
     /// missing or unreadable.
     public func inhabitedTimes(regionX: Int, regionZ: Int) throws -> [Int] {
         var times = [Int](repeating: 0, count: 1024)
-        guard let region = try region(x: regionX, z: regionZ) else { return times }
-        for (x, z) in region.chunkCoordinates {
-            guard let nbt = try? region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForInhabitedTime) else { continue }
+        for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForInhabitedTime) {
             // Chunks from before 1.18 keep it under `Level`.
-            times[z * 32 + x] = nbt["InhabitedTime"]?.int ?? nbt["Level"]?["InhabitedTime"]?.int ?? 0
+            times[chunk.localZ * 32 + chunk.localX] = chunk.nbt["InhabitedTime"]?.int ?? chunk.nbt["Level"]?["InhabitedTime"]?.int ?? 0
         }
         return times
     }

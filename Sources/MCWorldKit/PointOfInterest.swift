@@ -35,16 +35,9 @@ public struct PointOfInterest: Sendable, Equatable, Codable {
 }
 
 extension Dimension {
-    /// Points of interest in one region, or none if the dimension has no `poi` file for it.
+    /// Points of interest in one region (see `regionFiles(.pointsOfInterest)`), or none if the
+    /// dimension has no `poi` file for it. Chunks that can't be read are skipped.
     public func pointsOfInterest(regionX: Int, regionZ: Int) throws -> [PointOfInterest] {
-        guard let region = try Self.region(in: poiDirectory, x: regionX, z: regionZ) else { return [] }
-        return try region.chunkCoordinates.flatMap { x, z in
-            try region.chunkNBT(localX: x, localZ: z).map(PointOfInterest.records(inChunk:)) ?? []
-        }
-    }
-
-    /// Coordinates of every `poi` region file.
-    public func pointOfInterestRegions() -> [(x: Int, z: Int)] {
-        Self.regionFiles(in: poiDirectory).map { ($0.x, $0.z) }
+        try chunks(.pointsOfInterest, regionX: regionX, regionZ: regionZ).flatMap { PointOfInterest.records(inChunk: $0.nbt) }
     }
 }

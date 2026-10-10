@@ -129,7 +129,7 @@ public struct NetherPortal: Sendable, Equatable {
 extension Dimension {
     /// Every Nether portal in this dimension, from its `poi` files.
     public func netherPortals() throws -> [NetherPortal] {
-        let points = try pointOfInterestRegions().flatMap { try pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
+        let points = try regionFiles(.pointsOfInterest).flatMap { try pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
         return NetherPortal.portals(from: points, in: id)
     }
 }

@@ -1,5 +1,55 @@
 import Foundation
 
+/// Minecraft text components (custom names, sign text, book pages) reduced to plain text.
+public enum TextComponent {
+    /// Accepts a literal string, a JSON-encoded component (older worlds), an NBT compound with
+    /// `text`/`translate` and `extra`, or a list of components.
+    public static func plainText(_ nbt: NBT) -> String? {
+        let text: String
+        switch nbt {
+        case .string(let s):
+            let trimmed = s.trimmingCharacters(in: .whitespaces)
+            if let first = trimmed.first, "{[\"".contains(first),
+               let json = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8), options: [.fragmentsAllowed]) {
+                text = plainText(json: json)
+            } else {
+                text = s
+            }
+        case .compound:
+            text = (nbt["text"]?.string ?? nbt["translate"]?.string ?? "") + (nbt["extra"]?.list ?? []).compactMap(plainText).joined()
+        case .list(_, let items):
+            text = items.compactMap(plainText).joined()
+        default:
+            return nil
+        }
+        return text.isEmpty ? nil : text
+    }
+
+    private static func plainText(json: Any) -> String {
+        switch json {
+        case let s as String: return s
+        case let array as [Any]: return array.map(plainText(json:)).joined()
+        case let dict as [String: Any]:
+            let base = (dict["text"] as? String) ?? (dict["translate"] as? String) ?? ""
+            return base + ((dict["extra"] as? [Any]) ?? []).map(plainText(json:)).joined()
+        default: return ""
+        }
+    }
+
+    /// Strips `§` formatting codes, which server plugins put in names (`§aSummer` → `Summer`).
+    static func removingFormattingCodes(_ text: String) -> String {
+        var result = ""
+        var skipNext = false
+        for character in text {
+            if skipNext { skipNext = false; continue }
+            if character == "§" { skipNext = true; continue }
+            result.append(character)
+        }
+        return result.trimmingCharacters(in: .whitespaces)
+    }
+}
+
+
 /// A sign or hanging sign with its text.
 public struct Sign: Sendable, Equatable, Codable {
     /// Block entity id: `minecraft:sign` or `minecraft:hanging_sign`.
@@ -98,19 +148,13 @@ extension Dimension {
     /// can't be read are skipped.
     public func contents(regionX: Int, regionZ: Int) throws -> RegionContents {
         var found = RegionContents(containers: [], signs: [])
-        if let region = try Self.region(in: regionDirectory, x: regionX, z: regionZ) {
-            for (x, z) in region.chunkCoordinates {
-                guard let nbt = try? region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForContainers) else { continue }
-                found.containers += ItemContainer.containers(inChunk: nbt)
-                found.signs += Sign.signs(inChunk: nbt)
-            }
+        for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForContainers) {
+            found.containers += ItemContainer.containers(inChunk: chunk.nbt)
+            found.signs += Sign.signs(inChunk: chunk.nbt)
         }
-        if let entities = try Self.region(in: entitiesDirectory, x: regionX, z: regionZ) {
-            for (x, z) in entities.chunkCoordinates {
-                guard let nbt = try? entities.chunkNBT(localX: x, localZ: z) else { continue }
-                found.containers += ItemContainer.containers(inEntityChunk: nbt)
-                found.namedCreatures += Creature.creatures(inEntityChunk: nbt).filter { $0.customName != nil }
-            }
+        for chunk in try chunks(.entities, regionX: regionX, regionZ: regionZ) {
+            found.containers += ItemContainer.containers(inEntityChunk: chunk.nbt)
+            found.namedCreatures += Creature.creatures(inEntityChunk: chunk.nbt).filter { $0.customName != nil }
         }
         return found
     }
