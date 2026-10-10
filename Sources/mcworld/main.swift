@@ -12,6 +12,7 @@ usage:
   mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
   mcworld <world> portals                           Nether portals and where each one leads
   mcworld <world> find <text> [dimension]           containers and players holding matching items
+  mcworld <world> text <text> [dimension]           signs and books containing the text
 """
 
 func fail(_ message: String) -> Never {
@@ -125,6 +126,43 @@ do {
             }
         }
         print("\(total) containers")
+
+    case "text":
+        guard rest.count > 1 else { fail(usage) }
+        let query = rest[1].lowercased()
+        func books(_ items: [ItemStack]) -> [String] {
+            items.flatMap(\.allItems).compactMap { item in
+                guard let book = item.book else { return nil }
+                let text = ([book.title, book.author].compactMap(\.self) + book.pages).joined(separator: "\n")
+                guard text.lowercased().contains(query) else { return nil }
+                return book.title.map { "\"\($0)\" by \(book.author ?? "?")" } ?? "book and quill"
+            }
+        }
+        for player in world.players() {
+            for book in books(player.inventory + player.enderChest) {
+                print("player \(player.uuid.uuidString.prefix(8).lowercased()): \(book)")
+            }
+        }
+        let dims = rest.count > 2 ? [dimension(2)] : world.dimensions()
+        var total = 0
+        for dim in dims {
+            for (rx, rz, _) in dim.regionFiles() {
+                guard let contents = try? dim.contents(regionX: rx, regionZ: rz) else { continue }
+                for sign in contents.signs {
+                    let lines = (sign.front + sign.back).filter { !$0.isEmpty }
+                    guard lines.joined(separator: " ").lowercased().contains(query) else { continue }
+                    total += 1
+                    print("\(dim.id) \(sign.kind) at (\(sign.x), \(sign.y), \(sign.z)): \(lines.joined(separator: " / "))")
+                }
+                for container in contents.containers {
+                    for book in books(container.items) {
+                        total += 1
+                        print("\(dim.id) \(container.kind) at (\(container.x), \(container.y), \(container.z)): \(book)")
+                    }
+                }
+            }
+        }
+        print("\(total) matches")
 
     case "portals":
         guard let overworld = world.dimension("overworld"), let nether = world.dimension("the_nether") else {

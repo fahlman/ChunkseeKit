@@ -137,6 +137,19 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+### Signs and books
+
+```swift
+// One pass over a region reads both its containers and its signs.
+let contents = try overworld.contents(regionX: 0, regionZ: 0)
+for sign in contents.signs {
+    print(sign.x, sign.y, sign.z, sign.front.joined(separator: " / "), sign.back)
+}
+for item in contents.containers.flatMap(\.allItems) {
+    if let book = item.book { print(book.title ?? "book and quill", book.author ?? "", book.pages.count) }
+}
+```
+
 ### Nether portals
 
 ```swift
@@ -222,6 +235,7 @@ Other commands:
 | `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
 | `mcworld <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
 | `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
+| `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 

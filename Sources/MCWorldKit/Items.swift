@@ -175,22 +175,8 @@ extension PlayerInfo {
 }
 
 extension Dimension {
-    /// Every container in one region: block entities from `region/` and container entities from
-    /// `entities/`. Chunks that can't be read are skipped.
+    /// Every container in one region; see `contents(regionX:regionZ:)`.
     public func containers(regionX: Int, regionZ: Int) throws -> [ItemContainer] {
-        var found: [ItemContainer] = []
-        if let region = try Self.region(in: regionDirectory, x: regionX, z: regionZ) {
-            for (x, z) in region.chunkCoordinates {
-                guard let nbt = try? region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForContainers) else { continue }
-                found += ItemContainer.containers(inChunk: nbt)
-            }
-        }
-        if let entities = try Self.region(in: entitiesDirectory, x: regionX, z: regionZ) {
-            for (x, z) in entities.chunkCoordinates {
-                guard let nbt = try? entities.chunkNBT(localX: x, localZ: z) else { continue }
-                found += ItemContainer.containers(inEntityChunk: nbt)
-            }
-        }
-        return found
+        try contents(regionX: regionX, regionZ: regionZ).containers
     }
 }
