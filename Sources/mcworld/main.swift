@@ -8,6 +8,7 @@ usage:
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
   mcworld <world> players                           players' last positions, deaths and respawn points
+  mcworld <world> structures [dimension]            structures found in generated chunks, by kind
 """
 
 func fail(_ message: String) -> Never {
@@ -88,6 +89,24 @@ do {
             print("  death:    \(show(player.lastDeath))")
             print("  respawn:  \(show(player.respawn))")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
+        }
+
+    case "structures":
+        let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
+        for dim in dims {
+            var byKind: [String: [StructureStart]] = [:]
+            for (_, _, url) in dim.regionFiles() {
+                guard let region = try? RegionFile(contentsOf: url) else { continue }
+                for (lx, lz) in region.chunkCoordinates {
+                    guard let nbt = try? region.chunkNBT(localX: lx, localZ: lz, skipping: Chunk.keysNotNeededForStructures) else { continue }
+                    for start in StructureStart.starts(inChunk: nbt) { byKind[start.id, default: []].append(start) }
+                }
+            }
+            print("\(dim.id): \(byKind.values.reduce(0) { $0 + $1.count }) structures")
+            for (id, starts) in byKind.sorted(by: { $0.value.count != $1.value.count ? $0.value.count > $1.value.count : $0.key < $1.key }) {
+                let places = starts.prefix(4).compactMap(\.bounds).map { "(\(($0.minX + $0.maxX) / 2), \(($0.minZ + $0.maxZ) / 2))" }
+                print("  \(starts.count)\t\(id)  \(places.joined(separator: " "))\(starts.count > 4 ? " …" : "")")
+            }
         }
 
     case "scan":
