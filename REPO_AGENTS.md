@@ -64,8 +64,29 @@ The tool is then at `.build/release/mcworld`.
 - **Automated GitHub checks:** none exist. Ryan's projects run no hosted macOS CI, and the
   repository is private on a plan without branch protection. This was recorded on 2026-10-09;
   revisit it if the repository goes public.
-- **Releases:** no release process is approved yet, and there are no tags. Until one is
-  approved, consumers depend on `main` by branch.
+## Releases
+
+Ryan approved this process on 2026-10-09.
+
+- A release is an annotated semantic-version tag on a commit that has been reviewed and merged
+  to `main`:
+
+  ```sh
+  git tag -a vX.Y.Z -m '<summary>'
+  git push origin vX.Y.Z
+  ```
+
+- Every tag needs Ryan's approval. Approval to merge is not approval to release.
+- Before 1.0, the version number shows what changed:
+  - Additive public API is a minor bump.
+  - A breaking change is also a minor bump, but it must be named in the tag message. A breaking
+    change includes adding a public enum case, because that breaks a downstream exhaustive
+    `switch`.
+  - Fixes that don't change the public API are a patch bump.
+- Before tagging, run the required checks on the exact commit being tagged.
+- Record the tag, its commit and the checks in the release's issue.
+- Release order: tag MCWorldKit first, then bump the MCWorld app's pin.
+- The first release is `v0.1.0`, made after fahlman/MCWorldKit#2 merges.
 
 ## Toolchain and platforms
 
