@@ -1,0 +1,117 @@
+import Foundation
+
+/// What a player file says about where a player was, died and will respawn.
+///
+/// Player files are upgraded only when that player joins, so one world can hold several formats:
+/// 1.16+ string dimensions, older integer dimensions, the 1.21+ `respawn` compound, older
+/// `SpawnX`/`SpawnY`/`SpawnZ` fields, and files written by Bukkit servers, whose positions may
+/// belong to a different world of the same server.
+public struct PlayerInfo: Sendable {
+    /// A position in a dimension.
+    public struct Location: Sendable, Equatable {
+        /// Namespaced dimension ID, e.g. `minecraft:the_nether`.
+        public var dimension: String
+        public var x: Double
+        public var y: Double
+        public var z: Double
+
+        public init(dimension: String, x: Double, y: Double, z: Double) {
+            self.dimension = dimension
+            self.x = x
+            self.y = y
+            self.z = z
+        }
+    }
+
+    public let uuid: UUID
+    public let dataVersion: Int?
+    /// When the player file was last written, if known.
+    public let lastSaved: Date?
+    /// Where the player was when the file was saved, or `nil` if the dimension isn't recognized
+    /// (see `unrecognizedDimension`).
+    public let position: Location?
+    /// The raw dimension value when it couldn't be mapped, e.g. `"21"` for a Bukkit world ID.
+    public let unrecognizedDimension: String?
+    public let lastDeath: Location?
+    /// The bed or respawn anchor the player will respawn at, if set.
+    public let respawn: Location?
+    /// True when the file was written by a Bukkit-based server, whose worlds share player files:
+    /// every location here (position, death, respawn) may be in a different world than the one
+    /// being read, even when its dimension looks familiar.
+    public let isFromBukkitServer: Bool
+    /// The world a Bukkit server recorded for the player's spawn (`SpawnWorld`), if any.
+    public let bukkitWorldName: String?
+    /// The full player NBT, for fields this type doesn't model.
+    public let nbt: NBT
+
+    public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil) {
+        self.uuid = uuid
+        self.nbt = nbt
+        self.lastSaved = lastSaved
+        dataVersion = nbt["DataVersion"]?.int
+
+        let dimension = Self.dimensionID(nbt["Dimension"])
+        if let dimension, let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 {
+            position = Location(dimension: dimension, x: pos[0], y: pos[1], z: pos[2])
+        } else {
+            position = nil
+        }
+        unrecognizedDimension = dimension == nil ? nbt["Dimension"].map(Self.describe) : nil
+
+        lastDeath = Self.location(nbt["LastDeathLocation"])
+
+        if let respawn = Self.location(nbt["respawn"]) {
+            self.respawn = respawn
+        } else if let x = nbt["SpawnX"]?.int, let y = nbt["SpawnY"]?.int, let z = nbt["SpawnZ"]?.int {
+            let dimension = Self.dimensionID(nbt["SpawnDimension"]) ?? "minecraft:overworld"
+            respawn = Location(dimension: dimension, x: Double(x), y: Double(y), z: Double(z))
+        } else {
+            respawn = nil
+        }
+
+        bukkitWorldName = nbt["SpawnWorld"]?.string
+        isFromBukkitServer = nbt["WorldUUIDMost"] != nil || nbt["bukkit"] != nil || bukkitWorldName != nil
+    }
+
+    /// `{dimension: "…", pos: [I; x, y, z]}`, as used by `LastDeathLocation` and `respawn`.
+    static func location(_ nbt: NBT?) -> Location? {
+        guard let nbt, let dimension = nbt["dimension"]?.string,
+              let pos = nbt["pos"]?.intArray, pos.count == 3 else { return nil }
+        return Location(dimension: dimension, x: Double(pos[0]), y: Double(pos[1]), z: Double(pos[2]))
+    }
+
+    /// Maps a dimension tag to a namespaced ID: strings as-is, and the pre-1.16 integers
+    /// 0, -1 and 1 to the Overworld, the Nether and the End. Other integers aren't guessed.
+    static func dimensionID(_ nbt: NBT?) -> String? {
+        if let id = nbt?.string { return id.contains(":") ? id : "minecraft:" + id }
+        switch nbt?.int {
+        case 0: return "minecraft:overworld"
+        case -1: return "minecraft:the_nether"
+        case 1: return "minecraft:the_end"
+        default: return nil
+        }
+    }
+
+    private static func describe(_ nbt: NBT) -> String {
+        nbt.string ?? nbt.int.map(String.init) ?? "\(nbt)"
+    }
+}
+
+extension World {
+    /// Every player with saved data, most recently saved first. Files that can't be read are
+    /// skipped. Older singleplayer worlds without a player file contribute the player embedded in
+    /// `level.dat`.
+    public func players() -> [PlayerInfo] {
+        var players = playerUUIDs().compactMap { uuid -> PlayerInfo? in
+            let file = playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
+            guard let nbt = try? NBT.read(contentsOf: file) else { return nil }
+            let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
+            return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved)
+        }
+        if let embedded = level.nbt["Player"], let uuid = embedded["UUID"]?.uuid ?? level.singleplayerUUID,
+           !players.contains(where: { $0.uuid == uuid }) {
+            players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed))
+        }
+        return players.sorted { ($0.lastSaved ?? .distantPast) > ($1.lastSaved ?? .distantPast) }
+    }
+}

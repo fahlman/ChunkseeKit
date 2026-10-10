@@ -7,6 +7,7 @@ usage:
   mcworld <world> chunk <cx> <cz> [dimension]       chunk summary
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
+  mcworld <world> players                           players' last positions, deaths and respawn points
 """
 
 func fail(_ message: String) -> Never {
@@ -69,6 +70,21 @@ do {
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }
+
+    case "players":
+        func show(_ location: PlayerInfo.Location?) -> String {
+            guard let l = location else { return "-" }
+            return "\(l.dimension) \(Int(l.x.rounded(.down))) \(Int(l.y.rounded(.down))) \(Int(l.z.rounded(.down)))"
+        }
+        for player in world.players() {
+            let you = player.uuid == world.level.singleplayerUUID ? " (singleplayer)" : ""
+            print("\(player.uuid.uuidString.lowercased())\(you)")
+            print("  saved:    \(player.lastSaved.map { "\($0)" } ?? "?")  data version \(player.dataVersion.map(String.init) ?? "none")")
+            print("  position: \(player.position.map { show($0) } ?? "unknown dimension \(player.unrecognizedDimension ?? "?")")")
+            print("  death:    \(show(player.lastDeath))")
+            print("  respawn:  \(show(player.respawn))")
+            if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
+        }
 
     case "scan":
         let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
