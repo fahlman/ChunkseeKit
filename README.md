@@ -114,6 +114,16 @@ for (x, z) in region.chunkCoordinates {
 }
 ```
 
+### Points of interest
+
+```swift
+for (x, z) in overworld.pointOfInterestRegions() {
+    for poi in try overworld.pointsOfInterest(regionX: x, regionZ: z) where poi.type == "minecraft:nether_portal" {
+        print("portal block at", poi.x, poi.y, poi.z)
+    }
+}
+```
+
 ### Players and saved data
 
 ```swift
@@ -183,6 +193,7 @@ Other commands:
 | `mcworld <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
 | `mcworld <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
 | `mcworld <world> structures [dimension]` | Structures in generated chunks, by kind, with positions |
+| `mcworld <world> poi [dimension]` | Points of interest (beds, workstations, portals, bells…) by type |
 | `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
 
 For example:

@@ -9,6 +9,7 @@ usage:
   mcworld <world> scan [dimension]                  decode every chunk and report errors
   mcworld <world> players                           players' last positions, deaths and respawn points
   mcworld <world> structures [dimension]            structures found in generated chunks, by kind
+  mcworld <world> poi [dimension]                   points of interest (beds, workstations, portals…) by type
 """
 
 func fail(_ message: String) -> Never {
@@ -89,6 +90,20 @@ do {
             print("  death:    \(show(player.lastDeath))")
             print("  respawn:  \(show(player.respawn))")
             if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
+        }
+
+    case "poi":
+        let dims = rest.count > 1 ? [dimension(1)] : world.dimensions()
+        for dim in dims {
+            var byType: [String: [PointOfInterest]] = [:]
+            for (x, z) in dim.pointOfInterestRegions() {
+                for poi in (try? dim.pointsOfInterest(regionX: x, regionZ: z)) ?? [] { byType[poi.type, default: []].append(poi) }
+            }
+            print("\(dim.id): \(byType.values.reduce(0) { $0 + $1.count }) points of interest")
+            for (type, list) in byType.sorted(by: { $0.value.count != $1.value.count ? $0.value.count > $1.value.count : $0.key < $1.key }) {
+                let places = list.prefix(3).map { "(\($0.x), \($0.y), \($0.z))" }.joined(separator: " ")
+                print("  \(list.count)\t\(type)  \(places)\(list.count > 3 ? " …" : "")")
+            }
         }
 
     case "structures":
