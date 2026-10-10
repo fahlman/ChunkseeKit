@@ -162,12 +162,23 @@ extension Chunk {
 }
 
 extension PlayerInfo {
-    /// The main inventory and hotbar.
-    public var inventory: [ItemStack] { ItemStack.list(nbt["Inventory"]) }
+    /// Slots of armor and the offhand in the `Inventory` list of files from before 1.21.5.
+    static let legacyEquipmentSlots = [100: "feet", 101: "legs", 102: "chest", 103: "head", -106: "offhand"]
 
-    /// Worn armor and the offhand item: the `equipment` compound in 1.21.5+, keyed by slot name.
+    /// The main inventory (slots 9–35) and hotbar (slots 0–8).
+    public var inventory: [ItemStack] {
+        ItemStack.list(nbt["Inventory"]).filter { ($0.slot ?? 0) >= 0 && ($0.slot ?? 0) < 36 }
+    }
+
+    /// Worn armor and the offhand item, keyed by slot name (`head`, `chest`, `legs`, `feet`,
+    /// `offhand`, and `body`/`saddle` where present): the `equipment` compound in 1.21.5+, or the
+    /// special inventory slots before that.
     public var equipment: [String: ItemStack] {
-        (nbt["equipment"]?.compound ?? [:]).compactMapValues(ItemStack.init)
+        var found = (nbt["equipment"]?.compound ?? [:]).compactMapValues(ItemStack.init)
+        for item in ItemStack.list(nbt["Inventory"]) {
+            if let slot = item.slot, let name = Self.legacyEquipmentSlots[slot], found[name] == nil { found[name] = item }
+        }
+        return found
     }
 
     /// The player's ender chest, which every ender chest in the world opens for them.

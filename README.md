@@ -182,6 +182,7 @@ for player in world.players() {                         // most recently saved f
     print(names[player.uuid]?.name ?? "unknown name")
     print(player.uuid, player.position?.dimension ?? "?", player.position?.x ?? 0, player.position?.z ?? 0)
     print("  died at", player.lastDeath as Any, "respawns at", player.respawn as Any)
+    print("  ", player.gameMode as Any, player.health ?? 0, player.foodLevel ?? 0, player.experienceLevel ?? 0)
     if player.isFromBukkitServer { print("  locations may be in another world:", player.bukkitWorldName ?? "?") }
 }
 ```
@@ -237,7 +238,7 @@ Other commands:
 | `mcworld <world> find <text> [dimension]` | Containers and players holding items whose id or custom name matches |
 | `mcworld <world> text <text> [dimension]` | Signs and books whose text matches |
 | `mcworld <world> portals` | Nether portals and where each one leads, flagging one-way links |
-| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death and respawn point |
+| `mcworld <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level and items |
 
 For example:
 

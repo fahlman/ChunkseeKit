@@ -115,3 +115,27 @@ extension World {
         return players.sorted { ($0.lastSaved ?? .distantPast) > ($1.lastSaved ?? .distantPast) }
     }
 }
+
+/// A player's game mode, from `playerGameType`.
+public enum GameMode: Int, Sendable {
+    case survival = 0, creative, adventure, spectator
+}
+
+extension PlayerInfo {
+    /// Health in half-hearts, 0–20 for a player without health boosts.
+    public var health: Double? { nbt["Health"]?.double }
+    /// Extra health from golden apples and the like, shown as golden hearts.
+    public var absorption: Double? { nbt["AbsorptionAmount"]?.double }
+    /// Hunger in half-drumsticks, 0–20.
+    public var foodLevel: Int? { nbt["foodLevel"]?.int }
+    /// Hidden food reserve used up before hunger drops.
+    public var saturation: Double? { nbt["foodSaturationLevel"]?.double }
+    public var experienceLevel: Int? { nbt["XpLevel"]?.int }
+    /// Progress toward the next level, 0–1.
+    public var experienceProgress: Double? { nbt["XpP"]?.double }
+    /// Experience points collected since the player last died.
+    public var experienceTotal: Int? { nbt["XpTotal"]?.int }
+    public var gameMode: GameMode? { nbt["playerGameType"]?.int.flatMap(GameMode.init(rawValue:)) }
+    /// The selected hotbar slot, 0–8.
+    public var selectedSlot: Int? { nbt["SelectedItemSlot"]?.int }
+}
