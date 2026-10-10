@@ -24,7 +24,7 @@ public struct BlockBox: Sendable, Equatable {
 ///
 /// Only chunks that have been generated record their structures, so this covers explored terrain.
 public struct StructureStart: Sendable, Equatable {
-    /// One building block of a structure, such as a stronghold's portal room (`minecraft:shportalroom`).
+    /// One building block of a structure, such as a stronghold's portal room (`minecraft:shpr`).
     public struct Piece: Sendable, Equatable {
         public var id: String
         public var box: BlockBox

@@ -16,7 +16,7 @@ import Testing
                         "id": .string("minecraft:stronghold"), "ChunkX": .int(-302), "ChunkZ": .int(-51), "references": .int(0),
                         "Children": .list([
                             piece("minecraft:shstart", [-4830, -19, -814, -4826, -9, -810]),
-                            piece("minecraft:shportalroom", [-4900, -40, -830, -4890, -32, -815]),
+                            piece("minecraft:shpr", [-4900, -40, -830, -4890, -32, -815]),
                         ]),
                     ]),
                     "minecraft:mineshaft": .compound(["id": .string("INVALID")]),
@@ -30,7 +30,7 @@ import Testing
         #expect(starts.map(\.id) == ["minecraft:stronghold"])  // INVALID placeholder left out
         let stronghold = try #require(starts.first)
         #expect((stronghold.chunkX, stronghold.chunkZ) == (-302, -51))
-        #expect(stronghold.pieces.map(\.id) == ["minecraft:shstart", "minecraft:shportalroom"])
+        #expect(stronghold.pieces.map(\.id) == ["minecraft:shstart", "minecraft:shpr"])
         #expect(stronghold.bounds == BlockBox(minX: -4900, minY: -40, minZ: -830, maxX: -4826, maxY: -9, maxZ: -810))
     }
 
