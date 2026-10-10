@@ -253,10 +253,7 @@ import Testing
 @Suite struct WorldTests {
     let playerUUID = UUID(uuidString: "01234567-89AB-CDEF-0123-456789ABCDEF")!
 
-    func uuidInts(_ uuid: UUID) -> NBT {
-        let b = withUnsafeBytes(of: uuid.uuid) { Array($0) }
-        return .intArray((0..<4).map { i in Int32(bitPattern: b[i * 4..<i * 4 + 4].reduce(0) { $0 << 8 | UInt32($1) }) })
-    }
+    func uuidInts(_ uuid: UUID) -> NBT { Fixtures.uuidInts(uuid) }
 
     @Test func modernLayout() throws {
         let dir = try Fixtures.tempDirectory()

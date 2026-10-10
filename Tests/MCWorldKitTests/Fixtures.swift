@@ -80,6 +80,12 @@ enum Fixtures {
         return Array("LZ4Block".utf8) + [method] + le(payload.count) + le(originalLength) + le(0) + payload
     }
 
+    /// A UUID as the four big-endian ints Minecraft stores.
+    static func uuidInts(_ uuid: UUID) -> NBT {
+        let b = withUnsafeBytes(of: uuid.uuid) { Array($0) }
+        return .intArray((0..<4).map { i in Int32(bitPattern: b[i * 4..<i * 4 + 4].reduce(0) { $0 << 8 | UInt32($1) }) })
+    }
+
     static func tempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("MCWorldKitTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

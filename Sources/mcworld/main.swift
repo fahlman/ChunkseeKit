@@ -8,6 +8,7 @@ usage:
   mcworld <world> block <x> <y> <z> [dimension]     block and biome at a position
   mcworld <world> scan [dimension]                  decode every chunk and report errors
   mcworld <world> time [dimension]                  chunks where players spent the most time
+  mcworld <world> creatures [dimension]             named and tamed creatures, then counts by kind
   mcworld <world> maps                              maps made in the game, with where they cover
   mcworld <world> rules                             game rules
   mcworld <world> players                           players' positions, deaths, respawn points and status
@@ -110,6 +111,19 @@ do {
         for chunk in chunks.sorted(by: { $0.ticks > $1.ticks }).prefix(10) {
             print("  chunk \(chunk.x), \(chunk.z) (blocks \(chunk.x * 16), \(chunk.z * 16)): \(chunk.ticks / 72_000) hours")
         }
+
+    case "creatures":
+        let dim = dimension(1)
+        var kinds: [String: Int] = [:]
+        for (rx, rz, _) in dim.regionFiles() {
+            for creature in (try? dim.creatures(regionX: rx, regionZ: rz)) ?? [] {
+                kinds[creature.id, default: 0] += 1
+                guard creature.customName != nil || creature.owner != nil else { continue }
+                let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
+                print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at (\(Int(creature.x)), \(Int(creature.y)), \(Int(creature.z)))\(owner)")
+            }
+        }
+        for (kind, count) in kinds.sorted(by: { $0.value > $1.value }) { print("\(count) \(kind)") }
 
     case "maps":
         for map in world.mapItems() {
