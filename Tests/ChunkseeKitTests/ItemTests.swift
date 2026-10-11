@@ -35,6 +35,24 @@ import Testing
         #expect(TextComponent.plainText(.string("plain")) == "plain")
     }
 
+    @Test func enchantmentsInEveryFormat() throws {
+        func item(_ fields: [String: NBT]) throws -> ItemStack { try #require(ItemStack(.compound(fields))) }
+        // 26.x and 1.21.5+: the map directly.
+        let book = try item(["id": .string("minecraft:enchanted_book"), "count": .int(1), "components": .compound([
+            "minecraft:stored_enchantments": .compound(["minecraft:mending": .int(1)])])])
+        #expect(book.enchantments == ["minecraft:mending": 1])
+        // 1.20.5–1.21.4: wrapped in `levels`, beside `show_in_tooltip`.
+        let sword = try item(["id": .string("minecraft:diamond_sword"), "count": .int(1), "components": .compound([
+            "minecraft:enchantments": .compound(["levels": .compound(["minecraft:sharpness": .int(5), "minecraft:looting": .int(3)]),
+                                                 "show_in_tooltip": .byte(0)])])])
+        #expect(sword.enchantments == ["minecraft:sharpness": 5, "minecraft:looting": 3])
+        // Before 1.20.5: lists of {id, lvl} in the tag.
+        let legacy = try item(["id": .string("minecraft:enchanted_book"), "Count": .byte(1), "tag": .compound([
+            "StoredEnchantments": .list([.compound(["id": .string("minecraft:unbreaking"), "lvl": .short(3)])])])])
+        #expect(legacy.enchantments == ["minecraft:unbreaking": 3])
+        #expect(try item(["id": .string("minecraft:torch"), "count": .int(4)]).enchantments.isEmpty)
+    }
+
     @Test func containersFromBlockEntitiesAndEntities() {
         let chunk = NBT.compound(["block_entities": .list([
             .compound(["id": .string("minecraft:chest"), "x": .int(1), "y": .int(64), "z": .int(2), "Items": .list([item("minecraft:wheat", 8, slot: 0)])]),
