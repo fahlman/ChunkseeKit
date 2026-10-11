@@ -42,6 +42,18 @@ import Testing
         }
     }
 
+    @Test func paletteCountsMatchEveryEntry() throws {
+        // 17 entries → 5 bits, so the last long is partly padding; the counts must stop at 4096.
+        let palette = (0..<17).map { NBT.string("minecraft:block_\($0)") }
+        let indices = (0..<4096).map { ($0 * 7 + $0 / 100) % 17 }
+        let section = try ChunkSection(Fixtures.section(y: 2, palette: palette, indices: indices, bits: 5))
+        let expected = (0..<17).map { index in indices.filter { $0 == index }.count }
+        #expect(section.blockStates?.paletteCounts() == expected)
+        #expect(section.blockStates?.paletteCounts().reduce(0, +) == 4096)
+        let uniform = try ChunkSection(Fixtures.section(y: -4, palette: [.string("minecraft:bedrock")]))
+        #expect(uniform.blockStates?.paletteCounts() == [4096])
+    }
+
     @Test func minimumBlockBitsIsFour() throws {
         let indices = (0..<4096).map { $0 % 2 }
         let section = try ChunkSection(Fixtures.section(y: 0, palette: [air, .string("minecraft:dirt")], indices: indices, bits: 4))

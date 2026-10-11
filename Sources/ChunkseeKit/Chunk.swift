@@ -122,6 +122,34 @@ public struct PalettedContainer<Element: Sendable>: Sendable {
         return i < palette.count ? palette[i] : nil
     }
 
+    /// How many entries use each palette index, counted in one pass over the packed data:
+    /// `counts[i]` is the number of entries whose palette index is `i`. Much faster than reading
+    /// every entry when only totals are needed, such as counting ores. Indices past the palette
+    /// (malformed data) aren't counted.
+    public func paletteCounts() -> [Int] {
+        var counts = [Int](repeating: 0, count: palette.count)
+        guard bitsPerEntry > 0 else {
+            counts[0] = entryCount
+            return counts
+        }
+        let perLong = 64 / bitsPerEntry
+        let mask = (UInt64(1) << UInt64(bitsPerEntry)) - 1
+        var remaining = entryCount
+        counts.withUnsafeMutableBufferPointer { counts in
+            for word in data where remaining > 0 {
+                var w = UInt64(bitPattern: word)
+                let here = min(perLong, remaining)
+                for _ in 0..<here {
+                    let i = Int(w & mask)
+                    if i < counts.count { counts[i] += 1 }
+                    w >>= UInt64(bitsPerEntry)
+                }
+                remaining -= here
+            }
+        }
+        return counts
+    }
+
     /// All palette indices, decoded in one pass.
     public func allPaletteIndices() -> [Int] {
         guard bitsPerEntry > 0 else { return Array(repeating: 0, count: entryCount) }
