@@ -22,7 +22,7 @@ public struct BlockBox: Sendable, Equatable {
 
 /// A structure that begins in a chunk (`structures.starts`): a village, stronghold, fortress and so on.
 ///
-/// Only chunks that have been generated record their structures, so this covers explored terrain.
+/// Starts can be recorded before their blocks are placed, including leftovers in upgraded worlds.
 public struct StructureStart: Sendable, Equatable {
     /// One building block of a structure, such as a stronghold's portal room (`minecraft:shpr`).
     public struct Piece: Sendable, Equatable {
@@ -42,18 +42,35 @@ public struct StructureStart: Sendable, Equatable {
         pieces.dropFirst().reduce(pieces.first?.box) { $0?.union($1.box) }
     }
 
-    /// The starts in a chunk's NBT. Placeholder starts (`INVALID`) are left out.
+    /// The starts in a chunk's NBT. Invalid, empty and explicitly unplaced starts are left out.
+    /// Other pieces don't have a universal placement flag, so missing evidence is not a reason to
+    /// discard a structure. Callers showing explored terrain should also check the chunk's status.
     public static func starts(inChunk nbt: NBT) -> [StructureStart] {
         guard let starts = nbt["structures"]?["starts"]?.compound else { return [] }
         return starts.compactMap { key, start in
             let id = start["id"]?.string ?? key
             guard id != "INVALID", let chunkX = start["ChunkX"]?.int, let chunkZ = start["ChunkZ"]?.int else { return nil }
-            let pieces = (start["Children"]?.list ?? []).compactMap { child -> Piece? in
+            let children = start["Children"]?.list ?? []
+            let pieces = children.compactMap { child -> Piece? in
                 guard let box = BlockBox(child["BB"]) else { return nil }
                 return Piece(id: child["id"]?.string ?? "", box: box)
             }
+            guard !pieces.isEmpty, !children.allSatisfy(isUnplacedScatteredFeature) else { return nil }
             return StructureStart(id: id, chunkX: chunkX, chunkZ: chunkZ, pieces: pieces)
         }.sorted { $0.id < $1.id }
+    }
+
+    /// Minecraft's ScatteredFeaturePiece starts at HPos = -1 and sets it when postProcess aligns
+    /// the building with the ground, before placing blocks. Verified against the 26.3 game code
+    /// and an upgraded chunk with an unplaced jungle pyramid. Scope the field to its known piece
+    /// types: a data pack's unrelated HPos field does not establish placement.
+    private static func isUnplacedScatteredFeature(_ piece: NBT) -> Bool {
+        switch piece["id"]?.string {
+        case "minecraft:tejp", "minecraft:tedp", "minecraft:tesh":
+            return piece["HPos"]?.int == -1
+        default:
+            return false
+        }
     }
 }
 

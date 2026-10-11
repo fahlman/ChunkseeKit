@@ -104,6 +104,10 @@ for (_, _, url) in overworld.regionFiles() {
 
 ### Structures
 
+Invalid or empty starts and temples/huts explicitly marked as unplaced are excluded. Minecraft
+doesn't record a universal placement flag for every structure type; unknown placement is retained.
+For a map of explored terrain, also check `Chunk.isFullyGenerated`.
+
 ```swift
 // Structures are recorded in the chunk they start in; skip block data for a fast scan.
 let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
