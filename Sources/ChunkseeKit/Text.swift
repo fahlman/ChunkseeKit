@@ -140,17 +140,19 @@ public struct RegionContents: Sendable, Equatable, Codable {
     public var containers: [ItemContainer]
     public var signs: [Sign]
     public var namedCreatures: [Creature] = []
+    public var spawners: [Spawner] = []
 }
 
 extension Dimension {
-    /// Every container, sign with text and named creature in one region, read in one pass: block
-    /// entities from `region/`, and container entities and creatures from `entities/`. Chunks that
+    /// Every container, sign with text, spawner and named creature in one region, read in one pass:
+    /// block entities from `region/`, and container entities and creatures from `entities/`. Chunks that
     /// can't be read are skipped.
     public func contents(regionX: Int, regionZ: Int) throws -> RegionContents {
         var found = RegionContents(containers: [], signs: [])
         for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForContainers) {
             found.containers += ItemContainer.containers(inChunk: chunk.nbt)
             found.signs += Sign.signs(inChunk: chunk.nbt)
+            found.spawners += Spawner.spawners(inChunk: chunk.nbt)
         }
         for chunk in try chunks(.entities, regionX: regionX, regionZ: regionZ) {
             found.containers += ItemContainer.containers(inEntityChunk: chunk.nbt)
