@@ -142,6 +142,15 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+### Spawners
+
+```swift
+// Monster spawners and the mob each spawns (nil for an empty one); trial spawners aren't included.
+for spawner in try overworld.contents(regionX: 0, regionZ: 0).spawners {
+    print(spawner.mob ?? "empty", spawner.x, spawner.y, spawner.z)
+}
+```
+
 ### Signs and books
 
 ```swift
@@ -240,7 +249,7 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
-`ItemStack`, `ItemContainer`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` are `Codable`, so an app can cache scan results; `NBT` encodes as binary NBT.
+`ItemStack`, `ItemContainer`, `Spawner`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` are `Codable`, so an app can cache scan results; `NBT` encodes as binary NBT.
 
 Every decoded type keeps its source NBT (`chunk.nbt` and `world.level.nbt`), so you can read fields the typed API doesn't cover.
 

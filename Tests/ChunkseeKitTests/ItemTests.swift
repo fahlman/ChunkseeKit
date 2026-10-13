@@ -94,4 +94,16 @@ import Testing
         #expect(player.inventory.map(\.id) == ["minecraft:torch"])
         #expect(player.equipment.mapValues(\.id) == ["feet": "minecraft:iron_boots", "head": "minecraft:diamond_helmet", "offhand": "minecraft:shield"])
     }
+
+    @Test func spawnersAndTheirMobs() {
+        let chunk = NBT.compound(["block_entities": .list([
+            .compound(["id": .string("minecraft:mob_spawner"), "x": .int(-5252), "y": .int(-27), "z": .int(-5731),
+                       "SpawnData": .compound(["entity": .compound(["id": .string("minecraft:zombie")])])]),
+            .compound(["id": .string("minecraft:mob_spawner"), "x": .int(1), "y": .int(2), "z": .int(3), "SpawnData": .compound([:])]),
+            .compound(["id": .string("minecraft:trial_spawner"), "x": .int(4), "y": .int(5), "z": .int(6)]),
+            .compound(["id": .string("minecraft:chest"), "x": .int(7), "y": .int(8), "z": .int(9)]),
+        ])])
+        #expect(Spawner.spawners(inChunk: chunk) == [Spawner(x: -5252, y: -27, z: -5731, mob: "minecraft:zombie"),
+                                                    Spawner(x: 1, y: 2, z: 3, mob: nil)])   // an empty spawner
+    }
 }
