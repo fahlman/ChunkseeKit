@@ -198,7 +198,11 @@ let dragon = try world.enderDragonFight()               // previouslyKilled, rem
 let trader = try world.wanderingTrader()                // spawnDelay (ticks of play), spawnChance (%)
 
 // Player files hold only UUIDs; Minecraft's usercache.json files map them to names.
-let names = UserCache.names(under: URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft"))
+let minecraft = URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft")
+let names = UserCache.names(under: minecraft)
+
+// Every saved world in every installation's game folder (backups aren't included).
+let worlds = World.saved(under: minecraft).compactMap { try? World(contentsOf: $0) }
 
 for player in world.players() {                         // most recently saved first
     print(names[player.uuid]?.name ?? "unknown name")
