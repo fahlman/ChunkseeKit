@@ -111,4 +111,15 @@ import Testing
         #expect(World.saved(under: root, depth: 1).count == 1)  // only saves/Classic is that shallow
         #expect(World.saved(under: root.appendingPathComponent("vanilla/release/saves")).map(\.lastPathComponent) == ["Ryan's Realm"])
     }
+
+    @Test func eachVanillaDimensionListsTheBiomesItCanHave() {
+        func biomes(_ id: String) -> [String] { Dimension(id: id, url: URL(fileURLWithPath: "/")).vanillaBiomes }
+        #expect(biomes("minecraft:overworld").count == 56 && Set(biomes("minecraft:overworld")).count == 56)
+        #expect(biomes("minecraft:overworld").contains("minecraft:mushroom_fields"))
+        #expect(biomes("minecraft:overworld").contains("minecraft:dappled_forest"))   // new in 26.3
+        #expect(Set(biomes("minecraft:the_nether")) == ["minecraft:nether_wastes", "minecraft:soul_sand_valley", "minecraft:crimson_forest",
+                                                         "minecraft:warped_forest", "minecraft:basalt_deltas"])
+        #expect(biomes("minecraft:the_end").count == 5)
+        #expect(biomes("mymod:skylands").isEmpty)
+    }
 }

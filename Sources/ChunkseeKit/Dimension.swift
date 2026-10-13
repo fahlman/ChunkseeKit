@@ -74,3 +74,92 @@ public struct Dimension: Sendable {
         return nbt["Entities"]?.list ?? []
     }
 }
+
+extension Dimension {
+    /// Every biome that vanilla Minecraft generates in this dimension, by namespaced ID, or none for
+    /// a custom dimension. From Minecraft 26.3's biome tags `is_overworld`, `is_nether` and
+    /// `is_end`; a world saved by an older version may lack biomes added since.
+    public var vanillaBiomes: [String] {
+        switch id {
+        case "minecraft:overworld": Self.overworldBiomes
+        case "minecraft:the_nether": Self.netherBiomes
+        case "minecraft:the_end": Self.endBiomes
+        default: []
+        }
+    }
+
+    static let overworldBiomes = [
+        "minecraft:mushroom_fields",
+        "minecraft:deep_frozen_ocean",
+        "minecraft:frozen_ocean",
+        "minecraft:deep_cold_ocean",
+        "minecraft:cold_ocean",
+        "minecraft:deep_ocean",
+        "minecraft:ocean",
+        "minecraft:deep_lukewarm_ocean",
+        "minecraft:lukewarm_ocean",
+        "minecraft:warm_ocean",
+        "minecraft:stony_shore",
+        "minecraft:swamp",
+        "minecraft:mangrove_swamp",
+        "minecraft:snowy_slopes",
+        "minecraft:snowy_plains",
+        "minecraft:snowy_beach",
+        "minecraft:windswept_gravelly_hills",
+        "minecraft:grove",
+        "minecraft:windswept_hills",
+        "minecraft:snowy_taiga",
+        "minecraft:windswept_forest",
+        "minecraft:taiga",
+        "minecraft:plains",
+        "minecraft:meadow",
+        "minecraft:beach",
+        "minecraft:forest",
+        "minecraft:old_growth_spruce_taiga",
+        "minecraft:flower_forest",
+        "minecraft:birch_forest",
+        "minecraft:dark_forest",
+        "minecraft:pale_garden",
+        "minecraft:savanna_plateau",
+        "minecraft:savanna",
+        "minecraft:jungle",
+        "minecraft:badlands",
+        "minecraft:desert",
+        "minecraft:wooded_badlands",
+        "minecraft:jagged_peaks",
+        "minecraft:stony_peaks",
+        "minecraft:frozen_river",
+        "minecraft:river",
+        "minecraft:ice_spikes",
+        "minecraft:dappled_forest",
+        "minecraft:old_growth_pine_taiga",
+        "minecraft:sunflower_plains",
+        "minecraft:old_growth_birch_forest",
+        "minecraft:sparse_jungle",
+        "minecraft:bamboo_jungle",
+        "minecraft:eroded_badlands",
+        "minecraft:windswept_savanna",
+        "minecraft:cherry_grove",
+        "minecraft:frozen_peaks",
+        "minecraft:dripstone_caves",
+        "minecraft:lush_caves",
+        "minecraft:sulfur_caves",
+        "minecraft:deep_dark"
+    ]
+
+    static let netherBiomes = [
+        "minecraft:nether_wastes",
+        "minecraft:soul_sand_valley",
+        "minecraft:crimson_forest",
+        "minecraft:warped_forest",
+        "minecraft:basalt_deltas"
+    ]
+
+    static let endBiomes = [
+        "minecraft:the_end",
+        "minecraft:end_highlands",
+        "minecraft:end_midlands",
+        "minecraft:small_end_islands",
+        "minecraft:end_barrens"
+    ]
+}

@@ -201,6 +201,9 @@ let trader = try world.wanderingTrader()                // spawnDelay (ticks of 
 let minecraft = URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft")
 let names = UserCache.names(under: minecraft)
 
+// Every biome Minecraft 26.3 generates in a vanilla dimension; custom dimensions have none listed.
+let overworldBiomes = world.dimension("overworld")!.vanillaBiomes   // 56, from "minecraft:mushroom_fields" on
+
 // Every saved world in every installation's game folder (backups aren't included).
 let worlds = World.saved(under: minecraft).compactMap { try? World(contentsOf: $0) }
 
