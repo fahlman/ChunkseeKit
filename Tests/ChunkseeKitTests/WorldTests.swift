@@ -91,4 +91,24 @@ import Testing
         defer { try? FileManager.default.removeItem(at: dir) }
         #expect(throws: WorldError.missingLevelDat) { try World(contentsOf: dir) }
     }
+
+    @Test func findsSavedWorldsInEveryGameFolderButNotBackups() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        func world(_ path: String) throws {
+            try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string(path)])]),
+                                         to: root.appendingPathComponent(path).appendingPathComponent("level.dat"))
+        }
+        try world("saves/Classic")
+        try world("vanilla/release/saves/Ryan's Realm")
+        try world("vanilla/aprilfools/blue/saves/blue")
+        try world("vanilla/release/backups/Ryan's Realm-backup")
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("vanilla/release/saves/Not a World"),
+                                                withIntermediateDirectories: true)
+        let prefix = root.resolvingSymlinksInPath().path.count + 1  // the temporary folder is reached through /private
+        let found = World.saved(under: root).map { String($0.resolvingSymlinksInPath().path.dropFirst(prefix)) }
+        #expect(found == ["saves/Classic", "vanilla/aprilfools/blue/saves/blue", "vanilla/release/saves/Ryan's Realm"])
+        #expect(World.saved(under: root, depth: 1).count == 1)  // only saves/Classic is that shallow
+        #expect(World.saved(under: root.appendingPathComponent("vanilla/release/saves")).map(\.lastPathComponent) == ["Ryan's Realm"])
+    }
 }

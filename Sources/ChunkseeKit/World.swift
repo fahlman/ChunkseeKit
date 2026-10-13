@@ -18,6 +18,40 @@ public struct World: Sendable {
         level = try LevelInfo(NBT.read(contentsOf: levelDat))
     }
 
+    /// The saved worlds under a Minecraft folder: each folder with a `level.dat` inside a `saves`
+    /// folder. The launcher gives every installation its own game folder (`saves` directly under
+    /// `~/Library/Application Support/minecraft`, or deeper, such as `vanilla/release/saves`), so
+    /// `saves` folders up to `depth` levels below `folder` are found. A `saves` folder chosen
+    /// directly counts too. `backups` folders, which hold copies of worlds, aren't searched.
+    public static func saved(under folder: URL, depth: Int = 3) -> [URL] {
+        let fileManager = FileManager.default
+        func folders(in dir: URL) -> [URL] {
+            ((try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey],
+                                                    options: [.skipsHiddenFiles])) ?? [])
+                .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        }
+        func worlds(in saves: URL) -> [URL] {
+            folders(in: saves).filter { fileManager.fileExists(atPath: $0.appendingPathComponent("level.dat").path) }
+        }
+        if folder.lastPathComponent == "saves" { return worlds(in: folder).sorted { $0.path < $1.path } }
+        var found: [URL] = []
+        var level = [folder]
+        for _ in 0...max(0, depth) {
+            var next: [URL] = []
+            for dir in level {
+                for child in folders(in: dir) {
+                    switch child.lastPathComponent {
+                    case "saves": found += worlds(in: child)
+                    case "backups": continue
+                    default: next.append(child)
+                    }
+                }
+            }
+            level = next
+        }
+        return found.sorted { $0.path < $1.path }
+    }
+
     /// True when the world uses the 26.1+ folder layout.
     public var usesDimensionsFolderForVanilla: Bool {
         exists("dimensions/minecraft/overworld")
