@@ -20,6 +20,7 @@ import Testing
         try data("dimensions/minecraft/overworld/data/minecraft/world_border.dat", ["center_x": .double(10), "center_z": .double(-20), "size": .double(5000),
                                                                                   "lerp_target": .double(5000), "lerp_time": .long(0)])
         try data("dimensions/minecraft/the_end/data/minecraft/ender_dragon_fight.dat", ["dragon_killed": .byte(1), "previously_killed": .byte(1),
+                                                                                       "needs_state_scanning": .byte(0),
                                                                                        "gateways": .list((0..<19).map { NBT.int(Int32($0)) })])
         try FileManager.default.createDirectory(at: dir.appendingPathComponent("dimensions/minecraft/overworld/region"), withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: dir.appendingPathComponent("dimensions/minecraft/the_end/region"), withIntermediateDirectories: true)
@@ -33,7 +34,9 @@ import Testing
         let overworld = try #require(world.dimension("overworld"))
         let border = try #require(try world.worldBorder(of: overworld))
         #expect(border.centerX == 10 && border.centerZ == -20 && border.size == 5000 && border.isLimited)
-        #expect(try world.enderDragonFight() == EnderDragonFight(dragonKilled: true, previouslyKilled: true, remainingGateways: 19))
+        #expect(try world.enderDragonFight() == EnderDragonFight(dragonKilled: true, previouslyKilled: true, remainingGateways: 19,
+                                                                 needsStateScanning: false))
+        #expect(try world.enderDragonFight()?.isDefeated == true)
     }
 
     @Test func olderLevelDatFields() throws {
@@ -57,6 +60,26 @@ import Testing
         let border = try #require(try world.worldBorder(of: overworld))
         #expect(!border.isLimited)
         #expect(try world.enderDragonFight()?.remainingGateways == 20)
+        #expect(try world.enderDragonFight()?.needsStateScanning == true)   // missing means not yet checked, as in the game
         #expect(!world.level.wasModded && world.level.serverBrands.isEmpty)
+    }
+
+    /// Ryan's Realm's real file: nobody has been to the End, yet both kill flags are set. The game
+    /// hasn't checked the End, so they aren't a kill.
+    @Test func anUncheckedFightIsNotADefeat() throws {
+        let dir = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("Realm"), "DataVersion": .int(5023)])]),
+                                     to: dir.appendingPathComponent("level.dat"))
+        try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(4772), "data": .compound([
+            "dragon_killed": .byte(1), "previously_killed": .byte(1), "needs_state_scanning": .byte(1),
+            "gateways": .list((0..<20).map { NBT.int(Int32($0)) }),
+        ])]), to: dir.appendingPathComponent("dimensions/minecraft/the_end/data/minecraft/ender_dragon_fight.dat"))
+        for folder in ["overworld", "the_end"] {
+            try FileManager.default.createDirectory(at: dir.appendingPathComponent("dimensions/minecraft/\(folder)/region"),
+                                                    withIntermediateDirectories: true)
+        }
+        let fight = try #require(try World(contentsOf: dir).enderDragonFight())
+        #expect(fight.needsStateScanning && fight.previouslyKilled && !fight.isDefeated && fight.remainingGateways == 20)
     }
 }

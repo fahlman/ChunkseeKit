@@ -42,6 +42,14 @@ public struct EnderDragonFight: Sendable, Equatable {
     public var previouslyKilled: Bool
     /// End gateways not yet opened; each dragon kill opens one of the 20.
     public var remainingGateways: Int
+    /// True until the game first loads the End's central island and checks it. It then sets
+    /// `dragonKilled` and `previouslyKilled` from what's there (an active exit portal, a living
+    /// dragon), so until then they aren't confirmed, and nobody has fought the dragon: the fight
+    /// happens on that island. A missing value means true, as the game reads it.
+    public var needsStateScanning: Bool
+
+    /// Whether the dragon has been defeated: a kill the game has confirmed.
+    public var isDefeated: Bool { previouslyKilled && !needsStateScanning }
 }
 
 /// When the game next tries to spawn a wandering trader.
@@ -139,10 +147,12 @@ extension World {
         }
         if let data {
             return EnderDragonFight(dragonKilled: data["dragon_killed"]?.bool ?? false, previouslyKilled: data["previously_killed"]?.bool ?? false,
-                                    remainingGateways: data["gateways"]?.list?.count ?? 0)
+                                    remainingGateways: data["gateways"]?.list?.count ?? 0,
+                                    needsStateScanning: data["needs_state_scanning"]?.bool ?? true)
         }
         guard let fight = level.nbt["DragonFight"] ?? level.nbt["DimensionData"]?["1"]?["DragonFight"] else { return nil }
         return EnderDragonFight(dragonKilled: fight["DragonKilled"]?.bool ?? false, previouslyKilled: fight["PreviouslyKilled"]?.bool ?? false,
-                                remainingGateways: fight["Gateways"]?.list?.count ?? 0)
+                                remainingGateways: fight["Gateways"]?.list?.count ?? 0,
+                                needsStateScanning: fight["NeedsStateScanning"]?.bool ?? true)
     }
 }
