@@ -203,7 +203,7 @@ for uuid in world.playerUUIDs() {
 let rules = try world.gameRules()                       // ["minecraft:keep_inventory": .bool(false), …]
 let weather = try world.weather()
 let border = try world.worldBorder(of: overworld)       // isLimited is false for the default border
-let dragon = try world.enderDragonFight()               // previouslyKilled, remainingGateways
+let dragon = try world.enderDragonFight()               // isDefeated, needsStateScanning, remainingGateways
 let trader = try world.wanderingTrader()                // spawnDelay (ticks of play), spawnChance (%)
 
 // Player files hold only UUIDs; Minecraft's usercache.json files map them to names.
