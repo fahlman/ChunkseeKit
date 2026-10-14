@@ -44,11 +44,13 @@ public struct EnderDragonFight: Sendable, Equatable {
     public var remainingGateways: Int
     /// True until the game first loads the End's central island and checks it. It then sets
     /// `dragonKilled` and `previouslyKilled` from what's there (an active exit portal, a living
-    /// dragon), so until then they aren't confirmed, and nobody has fought the dragon: the fight
-    /// happens on that island. A missing value means true, as the game reads it.
+    /// dragon), so until then they aren't confirmed either way: a world saved by an older version
+    /// may have killed the dragon and still be waiting for this check. A missing value means true,
+    /// as the game reads it.
     public var needsStateScanning: Bool
 
-    /// Whether the dragon has been defeated: a kill the game has confirmed.
+    /// Whether the game has confirmed a kill. False while `needsStateScanning` is true means the
+    /// fight's outcome is unknown, not that the dragon is alive.
     public var isDefeated: Bool { previouslyKilled && !needsStateScanning }
 }
 
@@ -138,7 +140,7 @@ extension World {
     }
 
     /// The Ender Dragon fight, from the End's `ender_dragon_fight.dat` (26.1+) or `level.dat`'s
-    /// `DragonFight` before; `nil` if nobody has been to the End.
+    /// `DragonFight` before; `nil` if the world has no record of the fight.
     public func enderDragonFight() throws -> EnderDragonFight? {
         var data: NBT?
         if let end = dimension("the_end") {

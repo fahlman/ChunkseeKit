@@ -82,4 +82,18 @@ import Testing
         let fight = try #require(try World(contentsOf: dir).enderDragonFight())
         #expect(fight.needsStateScanning && fight.previouslyKilled && !fight.isDefeated && fight.remainingGateways == 20)
     }
+
+    /// A world from before the game saved the check: its kill stays unconfirmed until the game
+    /// checks the End, which can confirm it from the exit portal.
+    @Test func anOldKillIsUnconfirmedUntilChecked() throws {
+        let dir = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
+            "LevelName": .string("Old"),
+            "DragonFight": .compound(["DragonKilled": .byte(1), "PreviouslyKilled": .byte(1), "Gateways": .list((0..<19).map { NBT.int(Int32($0)) })]),
+        ])]), to: dir.appendingPathComponent("level.dat"))
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("region"), withIntermediateDirectories: true)
+        let fight = try #require(try World(contentsOf: dir).enderDragonFight())
+        #expect(fight.needsStateScanning && fight.previouslyKilled && !fight.isDefeated && fight.remainingGateways == 19)
+    }
 }

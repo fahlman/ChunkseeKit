@@ -21,7 +21,7 @@ func summaryCommand(_ world: World) {
         }
         if let w = try? world.weather() { print("Weather:         \(w.isThundering ? "thunder" : w.isRaining ? "rain" : "clear")") }
         if let fight = try? world.enderDragonFight() {
-            let state = fight.needsStateScanning ? "not fought yet" : fight.isDefeated ? "defeated" : "not defeated"
+            let state = fight.needsStateScanning ? "not checked yet" : fight.isDefeated ? "defeated" : "not defeated"
             print("Ender Dragon:    \(state), \(fight.remainingGateways) of 20 gateways unopened")
         }
         if l.wasModded { print("Modded:          yes (\(l.serverBrands.joined(separator: ", ")))") }
