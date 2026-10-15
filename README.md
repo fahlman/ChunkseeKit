@@ -169,6 +169,7 @@ for item in contents.containers.flatMap(\.allItems) {
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     if let owner = creature.owner { print(creature.id, creature.customName ?? "", "tamed by", owner) }
+    if let health = creature.health { print(health / 2, "hearts") }
     if let villager = creature.villager {
         print(villager.profession ?? "?", villager.level ?? 0, villager.trades.map { "\($0.buy.count) \($0.buy.id) → \($0.sell.id)" })
         // Enchanted books for sale, e.g. ["minecraft:mending": 1].
@@ -176,6 +177,10 @@ for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     }
 }
 ```
+
+Creature health is the current value recorded when Minecraft saved the entity, in half-hearts.
+No species maximum is inferred. Older cached creatures without health still decode, with
+`health == nil`; rebuild those caches to obtain the saved value.
 
 ### Nether portals
 

@@ -34,6 +34,10 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`Creature.health` exposes saved current health in half-hearts, as `PlayerInfo.health` does. It is
+optional so callers and older cached creatures can omit it; those caches must be reread for the
+value to become available. The library does not infer a species maximum.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,

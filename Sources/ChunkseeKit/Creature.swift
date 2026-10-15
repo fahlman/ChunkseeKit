@@ -13,8 +13,10 @@ public struct Creature: Sendable, Equatable, Codable {
     /// The player who tamed it.
     public var owner: UUID?
     public var villager: Villager?
+    /// Saved current health in half-hearts; nil when unavailable, including older cached records.
+    public var health: Double?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -22,6 +24,7 @@ public struct Creature: Sendable, Equatable, Codable {
         self.customName = customName
         self.owner = owner
         self.villager = villager
+        self.health = health
     }
 
     /// Reads a living entity; `nil` for anything without health (items, minecarts, falling blocks).
@@ -32,7 +35,7 @@ public struct Creature: Sendable, Equatable, Codable {
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
                   // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
                   owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
-                  villager: Villager(nbt))
+                  villager: Villager(nbt), health: nbt["Health"]?.double)
     }
 
     /// Living mobs among an entity chunk's entities.

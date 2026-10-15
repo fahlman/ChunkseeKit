@@ -19,8 +19,20 @@ import Testing
         let contents = RegionContents(
             containers: [ItemContainer(kind: "minecraft:chest", x: 1, y: 2, z: 3, items: [item], customName: nil, isSealedLoot: false, isEntity: false)],
             signs: [Sign(kind: "minecraft:sign", x: 0, y: 64, z: 0, front: ["Hi", "", "", ""])],
-            namedCreatures: [Creature(id: "minecraft:wolf", x: 1.5, y: 64, z: 2.5, customName: "Summer", owner: UUID())])
+            namedCreatures: [Creature(id: "minecraft:wolf", x: 1.5, y: 64, z: 2.5, customName: "Summer", owner: UUID(), health: 7.5)])
         #expect(try roundTrip(contents))
         #expect(try roundTrip(PointOfInterest(type: "minecraft:home", x: 1, y: 2, z: 3, freeTickets: 0)))
+    }
+
+    @Test func cachedCreatureFromBeforeHealthStillDecodes() throws {
+        let owner = UUID()
+        let oldRecord: [String: Any] = [
+            "id": "minecraft:cat", "x": 1.0, "y": 64.0, "z": 2.0, "customName": "Mittens",
+            "owner": owner.uuidString,
+        ]
+        let bytes = try PropertyListSerialization.data(fromPropertyList: oldRecord, format: .binary, options: 0)
+        let creature = try PropertyListDecoder().decode(Creature.self, from: bytes)
+        #expect(creature.health == nil && creature.owner == owner && creature.customName == "Mittens")
+        #expect(creature.x == 1 && creature.y == 64 && creature.z == 2)
     }
 }
