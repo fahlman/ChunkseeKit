@@ -41,6 +41,12 @@ rather than report an incomplete total. Pet appearance/order/collar/equipment in
 also belongs here. All new stored fields are optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
+`PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details. Shared
+health arithmetic lives in `EntityHealth`; player maximum health includes applicable saved
+equipment modifiers and Health Boost. Item durability defaults are owned by `VanillaItemDurability`,
+checked against 26.3, with explicit overrides and unbreakable/removed components respected.
+`Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,

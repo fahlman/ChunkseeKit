@@ -75,17 +75,17 @@ public struct ItemStack: Sendable, Equatable, Codable {
         return result
     }
 
-    /// Saved wear for pet equipment. Wolf armor's vanilla maximum is implicit in item stacks;
-    /// other items need an explicit maximum component. Unbreakable equipment has no wear row.
+    /// Remaining durability from saved wear and an explicit or known vanilla maximum.
+    /// Unbreakable items and items without a damage component have no durability value.
     public var durability: ItemDurability? {
         guard components?["minecraft:unbreakable"] == nil, components?["Unbreakable"]?.int != 1,
-              components?["!minecraft:max_damage"] == nil else { return nil }
+              components?["!minecraft:max_damage"] == nil, components?["!minecraft:damage"] == nil else { return nil }
         let maximum: Int
         if let value = components?["minecraft:max_damage"] {
             guard let number = value.int else { return nil }
             maximum = number
-        } else if id == "minecraft:wolf_armor" {
-            maximum = 64
+        } else if let known = VanillaItemDurability.values[id] {
+            maximum = known
         } else { return nil }
         guard maximum > 0 else { return nil }
         let damageTag = components?["minecraft:damage"] ?? components?["Damage"]

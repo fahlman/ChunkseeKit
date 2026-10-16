@@ -26,8 +26,10 @@ public struct Creature: Sendable, Equatable, Codable {
     public var collarColor: String?
     /// Equipped items by slot. Nil when not applicable; empty when an equipment-bearing pet has none.
     public var equipment: [String: ItemStack]?
+    /// The individual entity's stable identity, retained across movement and shared positions.
+    public var uuid: UUID?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -41,6 +43,7 @@ public struct Creature: Sendable, Equatable, Codable {
         self.appearance = appearance
         self.collarColor = collarColor
         self.equipment = equipment
+        self.uuid = uuid
     }
 
     /// Reads a living entity; `nil` for anything without health (items, minecarts, falling blocks).
@@ -57,7 +60,12 @@ public struct Creature: Sendable, Equatable, Codable {
                   // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
                   owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
                   villager: Villager(nbt), health: nbt["Health"]?.double)
-        maxHealth = CreatureAttributes.maximumHealth(nbt, species: id, dataVersion: dataVersion)
+        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion)
+        uuid = nbt["UUID"]?.uuid ?? nbt["UUID"]?.string.flatMap(UUID.init(uuidString:))
+        if uuid == nil, case .long(let most)? = nbt["UUIDMost"], case .long(let least)? = nbt["UUIDLeast"] {
+            uuid = NBT.intArray([Int32(truncatingIfNeeded: most >> 32), Int32(truncatingIfNeeded: most),
+                                 Int32(truncatingIfNeeded: least >> 32), Int32(truncatingIfNeeded: least)]).uuid
+        }
         if owner != nil {
             sittingOrder = PetData.sittingOrder(nbt, species: id)
             appearance = PetData.appearance(nbt, species: id)
