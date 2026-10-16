@@ -21,7 +21,14 @@ public struct StatusEffect: Sendable, Equatable {
         } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
             id = "minecraft:" + Self.legacyIDs[number]
         } else { return nil }
-        let amplifier = nbt["amplifier"]?.int ?? nbt["Amplifier"]?.int ?? 0
+        let amplifier: Int
+        switch nbt["amplifier"] ?? nbt["Amplifier"] {
+        case .byte(let value)?: amplifier = Int(UInt8(bitPattern: value))
+        case nil: amplifier = 0
+        case let tag?:
+            guard let value = tag.int else { return nil }
+            amplifier = value
+        }
         guard (0...255).contains(amplifier),
               let duration = nbt["duration"]?.int ?? nbt["Duration"]?.int,
               duration == -1 || duration > 0 else { return nil }
@@ -50,7 +57,7 @@ extension PlayerInfo {
         return inventory.first { $0.slot == selectedSlot }
     }
 
-    /// Saved maximum health in half-hearts, including applicable equipment and Health Boost.
+    /// Saved maximum health in half-hearts, including permanent effects and applicable equipment.
     /// Unknown defaults or unsupported modifiers leave it unavailable.
     public var maxHealth: Double? { PlayerHealth.maximum(self) }
 }
@@ -60,15 +67,13 @@ private enum PlayerHealth {
         var modifiers: [NBT] = []
         let effects = player.activeEffects
         guard effects.allSatisfy({ $0.id.hasPrefix("minecraft:") }) else { return nil }
-        if let boost = effects.first(where: { $0.id == "minecraft:health_boost" }) {
-            modifiers.append(.compound(["id": .string("minecraft:effect.health_boost"),
-                "amount": .double(Double(boost.level) * 4), "operation": .string("add_value")]))
-        }
+        // Health Boost is already a permanent saved attribute modifier, including legacy UUIDs.
         var equipment = player.equipment
         equipment["mainhand"] = player.mainHandItem
         // The game's slot order also defines replacement when custom modifiers share an ID.
         for slot in ["mainhand", "offhand", "feet", "legs", "chest", "head", "body", "saddle"] {
             guard let item = equipment[slot], item.count > 0 else { continue }
+            if let durability = item.durability, durability.remaining == 0 { continue }
             guard let added = healthModifiers(item, slot: slot) else { return nil }
             modifiers += added
         }
@@ -89,7 +94,7 @@ private enum PlayerHealth {
             guard EntityHealth.healthNames.contains(name) else { return false }
             let group = entry["slot"]?.string ?? entry["Slot"]?.string ?? "any"
             return group == "any" || group == slot || (group == "hand" && ["mainhand", "offhand"].contains(slot))
-                || (group == "armor" && ["head", "chest", "legs", "feet"].contains(slot))
+                || (group == "armor" && ["head", "chest", "legs", "feet", "body"].contains(slot))
         }
     }
 }

@@ -263,8 +263,9 @@ for player in world.players() {                         // most recently saved f
 }
 ```
 
-Player maximum health uses the same attribute arithmetic as creatures, with equipped-item
-modifiers and vanilla Health Boost applied. Only the selected hotbar item (or explicit saved
+Player maximum health uses the same saved attribute arithmetic as creatures, including permanent
+Health Boost in modern and legacy saves. It is not reconstructed from the effect list. Equipped-item
+modifiers are added separately. Only the selected hotbar item (or explicit saved
 main hand) contributes main-hand modifiers; slot groups and duplicate modifier IDs are honored.
 The omitted vanilla player base is supplied only for verified 26.3/data-version-5023 saves.
 Unknown defaults, modifier operations or modded effect/item defaults leave the maximum nil.
@@ -273,8 +274,11 @@ and queued `hidden_effect` values. They describe the save and do not count down 
 
 `ItemStack.durability` now also knows the vanilla 26.3 defaults for armor, tools, weapons,
 elytra, shields and other damageable equipment. Explicit maximum components override those
-defaults; unbreakable and removed damage components suppress durability. Custom item IDs need
-an explicit maximum. Enchantments remain available through `ItemStack.enchantments`.
+defaults; unbreakable and removed damage components suppress durability. Before 1.13, top-level
+`Damage` is retained in the existing legacy components value, including when a `tag` is present;
+older serialized ItemStacks still decode, but caches must be reread for previously discarded wear.
+Custom item IDs need an explicit maximum and damage component. A maximum alone does not make an
+item damageable. Enchantments remain available through `ItemStack.enchantments`.
 
 `Creature.uuid` preserves current UUID arrays/strings and older UUIDMost/UUIDLeast pairs, so
 callers can distinguish co-located creatures and track a moving one. It defaults to nil for

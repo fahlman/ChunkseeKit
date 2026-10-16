@@ -15,7 +15,7 @@ public struct ItemStack: Sendable, Equatable, Codable {
     public var customName: String?
     /// Items stored inside this one: a shulker box's or bundle's contents.
     public var contents: [ItemStack]
-    /// The item's components (or legacy `tag`), for details this type doesn't model.
+    /// The item's components (or legacy `tag`, including normalized top-level `Damage`).
     public var components: NBT?
 
     public init(id: String, count: Int = 1, slot: Int? = nil, customName: String? = nil, contents: [ItemStack] = [], components: NBT? = nil) {
@@ -43,14 +43,14 @@ public struct ItemStack: Sendable, Equatable, Codable {
             }
             let bundle = (components["minecraft:bundle_contents"]?.list ?? []).compactMap(ItemStack.init)
             contents = shulker + bundle
-        } else if let tag = nbt["tag"] {
-            components = tag
-            customName = tag["display"]?["Name"].flatMap(TextComponent.plainText)
-            contents = (tag["BlockEntityTag"]?["Items"]?.list ?? []).compactMap(ItemStack.init)
         } else {
-            components = nil
-            customName = nil
-            contents = []
+            let tag = nbt["tag"]
+            var legacy = tag?.compound ?? [:]
+            // Before 1.13, Damage lived beside id/Count even when the item also had a tag.
+            if let damage = nbt["Damage"] { legacy["Damage"] = damage }
+            components = legacy.isEmpty ? tag : .compound(legacy)
+            customName = tag?["display"]?["Name"].flatMap(TextComponent.plainText)
+            contents = (tag?["BlockEntityTag"]?["Items"]?.list ?? []).compactMap(ItemStack.init)
         }
     }
 
@@ -76,7 +76,8 @@ public struct ItemStack: Sendable, Equatable, Codable {
     }
 
     /// Remaining durability from saved wear and an explicit or known vanilla maximum.
-    /// Unbreakable items and items without a damage component have no durability value.
+    /// Known undamaged vanilla items use their prototype's damage component/default maximum.
+    /// Removed damage components, unbreakable items and unknown damageability leave it nil.
     public var durability: ItemDurability? {
         guard components?["minecraft:unbreakable"] == nil, components?["Unbreakable"]?.int != 1,
               components?["!minecraft:max_damage"] == nil, components?["!minecraft:damage"] == nil else { return nil }
@@ -89,6 +90,7 @@ public struct ItemStack: Sendable, Equatable, Codable {
         } else { return nil }
         guard maximum > 0 else { return nil }
         let damageTag = components?["minecraft:damage"] ?? components?["Damage"]
+        guard VanillaItemDurability.values[id] != nil || damageTag != nil else { return nil }
         guard damageTag == nil || damageTag?.int != nil else { return nil }
         let damage = damageTag?.int ?? 0
         guard damage >= 0 else { return nil }
