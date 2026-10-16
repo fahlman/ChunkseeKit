@@ -1,6 +1,7 @@
 import Foundation
 
-/// Namespaced appearance IDs, independent of presentation or translation.
+/// Engine-normalized appearance keys, independent of presentation or translation.
+/// Wolf/cat variants are registry IDs; numeric variants/markings use documented symbolic keys.
 public struct CreatureAppearance: Sendable, Equatable, Codable {
     public var variant: String
     public var markings: String?
@@ -60,7 +61,8 @@ enum PetData {
     }
 
     static func equipment(_ nbt: NBT, species: String) -> [String: ItemStack]? {
-        let saddled = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse", "minecraft:zombie_horse", "minecraft:camel"]
+        let saddled = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse", "minecraft:zombie_horse", "minecraft:camel",
+                       "minecraft:camel_husk", "minecraft:nautilus", "minecraft:zombie_nautilus"]
         let llama = ["minecraft:llama", "minecraft:trader_llama"].contains(species)
         let carriesChest = llama || ["minecraft:donkey", "minecraft:mule"].contains(species)
         let applicable = species == "minecraft:wolf" || llama || saddled.contains(species)

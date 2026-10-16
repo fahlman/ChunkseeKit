@@ -4,10 +4,10 @@ enum EntityHealth {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
     static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?) -> Double? {
-        // Minecraft saves permanent attribute modifiers. Effects and custom equipment can add
-        // transient ones on loading; omit the maximum rather than present a partial total.
+        // Effects are permanent saved modifiers. Custom equipment can add unsaved modifiers;
+        // leave those creature totals unavailable rather than report a partial value.
         guard !hasTransientHealthModifier(nbt) else { return nil }
-        return value(nbt, defaultBase: defaultMaximum(nbt, species: species, dataVersion: dataVersion))
+        return value(nbt, defaultBase: defaultMaximum(species: species, dataVersion: dataVersion))
     }
 
     static func value(_ nbt: NBT, defaultBase: Double?, additionalModifiers: [NBT] = []) -> Double? {
@@ -21,7 +21,7 @@ enum EntityHealth {
         else { return nil }
         guard base.isFinite else { return nil }
         var modifiers = attribute?["modifiers"]?.list ?? attribute?["Modifiers"]?.list ?? []
-        // Transient modifiers replace permanent ones with the same identity on loading.
+        // Equipped-item modifiers replace a saved modifier with the same identity.
         for modifier in additionalModifiers {
             if let id = modifierID(modifier), let index = modifiers.firstIndex(where: { modifierID($0) == id }) {
                 modifiers[index] = modifier
@@ -41,7 +41,7 @@ enum EntityHealth {
         // MAX_HEALTH is a ranged attribute, clamped to 1...1024 in Java Edition.
         let result = (base + added) * (1 + multipliedBase) * multipliedTotal
         guard result.isFinite else { return nil }
-        return min(1024, max(1, result))
+        return Double(Float(min(1024, max(1, result))))
     }
 
     private static func modifierID(_ nbt: NBT) -> String? {
@@ -51,23 +51,22 @@ enum EntityHealth {
         return nil
     }
 
-    private static func defaultMaximum(_ nbt: NBT, species: String, dataVersion: Int?) -> Double? {
+    private static func defaultMaximum(species: String, dataVersion: Int?) -> Double? {
         guard dataVersion == 5023 else { return nil }
         switch species {
         case "minecraft:cat": return 10
         case "minecraft:parrot": return 6
-        case "minecraft:wolf": return nbt["Owner"] != nil || nbt["OwnerUUID"] != nil ? 40 : 8
+        case "minecraft:wolf": return 8
         case "minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:llama", "minecraft:trader_llama": return 53
         case "minecraft:skeleton_horse": return 15
         case "minecraft:zombie_horse": return 25
-        case "minecraft:camel": return 32
+        case "minecraft:camel", "minecraft:camel_husk": return 32
+        case "minecraft:nautilus", "minecraft:zombie_nautilus": return 15
         default: return nil
         }
     }
 
     private static func hasTransientHealthModifier(_ nbt: NBT) -> Bool {
-        let effects = nbt["active_effects"]?.list ?? nbt["ActiveEffects"]?.list ?? []
-        if effects.contains(where: { $0["id"]?.string == "minecraft:health_boost" || $0["Id"]?.int == 21 }) { return true }
         let equipped = Array((nbt["equipment"]?.compound ?? [:]).values)
             + ["body_armor_item", "ArmorItem", "SaddleItem", "DecorItem"].compactMap { nbt[$0] }
         return equipped.compactMap(ItemStack.init).contains { item in
