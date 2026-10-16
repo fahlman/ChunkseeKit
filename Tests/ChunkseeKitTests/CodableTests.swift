@@ -36,5 +36,6 @@ import Testing
         #expect(creature.x == 1 && creature.y == 64 && creature.z == 2)
         #expect(creature.maxHealth == nil && creature.sittingOrder == nil && creature.appearance == nil)
         #expect(creature.collarColor == nil && creature.equipment == nil)
+        #expect(creature.uuid == nil)
     }
 }

@@ -251,6 +251,10 @@ for player in world.players() {                         // most recently saved f
     print(player.uuid, player.position?.dimension ?? "?", player.position?.x ?? 0, player.position?.z ?? 0)
     print("  died at", player.lastDeath as Any, "respawns at", player.respawn as Any)
     print("  ", player.gameMode as Any, player.health ?? 0, player.foodLevel ?? 0, player.experienceLevel ?? 0)
+    print("  maximum health", player.maxHealth as Any)  // half-hearts; nil if unavailable
+    for effect in player.activeEffects {
+        print(effect.id, effect.level, effect.durationTicks) // ticks at save time; -1 is infinite
+    }
     if player.isFromBukkitServer { print("  locations may be in another world:", player.bukkitWorldName ?? "?") }
     let stats = try world.statistics(for: player.uuid)            // statistics(forName:) for files from before 1.7.6
     print("  played", (stats?.playTime ?? 0) / 72_000, "hours, mined", stats?.value("minecraft:stone", in: "minecraft:mined") ?? 0, "stone")
@@ -258,6 +262,27 @@ for player in world.players() {                         // most recently saved f
     print("  ", advancements.filter { $0.isDone && !$0.isRecipe }.count, "advancements")
 }
 ```
+
+Player maximum health uses the same saved attribute arithmetic as creatures, including permanent
+Health Boost in modern and legacy saves. It is not reconstructed from the effect list. Equipped-item
+modifiers are added separately. Only the selected hotbar item (or explicit saved
+main hand) contributes main-hand modifiers; slot groups and duplicate modifier IDs are honored.
+The omitted vanilla player base is supplied only for verified 26.3/data-version-5023 saves.
+Unknown defaults, modifier operations or modded effect/item defaults leave the maximum nil.
+Active effects read modern names and legacy numeric IDs, omitting expired/malformed entries
+and queued `hidden_effect` values. They describe the save and do not count down in real time.
+
+`ItemStack.durability` now also knows the vanilla 26.3 defaults for armor, tools, weapons,
+elytra, shields and other damageable equipment. Explicit maximum components override those
+defaults; unbreakable and removed damage components suppress durability. Before 1.13, top-level
+`Damage` is retained in the existing legacy components value, including when a `tag` is present;
+older serialized ItemStacks still decode, but caches must be reread for previously discarded wear.
+Custom item IDs need an explicit maximum and damage component. A maximum alone does not make an
+item damageable. Enchantments remain available through `ItemStack.enchantments`.
+
+`Creature.uuid` preserves current UUID arrays/strings and older UUIDMost/UUIDLeast pairs, so
+callers can distinguish co-located creatures and track a moving one. It defaults to nil for
+older cached creatures; rebuild caches before relying on the identity.
 
 ### Maps made in the game
 
