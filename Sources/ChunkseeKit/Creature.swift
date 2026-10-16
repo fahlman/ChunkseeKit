@@ -15,8 +15,19 @@ public struct Creature: Sendable, Equatable, Codable {
     public var villager: Villager?
     /// Saved current health in half-hearts; nil when unavailable, including older cached records.
     public var health: Double?
+    /// Maximum health in half-hearts, from saved attributes or a verified version's defaults.
+    /// Nil if missing/unsupported, including transient health modifiers not in the attribute list.
+    public var maxHealth: Double?
+    /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
+    public var sittingOrder: Bool?
+    /// The saved coat/color variant and, for horses, markings. Only populated for pets.
+    public var appearance: CreatureAppearance?
+    /// A dye name such as `orange`, for pet wolves and cats.
+    public var collarColor: String?
+    /// Equipped items by slot. Nil when not applicable; empty when an equipment-bearing pet has none.
+    public var equipment: [String: ItemStack]?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -25,10 +36,20 @@ public struct Creature: Sendable, Equatable, Codable {
         self.owner = owner
         self.villager = villager
         self.health = health
+        self.maxHealth = maxHealth
+        self.sittingOrder = sittingOrder
+        self.appearance = appearance
+        self.collarColor = collarColor
+        self.equipment = equipment
     }
 
     /// Reads a living entity; `nil` for anything without health (items, minecarts, falling blocks).
     public init?(_ nbt: NBT) {
+        self.init(nbt, dataVersion: nil)
+    }
+
+    /// The chunk's saved version permits defaults that Minecraft omits from its attributes.
+    public init?(_ nbt: NBT, dataVersion: Int?) {
         guard let id = nbt["id"]?.string, nbt["Health"] != nil,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
@@ -36,11 +57,18 @@ public struct Creature: Sendable, Equatable, Codable {
                   // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
                   owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
                   villager: Villager(nbt), health: nbt["Health"]?.double)
+        maxHealth = CreatureAttributes.maximumHealth(nbt, species: id, dataVersion: dataVersion)
+        if owner != nil {
+            sittingOrder = PetData.sittingOrder(nbt, species: id)
+            appearance = PetData.appearance(nbt, species: id)
+            collarColor = PetData.collarColor(nbt, species: id)
+            equipment = PetData.equipment(nbt, species: id)
+        }
     }
 
     /// Living mobs among an entity chunk's entities.
     public static func creatures(inEntityChunk nbt: NBT) -> [Creature] {
-        (nbt["Entities"]?.list ?? []).compactMap(Creature.init)
+        (nbt["Entities"]?.list ?? []).compactMap { Creature($0, dataVersion: nbt["DataVersion"]?.int) }
     }
 }
 

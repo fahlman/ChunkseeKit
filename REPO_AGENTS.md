@@ -34,9 +34,12 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
-`Creature.health` exposes saved current health in half-hearts, as `PlayerInfo.health` does. It is
-optional so callers and older cached creatures can omit it; those caches must be reread for the
-value to become available. The library does not infer a species maximum.
+`Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
+permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
+Health-boost effects and equipment that changes maximum health leave the maximum unavailable
+rather than report an incomplete total. Pet appearance/order/collar/equipment interpretation
+also belongs here. All new stored fields are optional, so older cached creatures still decode
+but must be reread for the values. See README for format coverage and availability.
 
 ## Format sources
 

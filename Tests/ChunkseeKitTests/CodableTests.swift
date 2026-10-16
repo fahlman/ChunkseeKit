@@ -34,5 +34,7 @@ import Testing
         let creature = try PropertyListDecoder().decode(Creature.self, from: bytes)
         #expect(creature.health == nil && creature.owner == owner && creature.customName == "Mittens")
         #expect(creature.x == 1 && creature.y == 64 && creature.z == 2)
+        #expect(creature.maxHealth == nil && creature.sittingOrder == nil && creature.appearance == nil)
+        #expect(creature.collarColor == nil && creature.equipment == nil)
     }
 }
