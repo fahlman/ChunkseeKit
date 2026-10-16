@@ -93,12 +93,42 @@ import Testing
     @Test func unknownOrTransientMaximumIsNotInvented() throws {
         let unknown = try pet("cat", ["attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .string("unknown")])])])
         #expect(unknown.maxHealth == nil)
-        let effect = try pet("cat", ["active_effects": .list([.compound(["id": .string("minecraft:health_boost"), "amplifier": .byte(1)])])])
-        #expect(effect.maxHealth == nil)
         let gear = try pet("wolf", ["equipment": .compound(["body": item("wolf_armor", ["minecraft:attribute_modifiers": .list([
             .compound(["type": .string("minecraft:max_health"), "amount": .double(10), "operation": .string("add_value")]),
         ])])])])
         #expect(gear.maxHealth == nil)
+    }
+
+    @Test func savedHealthBoostModifierIsIncludedOnce() throws {
+        let cat = try pet("cat", [
+            "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(10), "modifiers": .list([
+                .compound(["id": .string("minecraft:effect.health_boost"), "amount": .double(4), "operation": .string("add_value")]),
+            ])])]),
+            "active_effects": .list([.compound(["id": .string("minecraft:health_boost"), "amplifier": .byte(0), "duration": .int(1200)])]),
+        ])
+        #expect(cat.maxHealth == 14)
+    }
+
+    @Test(arguments: [("wolf", 8.0), ("horse", 53), ("donkey", 53), ("mule", 53), ("llama", 53),
+                      ("trader_llama", 53), ("skeleton_horse", 15), ("zombie_horse", 25), ("camel", 32),
+                      ("camel_husk", 32), ("nautilus", 15), ("zombie_nautilus", 15)])
+    func omittedMaximumUsesTheLoadedSpeciesDefault(species: String, maximum: Double) throws {
+        #expect(try pet(species).maxHealth == maximum)
+    }
+
+    @Test func nautilusAndCamelHuskHaveApplicableSaddleAndArmorRows() throws {
+        for species in ["nautilus", "zombie_nautilus", "camel_husk"] {
+            let creature = try pet(species, ["equipment": .compound(["saddle": item("saddle"), "body": item("diamond_nautilus_armor")])])
+            #expect(creature.equipment?.count == 2 && creature.sittingOrder == nil && creature.collarColor == nil)
+            #expect(try pet(species).equipment?.isEmpty == true)
+        }
+    }
+
+    @Test func maximumUsesTheSameFloatPrecisionAsSavedCurrentHealth() throws {
+        let base = 25.786716356710073
+        let horse = try pet("horse", ["Health": .float(Float(base)),
+            "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(base)])])])
+        #expect(horse.maxHealth == horse.health)
     }
 
     @Test func invalidAppearanceCollarAndOrderAreOmittedAndWildAnimalsHaveNoPetRows() throws {

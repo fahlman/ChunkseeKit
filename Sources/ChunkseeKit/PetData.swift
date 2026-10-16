@@ -1,6 +1,7 @@
 import Foundation
 
-/// Namespaced appearance IDs, independent of presentation or translation.
+/// Engine-normalized appearance keys, independent of presentation or translation.
+/// Wolf/cat variants are registry IDs; numeric variants/markings use documented symbolic keys.
 public struct CreatureAppearance: Sendable, Equatable, Codable {
     public var variant: String
     public var markings: String?
@@ -15,8 +16,8 @@ enum CreatureAttributes {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
     static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?) -> Double? {
-        // Minecraft saves permanent attribute modifiers. Effects and custom equipment can add
-        // transient ones on loading; omit the maximum rather than present a partial total.
+        // Effect modifiers, including Health Boost, are saved permanently with the attribute.
+        // Custom equipment can add unsaved modifiers; omit that incomplete equipment total.
         guard !hasTransientHealthModifier(nbt) else { return nil }
         let attributes = nbt["attributes"]?.list ?? nbt["Attributes"]?.list ?? []
         guard let attribute = attributes.first(where: { healthNames.contains($0["id"]?.string ?? $0["Name"]?.string ?? "") }) else {
@@ -26,11 +27,13 @@ enum CreatureAttributes {
             switch species {
             case "minecraft:cat": return 10
             case "minecraft:parrot": return 6
-            case "minecraft:wolf": return nbt["Owner"] != nil || nbt["OwnerUUID"] != nil ? 40 : 8
+            // Loading an owner does not replay taming's base-health change to 40.
+            case "minecraft:wolf": return 8
             case "minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:llama", "minecraft:trader_llama": return 53
             case "minecraft:skeleton_horse": return 15
             case "minecraft:zombie_horse": return 25
-            case "minecraft:camel": return 32
+            case "minecraft:camel", "minecraft:camel_husk": return 32
+            case "minecraft:nautilus", "minecraft:zombie_nautilus": return 15
             default: return nil
             }
         }
@@ -49,12 +52,11 @@ enum CreatureAttributes {
         // MAX_HEALTH is a ranged attribute, clamped to 1...1024 in Java Edition.
         let result = (base + added) * (1 + multipliedBase) * multipliedTotal
         guard result.isFinite else { return nil }
-        return min(1024, max(1, result))
+        // LivingEntity.getMaxHealth() returns float, like the saved Health value.
+        return Double(Float(min(1024, max(1, result))))
     }
 
     private static func hasTransientHealthModifier(_ nbt: NBT) -> Bool {
-        let effects = nbt["active_effects"]?.list ?? nbt["ActiveEffects"]?.list ?? []
-        if effects.contains(where: { $0["id"]?.string == "minecraft:health_boost" || $0["Id"]?.int == 21 }) { return true }
         let equipped = Array((nbt["equipment"]?.compound ?? [:]).values)
             + ["body_armor_item", "ArmorItem", "SaddleItem", "DecorItem"].compactMap { nbt[$0] }
         return equipped.compactMap(ItemStack.init).contains { item in
@@ -114,7 +116,8 @@ enum PetData {
     }
 
     static func equipment(_ nbt: NBT, species: String) -> [String: ItemStack]? {
-        let saddled = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse", "minecraft:zombie_horse", "minecraft:camel"]
+        let saddled = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse", "minecraft:zombie_horse", "minecraft:camel",
+                       "minecraft:camel_husk", "minecraft:nautilus", "minecraft:zombie_nautilus"]
         let llama = ["minecraft:llama", "minecraft:trader_llama"].contains(species)
         let carriesChest = llama || ["minecraft:donkey", "minecraft:mule"].contains(species)
         let applicable = species == "minecraft:wolf" || llama || saddled.contains(species)

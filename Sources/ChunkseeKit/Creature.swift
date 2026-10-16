@@ -16,7 +16,7 @@ public struct Creature: Sendable, Equatable, Codable {
     /// Saved current health in half-hearts; nil when unavailable, including older cached records.
     public var health: Double?
     /// Maximum health in half-hearts, from saved attributes or a verified version's defaults.
-    /// Nil if missing/unsupported, including transient health modifiers not in the attribute list.
+    /// Saved effect modifiers are included; unsupported transient equipment modifiers leave it nil.
     public var maxHealth: Double?
     /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
     public var sittingOrder: Bool?
@@ -24,7 +24,8 @@ public struct Creature: Sendable, Equatable, Codable {
     public var appearance: CreatureAppearance?
     /// A dye name such as `orange`, for pet wolves and cats.
     public var collarColor: String?
-    /// Equipped items by slot. Nil when not applicable; empty when an equipment-bearing pet has none.
+    /// Equipped items by slot; the derived `storage` key represents an attached chest.
+    /// Nil when not applicable; empty when an equipment-bearing pet has none.
     public var equipment: [String: ItemStack]?
 
     public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil) {
