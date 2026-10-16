@@ -34,6 +34,14 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
+permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
+Health Boost is included once through the permanent saved attribute modifiers. Custom equipment
+that changes maximum health leaves the maximum unavailable rather than report an incomplete
+total. Maximums use the game's Float precision. Pet appearance/order/collar/equipment interpretation
+also belongs here. All new stored fields are optional, so older cached creatures still decode
+but must be reread for the values. See README for format coverage and availability.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,

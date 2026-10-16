@@ -169,6 +169,7 @@ for item in contents.containers.flatMap(\.allItems) {
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     if let owner = creature.owner { print(creature.id, creature.customName ?? "", "tamed by", owner) }
+    if let health = creature.health { print(health / 2, "hearts") }
     if let villager = creature.villager {
         print(villager.profession ?? "?", villager.level ?? 0, villager.trades.map { "\($0.buy.count) \($0.buy.id) → \($0.sell.id)" })
         // Enchanted books for sale, e.g. ["minecraft:mending": 1].
@@ -176,6 +177,35 @@ for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     }
 }
 ```
+
+Creature `health` and `maxHealth` use half-hearts. Maximum health comes from the saved attribute
+and its permanent modifiers, including the legacy `Attributes` format. For 26.3 entity chunks
+(data version 5023), known pet defaults fill an omitted attribute; these were checked against
+the vanilla client, including a real cat whose saved attributes omit its default maximum.
+Other versions need an explicit maximum attribute. Health Boost is already a permanent saved
+attribute modifier and is counted once from that list. Custom equipment that modifies maximum
+health makes `maxHealth` unavailable because its transient modifiers are not saved there.
+The result uses Minecraft's Float precision. No maximum is guessed from current health.
+
+Owned pets also expose `sittingOrder` (wolves/cats/parrots), `appearance` (wolf/cat coat,
+parrot color, horse coat and markings, llama color), `collarColor` (wolves/cats), and `equipment`
+by slot. An empty equipment dictionary means a pet that can wear equipment has none; nil means
+not applicable or unavailable. Equipment reads current slots and older body armor, horse
+armor/saddle, llama decor and attached chest fields. Item `durability` uses saved damage and
+maximum components; vanilla wolf armor has an implicit maximum of 64. Unbreakable equipment
+has no durability value. These are saved values, not live pose or following behavior.
+
+`CreatureAppearance` normalizes numeric appearance values into symbolic keys with a `minecraft:`
+prefix: parrot colors, horse coats/markings and llama colors. These are engine keys, not registry
+IDs saved by Minecraft; wolf and cat variants retain their actual registry IDs. Equipment uses
+the game's slot names (including `body` and `saddle`). The additional `storage` key is a derived
+indicator for an attached chest (`ChestedHorse`), represented by a chest item; it is not an
+equipped slot or a replacement for the animal's carried inventory. Equipment/default health also
+cover the nautilus, zombie nautilus and camel husk in 26.3.
+
+All new stored fields are optional so old cached creatures still decode. Rebuild those caches
+to obtain the new values. `Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
+callers decoding a single entity may use `Creature(entity, dataVersion: chunkVersion)`.
 
 ### Nether portals
 

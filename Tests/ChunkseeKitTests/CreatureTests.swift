@@ -26,6 +26,7 @@ import Testing
         ])])
         let creatures = Creature.creatures(inEntityChunk: chunk)
         #expect(creatures.map(\.id) == ["minecraft:wolf", "minecraft:cat", "minecraft:villager", "minecraft:sheep"])
+        #expect(creatures.map(\.health) == [8, 10, 20, 8])
         #expect(creatures[0].customName == "Summer: [❤❤]" && creatures[0].owner == owner)
         #expect(creatures[1].owner == owner && creatures[1].customName == nil)
         let villager = try #require(creatures[2].villager)
@@ -34,5 +35,22 @@ import Testing
         #expect(villager.trades.first?.isSoldOut == true)
         #expect(creatures[3].customName == nil)   // only formatting codes
         #expect(creatures[0].villager == nil)
+    }
+
+    @Test(arguments: [(NBT.float(7.5), 7.5), (.double(12.25), 12.25), (.short(20), 20), (.float(0), 0)])
+    func savedHealthKeepsFractionalZeroAndOlderNumericValues(tag: NBT, expected: Double) throws {
+        let creature = try #require(Creature(.compound([
+            "id": .string("minecraft:wolf"), "Health": tag, "Pos": pos(1, 64, 2), "Owner": ownerInts(),
+        ])))
+        #expect(creature.health == expected && creature.owner == owner)
+    }
+
+    @Test func unavailableHealthIsNotInvented() throws {
+        #expect(Creature(id: "minecraft:cat", x: 0, y: 64, z: 0).health == nil)
+        let creature = try #require(Creature(.compound([
+            "id": .string("minecraft:cat"), "Health": .string("unknown"), "Pos": pos(0, 64, 0),
+        ])))
+        #expect(creature.health == nil)
+        #expect(Creature(.compound(["id": .string("minecraft:item"), "Pos": pos(0, 64, 0)])) == nil)
     }
 }

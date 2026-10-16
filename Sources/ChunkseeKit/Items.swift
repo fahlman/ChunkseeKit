@@ -75,11 +75,42 @@ public struct ItemStack: Sendable, Equatable, Codable {
         return result
     }
 
+    /// Saved wear for pet equipment. Wolf armor's vanilla maximum is implicit in item stacks;
+    /// other items need an explicit maximum component. Unbreakable equipment has no wear row.
+    public var durability: ItemDurability? {
+        guard components?["minecraft:unbreakable"] == nil, components?["Unbreakable"]?.int != 1,
+              components?["!minecraft:max_damage"] == nil else { return nil }
+        let maximum: Int
+        if let value = components?["minecraft:max_damage"] {
+            guard let number = value.int else { return nil }
+            maximum = number
+        } else if id == "minecraft:wolf_armor" {
+            maximum = 64
+        } else { return nil }
+        guard maximum > 0 else { return nil }
+        let damageTag = components?["minecraft:damage"] ?? components?["Damage"]
+        guard damageTag == nil || damageTag?.int != nil else { return nil }
+        let damage = damageTag?.int ?? 0
+        guard damage >= 0 else { return nil }
+        return ItemDurability(remaining: max(0, maximum - min(damage, maximum)), maximum: maximum)
+    }
+
     /// This stack and everything nested inside it.
     public var allItems: [ItemStack] { [self] + contents.flatMap(\.allItems) }
 
     /// Reads a list of items, skipping empty slots.
     public static func list(_ nbt: NBT?) -> [ItemStack] { (nbt?.list ?? []).compactMap(ItemStack.init) }
+}
+
+/// Durability points, not health points or hearts.
+public struct ItemDurability: Sendable, Equatable {
+    public var remaining: Int
+    public var maximum: Int
+
+    public init(remaining: Int, maximum: Int) {
+        self.remaining = remaining
+        self.maximum = maximum
+    }
 }
 
 /// Something that holds items at a place in the world: a chest, barrel, hopper, furnace, chest
