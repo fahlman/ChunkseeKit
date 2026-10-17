@@ -101,7 +101,8 @@ import Testing
             }
         }
         entities += [
-            container("minecraft:donkey", at: [.double(1), .string("unreadable"), .double(2), .double(3)]),
+            container("minecraft:donkey", at: [.string("x"), .string("y"), .string("z")]),
+            container("minecraft:donkey", at: [.double(1), .double(2), .double(3), .double(4)]),
             container("minecraft:donkey", at: [.double(-0.1), .double(63.9), .double(-16.1)]),
             container("minecraft:chest_minecart", at: [.double(2.2), .double(-0.1), .double(3.4)]),
         ]
