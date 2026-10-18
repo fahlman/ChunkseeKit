@@ -48,6 +48,12 @@ equipment modifiers and Health Boost. Item durability defaults are owned by `Van
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
 `Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
 
+`SavedDate` owns Mojang's saved timestamp grammar for UserCache and AdvancementProgress. Its
+private DateFormatter is fully configured once and never mutated by readers. Apple documents
+modern DateFormatter as thread safe on 64-bit macOS, covering this Mac-only macOS 27 target:
+https://developer.apple.com/documentation/foundation/dateformatter. No custom unchecked-concurrency
+annotation or additional lock is used.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
