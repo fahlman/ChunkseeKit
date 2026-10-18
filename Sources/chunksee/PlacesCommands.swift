@@ -47,7 +47,7 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
 func creaturesCommand(_ world: World, _ arguments: Arguments) {
         let dim = arguments.dimension(1, in: world)
         var kinds: [String: Int] = [:]
-        for (rx, rz, _) in dim.regionFiles() {
+        for (rx, rz, _) in dim.regionFiles(.entities) {
             for creature in (try? dim.creatures(regionX: rx, regionZ: rz)) ?? [] {
                 kinds[creature.id, default: 0] += 1
                 guard creature.customName != nil || creature.owner != nil else { continue }
