@@ -18,8 +18,8 @@ extension Dimension {
     /// missing or unreadable.
     public func inhabitedTimes(regionX: Int, regionZ: Int) throws -> [Int] {
         var times = [Int](repeating: 0, count: 1024)
-        for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForInhabitedTime) {
-            times[chunk.localZ * 32 + chunk.localX] = Chunk.inhabitedTime(in: chunk.nbt) ?? 0
+        try forEachChunk(regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForInhabitedTime) { x, z, nbt in
+            times[z * 32 + x] = Chunk.inhabitedTime(in: nbt) ?? 0
         }
         return times
     }
