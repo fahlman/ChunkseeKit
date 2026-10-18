@@ -9,12 +9,12 @@ import Testing
     }
 
     @Test func defaultsApplyOnlyToTheVerifiedSpeciesAndReleaseVersions() {
-        for version in [4786, 4903, 5023] {
+        for version in [4786, 4788, 4790, 4903, 5023] {
             for (species, maximum) in [("cat", 10.0), ("parrot", 6.0), ("wolf", 8.0)] {
                 #expect(Creature(entity(species), dataVersion: version)?.maxHealth == maximum)
             }
         }
-        let unverified: [Int?] = [nil, 4785, 4787, 4902, 4904, 5022, 5024, 9999]
+        let unverified: [Int?] = [nil, 4785, 4787, 4789, 4791, 4902, 4904, 5022, 5024, 9999]
         for version in unverified {
             for species in ["cat", "parrot", "wolf"] {
                 #expect(Creature(entity(species), dataVersion: version)?.maxHealth == nil)
@@ -34,7 +34,7 @@ import Testing
             .compound(["id": .string("test:base"), "amount": .double(0.5), "operation": .string("add_multiplied_base")]),
             .compound(["id": .string("test:total"), "amount": .double(1), "operation": .string("add_multiplied_total")]),
         ])])
-        for version in [4786, 4903, 5023] {
+        for version in [4786, 4788, 4790, 4903, 5023] {
             let wild = entity("wolf", fields: ["attributes": .list([attribute])])
             #expect(Creature(wild, dataVersion: version)?.maxHealth == 36) // (8 + 4) * 1.5 * 2
             let owner = NBT.intArray([1, 2, 3, 4])
@@ -51,7 +51,8 @@ import Testing
         #expect(Creature(explicit, dataVersion: 9999)?.maxHealth == 40)
     }
 
-    @Test func perChunkCreatureReadPreservesVersionAndNegativeCoordinates() throws {
+    @Test(arguments: [4786, 4788, 4790, 4903, 5023])
+    func perChunkCreatureReadPreservesVersionAndNegativeCoordinates(_ version: Int) throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
@@ -59,7 +60,7 @@ import Testing
         ])]), to: dir.appendingPathComponent("level.dat"))
         try FileManager.default.createDirectory(at: dir.appendingPathComponent("region"), withIntermediateDirectories: true)
         let old = NBT.compound(["DataVersion": .int(4787), "Entities": .list([entity("cat")])])
-        let verified = NBT.compound(["DataVersion": .int(4786), "Entities": .list([
+        let verified = NBT.compound(["DataVersion": .int(Int32(version)), "Entities": .list([
             entity("cat"), entity("parrot"), entity("wolf"),
             .compound(["id": .string("minecraft:item"), "Pos": .list([.double(0), .double(64), .double(0)])]),
         ])])
