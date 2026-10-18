@@ -18,6 +18,7 @@ public struct LevelInfo: Sendable {
     public let allowCommands: Bool?
     /// The singleplayer player's UUID; their data is in the players folder (26.1+).
     public let singleplayerUUID: UUID?
+    /// World spawn fields are available together, from a complete modern location or legacy XYZ.
     public let spawnDimension: String?
     public let spawnPosition: (x: Int, y: Int, z: Int)?
     public let enabledFeatures: [String]
@@ -55,8 +56,9 @@ public struct LevelInfo: Sendable {
         singleplayerUUID = data["singleplayer_uuid"]?.uuid ?? data["Player"]?["UUID"]?.uuid
 
         if let spawn = data["spawn"] {
-            spawnDimension = spawn["dimension"]?.string
-            spawnPosition = spawn["pos"]?.intArray.flatMap { $0.count == 3 ? (Int($0[0]), Int($0[1]), Int($0[2])) : nil }
+            let location = SavedBlockLocation(spawn)
+            spawnDimension = location?.dimension
+            spawnPosition = location?.position
         } else if let x = data["SpawnX"]?.int, let y = data["SpawnY"]?.int, let z = data["SpawnZ"]?.int {
             spawnDimension = "minecraft:overworld"
             spawnPosition = (x, y, z)

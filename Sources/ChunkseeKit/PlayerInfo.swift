@@ -50,7 +50,7 @@ public struct PlayerInfo: Sendable {
         self.lastSaved = lastSaved
         dataVersion = nbt["DataVersion"]?.int
 
-        let dimension = Self.dimensionID(nbt["Dimension"])
+        let dimension = nbt["Dimension"]?.dimensionID
         if let dimension, let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 {
             position = Location(dimension: dimension, x: pos[0], y: pos[1], z: pos[2])
         } else {
@@ -63,7 +63,7 @@ public struct PlayerInfo: Sendable {
         if let respawn = Self.location(nbt["respawn"]) {
             self.respawn = respawn
         } else if let x = nbt["SpawnX"]?.int, let y = nbt["SpawnY"]?.int, let z = nbt["SpawnZ"]?.int {
-            let dimension = Self.dimensionID(nbt["SpawnDimension"]) ?? "minecraft:overworld"
+            let dimension = nbt["SpawnDimension"]?.dimensionID ?? "minecraft:overworld"
             respawn = Location(dimension: dimension, x: Double(x), y: Double(y), z: Double(z))
         } else {
             respawn = nil
@@ -75,21 +75,9 @@ public struct PlayerInfo: Sendable {
 
     /// `{dimension: "…", pos: [I; x, y, z]}`, as used by `LastDeathLocation` and `respawn`.
     static func location(_ nbt: NBT?) -> Location? {
-        guard let nbt, let dimension = nbt["dimension"]?.string,
-              let pos = nbt["pos"]?.intArray, pos.count == 3 else { return nil }
-        return Location(dimension: dimension, x: Double(pos[0]), y: Double(pos[1]), z: Double(pos[2]))
-    }
-
-    /// Maps a dimension tag to a namespaced ID: strings as-is, and the pre-1.16 integers
-    /// 0, -1 and 1 to the Overworld, the Nether and the End. Other integers aren't guessed.
-    static func dimensionID(_ nbt: NBT?) -> String? {
-        if let id = nbt?.string { return id.contains(":") ? id : "minecraft:" + id }
-        switch nbt?.int {
-        case 0: return "minecraft:overworld"
-        case -1: return "minecraft:the_nether"
-        case 1: return "minecraft:the_end"
-        default: return nil
-        }
+        guard let location = SavedBlockLocation(nbt) else { return nil }
+        return Location(dimension: location.dimension, x: Double(location.position.x),
+                        y: Double(location.position.y), z: Double(location.position.z))
     }
 
     private static func describe(_ nbt: NBT) -> String {

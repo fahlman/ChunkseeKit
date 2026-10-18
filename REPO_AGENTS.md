@@ -48,6 +48,11 @@ equipment modifiers and Health Boost. Item durability defaults are owned by `Van
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
 `Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
 
+Modern world spawn and player death/respawn share `SavedBlockLocation`'s paired string-dimension
+and integer-array position reader. World-spawn fields become available together; a partial modern
+record never gains an inferred Overworld dimension. The existing dimension-tag normalization is
+shared by player/map locations through an internal NBT accessor; legacy XYZ/number rules stay intact.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,

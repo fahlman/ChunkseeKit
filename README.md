@@ -263,6 +263,14 @@ for player in world.players() {                         // most recently saved f
 }
 ```
 
+Modern world spawn, player death and player respawn share the `{dimension, pos: [I; x, y, z]}`
+reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
+`spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.
+Bare dimension strings use the `minecraft:` namespace, as player/map dimensions already do;
+custom qualified IDs stay intact. The reader does not validate world membership or identifier
+syntax. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
+fallback remains.
+
 Player maximum health uses the same saved attribute arithmetic as creatures, including permanent
 Health Boost in modern and legacy saves. It is not reconstructed from the effect list. Equipped-item
 modifiers are added separately. Only the selected hotbar item (or explicit saved
