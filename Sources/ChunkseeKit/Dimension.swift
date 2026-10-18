@@ -75,9 +75,14 @@ public struct Dimension: Sendable {
 
     /// Entities saved in the given chunk (stored separately from terrain since 1.17).
     public func entities(chunkX: Int, chunkZ: Int) throws -> [NBT] {
-        guard let region = try region(.entities, x: chunkX >> 5, z: chunkZ >> 5),
-              let nbt = try region.chunkNBT(localX: chunkX & 31, localZ: chunkZ & 31) else { return [] }
+        guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
         return nbt["Entities"]?.list ?? []
+    }
+
+    /// Shared raw read so creature decoding retains the entity chunk's DataVersion.
+    func entityChunk(x: Int, z: Int) throws -> NBT? {
+        guard let region = try region(.entities, x: x >> 5, z: z >> 5) else { return nil }
+        return try region.chunkNBT(localX: x & 31, localZ: z & 31)
     }
 }
 

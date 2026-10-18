@@ -109,8 +109,16 @@ extension NBT {
         return nil
     }
 
-    /// A UUID stored as four big-endian ints (most significant first), the format used since 1.16.
+    /// A UUID string, four big-endian ints, or an entity/modifier compound containing `UUID`
+    /// or the legacy `UUIDMost`/`UUIDLeast` pair. All forms produce the same UUID identity.
     public var uuid: UUID? {
+        if case .string(let value) = self { return UUID(uuidString: value) }
+        if case .compound(let fields) = self {
+            if let direct = fields["UUID"]?.uuid { return direct }
+            guard case .long(let most)? = fields["UUIDMost"], case .long(let least)? = fields["UUIDLeast"] else { return nil }
+            return NBT.intArray([Int32(truncatingIfNeeded: most >> 32), Int32(truncatingIfNeeded: most),
+                                 Int32(truncatingIfNeeded: least >> 32), Int32(truncatingIfNeeded: least)]).uuid
+        }
         guard let a = intArray, a.count == 4 else { return nil }
         var bytes = [UInt8]()
         for v in a { withUnsafeBytes(of: UInt32(bitPattern: v).bigEndian) { bytes.append(contentsOf: $0) } }
