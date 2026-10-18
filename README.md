@@ -82,6 +82,19 @@ print(entities.compactMap { $0["id"]?.string })
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
+### Slime chunks
+
+```swift
+if let seed = try world.seed() {  // modern saved data or the older level.dat layout
+    let slimeChunk = World.isSlimeChunk(x: -12, z: 27, seed: seed) // chunk coordinates, Int32
+    print(slimeChunk)
+}
+```
+
+The engine follows Java Edition’s seed mixing and random draw, verified against Minecraft 26.3.
+Use the classification for low-altitude Overworld slime chunks; height and other spawning
+conditions still apply, and swamps have a separate spawning rule.
+
 ### Iterate every chunk
 
 ```swift
