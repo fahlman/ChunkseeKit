@@ -38,6 +38,8 @@ The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after
 unneeded block data; it does not apply its own chunk-status or placement rules.
 CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
+CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than
+expand an array of every block index before counting.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
