@@ -31,9 +31,11 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
 
-The CLI's `blockPosition` is the checked presentation conversion from exact entity positions to
-whole containing blocks. Creature and player output share it: negative fractions round down,
-and malformed/unrepresentable positions remain listed with their coordinates unavailable.
+The library's public `BlockPosition` owns conversion from exact positions to whole containing
+blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
+entity-container reads and CLI creature/player output share that rule. Negative fractions round
+down, and nonfinite/out-of-range coordinates are unavailable. The CLI retains those records with
+unknown positions; the container reader omits an unmappable container while keeping its neighbors.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
