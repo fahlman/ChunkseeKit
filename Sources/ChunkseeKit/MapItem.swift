@@ -46,7 +46,7 @@ public struct MapItem: Sendable, Equatable {
         guard case .byteArray(let bytes)? = data["colors"], bytes.count == Self.size * Self.size else { return nil }
         self.id = id
         let dimensionTag = data["dimension"]
-        dimension = dimensionTag.flatMap { PlayerInfo.dimensionID($0) }
+        dimension = dimensionTag?.dimensionID
         unrecognizedDimension = dimension == nil ? dimensionTag.map { $0.string ?? $0.int.map(String.init) ?? "?" } : nil
         centerX = data["xCenter"]?.int ?? 0
         centerZ = data["zCenter"]?.int ?? 0

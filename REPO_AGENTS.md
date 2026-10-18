@@ -84,6 +84,11 @@ invent a level. Consumers must rescan previously cached creatures to obtain the 
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.
 
+Modern world spawn and player death/respawn share `SavedBlockLocation`'s paired string-dimension
+and integer-array position reader. World-spawn fields become available together; a partial modern
+record never gains an inferred Overworld dimension. The existing dimension-tag normalization is
+shared by player/map locations through an internal NBT accessor; legacy XYZ/number rules stay intact.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
