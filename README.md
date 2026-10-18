@@ -353,6 +353,10 @@ Other commands:
 | `chunksee <world> rules` | Game rules and their values |
 | `chunksee <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
+Creature and player coordinates name the containing block (negative fractions round down).
+Edited or malformed positions that cannot be represented are printed as `unknown position`;
+the creature/player remains in the list.
+
 For example:
 
 ```bash
