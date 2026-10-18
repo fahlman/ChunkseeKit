@@ -21,18 +21,35 @@ public struct StatusEffect: Sendable, Equatable {
         } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
             id = "minecraft:" + Self.legacyIDs[number]
         } else { return nil }
-        let amplifier: Int
-        switch nbt["amplifier"] ?? nbt["Amplifier"] {
-        case .byte(let value)?: amplifier = Int(UInt8(bitPattern: value))
-        case nil: amplifier = 0
-        case let tag?:
-            guard let value = tag.int else { return nil }
-            amplifier = value
-        }
-        guard (0...255).contains(amplifier),
+        guard let amplifier = Self.savedAmplifier(nbt["amplifier"] ?? nbt["Amplifier"]),
               let duration = nbt["duration"]?.int ?? nbt["Duration"]?.int,
               duration == -1 || duration > 0 else { return nil }
         self.init(id: id, amplifier: amplifier, durationTicks: duration)
+    }
+
+    /// 26.3's UNSIGNED_BYTE codec narrows Number.byteValue before unsigned interpretation.
+    /// Edited numeric tags therefore wrap, while a missing amplifier still defaults to zero.
+    private static func savedAmplifier(_ tag: NBT?) -> Int? {
+        switch tag {
+        case nil: return 0
+        case .byte(let value)?: return Int(UInt8(bitPattern: value))
+        case .short(let value)?: return Int(UInt8(truncatingIfNeeded: value))
+        case .int(let value)?: return Int(UInt8(truncatingIfNeeded: value))
+        case .long(let value)?: return Int(UInt8(truncatingIfNeeded: value))
+        case .float(let value)?: return floatingAmplifier(Double(value))
+        case .double(let value)?: return floatingAmplifier(value)
+        default: return nil
+        }
+    }
+
+    private static func floatingAmplifier(_ value: Double) -> Int {
+        // Java first truncates to a signed int (NaN -> 0, overflow -> endpoint), then a byte.
+        let narrowed: Int32
+        if value.isNaN { narrowed = 0 }
+        else if value >= Double(Int32.max) { narrowed = .max }
+        else if value <= Double(Int32.min) { narrowed = .min }
+        else { narrowed = Int32(value) }
+        return Int(UInt8(truncatingIfNeeded: narrowed))
     }
 
     // Before 1.20.2 effects used numeric IDs; player files can remain in the older format.

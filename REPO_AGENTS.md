@@ -52,6 +52,10 @@ checked against 26.3, with explicit overrides and unbreakable/removed components
 verified against the 26.3 codec. Explicit values are retained, and malformed/absent data does not
 invent a level. Consumers must rescan previously cached creatures to obtain the corrected value.
 
+`MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
+coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
+No map pixels or world files are changed when reading banners.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
