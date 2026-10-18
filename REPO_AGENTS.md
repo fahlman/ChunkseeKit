@@ -34,6 +34,12 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`Dimension.regionURL` owns region file locations; `forEachChunk` exposes a synchronous,
+throwing visit without retaining a decoded NBT array. Missing regions are empty, damaged chunks
+are skipped, and opening/callback errors propagate. `Chunk.inhabitedTime(in:)` owns the current
+root/legacy `Level` metadata fallback, shared with Chunk and the regional time reader. It does
+not decode legacy terrain or change the hold on #38. These are additive public APIs.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
 Health Boost is included once through the permanent saved attribute modifiers. Custom equipment

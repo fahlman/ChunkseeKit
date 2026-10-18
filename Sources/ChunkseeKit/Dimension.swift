@@ -39,20 +39,38 @@ public struct Dimension: Sendable {
         }.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
     }
 
+    /// The region file's location, including when the file does not currently exist.
+    public func regionURL(_ folder: Folder = .terrain, x: Int, z: Int) -> URL {
+        directory(folder).appendingPathComponent("r.\(x).\(z).mca")
+    }
+
     /// The region file at region coordinates in a folder, if it exists.
     public func region(_ folder: Folder = .terrain, x: Int, z: Int) throws -> RegionFile? {
-        let url = directory(folder).appendingPathComponent("r.\(x).\(z).mca")
+        let url = regionURL(folder, x: x, z: z)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return try RegionFile(contentsOf: url)
+    }
+
+    /// Visits one decoded chunk at a time, with region-local X/Z and raw NBT. Entries named in
+    /// `skipping` are omitted. Missing regions are empty; unreadable individual chunks are skipped.
+    /// Opening errors and errors thrown by `body` (including cancellation) propagate immediately.
+    public func forEachChunk(_ folder: Folder = .terrain, regionX: Int, regionZ: Int,
+                             skipping: Set<String> = [], _ body: (Int, Int, NBT) throws -> Void) throws {
+        guard let region = try region(folder, x: regionX, z: regionZ) else { return }
+        for (x, z) in region.chunkCoordinates {
+            guard let nbt = try? region.chunkNBT(localX: x, localZ: z, skipping: skipping) else { continue }
+            try body(x, z, nbt)
+        }
     }
 
     /// Every readable chunk of one region file in a folder, with the entries in `skipping` left
     /// out. Chunks that can't be read are skipped, so one damaged chunk doesn't hide the rest.
     func chunks(_ folder: Folder, regionX: Int, regionZ: Int, skipping: Set<String> = []) throws -> [(localX: Int, localZ: Int, nbt: NBT)] {
-        guard let region = try region(folder, x: regionX, z: regionZ) else { return [] }
-        return region.chunkCoordinates.compactMap { x, z in
-            (try? region.chunkNBT(localX: x, localZ: z, skipping: skipping)).flatMap { $0 }.map { (x, z, $0) }
+        var chunks: [(localX: Int, localZ: Int, nbt: NBT)] = []
+        try forEachChunk(folder, regionX: regionX, regionZ: regionZ, skipping: skipping) { x, z, nbt in
+            chunks.append((x, z, nbt))
         }
+        return chunks
     }
 
     /// The chunk at absolute chunk coordinates, or `nil` if it hasn't been generated.
