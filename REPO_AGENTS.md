@@ -36,6 +36,8 @@ whole containing blocks. Creature and player output share it: negative fractions
 and malformed/unrepresentable positions remain listed with their coordinates unavailable.
 The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
 unneeded block data; it does not apply its own chunk-status or placement rules.
+CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
+terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.

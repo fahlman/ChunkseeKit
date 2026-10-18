@@ -379,6 +379,10 @@ The structures command lists starts in fully generated chunks and uses the conta
 each inclusive bounding box's center. It keeps unknown placement for piece types without a
 verified placement flag, following `StructureStart`.
 
+Both item and text searches include inventory, equipment (including offhand books) and ender
+chests, plus containers from terrain and entity region files. Overlapping terrain/entity regions
+are read once per search, and an entity region does not need a matching terrain file.
+
 For example:
 
 ```bash
