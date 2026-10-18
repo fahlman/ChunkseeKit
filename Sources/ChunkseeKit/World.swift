@@ -128,7 +128,8 @@ public struct World: Sendable {
     public func playerData(_ uuid: UUID) throws -> NBT? {
         let file = playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
         if FileManager.default.fileExists(atPath: file.path) { return try NBT.read(contentsOf: file) }
-        if let embedded = level.nbt["Player"], embedded["UUID"]?.uuid == uuid { return embedded }
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           (embedded.uuid ?? level.singleplayerUUID) == uuid { return embedded }
         return nil
     }
 

@@ -108,7 +108,8 @@ extension World {
             let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
             return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved)
         }
-        if let embedded = level.nbt["Player"], let uuid = embedded["UUID"]?.uuid ?? level.singleplayerUUID,
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           let uuid = embedded.uuid ?? level.singleplayerUUID,
            !players.contains(where: { $0.uuid == uuid }) {
             players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed))
         }

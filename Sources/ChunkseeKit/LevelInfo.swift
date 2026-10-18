@@ -52,7 +52,9 @@ public struct LevelInfo: Sendable {
         }
 
         // 26.1+ stores a UUID reference; older worlds embed the whole player compound.
-        singleplayerUUID = data["singleplayer_uuid"]?.uuid ?? data["Player"]?["UUID"]?.uuid
+        singleplayerUUID = data["singleplayer_uuid"]?.uuid ?? data["Player"].flatMap { player in
+            player.compound == nil ? nil : player.uuid
+        }
 
         if let spawn = data["spawn"] {
             spawnDimension = spawn["dimension"]?.string

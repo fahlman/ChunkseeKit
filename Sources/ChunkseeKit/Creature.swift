@@ -58,15 +58,10 @@ public struct Creature: Sendable, Equatable, Codable {
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
-                  // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
-                  owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
+                  owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt), health: nbt["Health"]?.double)
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion)
-        uuid = nbt["UUID"]?.uuid ?? nbt["UUID"]?.string.flatMap(UUID.init(uuidString:))
-        if uuid == nil, case .long(let most)? = nbt["UUIDMost"], case .long(let least)? = nbt["UUIDLeast"] {
-            uuid = NBT.intArray([Int32(truncatingIfNeeded: most >> 32), Int32(truncatingIfNeeded: most),
-                                 Int32(truncatingIfNeeded: least >> 32), Int32(truncatingIfNeeded: least)]).uuid
-        }
+        uuid = nbt.uuid
         if owner != nil {
             sittingOrder = PetData.sittingOrder(nbt, species: id)
             appearance = PetData.appearance(nbt, species: id)

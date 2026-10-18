@@ -47,6 +47,9 @@ health arithmetic lives in `EntityHealth`; player maximum health includes applic
 equipment modifiers and Health Boost. Item durability defaults are owned by `VanillaItemDurability`,
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
 `Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
+`NBT.uuid` owns UUID strings, four-int arrays and the enclosing modern/legacy entity compounds.
+Embedded singleplayer records, pet identities/owners and attribute-modifier replacement use that
+reader, so a legacy Most/Least pair and a current array identify the same player or modifier.
 
 ## Format sources
 
