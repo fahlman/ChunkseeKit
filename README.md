@@ -181,10 +181,14 @@ for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
 ```
 
 Creature `health` and `maxHealth` use half-hearts. Maximum health comes from the saved attribute
-and its permanent modifiers, including the legacy `Attributes` format. For 26.3 entity chunks
-(data version 5023), known pet defaults fill an omitted attribute; these were checked against
-the vanilla client, including a real cat whose saved attributes omit its default maximum.
-Other versions need an explicit maximum attribute. Health Boost is already a permanent saved
+and its permanent modifiers, including the legacy `Attributes` format. Verified defaults fill
+an omitted attribute for cats (10), parrots (6) and wolves (8) in exactly 26.1/4786, 26.2/4903
+and 26.3/5023. The other documented pet defaults apply only in 26.3/5023. Unknown species/versions
+need an explicit maximum attribute; no defaults are inferred for adjacent snapshot versions.
+The official clients' attribute builders and taming load paths were checked for these versions.
+In these verified versions, an unowned wolf's loaded base is reset to 8 even when the save records another base; its permanent
+modifiers remain. An owned wolf preserves its saved base. A saved owner that cannot be identified
+leaves that wolf maximum unavailable rather than treating it as untamed. Health Boost is a permanent saved
 attribute modifier and is counted once from that list. Custom equipment that modifies maximum
 health makes `maxHealth` unavailable because its transient modifiers are not saved there.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
@@ -208,6 +212,10 @@ cover the nautilus, zombie nautilus and camel husk in 26.3.
 All new stored fields are optional so old cached creatures still decode. Rebuild those caches
 to obtain the new values. `Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
 callers decoding a single entity may use `Creature(entity, dataVersion: chunkVersion)`.
+For one chunk, `try dimension.creatures(chunkX: x, chunkZ: z)` retains the saved entity version
+automatically. `dimension.entities` still returns raw NBT without that context; existing callers
+remain source compatible. The per-chunk creature method is additive public API and requires a
+minor release. Cache users should reread creatures when adopting the corrected maximums.
 
 ### Nether portals
 

@@ -60,7 +60,8 @@ public struct Creature: Sendable, Equatable, Codable {
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt), health: nbt["Health"]?.double)
-        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion)
+        let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
+        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
         uuid = nbt.uuid
         if owner != nil {
             sittingOrder = PetData.sittingOrder(nbt, species: id)
@@ -120,6 +121,13 @@ public struct Trade: Sendable, Equatable, Codable {
 }
 
 extension Dimension {
+    /// Living mobs in one entity chunk, preserving its saved version for omitted attributes.
+    /// Unlike constructing creatures from raw `entities`, this retains the DataVersion context.
+    public func creatures(chunkX: Int, chunkZ: Int) throws -> [Creature] {
+        guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
+        return Creature.creatures(inEntityChunk: nbt)
+    }
+
     /// Living mobs in one region's entity file.
     public func creatures(regionX: Int, regionZ: Int) throws -> [Creature] {
         try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt) }
