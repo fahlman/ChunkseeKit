@@ -103,17 +103,13 @@ public struct PalettedContainer<Element: Sendable>: Sendable {
     }
 
     static func longsNeeded(entries: Int, bits: Int) -> Int {
-        let perLong = 64 / bits
-        return (entries + perLong - 1) / perLong
+        PackedLongs.wordCount(entries: entries, bits: bits)
     }
 
     /// The palette index stored at `index`.
     public func paletteIndex(at index: Int) -> Int {
         guard bitsPerEntry > 0 else { return 0 }
-        let perLong = 64 / bitsPerEntry
-        let word = UInt64(bitPattern: data[index / perLong])
-        let shift = (index % perLong) * bitsPerEntry
-        return Int((word >> UInt64(shift)) & ((1 << UInt64(bitsPerEntry)) - 1))
+        return PackedLongs.value(at: index, in: data, bits: bitsPerEntry)
     }
 
     /// The element at `index`. Out-of-range palette references return `nil`.
@@ -132,19 +128,9 @@ public struct PalettedContainer<Element: Sendable>: Sendable {
             counts[0] = entryCount
             return counts
         }
-        let perLong = 64 / bitsPerEntry
-        let mask = (UInt64(1) << UInt64(bitsPerEntry)) - 1
-        var remaining = entryCount
         counts.withUnsafeMutableBufferPointer { counts in
-            for word in data where remaining > 0 {
-                var w = UInt64(bitPattern: word)
-                let here = min(perLong, remaining)
-                for _ in 0..<here {
-                    let i = Int(w & mask)
-                    if i < counts.count { counts[i] += 1 }
-                    w >>= UInt64(bitsPerEntry)
-                }
-                remaining -= here
+            PackedLongs.forEachValue(in: data, entries: entryCount, bits: bitsPerEntry) { i in
+                if i < counts.count { counts[i] += 1 }
             }
         }
         return counts
@@ -155,15 +141,7 @@ public struct PalettedContainer<Element: Sendable>: Sendable {
         guard bitsPerEntry > 0 else { return Array(repeating: 0, count: entryCount) }
         var out = [Int]()
         out.reserveCapacity(entryCount)
-        let perLong = 64 / bitsPerEntry
-        let mask = (UInt64(1) << UInt64(bitsPerEntry)) - 1
-        for word in data {
-            var w = UInt64(bitPattern: word)
-            for _ in 0..<perLong where out.count < entryCount {
-                out.append(Int(w & mask))
-                w >>= UInt64(bitsPerEntry)
-            }
-        }
+        PackedLongs.forEachValue(in: data, entries: entryCount, bits: bitsPerEntry) { out.append($0) }
         return out
     }
 }
@@ -279,7 +257,7 @@ public struct Chunk: Sendable {
         self.z = z
         self.status = (nbt["status"] ?? nbt["Status"])?.string
         self.lastUpdate = nbt["LastUpdate"]?.int
-        self.inhabitedTime = nbt["InhabitedTime"]?.int
+        self.inhabitedTime = Self.inhabitedTime(in: nbt)
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
         self.blockEntities = nbt["block_entities"]?.list ?? []
@@ -316,17 +294,37 @@ public struct Chunk: Sendable {
 
     /// Decodes a heightmap into 256 absolute Y values (index = `z * 16 + x`).
     /// Each entry is the Y of the first free block above the highest matching block.
+    /// Returns nil when the packed length permits several widths; use the height overload when
+    /// the dimension's build height is known. Vanilla 128/256/384-block heights are unambiguous.
     public func heightmap(_ name: String) -> [Int]? {
         guard let longs = nbt["Heightmaps"]?[name]?.longArray, !longs.isEmpty else { return nil }
-        // Width is ceil(log2(worldHeight + 1)) — 9 bits for 384 — recoverable from the array length.
-        guard let bits = (1...32).first(where: { PalettedContainer<Int>.longsNeeded(entries: 256, bits: $0) == longs.count }) else {
-            return nil
+        let widths = (1...32).filter { PackedLongs.wordCount(entries: 256, bits: $0) == longs.count }
+        guard widths.count == 1, let bits = widths.first else { return nil }
+        return decodedHeightmap(longs, bits: bits, maximum: nil)
+    }
+
+    /// Decodes using the dimension's actual build height (number of blocks, not its maximum Y).
+    /// Minecraft stores ceil(log2(height + 1)) bits per entry. Inconsistent data is unavailable.
+    public func heightmap(_ name: String, height: Int) -> [Int]? {
+        guard height > 0 else { return nil }
+        let bits = Int.bitWidth - height.leadingZeroBitCount
+        guard bits <= 32, let longs = nbt["Heightmaps"]?[name]?.longArray,
+              PackedLongs.wordCount(entries: 256, bits: bits) == longs.count else { return nil }
+        return decodedHeightmap(longs, bits: bits, maximum: height)
+    }
+
+    private func decodedHeightmap(_ longs: [Int64], bits: Int, maximum: Int?) -> [Int]? {
+        let (baseY, overflow) = minSectionY.multipliedReportingOverflow(by: 16)
+        guard !overflow else { return nil }
+        var result: [Int] = []
+        result.reserveCapacity(256)
+        var valid = true
+        PackedLongs.forEachValue(in: longs, entries: 256, bits: bits) { value in
+            if let maximum, value > maximum { valid = false }
+            let (y, overflow) = baseY.addingReportingOverflow(value)
+            if overflow { valid = false }
+            else { result.append(y) }
         }
-        let perLong = 64 / bits
-        let mask = (UInt64(1) << UInt64(bits)) - 1
-        let baseY = minSectionY * 16
-        return (0..<256).map { i in
-            Int((UInt64(bitPattern: longs[i / perLong]) >> UInt64((i % perLong) * bits)) & mask) + baseY
-        }
+        return valid ? result : nil
     }
 }

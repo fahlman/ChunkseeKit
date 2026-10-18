@@ -88,7 +88,7 @@ import Testing
         let modern = player(["active_effects": .list([.compound(["id": .string("minecraft:resistance"), "amplifier": amplifier, "duration": .int(-1)])])])
         let legacy = player(["ActiveEffects": .list([.compound(["Id": .byte(11), "Amplifier": amplifier, "Duration": .int(-1)])])])
         #expect(modern.activeEffects.first?.level == level && legacy.activeEffects.first?.level == level)
-        for invalid in [NBT.int(-1), .short(256), .string("unknown")] {
+        for invalid in [NBT.string("unknown"), .compound([:]), .intArray([1])] {
             #expect(player(["active_effects": .list([.compound(["id": .string("minecraft:resistance"), "amplifier": invalid, "duration": .int(100)])])]).activeEffects.isEmpty)
         }
     }

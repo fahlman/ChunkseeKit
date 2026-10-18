@@ -94,9 +94,11 @@ public struct World: Sendable {
     }
 
     /// Looks up a dimension by namespaced ID (`minecraft:overworld`, `overworld`, `mymod:mining`).
+    /// Missing dimensions and empty namespace/path components return nil.
     public func dimension(_ id: String) -> Dimension? {
         let full = id.contains(":") ? id : "minecraft:" + id
-        let parts = full.split(separator: ":", maxSplits: 1).map(String.init)
+        let parts = full.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
         let modern = "dimensions/\(parts[0])/\(parts[1])"
         if exists(modern) { return Dimension(id: full, url: url.appendingPathComponent(modern)) }
         // Pre-26.1 locations of the vanilla dimensions.
@@ -128,7 +130,8 @@ public struct World: Sendable {
     public func playerData(_ uuid: UUID) throws -> NBT? {
         let file = playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
         if FileManager.default.fileExists(atPath: file.path) { return try NBT.read(contentsOf: file) }
-        if let embedded = level.nbt["Player"], embedded["UUID"]?.uuid == uuid { return embedded }
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           (embedded.uuid ?? level.singleplayerUUID) == uuid { return embedded }
         return nil
     }
 
@@ -147,8 +150,16 @@ public struct World: Sendable {
     /// Reads a world-level saved-data file, e.g. `savedData("game_rules")` → `data/minecraft/game_rules.dat`.
     /// Falls back to the pre-26.1 flat `data/<name>.dat` location.
     public func savedData(_ name: String, namespace: String = "minecraft") throws -> NBT? {
-        for relative in ["data/\(namespace)/\(name).dat", "data/\(name).dat"] {
-            let file = url.appendingPathComponent(relative)
+        try Self.readSavedData(name, namespace: namespace, at: url, includingFlatFile: true)
+    }
+
+    /// The border/fight file readers support the namespaced layout. They opt out of the older
+    /// world-file fallback rather than reinterpret a flat dimension file.
+    static func readSavedData(_ name: String, namespace: String = "minecraft", at root: URL,
+                              includingFlatFile: Bool) throws -> NBT? {
+        let modern = "data/\(namespace)/\(name).dat"
+        for relative in includingFlatFile ? [modern, "data/\(name).dat"] : [modern] {
+            let file = root.appendingPathComponent(relative)
             if FileManager.default.fileExists(atPath: file.path) { return try NBT.read(contentsOf: file) }
         }
         return nil
