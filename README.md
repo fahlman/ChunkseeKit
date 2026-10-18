@@ -62,6 +62,11 @@ for dimension in world.dimensions() {
 
 let overworld = world.dimension("overworld")!   // or "minecraft:the_nether", "mymod:custom"
 
+// A path for a watcher/cache, without opening or requiring the file. These are region coordinates.
+let terrainURL = overworld.regionURL(x: -1, z: 2)
+let poiURL = overworld.regionURL(.pointsOfInterest, x: -1, z: 2)
+// regionURL(.entities, x:z:) addresses entity regions; region(_:x:z:) opens an existing region.
+
 // One-off lookup by world coordinates.
 let state = try overworld.block(x: 10, y: 68, z: -2)
 print(state?.description ?? "not generated")    // "minecraft:stone_bricks"
@@ -114,7 +119,6 @@ without requiring a legacy terrain decode:
 try overworld.forEachChunk(regionX: -1, regionZ: 0, skipping: Chunk.keysNotNeededForInhabitedTime) { x, z, nbt in
     print(x, z, Chunk.inhabitedTime(in: nbt) ?? 0)
 }
-let file = overworld.regionURL(.entities, x: -1, z: 0) // URL even when the file is absent
 ```
 
 ### Structures
