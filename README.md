@@ -355,7 +355,8 @@ Other commands:
 
 Creature and player coordinates name the containing block (negative fractions round down).
 Edited or malformed positions that cannot be represented are printed as `unknown position`;
-the creature/player remains in the list.
+the creature/player remains in the list. Creature listing scans entity region files even when
+there is no corresponding terrain file.
 
 For example:
 
