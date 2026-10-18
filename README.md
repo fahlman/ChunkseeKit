@@ -64,6 +64,11 @@ for dimension in world.dimensions() {
 
 let overworld = world.dimension("overworld")!   // or "minecraft:the_nether", "mymod:custom"
 
+// A path for a watcher/cache, without opening or requiring the file. These are region coordinates.
+let terrainURL = overworld.regionURL(x: -1, z: 2)
+let poiURL = overworld.regionURL(.pointsOfInterest, x: -1, z: 2)
+// regionURL(.entities, x:z:) addresses entity regions; region(_:x:z:) opens an existing region.
+
 // One-off lookup by world coordinates.
 let state = try overworld.block(x: 10, y: 68, z: -2)
 print(state?.description ?? "not generated")    // "minecraft:stone_bricks"

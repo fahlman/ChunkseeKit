@@ -50,6 +50,10 @@ rules and `NetherPortal.Link` are unchanged; the additive API needs a future app
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
+It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
+uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded

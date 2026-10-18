@@ -86,6 +86,49 @@ import Testing
         #expect(try world.playerData(playerUUID)?["Health"] == .float(7))
     }
 
+    @Test(arguments: [false, true]) func regionPathsReadEveryFolderInOldAndModernWorlds(modern: Bool) throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("Paths")])]),
+                                    to: root.appendingPathComponent("level.dat"))
+        let paths = modern
+            ? ["minecraft:overworld": "dimensions/minecraft/overworld", "minecraft:the_nether": "dimensions/minecraft/the_nether",
+               "example:deep/mines": "dimensions/example/deep/mines"]
+            : ["minecraft:overworld": "", "minecraft:the_nether": "DIM-1", "example:deep/mines": "dimensions/example/deep/mines"]
+        for path in paths.values {
+            try FileManager.default.createDirectory(at: root.appendingPathComponent(path).appendingPathComponent("region"),
+                                                    withIntermediateDirectories: true)
+        }
+        let world = try World(contentsOf: root)
+        for (id, path) in paths {
+            let dimension = try #require(world.dimension(id))
+            for (folder, directory, x, z) in [(Dimension.Folder.terrain, "region", -1, 2), (.entities, "entities", 0, -3),
+                                               (.pointsOfInterest, "poi", 4, 0)] {
+                let url = dimension.regionURL(folder, x: x, z: z)
+                let base = path.isEmpty ? root : root.appendingPathComponent(path)
+                let expected = base.appendingPathComponent(directory).appendingPathComponent("r.\(x).\(z).mca")
+                #expect(url == expected)
+                let payload = NBT.compound(["source": .string(id + "/" + directory)])
+                try Fixtures.write(try Fixtures.region([.init(localX: 31, localZ: 0, nbt: payload)]), to: url)
+                let region = try #require(try dimension.region(folder, x: x, z: z))
+                #expect(region.url == url && region.x == x && region.z == z)
+                #expect(try region.chunkNBT(localX: 31, localZ: 0) == payload)
+                #expect(dimension.regionFiles(folder).map(\.url) == [url])
+            }
+        }
+    }
+
+    @Test func regionPathKeepsMissingAndUnreadableFilesDistinct() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "example:uncreated", url: root.appendingPathComponent("Not Created"))
+        let url = dimension.regionURL(x: -5, z: 9)
+        #expect(!FileManager.default.fileExists(atPath: dimension.url.path))
+        #expect(try dimension.region(x: -5, z: 9) == nil)
+        try Fixtures.write([0], to: url)
+        #expect(throws: RegionError.truncatedHeader) { try dimension.region(x: -5, z: 9) }
+    }
+
     @Test func missingLevelDat() throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
