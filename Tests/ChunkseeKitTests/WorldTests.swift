@@ -105,7 +105,8 @@ import Testing
             for (folder, directory, x, z) in [(Dimension.Folder.terrain, "region", -1, 2), (.entities, "entities", 0, -3),
                                                (.pointsOfInterest, "poi", 4, 0)] {
                 let url = dimension.regionURL(folder, x: x, z: z)
-                let expected = root.appendingPathComponent(path).appendingPathComponent(directory).appendingPathComponent("r.\(x).\(z).mca")
+                let base = path.isEmpty ? root : root.appendingPathComponent(path)
+                let expected = base.appendingPathComponent(directory).appendingPathComponent("r.\(x).\(z).mca")
                 #expect(url == expected)
                 let payload = NBT.compound(["source": .string(id + "/" + directory)])
                 try Fixtures.write(try Fixtures.region([.init(localX: 31, localZ: 0, nbt: payload)]), to: url)
