@@ -7,11 +7,11 @@ import ChunkseeKit
     @Test func namedCreaturesAndPlayersUseTheContainingBlock() throws {
         let world = try fixture(position: [-8.7, -0.1, -513.1])
         defer { try? FileManager.default.removeItem(at: world) }
-        let creature = try run(world, command: "creatures")
+        let creature = try Fixtures.runCLI(world, command: "creatures")
         #expect(creature.status == 0)
         #expect(creature.output.contains("minecraft:wolf \"Check Wolf\" at (-9, -1, -514)"))
         #expect(creature.output.contains("1 minecraft:wolf"))
-        let player = try run(world, command: "players")
+        let player = try Fixtures.runCLI(world, command: "players")
         #expect(player.status == 0)
         #expect(player.output.contains("position: minecraft:overworld -9 -1 -514"))
         #expect(player.output.contains("death:    minecraft:the_nether -16 60 32"))
@@ -26,7 +26,7 @@ import ChunkseeKit
             let world = try fixture(position: position)
             defer { try? FileManager.default.removeItem(at: world) }
             for command in ["creatures", "players"] {
-                let result = try run(world, command: command)
+                let result = try Fixtures.runCLI(world, command: command)
                 #expect(result.status == 0, "\(command) must not trap for invalid axis \(axis)")
                 #expect(result.output.contains("unknown position"))
                 #expect(result.output.contains(command == "creatures" ? "Check Wolf" : playerID.uuidString.lowercased()))
@@ -39,7 +39,7 @@ import ChunkseeKit
     @Test func exactIntegerEdgesAndFractionsRemainRepresentable() throws {
         let world = try fixture(position: [Double(Int.min), Double(Int.max).nextDown, 0.999])
         defer { try? FileManager.default.removeItem(at: world) }
-        let player = try run(world, command: "players")
+        let player = try Fixtures.runCLI(world, command: "players")
         #expect(player.status == 0)
         #expect(player.output.contains("position: minecraft:overworld -9223372036854775808 9223372036854774784 0"))
     }
@@ -69,7 +69,7 @@ import ChunkseeKit
             .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "CustomName": .string("Other Dimension"),
                        "Pos": .list([.double(0), .double(70), .double(0)])]),
         ])
-        let result = try run(root, command: "creatures")
+        let result = try Fixtures.runCLI(root, command: "creatures")
         #expect(result.status == 0)
         #expect(result.output.contains("at (-9, 70, 1) owned by \(playerID.uuidString.lowercased())"))
         #expect(result.output.contains("Check Wolf") && result.output.contains("Distant Cat"))
@@ -99,16 +99,4 @@ import ChunkseeKit
         return root
     }
 
-    private func run(_ world: URL, command: String) throws -> (status: Int32, output: String) {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let process = Process(), pipe = Pipe()
-        process.executableURL = root.appendingPathComponent(".build/debug/chunksee")
-        process.arguments = [world.path, command]
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try process.run()
-        let output = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return (process.terminationStatus, String(decoding: output, as: UTF8.self))
-    }
 }
