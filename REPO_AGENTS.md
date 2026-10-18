@@ -31,6 +31,10 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
 
+The CLI's `blockPosition` is the checked presentation conversion from exact entity positions to
+whole containing blocks. Creature and player output share it: negative fractions round down,
+and malformed/unrepresentable positions remain listed with their coordinates unavailable.
+
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 

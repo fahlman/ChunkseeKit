@@ -54,7 +54,8 @@ func mapsCommand(_ world: World, _ arguments: Arguments) {
 func playersCommand(_ world: World, _ arguments: Arguments) {
         func show(_ location: PlayerInfo.Location?) -> String {
             guard let l = location else { return "-" }
-            return "\(l.dimension) \(Int(l.x.rounded(.down))) \(Int(l.y.rounded(.down))) \(Int(l.z.rounded(.down)))"
+            guard let position = blockPosition(x: l.x, y: l.y, z: l.z) else { return "\(l.dimension) (unknown position)" }
+            return "\(l.dimension) \(position.x) \(position.y) \(position.z)"
         }
         // The game folder holding this world's saves folder keeps the local name cache.
         let gameFolder = world.url.deletingLastPathComponent().deletingLastPathComponent()
