@@ -57,7 +57,8 @@ public struct Creature: Sendable, Equatable, Codable {
         guard let id = nbt["id"]?.string, nbt["Health"] != nil,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
-                  customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
+                  customName: nbt["CustomName"].flatMap(TextComponent.plainText)
+                      .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
                   // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
                   owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
                   villager: Villager(nbt), health: nbt["Health"]?.double)

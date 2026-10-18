@@ -153,6 +153,11 @@ for spawner in try overworld.contents(regionX: 0, regionZ: 0).spawners {
 
 ### Signs and books
 
+`TextComponent.plainText` removes legacy `§` formatting codes consistently from parsed
+components, including item/container names, signs, map banners and written book pages. Spaces
+and line breaks are preserved when components are joined. Unsigned writable-book pages remain
+literal strings. Creature names retain their existing outer-whitespace trimming.
+
 ```swift
 // One pass over a region reads both its containers and its signs.
 let contents = try overworld.contents(regionX: 0, regionZ: 0)
