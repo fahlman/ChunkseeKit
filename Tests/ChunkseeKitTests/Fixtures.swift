@@ -103,11 +103,11 @@ enum Fixtures {
 }
 
 extension Fixtures {
-    static func runCLI(_ world: URL, command: String) throws -> (status: Int32, output: String) {
+    static func runCLI(_ world: URL, command: String, arguments: [String] = []) throws -> (status: Int32, output: String) {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let process = Process(), pipe = Pipe()
         process.executableURL = root.appendingPathComponent(".build/debug/chunksee")
-        process.arguments = [world.path, command]
+        process.arguments = [world.path, command] + arguments
         process.standardOutput = pipe
         process.standardError = pipe
         try process.run()
