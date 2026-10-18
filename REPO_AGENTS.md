@@ -31,11 +31,14 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
 
-The CLI's `blockPosition` is the checked presentation conversion from exact entity positions to
-whole containing blocks. Creature and player output share it: negative fractions round down,
-and malformed/unrepresentable positions remain listed with their coordinates unavailable.
+The library's public `BlockPosition` owns conversion from exact positions to whole containing
+blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
+entity-container reads and CLI creature/player output share that rule. Negative fractions round
+down, and nonfinite/out-of-range coordinates are unavailable. The CLI retains those records with
+unknown positions; the container reader omits an unmappable container while keeping its neighbors.
 The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
-unneeded block data; it does not apply its own chunk-status or placement rules.
+unneeded block data; it does not apply its own chunk-status or placement rules. Structure-center
+X/Z coordinates use the same public single-axis conversion without inventing a height.
 CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
 CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than

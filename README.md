@@ -143,6 +143,18 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+### Block coordinates
+
+`BlockPosition` converts exact coordinates to the containing block, rounding negative fractions
+down and returning nil for nonfinite or out-of-Int-range values. Entity-container reads and the
+CLI use this same public rule. Callers with only X/Z can convert each available axis without
+inventing a height:
+
+```swift
+let block = BlockPosition(x: -8.7, y: 63.9, z: -513.1) // x: -9, y: 63, z: -514
+let x = BlockPosition.coordinate(containing: -8.7)     // -9
+```
+
 ### Spawners
 
 ```swift

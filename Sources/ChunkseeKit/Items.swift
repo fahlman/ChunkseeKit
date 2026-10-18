@@ -158,8 +158,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
         (nbt["Entities"]?.list ?? []).compactMap { entity in
             guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
                   let savedX = pos[0].double, let savedY = pos[1].double, let savedZ = pos[2].double,
-                  let x = Int(exactly: savedX.rounded(.down)), let y = Int(exactly: savedY.rounded(.down)),
-                  let z = Int(exactly: savedZ.rounded(.down)) else {
+                  let position = BlockPosition(x: savedX, y: savedY, z: savedZ) else {
                 return nil
             }
             // Dropped items despawn and players' items are read from player files, so neither counts.
@@ -167,7 +166,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             let items = ItemStack.list(entity["Items"]) + (entity["Item"].flatMap(ItemStack.init).map { [$0] } ?? [])
             let sealed = entity["LootTable"] != nil
             guard !items.isEmpty || sealed else { return nil }
-            return ItemContainer(kind: kind, x: x, y: y, z: z,
+            return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z,
                                  items: items, customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  isSealedLoot: sealed && items.isEmpty, isEntity: true)
         }

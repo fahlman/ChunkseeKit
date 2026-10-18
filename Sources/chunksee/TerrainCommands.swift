@@ -64,11 +64,12 @@ func structuresCommand(_ world: World, _ arguments: Arguments) {
             }
             print("\(dim.id): \(byKind.values.reduce(0) { $0 + $1.count }) structures")
             for (id, starts) in byKind.sorted(by: { byCount(($0.key, $0.value.count), ($1.key, $1.value.count)) }) {
-                let places = starts.prefix(4).compactMap(\.bounds).compactMap { box in
+                let places = starts.prefix(4).compactMap(\.bounds).compactMap { box -> String? in
                     // BlockBox includes both endpoints; the center is halfway between its outer faces.
-                    blockPosition(x: (Double(box.minX) + Double(box.maxX) + 1) / 2, y: 0,
-                                  z: (Double(box.minZ) + Double(box.maxZ) + 1) / 2)
-                }.map { "(\($0.x), \($0.z))" }
+                    guard let x = BlockPosition.coordinate(containing: (Double(box.minX) + Double(box.maxX) + 1) / 2),
+                          let z = BlockPosition.coordinate(containing: (Double(box.minZ) + Double(box.maxZ) + 1) / 2) else { return nil }
+                    return "(\(x), \(z))"
+                }
                 print("  \(starts.count)\t\(id)  \(places.joined(separator: " "))\(starts.count > 4 ? " …" : "")")
             }
         }

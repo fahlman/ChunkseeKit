@@ -58,7 +58,7 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
                 kinds[creature.id, default: 0] += 1
                 guard creature.customName != nil || creature.owner != nil else { continue }
                 let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
-                let position = blockPosition(x: creature.x, y: creature.y, z: creature.z)
+                let position = BlockPosition(x: creature.x, y: creature.y, z: creature.z)
                     .map { "(\($0.x), \($0.y), \($0.z))" } ?? "unknown position"
                 print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at \(position)\(owner)")
             }
