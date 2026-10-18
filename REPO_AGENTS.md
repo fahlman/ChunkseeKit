@@ -51,7 +51,11 @@ The library only reads world files. Apart from the NBT writer, which tests and t
 build fixtures, it never writes into a world folder.
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
-permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
+permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
+26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
+base to 8; owned wolves retain the saved base, and an unidentified saved owner stays unavailable.
+`Dimension.creatures(chunkX:chunkZ:)` retains the entity chunk's saved version, as the existing
+per-region creature read does; raw `entities` remains unchanged.
 Health Boost is included once through the permanent saved attribute modifiers. Custom equipment
 that changes maximum health leaves the maximum unavailable rather than report an incomplete
 total. Maximums use the game's Float precision. Pet appearance/order/collar/equipment interpretation
