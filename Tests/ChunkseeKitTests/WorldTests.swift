@@ -109,7 +109,7 @@ import Testing
                 #expect(url == expected)
                 let payload = NBT.compound(["source": .string(id + "/" + directory)])
                 try Fixtures.write(try Fixtures.region([.init(localX: 31, localZ: 0, nbt: payload)]), to: url)
-                let region = try #require(dimension.region(folder, x: x, z: z))
+                let region = try #require(try dimension.region(folder, x: x, z: z))
                 #expect(region.url == url && region.x == x && region.z == z)
                 #expect(try region.chunkNBT(localX: 31, localZ: 0) == payload)
                 #expect(dimension.regionFiles(folder).map(\.url) == [url])
