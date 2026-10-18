@@ -44,6 +44,39 @@ import ChunkseeKit
         #expect(player.output.contains("position: minecraft:overworld -9223372036854775808 9223372036854774784 0"))
     }
 
+    @Test(arguments: [false, true])
+    func creaturesReadEntityRegionsWithOrWithoutMatchingTerrain(_ terrainPresent: Bool) throws {
+        let root = try fixture(position: [1.25, 64, 2.5])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = root.appendingPathComponent("dimensions/minecraft/overworld")
+        if !terrainPresent { try FileManager.default.removeItem(at: dimension.appendingPathComponent("region")) }
+        func write(_ path: String, localX: Int, entities: [NBT]) throws {
+            try Fixtures.write(try Fixtures.region([.init(localX: localX, localZ: 0, nbt: .compound([
+                "DataVersion": .int(5023), "Entities": .list(entities),
+            ]))]), to: root.appendingPathComponent(path))
+        }
+        try write("dimensions/minecraft/overworld/entities/r.-1.0.mca", localX: 31, entities: [
+            .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "Owner": Fixtures.uuidInts(playerID),
+                       "Pos": .list([.double(-8.7), .double(70.5), .double(1.25)])]),
+            .compound(["id": .string("minecraft:item"), "CustomName": .string("Not a creature"),
+                       "Pos": .list([.double(-8), .double(70), .double(1)])]),
+        ])
+        try write("dimensions/minecraft/overworld/entities/r.1.0.mca", localX: 1, entities: [
+            .compound(["id": .string("minecraft:cat"), "Health": .float(10), "CustomName": .string("Distant Cat"),
+                       "Pos": .list([.double(528.9), .double(64), .double(0)])]),
+        ])
+        try write("dimensions/minecraft/the_nether/entities/r.0.0.mca", localX: 0, entities: [
+            .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "CustomName": .string("Other Dimension"),
+                       "Pos": .list([.double(0), .double(70), .double(0)])]),
+        ])
+        let result = try run(root, command: "creatures")
+        #expect(result.status == 0)
+        #expect(result.output.contains("at (-9, 70, 1) owned by \(playerID.uuidString.lowercased())"))
+        #expect(result.output.contains("Check Wolf") && result.output.contains("Distant Cat"))
+        #expect(result.output.contains("2 minecraft:wolf") && result.output.contains("1 minecraft:cat"))
+        #expect(!result.output.contains("Not a creature") && !result.output.contains("Other Dimension"))
+    }
+
     private var playerID: UUID { UUID(uuidString: "01234567-89ab-cdef-0123-456789abcdef")! }
 
     private func fixture(position: [Double]) throws -> URL {
