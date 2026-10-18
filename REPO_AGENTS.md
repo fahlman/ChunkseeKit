@@ -48,6 +48,10 @@ equipment modifiers and Health Boost. Item durability defaults are owned by `Van
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
 `Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
 
+`Villager` owns the missing-level default: a `VillagerData` compound with no `level` reads as 1,
+verified against the 26.3 codec. Explicit values are retained, and malformed/absent data does not
+invent a level. Consumers must rescan previously cached creatures to obtain the corrected value.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
