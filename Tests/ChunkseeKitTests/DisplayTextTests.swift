@@ -42,6 +42,7 @@ import Testing
                        "CustomName": .string("§cSupplies§r"), "Items": .list([item])]),
             .compound(["id": .string("minecraft:wolf"),
                        "Pos": .list([.double(2), .double(64), .double(3)]),
+                       "Health": .float(8),
                        "CustomName": .string(" §aSummer§r ")]),
         ])])
         try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: chunk)]),
