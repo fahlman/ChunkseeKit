@@ -112,8 +112,9 @@ For a map of explored terrain, also check `Chunk.isFullyGenerated`.
 // Structures are recorded in the chunk they start in; skip block data for a fast scan.
 let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
 for (x, z) in region.chunkCoordinates {
-    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures) else { continue }
-    for start in StructureStart.starts(inChunk: nbt) {
+    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures),
+          let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { continue }
+    for start in chunk.structureStarts {
         print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shpr"
     }
 }
@@ -232,6 +233,17 @@ for portal in overworldPortals {
     }
 }
 ```
+
+To classify the return as well, use `portal.roundTrip(into: netherPortals,
+returningThrough: overworldPortals)`. It returns `.twoWay(target:block:)`,
+`.oneWay(target:block:returning:)`, or `.wouldCreateNewPortal(destination:)`.
+The one-way result includes whether the default return goes to another existing portal or
+would create a new one. Unsupported source dimensions return `nil`.
+
+Supply complete lists from both dimensions. These are predictions using each portal's default
+bottom-center entry (or the specified outward `entering:` block); the return does not use the
+outward arrival block. Entering elsewhere or chunks the game cannot load can change the trip.
+The CLI `portals` command uses this shared classification and flags both one-way outcomes.
 
 ### Players and saved data
 
@@ -367,7 +379,16 @@ Other commands:
 
 Creature and player coordinates name the containing block (negative fractions round down).
 Edited or malformed positions that cannot be represented are printed as `unknown position`;
-the creature/player remains in the list.
+the creature/player remains in the list. Creature listing scans entity region files even when
+there is no corresponding terrain file.
+
+The structures command lists starts in fully generated chunks and uses the containing block of
+each inclusive bounding box's center. It keeps unknown placement for piece types without a
+verified placement flag, following `StructureStart`.
+
+Both item and text searches include inventory, equipment (including offhand books) and ender
+chests, plus containers from terrain and entity region files. Overlapping terrain/entity regions
+are read once per search, and an entity region does not need a matching terrain file.
 
 For example:
 

@@ -27,12 +27,18 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
         func show(_ portals: [NetherPortal], _ candidates: [NetherPortal], back: [NetherPortal], label: String) {
             print("\(label): \(portals.count) portals")
             for portal in portals {
-                switch portal.link(into: candidates) {
-                case .portal(let target, _)?:
-                    // Does the target lead back here?
-                    var note = ""
-                    if case .portal(let returns, _)? = target.link(into: back), returns != portal { note = "  (one-way: it leads back to \(describe(returns)))" }
-                    print("  \(describe(portal)) -> \(describe(target))\(note)")
+                switch portal.roundTrip(into: candidates, returningThrough: back) {
+                case .twoWay(let target, _)?:
+                    print("  \(describe(portal)) -> \(describe(target))")
+                case .oneWay(let target, _, let returning)?:
+                    let note: String
+                    switch returning {
+                    case .portal(let returns, _):
+                        note = "it leads back to \(describe(returns))"
+                    case .wouldCreateNewPortal(let destination):
+                        note = "the return trip would create one near (\(destination.x), \(destination.y), \(destination.z))"
+                    }
+                    print("  \(describe(portal)) -> \(describe(target))  (one-way: \(note))")
                 case .wouldCreateNewPortal(let destination)?:
                     print("  \(describe(portal)) -> no portal in range; would create one near (\(destination.x), \(destination.y), \(destination.z))")
                 case nil:
@@ -47,7 +53,7 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
 func creaturesCommand(_ world: World, _ arguments: Arguments) {
         let dim = arguments.dimension(1, in: world)
         var kinds: [String: Int] = [:]
-        for (rx, rz, _) in dim.regionFiles() {
+        for (rx, rz, _) in dim.regionFiles(.entities) {
             for creature in (try? dim.creatures(regionX: rx, regionZ: rz)) ?? [] {
                 kinds[creature.id, default: 0] += 1
                 guard creature.customName != nil || creature.owner != nil else { continue }

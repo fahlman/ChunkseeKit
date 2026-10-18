@@ -94,9 +94,11 @@ public struct World: Sendable {
     }
 
     /// Looks up a dimension by namespaced ID (`minecraft:overworld`, `overworld`, `mymod:mining`).
+    /// Missing dimensions and empty namespace/path components return nil.
     public func dimension(_ id: String) -> Dimension? {
         let full = id.contains(":") ? id : "minecraft:" + id
-        let parts = full.split(separator: ":", maxSplits: 1).map(String.init)
+        let parts = full.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
         let modern = "dimensions/\(parts[0])/\(parts[1])"
         if exists(modern) { return Dimension(id: full, url: url.appendingPathComponent(modern)) }
         // Pre-26.1 locations of the vanilla dimensions.
