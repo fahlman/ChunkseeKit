@@ -80,7 +80,7 @@ public struct Creature: Sendable, Equatable, Codable {
 public struct Villager: Sendable, Equatable, Codable {
     /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
     public var profession: String?
-    /// 1 (novice) to 5 (master).
+    /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?
     /// The biome style, e.g. `minecraft:desert`.
     public var type: String?
@@ -91,7 +91,12 @@ public struct Villager: Sendable, Equatable, Codable {
         let trades = (nbt["Offers"]?["Recipes"]?.list ?? []).compactMap(Trade.init)
         guard data != nil || !trades.isEmpty else { return nil }
         profession = data?["profession"]?.string
-        level = data?["level"]?.int
+        // The VillagerData codec defaults an absent field, not a malformed one, to novice.
+        if let fields = data?.compound, fields["level"] == nil {
+            level = 1
+        } else {
+            level = data?["level"]?.int
+        }
         type = data?["type"]?.string
         self.trades = trades
     }

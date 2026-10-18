@@ -57,13 +57,19 @@ func structuresCommand(_ world: World, _ arguments: Arguments) {
             for (_, _, url) in dim.regionFiles() {
                 guard let region = try? RegionFile(contentsOf: url) else { continue }
                 for (lx, lz) in region.chunkCoordinates {
-                    guard let nbt = try? region.chunkNBT(localX: lx, localZ: lz, skipping: Chunk.keysNotNeededForStructures) else { continue }
-                    for start in StructureStart.starts(inChunk: nbt) { byKind[start.id, default: []].append(start) }
+                    guard let nbt = try? region.chunkNBT(localX: lx, localZ: lz, skipping: Chunk.keysNotNeededForStructures),
+                          let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { continue }
+                    for start in chunk.structureStarts { byKind[start.id, default: []].append(start) }
                 }
             }
             print("\(dim.id): \(byKind.values.reduce(0) { $0 + $1.count }) structures")
             for (id, starts) in byKind.sorted(by: { byCount(($0.key, $0.value.count), ($1.key, $1.value.count)) }) {
-                let places = starts.prefix(4).compactMap(\.bounds).map { "(\(($0.minX + $0.maxX) / 2), \(($0.minZ + $0.maxZ) / 2))" }
+                let places = starts.prefix(4).compactMap(\.bounds).compactMap { box -> String? in
+                    // BlockBox includes both endpoints; the center is halfway between its outer faces.
+                    guard let x = BlockPosition.coordinate(containing: (Double(box.minX) + Double(box.maxX) + 1) / 2),
+                          let z = BlockPosition.coordinate(containing: (Double(box.minZ) + Double(box.maxZ) + 1) / 2) else { return nil }
+                    return "(\(x), \(z))"
+                }
                 print("  \(starts.count)\t\(id)  \(places.joined(separator: " "))\(starts.count > 4 ? " …" : "")")
             }
         }
