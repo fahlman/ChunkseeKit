@@ -46,9 +46,7 @@ enum EntityHealth {
 
     private static func modifierID(_ nbt: NBT) -> String? {
         if let id = nbt["id"]?.string { return id }
-        if let uuid = nbt["UUID"]?.uuid { return uuid.uuidString }
-        if case .long(let most)? = nbt["UUIDMost"], case .long(let least)? = nbt["UUIDLeast"] { return "\(most):\(least)" }
-        return nil
+        return nbt.uuid?.uuidString
     }
 
     private static func defaultMaximum(species: String, dataVersion: Int?) -> Double? {

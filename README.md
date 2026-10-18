@@ -10,6 +10,8 @@ A Swift library and command-line tool for reading Minecraft: Java Edition world 
   - light, heightmaps, block entities and entities
 - **World folders**: the 26.1+ layout (`dimensions/minecraft/<dim>`, `players/data`, `data/minecraft/*.dat`), with a fallback to the older `region/`, `DIM-1`, `DIM1` and `playerdata/` layout.
 - **`level.dat`**: name, versions and version history, difficulty, spawn, singleplayer UUID and seed.
+- **UUIDs**: strings, four-int arrays and legacy `UUIDMost`/`UUIDLeast` pairs share one reader;
+  older embedded singleplayer records use the same identity and player-data fallback as current saves.
 
 It is read-only apart from the NBT writer, and it never modifies world files.
 
