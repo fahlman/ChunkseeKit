@@ -34,6 +34,12 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`PackedLongs` owns the non-straddling packed-long traversal used by palettes and heightmaps.
+`Chunk.heightmap(_:)` infers only a unique width from stored length; ambiguous maps require
+`heightmap(_:height:)` with the dimension's actual build height. Both return first-free-block
+absolute Y. Invalid context or overflowing coordinates is unavailable; no legacy terrain support
+is added. The explicit-height overload is additive public API.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
 Health Boost is included once through the permanent saved attribute modifiers. Custom equipment
