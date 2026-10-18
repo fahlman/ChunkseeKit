@@ -130,10 +130,12 @@ Ryan approved this process on 2026-10-09.
 
 ## Toolchain and platforms
 
-On 2026-10-09 these were verified as the newest non-beta releases on Apple's and Swift's release
-pages, then compared with what this Mac uses.
+Rechecked on 2026-10-18 against [Apple's releases](https://developer.apple.com/news/releases/),
+[its SDK table](https://developer.apple.com/xcode/system-requirements), and the
+[Swift releases](https://www.swift.org/install/macos/), then compared with the installed tools
+and the project's settings. Xcode 27.2 and Swift snapshots are previews, not the stable toolchain.
 
-- **Compiler:** Xcode 27.0 (`27A266a`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
+- **Compiler:** Xcode 27.1 (`27A9275`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
   package requires `swift-tools-version: 6.4`.
 - **Swift language mode:** 6, set explicitly with `swiftLanguageModes: [.v6]`.
 - **SDK:** macOS 27.0 SDK. The package doesn't pin an SDK version.
