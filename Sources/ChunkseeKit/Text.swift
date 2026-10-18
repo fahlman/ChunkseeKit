@@ -3,8 +3,15 @@ import Foundation
 /// Minecraft text components (custom names, sign text, book pages) reduced to plain text.
 public enum TextComponent {
     /// Accepts a literal string, a JSON-encoded component (older worlds), an NBT compound with
-    /// `text`/`translate` and `extra`, or a list of components.
+    /// `text`/`translate` and `extra`, or a list of components. Removes legacy `§` formatting
+    /// codes after joining the fragments, preserving their spaces and line breaks.
     public static func plainText(_ nbt: NBT) -> String? {
+        guard let text = componentText(nbt) else { return nil }
+        let plain = removingFormattingCodes(text)
+        return plain.isEmpty ? nil : plain
+    }
+
+    private static func componentText(_ nbt: NBT) -> String? {
         let text: String
         switch nbt {
         case .string(let s):
@@ -16,9 +23,9 @@ public enum TextComponent {
                 text = s
             }
         case .compound:
-            text = (nbt["text"]?.string ?? nbt["translate"]?.string ?? "") + (nbt["extra"]?.list ?? []).compactMap(plainText).joined()
+            text = (nbt["text"]?.string ?? nbt["translate"]?.string ?? "") + (nbt["extra"]?.list ?? []).compactMap(componentText).joined()
         case .list(_, let items):
-            text = items.compactMap(plainText).joined()
+            text = items.compactMap(componentText).joined()
         default:
             return nil
         }
@@ -37,7 +44,7 @@ public enum TextComponent {
     }
 
     /// Strips `§` formatting codes, which server plugins put in names (`§aSummer` → `Summer`).
-    static func removingFormattingCodes(_ text: String) -> String {
+    private static func removingFormattingCodes(_ text: String) -> String {
         var result = ""
         var skipNext = false
         for character in text {
@@ -45,7 +52,7 @@ public enum TextComponent {
             if character == "§" { skipNext = true; continue }
             result.append(character)
         }
-        return result.trimmingCharacters(in: .whitespaces)
+        return result
     }
 }
 
