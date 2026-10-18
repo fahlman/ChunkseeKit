@@ -45,4 +45,35 @@ import Testing
         // The End has no Nether-portal travel.
         #expect(frame("minecraft:the_end", x: 0, y: 64, z: 0).link(into: [near]) == nil)
     }
+
+    @Test func roundTripsDistinguishReciprocalRedirectedAndNewReturnPortals() {
+        let home = frame(NetherPortal.overworld, x: 800, y: 64, z: 0)
+        let paired = frame(NetherPortal.nether, x: 100, y: 64, z: 0)
+        #expect(home.roundTrip(into: [paired], returningThrough: [home]) == .twoWay(target: paired, block: Block(x: 100, y: 64, z: 0)))
+
+        let offset = frame(NetherPortal.nether, x: 110, y: 64, z: 0)
+        let other = frame(NetherPortal.overworld, x: 880, y: 64, z: 0)
+        #expect(home.roundTrip(into: [offset], returningThrough: [home, other]) ==
+                .oneWay(target: offset, block: Block(x: 110, y: 64, z: 0), returning: .portal(other, block: Block(x: 880, y: 64, z: 0))))
+
+        let edge = frame(NetherPortal.overworld, x: 7, y: 64, z: 0)
+        let negative = frame(NetherPortal.nether, x: -16, y: 64, z: 0)
+        #expect(edge.roundTrip(into: [negative], returningThrough: [edge]) ==
+                .oneWay(target: negative, block: Block(x: -15, y: 64, z: 0), returning: .wouldCreateNewPortal(destination: Block(x: -128, y: 64, z: 0))))
+    }
+
+    @Test func roundTripsPreserveCreationUnknownDimensionsAndExplicitEntryRules() {
+        let home = frame(NetherPortal.overworld, x: 7, y: 64, z: 0)
+        let end = frame("minecraft:the_end", x: 0, y: 64, z: 0)
+        #expect(home.roundTrip(into: [], returningThrough: [home]) == .wouldCreateNewPortal(destination: Block(x: 0, y: 64, z: 0)))
+        #expect(home.roundTrip(into: [end], returningThrough: [home]) == .wouldCreateNewPortal(destination: Block(x: 0, y: 64, z: 0)))
+        #expect(end.roundTrip(into: [home], returningThrough: []) == nil)
+
+        let far = frame(NetherPortal.nether, x: 17, y: 64, z: 0)
+        #expect(home.roundTrip(into: [far], returningThrough: [home]) == .wouldCreateNewPortal(destination: Block(x: 0, y: 64, z: 0)))
+        #expect(home.roundTrip(into: [far], returningThrough: [home], entering: Block(x: 8, y: 64, z: 0)) ==
+                .twoWay(target: far, block: Block(x: 17, y: 64, z: 0)))
+        #expect(home.roundTrip(into: [far], returningThrough: [], entering: Block(x: 8, y: 64, z: 0)) ==
+                .oneWay(target: far, block: Block(x: 17, y: 64, z: 0), returning: .wouldCreateNewPortal(destination: Block(x: 136, y: 64, z: 0))))
+    }
 }

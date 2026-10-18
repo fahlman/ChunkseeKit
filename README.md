@@ -222,6 +222,17 @@ for portal in overworldPortals {
 }
 ```
 
+To classify the return as well, use `portal.roundTrip(into: netherPortals,
+returningThrough: overworldPortals)`. It returns `.twoWay(target:block:)`,
+`.oneWay(target:block:returning:)`, or `.wouldCreateNewPortal(destination:)`.
+The one-way result includes whether the default return goes to another existing portal or
+would create a new one. Unsupported source dimensions return `nil`.
+
+Supply complete lists from both dimensions. These are predictions using each portal's default
+bottom-center entry (or the specified outward `entering:` block); the return does not use the
+outward arrival block. Entering elsewhere or chunks the game cannot load can change the trip.
+The CLI `portals` command uses this shared classification and flags both one-way outcomes.
+
 ### Players and saved data
 
 ```swift

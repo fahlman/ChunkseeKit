@@ -50,4 +50,30 @@ import ChunkseeKit
         #expect(result.output.contains("(one-way: the return trip would create one near (-128, 64, 0))"))
         #expect(result.output.contains("Nether: 1 portals"))
     }
+
+    @Test func reciprocalLinksKeepTheirOutputWithoutAOneWayWarning() throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 0)], nether: [frame(NetherPortal.nether, x: 0)])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 0)
+        #expect(result.output == "Overworld: 1 portals\n  (1, 64, 0) -> (1, 64, 0)\nNether: 1 portals\n  (1, 64, 0) -> (1, 64, 0)\n")
+    }
+
+    @Test func aReturnToAnotherExistingPortalKeepsTheOriginalOneWayNote() throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 0), frame(NetherPortal.overworld, x: 80)],
+                             nether: [frame(NetherPortal.nether, x: 10)])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 0)
+        #expect(result.output.contains("(1, 64, 0) -> (11, 64, 0)  (one-way: it leads back to (81, 64, 0))"))
+        #expect(!result.output.contains("the return trip would create"))
+    }
+
+    @Test func outboundCreationKeepsTheOriginalMessage() throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 7)], nether: [])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 0)
+        #expect(result.output == "Overworld: 1 portals\n  (8, 64, 0) -> no portal in range; would create one near (0, 64, 0)\nNether: 0 portals\n")
+    }
 }

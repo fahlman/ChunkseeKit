@@ -40,6 +40,9 @@ CLI item/text searches share inventory-plus-equipment selection and a deduplicat
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
 CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than
 expand an array of every block index before counting.
+`NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
+its result, including a return that would create another portal. Existing single-link prediction
+rules and `NetherPortal.Link` are unchanged; the additive API needs a future approved minor tag.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
