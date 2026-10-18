@@ -54,6 +54,18 @@ enum EntityEquipment {
 
 /// Applicable unsaved modifiers from equipped items; arithmetic stays in EntityHealth.
 enum EquipmentHealth {
+    // The 43 vanilla 26.3 definitions have no max-health effects. Other definitions can add
+    // transient attributes absent from the save. Data packs overriding these IDs remain unsupported.
+    private static let vanillaEnchantments = Set([
+        "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection", "breach",
+        "channeling", "density", "depth_strider", "efficiency", "feather_falling", "fire_aspect",
+        "fire_protection", "flame", "fortune", "frost_walker", "impaling", "infinity", "knockback",
+        "looting", "loyalty", "luck_of_the_sea", "lunge", "lure", "mending", "multishot", "piercing",
+        "power", "projectile_protection", "protection", "punch", "quick_charge", "respiration",
+        "riptide", "sharpness", "silk_touch", "smite", "soul_speed", "sweeping_edge", "swift_sneak",
+        "thorns", "unbreaking", "vanishing_curse", "wind_burst",
+    ].map { "minecraft:" + $0 })
+
     static func modifiers(in equipment: [String: ItemStack]) -> [NBT]? {
         var found: [NBT] = []
         for slot in EntityEquipment.slots {
@@ -66,6 +78,9 @@ enum EquipmentHealth {
     }
 
     private static func modifiers(_ item: ItemStack, slot: String) -> [NBT]? {
+        guard item.activeEnchantments.keys.allSatisfy({ id in
+            vanillaEnchantments.contains(id.contains(":") ? id : "minecraft:" + id)
+        }) else { return nil }
         if item.components?["!minecraft:attribute_modifiers"] != nil { return [] }
         let component = item.components?["minecraft:attribute_modifiers"]
         let legacy = item.components?["AttributeModifiers"]

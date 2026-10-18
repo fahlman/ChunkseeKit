@@ -43,7 +43,10 @@ per-region creature read does; raw `entities` remains unchanged.
 Health Boost is included once through the permanent saved attribute modifiers. `EntityEquipment`
 owns current slots and legacy player/creature equipment reading; `EquipmentHealth` selects applicable
 equipped modifiers for both APIs. Empty/broken items, removed components and wrong-slot modifiers
-do not contribute. Unsupported item/effect defaults leave either maximum unavailable. Maximums
+do not contribute. Unsupported item/effect/active-enchantment defaults leave either maximum
+unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
+book enchantments separate from equipped effects. The 43 vanilla 26.3 enchantment definitions
+have no max-health effects; data packs overriding their IDs are not resolved. Maximums
 use the game's Float precision. Pet appearance/order/collar/equipment interpretation
 also belongs here. All new stored fields are optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
