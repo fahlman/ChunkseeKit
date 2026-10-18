@@ -182,8 +182,8 @@ for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
 
 Creature `health` and `maxHealth` use half-hearts. Maximum health comes from the saved attribute
 and its permanent modifiers, including the legacy `Attributes` format. Verified defaults fill
-an omitted attribute for cats (10), parrots (6) and wolves (8) in exactly 26.1/4786, 26.2/4903
-and 26.3/5023. The other documented pet defaults apply only in 26.3/5023. Unknown species/versions
+an omitted attribute for cats (10), parrots (6) and wolves (8) in exactly 26.1/4786, 26.1.1/4788,
+26.1.2/4790, 26.2/4903 and 26.3/5023. The other documented pet defaults apply only in 26.3/5023. Unknown species/versions
 need an explicit maximum attribute; no defaults are inferred for adjacent snapshot versions.
 The official clients' attribute builders and taming load paths were checked for these versions.
 In these verified versions, an unowned wolf's loaded base is reset to 8 even when the save records another base; its permanent
