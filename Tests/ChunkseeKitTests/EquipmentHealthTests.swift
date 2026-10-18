@@ -102,4 +102,60 @@ import Testing
         #expect(llama.equipment?["chest"]?.id == "minecraft:iron_chestplate")
         #expect(llama.maxHealth == 123)
     }
+
+    @Test func unsupportedActiveEnchantmentsDoNotReturnPartialHealth() throws {
+        let active = NBT.compound(["example:vitality": .int(2)])
+        let components: [[String: NBT]] = [
+            ["minecraft:enchantments": active],
+            ["minecraft:enchantments": .compound(["levels": active, "show_in_tooltip": .byte(0)])],
+            ["minecraft:enchantments": .compound(["minecraft:custom_health": .int(1), "minecraft:protection": .int(4)])],
+            ["minecraft:enchantments": active, "!minecraft:attribute_modifiers": .compound([:])],
+            ["minecraft:enchantments": active, "minecraft:attribute_modifiers": .list([modifier(4, slot: "body")])],
+        ]
+        for fields in components {
+            let values = try pair(["equipment": .compound(["body": item(fields)])])
+            #expect(values.pet.maxHealth == nil && values.player.maxHealth == nil)
+        }
+        let boots = NBT.compound(["id": .string("minecraft:iron_boots"), "Count": .byte(1), "Slot": .byte(100),
+            "tag": .compound(["Enchantments": .list([.compound(["id": .string("example:vitality"), "lvl": .short(2)])])])])
+        let legacy = try pair(["ArmorItems": .list([boots]), "Inventory": .list([boots])])
+        #expect(legacy.pet.maxHealth == nil && legacy.player.maxHealth == nil)
+    }
+
+    @Test func storedRemovedEmptyAndBrokenEnchantmentsDoNotHideHealth() throws {
+        let active = NBT.compound(["example:vitality": .int(2)])
+        let stored = NBT.compound(["id": .string("minecraft:enchanted_book"), "Count": .byte(1), "tag": .compound([
+            "StoredEnchantments": .list([.compound(["id": .string("example:vitality"), "lvl": .short(2)])]),
+        ])])
+        let items = [
+            item(["minecraft:stored_enchantments": active], id: "minecraft:enchanted_book"),
+            item(["minecraft:stored_enchantments": .compound(["levels": active])], id: "minecraft:enchanted_book"),
+            stored,
+            item(["!minecraft:enchantments": .compound([:]), "minecraft:enchantments": active]),
+            item(["minecraft:enchantments": active], count: 0),
+            item(["minecraft:enchantments": active, "minecraft:damage": .int(64)]),
+            item(["minecraft:enchantments": .compound(["minecraft:protection": .int(4), "minecraft:mending": .int(1)])]),
+        ]
+        for gear in items {
+            let values = try pair(["equipment": .compound(["body": gear])])
+            #expect(values.pet.maxHealth == 20 && values.player.maxHealth == 20)
+        }
+        // Stored enchantments stay available for display/search without becoming equipped effects.
+        for gear in items.prefix(3) {
+            #expect(ItemStack(gear)?.enchantments == ["example:vitality": 2])
+        }
+    }
+
+    @Test func onlyTheEquippedSelectedItemIntroducesEnchantmentUncertainty() throws {
+        let gear = NBT.compound(["id": .string("minecraft:diamond_sword"), "count": .int(1), "Slot": .byte(0),
+            "components": .compound(["minecraft:enchantments": .compound(["example:vitality": .int(2)])])])
+        for selected in [Int32(0), 1] {
+            let values = try pair(["Inventory": .list([gear]), "SelectedItemSlot": .int(selected),
+                                   "Items": .list([gear])])
+            #expect(values.player.maxHealth == (selected == 0 ? nil : 20))
+            #expect(values.pet.maxHealth == 20)
+        }
+        let held = try pair(["HandItems": .list([gear]), "equipment": .compound(["mainhand": gear])])
+        #expect(held.pet.maxHealth == nil && held.player.maxHealth == nil)
+    }
 }

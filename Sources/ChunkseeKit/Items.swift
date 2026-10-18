@@ -57,8 +57,19 @@ public struct ItemStack: Sendable, Equatable, Codable {
     /// Enchantments on the item, or stored in an enchanted book, by id with their level, e.g.
     /// `["minecraft:mending": 1]`. Empty when the item has none.
     public var enchantments: [String: Int] {
+        readEnchantments(components: ["minecraft:enchantments", "minecraft:stored_enchantments"],
+                         legacy: ["Enchantments", "StoredEnchantments"])
+    }
+
+    /// Stored book enchantments describe contents; only active enchantments affect equipped health.
+    var activeEnchantments: [String: Int] {
+        guard components?["!minecraft:enchantments"] == nil else { return [:] }
+        return readEnchantments(components: ["minecraft:enchantments"], legacy: ["Enchantments"])
+    }
+
+    private func readEnchantments(components componentKeys: [String], legacy legacyKeys: [String]) -> [String: Int] {
         var result: [String: Int] = [:]
-        for key in ["minecraft:enchantments", "minecraft:stored_enchantments"] {
+        for key in componentKeys {
             guard let value = components?[key]?.compound else { continue }
             // 1.20.5–1.21.4 wrapped the levels in `levels` beside `show_in_tooltip`; later versions
             // store the map directly. Enchantment ids are namespaced, which skips any other key.
@@ -67,7 +78,7 @@ public struct ItemStack: Sendable, Equatable, Codable {
             }
         }
         // Before 1.20.5, item tags held lists of `{id, lvl}`.
-        for key in ["Enchantments", "StoredEnchantments"] {
+        for key in legacyKeys {
             for entry in components?[key]?.list ?? [] {
                 if let id = entry["id"]?.string, let level = entry["lvl"]?.int { result[id] = level }
             }

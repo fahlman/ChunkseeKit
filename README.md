@@ -206,6 +206,11 @@ attribute modifier and is counted once from that list. Applicable equipped-item 
 combined with the saved modifiers, in slot order with duplicate identities replaced. Players
 and creatures share slot-group, broken/empty-item and removed-component rules. Unsupported
 modded item or active-effect defaults leave the maximum unavailable instead of returning a partial total.
+Equipped active enchantments outside the 43 verified vanilla 26.3 definitions also leave it unavailable:
+their data-pack definitions can add transient health modifiers absent from saved attributes. Stored
+book enchantments, removed enchantments and empty/broken equipment do not contribute. This applies
+to current, wrapped and legacy item formats. Vanilla definitions are assumed unchanged; data packs
+that override vanilla enchantment IDs are not resolved and can still make a total incomplete.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
@@ -314,7 +319,8 @@ Health Boost in modern and legacy saves. It is not reconstructed from the effect
 modifiers are added separately. Only the selected hotbar item (or explicit saved
 main hand) contributes main-hand modifiers; slot groups and duplicate modifier IDs are honored.
 The omitted vanilla player base is supplied only for verified 26.3/data-version-5023 saves.
-Unknown defaults, modifier operations or modded effect/item defaults leave the maximum nil.
+Unknown defaults, modifier operations or unsupported effect/item/active-enchantment defaults leave
+the maximum nil. The same vanilla-enchantment override limitation described for creatures applies.
 Active effects read modern names and legacy numeric IDs, omitting expired/malformed entries
 and queued `hidden_effect` values. They describe the save and do not count down in real time.
 Amplifiers follow 26.3's `UNSIGNED_BYTE` codec: integral tags retain their low eight bits;
