@@ -202,8 +202,10 @@ The official clients' attribute builders and taming load paths were checked for 
 In these verified versions, an unowned wolf's loaded base is reset to 8 even when the save records another base; its permanent
 modifiers remain. An owned wolf preserves its saved base. A saved owner that cannot be identified
 leaves that wolf maximum unavailable rather than treating it as untamed. Health Boost is a permanent saved
-attribute modifier and is counted once from that list. Custom equipment that modifies maximum
-health makes `maxHealth` unavailable because its transient modifiers are not saved there.
+attribute modifier and is counted once from that list. Applicable equipped-item modifiers are
+combined with the saved modifiers, in slot order with duplicate identities replaced. Players
+and creatures share slot-group, broken/empty-item and removed-component rules. Unsupported
+modded item or active-effect defaults leave the maximum unavailable instead of returning a partial total.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
@@ -214,8 +216,13 @@ still decode as saved, so rescan them to obtain this corrected default.
 Owned pets also expose `sittingOrder` (wolves/cats/parrots), `appearance` (wolf/cat coat,
 parrot color, horse coat and markings, llama color), `collarColor` (wolves/cats), and `equipment`
 by slot. An empty equipment dictionary means a pet that can wear equipment has none; nil means
-not applicable or unavailable. Equipment reads current slots and older body armor, horse
-armor/saddle, llama decor and attached chest fields. Item `durability` uses saved damage and
+not applicable or unavailable. Equipment reads current slots, legacy `ArmorItems`/`HandItems`
+lists, older body armor, horse armor/saddle, llama decor and attached chest fields. A current
+creature equipment compound supersedes those older fields, including when explicitly empty.
+Older horse `ArmorItem` conversion clears the former chest entry, as Minecraft's data fix does;
+llama decor conversion retains other armor slots.
+Only the game's eight equipment slots participate in health; an attached storage chest is descriptive.
+Item `durability` uses saved damage and
 maximum components; vanilla wolf armor has an implicit maximum of 64. Unbreakable equipment
 has no durability value. These are saved values, not live pose or following behavior.
 

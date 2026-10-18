@@ -64,7 +64,7 @@ public struct StatusEffect: Sendable, Equatable {
 extension PlayerInfo {
     /// Active effects at the last save, not the weaker effects queued in `hidden_effect`.
     public var activeEffects: [StatusEffect] {
-        (nbt["active_effects"]?.list ?? nbt["ActiveEffects"]?.list ?? []).compactMap(StatusEffect.init)
+        StatusEffect.active(in: nbt)
     }
 
     /// The selected hotbar item, or an explicit saved main-hand equipment item when present.
@@ -81,37 +81,19 @@ extension PlayerInfo {
 
 private enum PlayerHealth {
     static func maximum(_ player: PlayerInfo) -> Double? {
-        var modifiers: [NBT] = []
-        let effects = player.activeEffects
-        guard effects.allSatisfy({ $0.id.hasPrefix("minecraft:") }) else { return nil }
+        guard EntityHealth.supportsEffects(player.nbt) else { return nil }
         // Health Boost is already a permanent saved attribute modifier, including legacy UUIDs.
         var equipment = player.equipment
         equipment["mainhand"] = player.mainHandItem
-        // The game's slot order also defines replacement when custom modifiers share an ID.
-        for slot in ["mainhand", "offhand", "feet", "legs", "chest", "head", "body", "saddle"] {
-            guard let item = equipment[slot], item.count > 0 else { continue }
-            if let durability = item.durability, durability.remaining == 0 { continue }
-            guard let added = healthModifiers(item, slot: slot) else { return nil }
-            modifiers += added
-        }
+        guard let modifiers = EquipmentHealth.modifiers(in: equipment) else { return nil }
         return EntityHealth.value(player.nbt, defaultBase: player.dataVersion == 5023 ? 20 : nil,
                                   additionalModifiers: modifiers)
     }
 
-    private static func healthModifiers(_ item: ItemStack, slot: String) -> [NBT]? {
-        if item.components?["!minecraft:attribute_modifiers"] != nil { return [] }
-        let component = item.components?["minecraft:attribute_modifiers"]
-        let legacy = item.components?["AttributeModifiers"]
-        guard component != nil || legacy != nil else {
-            return item.id.hasPrefix("minecraft:") ? [] : nil
-        }
-        guard let entries = component?.list ?? component?["modifiers"]?.list ?? legacy?.list else { return nil }
-        return entries.filter { entry in
-            let name = entry["type"]?.string ?? entry["AttributeName"]?.string ?? ""
-            guard EntityHealth.healthNames.contains(name) else { return false }
-            let group = entry["slot"]?.string ?? entry["Slot"]?.string ?? "any"
-            return group == "any" || group == slot || (group == "hand" && ["mainhand", "offhand"].contains(slot))
-                || (group == "armor" && ["head", "chest", "legs", "feet", "body"].contains(slot))
-        }
+}
+
+extension StatusEffect {
+    static func active(in nbt: NBT) -> [StatusEffect] {
+        (nbt["active_effects"]?.list ?? nbt["ActiveEffects"]?.list ?? []).compactMap(StatusEffect.init)
     }
 }

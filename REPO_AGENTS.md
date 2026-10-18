@@ -56,9 +56,11 @@ permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 
 base to 8; owned wolves retain the saved base, and an unidentified saved owner stays unavailable.
 `Dimension.creatures(chunkX:chunkZ:)` retains the entity chunk's saved version, as the existing
 per-region creature read does; raw `entities` remains unchanged.
-Health Boost is included once through the permanent saved attribute modifiers. Custom equipment
-that changes maximum health leaves the maximum unavailable rather than report an incomplete
-total. Maximums use the game's Float precision. Pet appearance/order/collar/equipment interpretation
+Health Boost is included once through the permanent saved attribute modifiers. `EntityEquipment`
+owns current slots and legacy player/creature equipment reading; `EquipmentHealth` selects applicable
+equipped modifiers for both APIs. Empty/broken items, removed components and wrong-slot modifiers
+do not contribute. Unsupported item/effect defaults leave either maximum unavailable. Maximums
+use the game's Float precision. Pet appearance/order/collar/equipment interpretation
 also belongs here. All new stored fields are optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 

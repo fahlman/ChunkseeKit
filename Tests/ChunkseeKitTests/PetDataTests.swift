@@ -90,13 +90,13 @@ import Testing
         #expect(try pet("cat", version: 6000).maxHealth == nil)
     }
 
-    @Test func unknownOrTransientMaximumIsNotInvented() throws {
+    @Test func unknownMaximumStaysUnavailableAndExplicitEquipmentIsIncluded() throws {
         let unknown = try pet("cat", ["attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .string("unknown")])])])
         #expect(unknown.maxHealth == nil)
         let gear = try pet("wolf", ["equipment": .compound(["body": item("wolf_armor", ["minecraft:attribute_modifiers": .list([
             .compound(["type": .string("minecraft:max_health"), "amount": .double(10), "operation": .string("add_value")]),
         ])])])])
-        #expect(gear.maxHealth == nil)
+        #expect(gear.maxHealth == 18)
     }
 
     @Test func savedHealthBoostModifierIsIncludedOnce() throws {
