@@ -391,6 +391,10 @@ For example:
 
 Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` compound. These chunks are parsed normally.
 
+Entity containers use the containing block of their saved `Pos`, rounding negative fractions down.
+A missing, nonnumeric, nonfinite or out-of-range coordinate makes that container unavailable;
+other readable containers in the same region are still returned.
+
 ## Testing
 
 ```bash
