@@ -113,8 +113,7 @@ extension World {
     /// A dimension's world border: its own `data/minecraft/world_border.dat` in 26.1+, or the
     /// single border in `level.dat` before.
     public func worldBorder(of dimension: Dimension) throws -> WorldBorder? {
-        let file = dimension.dataDirectory.appendingPathComponent("minecraft/world_border.dat")
-        if FileManager.default.fileExists(atPath: file.path), let d = try NBT.read(contentsOf: file)["data"] {
+        if let d = try Self.readSavedData("world_border", at: dimension.url, includingFlatFile: false)?["data"] {
             return WorldBorder(centerX: d["center_x"]?.double ?? 0, centerZ: d["center_z"]?.double ?? 0,
                                size: d["size"]?.double ?? WorldBorder.defaultSize, targetSize: d["lerp_target"]?.double ?? WorldBorder.defaultSize,
                                lerpTime: d["lerp_time"]?.int ?? 0, damagePerBlock: d["damage_per_block"]?.double ?? 0.2,
@@ -144,8 +143,7 @@ extension World {
     public func enderDragonFight() throws -> EnderDragonFight? {
         var data: NBT?
         if let end = dimension("the_end") {
-            let file = end.dataDirectory.appendingPathComponent("minecraft/ender_dragon_fight.dat")
-            if FileManager.default.fileExists(atPath: file.path) { data = try NBT.read(contentsOf: file)["data"] }
+            data = try Self.readSavedData("ender_dragon_fight", at: end.url, includingFlatFile: false)?["data"]
         }
         if let data {
             return EnderDragonFight(dragonKilled: data["dragon_killed"]?.bool ?? false, previouslyKilled: data["previously_killed"]?.bool ?? false,

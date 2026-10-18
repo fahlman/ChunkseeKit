@@ -147,8 +147,16 @@ public struct World: Sendable {
     /// Reads a world-level saved-data file, e.g. `savedData("game_rules")` → `data/minecraft/game_rules.dat`.
     /// Falls back to the pre-26.1 flat `data/<name>.dat` location.
     public func savedData(_ name: String, namespace: String = "minecraft") throws -> NBT? {
-        for relative in ["data/\(namespace)/\(name).dat", "data/\(name).dat"] {
-            let file = url.appendingPathComponent(relative)
+        try Self.readSavedData(name, namespace: namespace, at: url, includingFlatFile: true)
+    }
+
+    /// Dimension metadata moved out of level.dat only in the namespaced layout. Its readers
+    /// opt out of the older world-file fallback rather than reinterpret a flat dimension file.
+    static func readSavedData(_ name: String, namespace: String = "minecraft", at root: URL,
+                              includingFlatFile: Bool) throws -> NBT? {
+        let modern = "data/\(namespace)/\(name).dat"
+        for relative in includingFlatFile ? [modern, "data/\(name).dat"] : [modern] {
+            let file = root.appendingPathComponent(relative)
             if FileManager.default.fileExists(atPath: file.path) { return try NBT.read(contentsOf: file) }
         }
         return nil
