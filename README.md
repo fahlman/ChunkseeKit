@@ -114,8 +114,9 @@ For a map of explored terrain, also check `Chunk.isFullyGenerated`.
 // Structures are recorded in the chunk they start in; skip block data for a fast scan.
 let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
 for (x, z) in region.chunkCoordinates {
-    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures) else { continue }
-    for start in StructureStart.starts(inChunk: nbt) {
+    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures),
+          let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { continue }
+    for start in chunk.structureStarts {
         print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shpr"
     }
 }
@@ -142,6 +143,18 @@ for (x, z, _) in overworld.regionFiles() {
     }
 }
 let pockets = player.inventory + player.enderChest   // PlayerInfo
+```
+
+### Block coordinates
+
+`BlockPosition` converts exact coordinates to the containing block, rounding negative fractions
+down and returning nil for nonfinite or out-of-Int-range values. Entity-container reads and the
+CLI use this same public rule. Callers with only X/Z can convert each available axis without
+inventing a height:
+
+```swift
+let block = BlockPosition(x: -8.7, y: 63.9, z: -513.1) // x: -9, y: 63, z: -514
+let x = BlockPosition.coordinate(containing: -8.7)     // -9
 ```
 
 ### Spawners
@@ -200,6 +213,11 @@ to current, wrapped and legacy item formats. Vanilla definitions are assumed unc
 that override vanilla enchantment IDs are not resolved and can still make a total incomplete.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
+`Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
+matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
+unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
+still decode as saved, so rescan them to obtain this corrected default.
+
 Owned pets also expose `sittingOrder` (wolves/cats/parrots), `appearance` (wolf/cat coat,
 parrot color, horse coat and markings, llama color), `collarColor` (wolves/cats), and `equipment`
 by slot. An empty equipment dictionary means a pet that can wear equipment has none; nil means
@@ -242,6 +260,17 @@ for portal in overworldPortals {
     }
 }
 ```
+
+To classify the return as well, use `portal.roundTrip(into: netherPortals,
+returningThrough: overworldPortals)`. It returns `.twoWay(target:block:)`,
+`.oneWay(target:block:returning:)`, or `.wouldCreateNewPortal(destination:)`.
+The one-way result includes whether the default return goes to another existing portal or
+would create a new one. Unsupported source dimensions return `nil`.
+
+Supply complete lists from both dimensions. These are predictions using each portal's default
+bottom-center entry (or the specified outward `entering:` block); the return does not use the
+outward arrival block. Entering elsewhere or chunks the game cannot load can change the trip.
+The CLI `portals` command uses this shared classification and flags both one-way outcomes.
 
 ### Players and saved data
 
@@ -294,6 +323,11 @@ Unknown defaults, modifier operations or unsupported effect/item/active-enchantm
 the maximum nil. The same vanilla-enchantment override limitation described for creatures applies.
 Active effects read modern names and legacy numeric IDs, omitting expired/malformed entries
 and queued `hidden_effect` values. They describe the save and do not count down in real time.
+Amplifiers follow 26.3's `UNSIGNED_BYTE` codec: integral tags retain their low eight bits;
+floating tags first narrow to Java's signed-int range (truncate toward zero, NaN to zero,
+overflow/infinity to the corresponding endpoint), then retain their low eight bits. Thus edited
+int `-1` means level 256, short `256` means level 1, and int `300` means level 45. Nonnumeric
+amplifiers remain unavailable; a missing amplifier is level 1. Duration parsing is unchanged.
 
 `ItemStack.durability` now also knows the vanilla 26.3 defaults for armor, tools, weapons,
 elytra, shields and other damageable equipment. Explicit maximum components override those
@@ -308,6 +342,12 @@ callers can distinguish co-located creatures and track a moving one. It defaults
 older cached creatures; rebuild caches before relying on the identity.
 
 ### Maps made in the game
+
+`MapItem.banners` reads both the three-int `pos` array used by 26.3 and the older
+coordinate compound. Incomplete positions are skipped. Color and name remain the saved optional
+values: current maps omit the default white color and an absent custom name. The array shape and
+defaults were checked against the official 26.3 `MapBanner`/`BlockPos` codecs and a game-written map;
+the version that changed the position shape has not been established.
 
 ```swift
 for map in world.mapItems() where !map.isBlank {
@@ -376,6 +416,19 @@ Other commands:
 | `chunksee <world> rules` | Game rules and their values |
 | `chunksee <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
+Creature and player coordinates name the containing block (negative fractions round down).
+Edited or malformed positions that cannot be represented are printed as `unknown position`;
+the creature/player remains in the list. Creature listing scans entity region files even when
+there is no corresponding terrain file.
+
+The structures command lists starts in fully generated chunks and uses the containing block of
+each inclusive bounding box's center. It keeps unknown placement for piece types without a
+verified placement flag, following `StructureStart`.
+
+Both item and text searches include inventory, equipment (including offhand books) and ender
+chests, plus containers from terrain and entity region files. Overlapping terrain/entity regions
+are read once per search, and an entity region does not need a matching terrain file.
+
 For example:
 
 ```bash
@@ -397,6 +450,10 @@ For example:
 | 26.4 | 5119 | Biomes stored per block (4096 per section); `Status` renamed to `status` | Detected from the data length; both names are read |
 
 Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` compound. These chunks are parsed normally.
+
+Entity containers use the containing block of their saved `Pos`, rounding negative fractions down.
+A missing, nonnumeric, nonfinite or out-of-range coordinate makes that container unavailable;
+other readable containers in the same region are still returned.
 
 ## Testing
 

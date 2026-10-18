@@ -38,6 +38,56 @@ import Testing
         #expect(MapItem.rgb(forColor: 255) == nil)
     }
 
+    @Test func worldReadsCurrentAndLegacyBannerPositions() throws {
+        let dir = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("Banners")])]),
+                                     to: dir.appendingPathComponent("level.dat"))
+        let banners: [NBT] = [
+            // 26.3 BlockPos.CODEC writes exactly three ints. White/unnamed defaults are omitted.
+            .compound(["pos": .intArray([14, 64, 31])]),
+            .compound(["pos": .intArray([.min, -64, .max]), "color": .string("blue"),
+                       "name": .compound(["text": .string("Deep camp")])]),
+            .compound(["Pos": .compound(["X": .int(-17), "Y": .int(80), "Z": .int(-2)]),
+                       "Color": .string("red"), "Name": .string("Home")]),
+            .compound(["pos": .compound(["x": .int(4), "y": .int(0), "z": .int(-9)])]),
+        ]
+        for path in ["data/minecraft/maps/1.dat", "data/map_2.dat"] {
+            try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([
+                "dimension": .string("minecraft:overworld"), "colors": colors(), "banners": .list(banners),
+            ])]), to: dir.appendingPathComponent(path))
+        }
+        let maps = try World(contentsOf: dir).mapItems()
+        #expect(maps.map(\.id) == [1, 2])
+        let expected = [
+            MapItem.Banner(x: 14, y: 64, z: 31, color: nil, name: nil),
+            MapItem.Banner(x: Int(Int32.min), y: -64, z: Int(Int32.max), color: "blue", name: "Deep camp"),
+            MapItem.Banner(x: -17, y: 80, z: -2, color: "red", name: "Home"),
+            MapItem.Banner(x: 4, y: 0, z: -9, color: nil, name: nil),
+        ]
+        for map in maps { #expect(map.banners == expected) }
+    }
+
+    @Test func malformedBannerPositionsDoNotInventCoordinatesOrDropValidNeighbors() throws {
+        let malformed: [NBT] = [
+            .intArray([]), .intArray([1]), .intArray([1, 2]), .intArray([1, 2, 3, 4]),
+            .compound(["X": .int(1), "Z": .int(3)]),
+            .compound(["X": .int(1), "Y": .string("2"), "Z": .int(3)]), .string("1 2 3"),
+        ]
+        let entries = malformed.map { NBT.compound(["pos": $0]) } + [
+            .compound([:]),
+            .compound(["pos": .intArray([-3, 62, -5])]),
+            .compound(["pos": .compound(["X": .int(7), "Y": .int(64), "Z": .int(9)])]),
+        ]
+        let map = try #require(MapItem(id: 0, nbt: .compound([
+            "colors": colors(), "banners": .list(entries),
+        ])))
+        #expect(map.banners == [
+            MapItem.Banner(x: -3, y: 62, z: -5, color: nil, name: nil),
+            MapItem.Banner(x: 7, y: 64, z: 9, color: nil, name: nil),
+        ])
+    }
+
     @Test func worldListsMapsAndSkipsOtherFiles() throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

@@ -167,7 +167,9 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     /// minecarts and boats, animals with chests, and item frames.
     public static func containers(inEntityChunk nbt: NBT) -> [ItemContainer] {
         (nbt["Entities"]?.list ?? []).compactMap { entity in
-            guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list?.compactMap(\.double), pos.count == 3 else {
+            guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
+                  let savedX = pos[0].double, let savedY = pos[1].double, let savedZ = pos[2].double,
+                  let position = BlockPosition(x: savedX, y: savedY, z: savedZ) else {
                 return nil
             }
             // Dropped items despawn and players' items are read from player files, so neither counts.
@@ -175,7 +177,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             let items = ItemStack.list(entity["Items"]) + (entity["Item"].flatMap(ItemStack.init).map { [$0] } ?? [])
             let sealed = entity["LootTable"] != nil
             guard !items.isEmpty || sealed else { return nil }
-            return ItemContainer(kind: kind, x: Int(pos[0].rounded(.down)), y: Int(pos[1].rounded(.down)), z: Int(pos[2].rounded(.down)),
+            return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z,
                                  items: items, customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  isSealedLoot: sealed && items.isEmpty, isEntity: true)
         }
