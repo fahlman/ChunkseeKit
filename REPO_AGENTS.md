@@ -54,6 +54,12 @@ build fixtures, it never writes into a world folder.
 It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
 uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.
 
+`Dimension.forEachChunk` exposes a synchronous, throwing visit without retaining a decoded NBT
+array. Missing regions are empty, damaged chunks are skipped, and opening/callback errors
+propagate. `Chunk.inhabitedTime(in:)` owns the current root/legacy `Level` metadata fallback,
+shared with Chunk and the regional time reader. It does not decode legacy terrain or change
+the hold on #38. These are additive public APIs.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded

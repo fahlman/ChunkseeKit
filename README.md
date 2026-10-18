@@ -93,10 +93,8 @@ A `BlockState` whose `properties` is empty is in its default state. Since 26.3, 
 
 ```swift
 var diamonds = 0
-for (_, _, url) in overworld.regionFiles() {
-    let region = try RegionFile(contentsOf: url)
-    for (localX, localZ) in region.chunkCoordinates {
-        guard let nbt = try region.chunkNBT(localX: localX, localZ: localZ) else { continue }
+for (regionX, regionZ, _) in overworld.regionFiles() {
+    try overworld.forEachChunk(regionX: regionX, regionZ: regionZ) { _, _, nbt in
         let chunk = try Chunk(nbt: nbt)
         for section in chunk.sections {
             guard let states = section.blockStates else { continue }
@@ -106,6 +104,22 @@ for (_, _, url) in overworld.regionFiles() {
             diamonds += states.allPaletteIndices().filter(ore.contains).count
         }
     }
+}
+```
+
+`forEachChunk` visits decoded NBT one chunk at a time. Its `skipping` set omits unneeded keys;
+`.entities` and `.pointsOfInterest` select the other region folders. Missing regions have no
+visits and unreadable chunks are skipped. File-opening errors and errors from your callback
+(including `CancellationError`) propagate immediately. The callback can retain values if needed;
+the visitor does not build an array of raw chunks.
+
+For combined scans, the same chunk NBT can feed the existing container, sign, spawner, structure
+and terrain readers. `Chunk.inhabitedTime(in:)` also handles old `Level.InhabitedTime` metadata
+without requiring a legacy terrain decode:
+
+```swift
+try overworld.forEachChunk(regionX: -1, regionZ: 0, skipping: Chunk.keysNotNeededForInhabitedTime) { x, z, nbt in
+    print(x, z, Chunk.inhabitedTime(in: nbt) ?? 0)
 }
 ```
 
