@@ -34,6 +34,10 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
+It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
+uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
 Health Boost is included once through the permanent saved attribute modifiers. Custom equipment

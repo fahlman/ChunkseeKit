@@ -39,9 +39,15 @@ public struct Dimension: Sendable {
         }.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
     }
 
+    /// URL of a region file at region coordinates (not chunk or block coordinates).
+    /// This only constructs a path; the file and its parent folder need not exist.
+    public func regionURL(_ folder: Folder = .terrain, x: Int, z: Int) -> URL {
+        directory(folder).appendingPathComponent("r.\(x).\(z).mca")
+    }
+
     /// The region file at region coordinates in a folder, if it exists.
     public func region(_ folder: Folder = .terrain, x: Int, z: Int) throws -> RegionFile? {
-        let url = directory(folder).appendingPathComponent("r.\(x).\(z).mca")
+        let url = regionURL(folder, x: x, z: z)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return try RegionFile(contentsOf: url)
     }
