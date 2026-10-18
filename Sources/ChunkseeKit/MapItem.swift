@@ -8,6 +8,7 @@ public struct MapItem: Sendable, Equatable {
         public var x: Int
         public var y: Int
         public var z: Int
+        /// The saved dye color. Current maps may omit the white default.
         public var color: String?
         public var name: String?
     }
@@ -54,8 +55,16 @@ public struct MapItem: Sendable, Equatable {
         isLocked = data["locked"]?.bool ?? false
         banners = (data["banners"]?.list ?? []).compactMap { banner in
             let pos = banner["pos"] ?? banner["Pos"]
-            guard let x = pos?["X"]?.int ?? pos?["x"]?.int, let y = pos?["Y"]?.int ?? pos?["y"]?.int,
-                  let z = pos?["Z"]?.int ?? pos?["z"]?.int else { return nil }
+            let x: Int, y: Int, z: Int
+            if let values = pos?.intArray {
+                guard values.count == 3 else { return nil }
+                (x, y, z) = (Int(values[0]), Int(values[1]), Int(values[2]))
+            } else {
+                guard let oldX = pos?["X"]?.int ?? pos?["x"]?.int,
+                      let oldY = pos?["Y"]?.int ?? pos?["y"]?.int,
+                      let oldZ = pos?["Z"]?.int ?? pos?["z"]?.int else { return nil }
+                (x, y, z) = (oldX, oldY, oldZ)
+            }
             return Banner(x: x, y: y, z: z, color: (banner["color"] ?? banner["Color"])?.string,
                           name: (banner["name"] ?? banner["Name"]).flatMap(TextComponent.plainText))
         }

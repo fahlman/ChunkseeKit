@@ -286,6 +286,12 @@ older cached creatures; rebuild caches before relying on the identity.
 
 ### Maps made in the game
 
+`MapItem.banners` reads both the three-int `pos` array used by 26.3 and the older
+coordinate compound. Incomplete positions are skipped. Color and name remain the saved optional
+values: current maps omit the default white color and an absent custom name. The array shape and
+defaults were checked against the official 26.3 `MapBanner`/`BlockPos` codecs and a game-written map;
+the version that changed the position shape has not been established.
+
 ```swift
 for map in world.mapItems() where !map.isBlank {
     // 128×128 color ids; pixel (0, 0) is at world (map.minX, map.minZ), each covering map.blocksPerPixel blocks.
