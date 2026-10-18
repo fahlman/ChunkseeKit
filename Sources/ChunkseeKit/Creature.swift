@@ -57,16 +57,13 @@ public struct Creature: Sendable, Equatable, Codable {
         guard let id = nbt["id"]?.string, nbt["Health"] != nil,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
-                  customName: nbt["CustomName"].flatMap(TextComponent.plainText).map(TextComponent.removingFormattingCodes).flatMap { $0.isEmpty ? nil : $0 },
-                  // 1.16+ stores an int array; older versions a string, as `Owner` or `OwnerUUID`.
-                  owner: nbt["Owner"]?.uuid ?? (nbt["Owner"]?.string ?? nbt["OwnerUUID"]?.string).flatMap(UUID.init(uuidString:)),
+                  customName: nbt["CustomName"].flatMap(TextComponent.plainText)
+                      .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
+                  owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt), health: nbt["Health"]?.double)
-        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion)
-        uuid = nbt["UUID"]?.uuid ?? nbt["UUID"]?.string.flatMap(UUID.init(uuidString:))
-        if uuid == nil, case .long(let most)? = nbt["UUIDMost"], case .long(let least)? = nbt["UUIDLeast"] {
-            uuid = NBT.intArray([Int32(truncatingIfNeeded: most >> 32), Int32(truncatingIfNeeded: most),
-                                 Int32(truncatingIfNeeded: least >> 32), Int32(truncatingIfNeeded: least)]).uuid
-        }
+        let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
+        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
+        uuid = nbt.uuid
         if owner != nil {
             sittingOrder = PetData.sittingOrder(nbt, species: id)
             appearance = PetData.appearance(nbt, species: id)
@@ -85,7 +82,7 @@ public struct Creature: Sendable, Equatable, Codable {
 public struct Villager: Sendable, Equatable, Codable {
     /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
     public var profession: String?
-    /// 1 (novice) to 5 (master).
+    /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?
     /// The biome style, e.g. `minecraft:desert`.
     public var type: String?
@@ -96,7 +93,12 @@ public struct Villager: Sendable, Equatable, Codable {
         let trades = (nbt["Offers"]?["Recipes"]?.list ?? []).compactMap(Trade.init)
         guard data != nil || !trades.isEmpty else { return nil }
         profession = data?["profession"]?.string
-        level = data?["level"]?.int
+        // The VillagerData codec defaults an absent field, not a malformed one, to novice.
+        if let fields = data?.compound, fields["level"] == nil {
+            level = 1
+        } else {
+            level = data?["level"]?.int
+        }
         type = data?["type"]?.string
         self.trades = trades
     }
@@ -125,6 +127,13 @@ public struct Trade: Sendable, Equatable, Codable {
 }
 
 extension Dimension {
+    /// Living mobs in one entity chunk, preserving its saved version for omitted attributes.
+    /// Unlike constructing creatures from raw `entities`, this retains the DataVersion context.
+    public func creatures(chunkX: Int, chunkZ: Int) throws -> [Creature] {
+        guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
+        return Creature.creatures(inEntityChunk: nbt)
+    }
+
     /// Living mobs in one region's entity file.
     public func creatures(regionX: Int, regionZ: Int) throws -> [Creature] {
         try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt) }

@@ -60,9 +60,7 @@ func scanRegion(x rx: Int, z rz: Int, url: URL, in dimension: ChunkseeKit.Dimens
             for section in chunk.sections {
                 guard let states = section.blockStates else { continue }
                 tally.sections += 1
-                var perIndex = [Int](repeating: 0, count: states.palette.count)
-                for i in states.allPaletteIndices() where i < perIndex.count { perIndex[i] += 1 }
-                for (i, n) in perIndex.enumerated() { tally.blockCounts[states.palette[i].id, default: 0] += n }
+                for (i, n) in states.paletteCounts().enumerated() { tally.blockCounts[states.palette[i].id, default: 0] += n }
             }
             tally.entityChunks += try dimension.entities(chunkX: chunk.x, chunkZ: chunk.z).isEmpty ? 0 : 1
         } catch {
