@@ -92,6 +92,23 @@ import ChunkseeKit
         (-9223372036854775808, -300000, 500000, false),
         // First 31-bit draw is 2_147_483_640 (modulo 10 = 0), but rejected; actual nextInt = 6.
         (181072394636955, 0, 0, false),
+        // Nearby chunks: eight actual positives and eight negatives from a bounded 9×9 check.
+        (0, -2, 0, true),
+        (0, 1, -3, true),
+        (0, 2, -3, true),
+        (0, 2, 2, true),
+        (0, 2, 4, true),
+        (0, 4, 2, true),
+        (-987654321, -4, -4, true),
+        (-987654321, -4, 1, true),
+        (0, -4, -4, false),
+        (0, -4, -3, false),
+        (0, -4, -2, false),
+        (0, -4, -1, false),
+        (0, -4, 0, false),
+        (0, -4, 1, false),
+        (0, -4, 2, false),
+        (0, -4, 3, false),
     ]
 
     @Test(arguments: gameCases)
