@@ -87,6 +87,21 @@ let entities = try overworld.entities(chunkX: 0, chunkZ: -1)
 print(entities.compactMap { $0["id"]?.string })
 ```
 
+Heightmaps store the absolute Y of the first free block above the matching surface. The automatic
+reader returns `nil` if stored length cannot uniquely determine width: for example, 11-bit and
+12-bit maps both use 52 longs. Vanilla 128/256/384-block heights remain unambiguous. When the
+actual dimension build height is known, pass it explicitly:
+
+```swift
+let tallSurface = chunk.heightmap("WORLD_SURFACE", height: 4000) // build height, not maximum Y
+```
+
+The explicit overload checks stored length and value range against that height. Missing/inconsistent
+maps and overflowing Y values return `nil`. Callers without height context should use their normal
+surface fallback rather than treat an ambiguous packing guess as a valid map. This changes the
+availability of ambiguous maps in the existing overload; their previously guessed values could be
+incorrect. It does not add pre-1.18 terrain decoding.
+
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
 ### Iterate every chunk

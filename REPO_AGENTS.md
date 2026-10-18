@@ -60,6 +60,12 @@ propagate. `Chunk.inhabitedTime(in:)` owns the current root/legacy `Level` metad
 shared with Chunk and the regional time reader. It does not decode legacy terrain or change
 the hold on #38. These are additive public APIs.
 
+`PackedLongs` owns the non-straddling packed-long traversal used by palettes and heightmaps.
+`Chunk.heightmap(_:)` infers only a unique width from stored length; ambiguous maps require
+`heightmap(_:height:)` with the dimension's actual build height. Both return first-free-block
+absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
+is added. The explicit-height overload is additive public API.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
