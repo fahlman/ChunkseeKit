@@ -187,6 +187,11 @@ attribute modifier and is counted once from that list. Custom equipment that mod
 health makes `maxHealth` unavailable because its transient modifiers are not saved there.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
+`Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
+matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
+unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
+still decode as saved, so rescan them to obtain this corrected default.
+
 Owned pets also expose `sittingOrder` (wolves/cats/parrots), `appearance` (wolf/cat coat,
 parrot color, horse coat and markings, llama color), `collarColor` (wolves/cats), and `equipment`
 by slot. An empty equipment dictionary means a pet that can wear equipment has none; nil means
