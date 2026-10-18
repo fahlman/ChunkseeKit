@@ -68,6 +68,15 @@ public struct NetherPortal: Sendable, Equatable {
         case wouldCreateNewPortal(destination: Block)
     }
 
+    /// The outbound link and whether the destination's default entry leads back to this portal.
+    public enum RoundTrip: Sendable, Equatable {
+        case twoWay(target: NetherPortal, block: Block)
+        /// The return goes to another existing portal or would create a new one.
+        case oneWay(target: NetherPortal, block: Block, returning: Link)
+        /// There is no outbound portal in range, so there is no return link to inspect yet.
+        case wouldCreateNewPortal(destination: Block)
+    }
+
     public static let overworld = "minecraft:overworld"
     public static let nether = "minecraft:the_nether"
 
@@ -123,6 +132,26 @@ public struct NetherPortal: Sendable, Equatable {
         }
         if let best { return .portal(best.portal, block: best.block) }
         return .wouldCreateNewPortal(destination: destination)
+    }
+
+    /// Classifies both legs using `link(into:entering:)` and complete portal lists from each
+    /// dimension. The outward leg uses `entry` or this portal's default bottom-center entry;
+    /// the return uses the target's default entry, not the outward arrival block. As with `link`,
+    /// this is a prediction: entering another block or unavailable chunks can change the trip.
+    /// Returns `nil` for a dimension without Nether-portal travel.
+    public func roundTrip(into candidates: [NetherPortal], returningThrough origins: [NetherPortal],
+                          entering entry: Block? = nil) -> RoundTrip? {
+        guard let outward = link(into: candidates, entering: entry) else { return nil }
+        switch outward {
+        case .wouldCreateNewPortal(let destination):
+            return .wouldCreateNewPortal(destination: destination)
+        case .portal(let target, let block):
+            guard let returning = target.link(into: origins) else { return nil }
+            if case .portal(let back, _) = returning, back == self {
+                return .twoWay(target: target, block: block)
+            }
+            return .oneWay(target: target, block: block, returning: returning)
+        }
     }
 }
 

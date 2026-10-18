@@ -94,9 +94,11 @@ public struct World: Sendable {
     }
 
     /// Looks up a dimension by namespaced ID (`minecraft:overworld`, `overworld`, `mymod:mining`).
+    /// Missing dimensions and empty namespace/path components return nil.
     public func dimension(_ id: String) -> Dimension? {
         let full = id.contains(":") ? id : "minecraft:" + id
-        let parts = full.split(separator: ":", maxSplits: 1).map(String.init)
+        let parts = full.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
         let modern = "dimensions/\(parts[0])/\(parts[1])"
         if exists(modern) { return Dimension(id: full, url: url.appendingPathComponent(modern)) }
         // Pre-26.1 locations of the vanilla dimensions.
@@ -128,7 +130,8 @@ public struct World: Sendable {
     public func playerData(_ uuid: UUID) throws -> NBT? {
         let file = playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
         if FileManager.default.fileExists(atPath: file.path) { return try NBT.read(contentsOf: file) }
-        if let embedded = level.nbt["Player"], embedded["UUID"]?.uuid == uuid { return embedded }
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           (embedded.uuid ?? level.singleplayerUUID) == uuid { return embedded }
         return nil
     }
 

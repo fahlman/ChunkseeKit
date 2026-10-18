@@ -61,22 +61,8 @@ enum PetData {
     }
 
     static func equipment(_ nbt: NBT, species: String) -> [String: ItemStack]? {
-        let saddled = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse", "minecraft:zombie_horse", "minecraft:camel",
-                       "minecraft:camel_husk", "minecraft:nautilus", "minecraft:zombie_nautilus"]
-        let llama = ["minecraft:llama", "minecraft:trader_llama"].contains(species)
-        let carriesChest = llama || ["minecraft:donkey", "minecraft:mule"].contains(species)
-        let applicable = species == "minecraft:wolf" || llama || saddled.contains(species)
-        var items: [String: ItemStack]
-        if let current = nbt["equipment"]?.compound {
-            items = current.compactMapValues(ItemStack.init)
-        } else {
-            items = [:]
-            if let body = nbt["body_armor_item"].flatMap(ItemStack.init) { items["body"] = body }
-            if species == "minecraft:horse", let armor = nbt["ArmorItem"].flatMap(ItemStack.init) { items["body"] = armor }
-            if llama, let decor = nbt["DecorItem"].flatMap(ItemStack.init) { items["body"] = decor }
-            if saddled.contains(species), let saddle = nbt["SaddleItem"].flatMap(ItemStack.init) { items["saddle"] = saddle }
-        }
-        if carriesChest, nbt["ChestedHorse"]?.int == 1 { items["storage"] = ItemStack(id: "minecraft:chest") }
-        return applicable || !items.isEmpty ? items : nil
+        var items = EntityEquipment.creature(nbt, species: species)
+        if EntityEquipment.carriesChest(species), nbt["ChestedHorse"]?.int == 1 { items["storage"] = ItemStack(id: "minecraft:chest") }
+        return EntityEquipment.canWearPetEquipment(species) || !items.isEmpty ? items : nil
     }
 }

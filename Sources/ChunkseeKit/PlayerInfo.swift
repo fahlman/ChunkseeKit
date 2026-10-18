@@ -96,7 +96,8 @@ extension World {
             let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
             return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved)
         }
-        if let embedded = level.nbt["Player"], let uuid = embedded["UUID"]?.uuid ?? level.singleplayerUUID,
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           let uuid = embedded.uuid ?? level.singleplayerUUID,
            !players.contains(where: { $0.uuid == uuid }) {
             players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed))
         }
@@ -129,9 +130,6 @@ extension PlayerInfo {
 }
 
 extension PlayerInfo {
-    /// Slots of armor and the offhand in the `Inventory` list of files from before 1.21.5.
-    static let legacyEquipmentSlots = [100: "feet", 101: "legs", 102: "chest", 103: "head", -106: "offhand"]
-
     /// The main inventory (slots 9–35) and hotbar (slots 0–8).
     public var inventory: [ItemStack] {
         ItemStack.list(nbt["Inventory"]).filter { ($0.slot ?? 0) >= 0 && ($0.slot ?? 0) < 36 }
@@ -141,11 +139,7 @@ extension PlayerInfo {
     /// `offhand`, and `body`/`saddle` where present): the `equipment` compound in 1.21.5+, or the
     /// special inventory slots before that.
     public var equipment: [String: ItemStack] {
-        var found = (nbt["equipment"]?.compound ?? [:]).compactMapValues(ItemStack.init)
-        for item in ItemStack.list(nbt["Inventory"]) {
-            if let slot = item.slot, let name = Self.legacyEquipmentSlots[slot], found[name] == nil { found[name] = item }
-        }
-        return found
+        EntityEquipment.player(nbt)
     }
 
     /// The player's ender chest, which every ender chest in the world opens for them.
