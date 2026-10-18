@@ -3,6 +3,24 @@ import Testing
 @testable import ChunkseeKit
 
 @Suite struct InhabitedTimeTests {
+    @Test func sharedMetadataReadPreservesRootPrecedenceAndMissingValues() throws {
+        let old = NBT.compound(["Level": .compound(["InhabitedTime": .long(5)])])
+        #expect(Chunk.inhabitedTime(in: old) == 5)
+        #expect(Chunk.inhabitedTime(in: .compound([:])) == nil)
+        for rootValue in [Int64(0), 72_000] {
+            let nbt = Fixtures.chunk(x: 0, z: 0, dataVersion: 5023, sections: [], extra: [
+                "InhabitedTime": .long(rootValue), "Level": .compound(["InhabitedTime": .long(5)]),
+            ])
+            #expect(Chunk.inhabitedTime(in: nbt) == Int(rootValue))
+            #expect(try Chunk(nbt: nbt).inhabitedTime == Int(rootValue))
+        }
+        let upgraded = Fixtures.chunk(x: 0, z: 0, dataVersion: 5023, sections: [], extra: [
+            "Level": .compound(["InhabitedTime": .long(5)]),
+        ])
+        #expect(try Chunk(nbt: upgraded).inhabitedTime == Chunk.inhabitedTime(in: upgraded))
+        #expect(Chunk.inhabitedTime(in: upgraded) == 5)
+    }
+
     @Test func timesByChunkInARegion() throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

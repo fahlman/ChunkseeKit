@@ -14,7 +14,7 @@ func findCommand(_ world: World, _ arguments: Arguments) {
             return byID.sorted { $0.key < $1.key }.map { "\($0.value) \($0.key)" }.joined(separator: ", ")
         }
         for player in world.players() {
-            for (label, items) in [("inventory", player.inventory + Array(player.equipment.values)), ("ender chest", player.enderChest)] {
+            for (label, items) in [("inventory", player.searchableInventory), ("ender chest", player.enderChest)] {
                 let found = summary(items)
                 if !found.isEmpty { print("player \(player.uuid.uuidString.prefix(8).lowercased()) \(label): \(found)") }
             }
@@ -22,8 +22,8 @@ func findCommand(_ world: World, _ arguments: Arguments) {
         let dims = arguments.dimensions(2, in: world)
         var total = 0
         for dim in dims {
-            for (rx, rz, _) in dim.regionFiles() {
-                for container in (try? dim.containers(regionX: rx, regionZ: rz)) ?? [] {
+            for region in searchRegions(in: dim) {
+                for container in (try? dim.containers(regionX: region.x, regionZ: region.z)) ?? [] {
                     let found = summary(container.items)
                     guard !found.isEmpty else { continue }
                     total += 1
@@ -46,15 +46,15 @@ func textCommand(_ world: World, _ arguments: Arguments) {
             }
         }
         for player in world.players() {
-            for book in books(player.inventory + player.enderChest) {
+            for book in books(player.searchableInventory + player.enderChest) {
                 print("player \(player.uuid.uuidString.prefix(8).lowercased()): \(book)")
             }
         }
         let dims = arguments.dimensions(2, in: world)
         var total = 0
         for dim in dims {
-            for (rx, rz, _) in dim.regionFiles() {
-                guard let contents = try? dim.contents(regionX: rx, regionZ: rz) else { continue }
+            for region in searchRegions(in: dim) {
+                guard let contents = try? dim.contents(regionX: region.x, regionZ: region.z) else { continue }
                 for sign in contents.signs {
                     let lines = (sign.front + sign.back).filter { !$0.isEmpty }
                     guard lines.joined(separator: " ").lowercased().contains(query) else { continue }

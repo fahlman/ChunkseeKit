@@ -75,6 +75,55 @@ import Testing
         #expect((moving[0].x, moving[0].y, moving[0].z) == (-11, 30, 4) && moving[0].isEntity)
     }
 
+    @Test(arguments: ["nan", "infinity", "negative infinity", "out of range"])
+    func invalidContainerPositionsDoNotDiscardOtherContainersInTheRegion(_ value: String) throws {
+        let invalid: Double = switch value {
+        case "nan": .nan
+        case "infinity": .infinity
+        case "negative infinity": -.infinity
+        default: .greatestFiniteMagnitude
+        }
+        func container(_ kind: String, at pos: [NBT]) -> NBT {
+            var fields: [String: NBT] = ["id": .string(kind), "Pos": .list(pos)]
+            switch kind {
+            case "minecraft:item_frame": fields["Item"] = item("minecraft:map", 1)
+            case "minecraft:chest_minecart": fields["LootTable"] = .string("minecraft:chests/abandoned_mineshaft")
+            default: fields["Items"] = .list([item("minecraft:diamond", 2)])
+            }
+            return .compound(fields)
+        }
+        var entities: [NBT] = []
+        for axis in 0..<3 {
+            var pos: [NBT] = [.double(-0.1), .double(63.9), .double(-16.1)]
+            pos[axis] = .double(invalid)
+            for kind in ["minecraft:donkey", "minecraft:item_frame", "minecraft:chest_minecart"] {
+                entities.append(container(kind, at: pos))
+            }
+        }
+        entities += [
+            container("minecraft:donkey", at: [.string("x"), .string("y"), .string("z")]),
+            container("minecraft:donkey", at: [.double(1), .double(2), .double(3), .double(4)]),
+            container("minecraft:donkey", at: [.double(-0.1), .double(63.9), .double(-16.1)]),
+            container("minecraft:chest_minecart", at: [.double(2.2), .double(-0.1), .double(3.4)]),
+        ]
+        let nbt = NBT.compound(["Entities": .list(entities)])
+        let parsed = ItemContainer.containers(inEntityChunk: nbt)
+        #expect(parsed.count == 2)
+        #expect(parsed.first.map { [$0.x, $0.y, $0.z] } == [-1, 63, -17])
+        #expect(parsed.first?.allItems.first?.id == "minecraft:diamond")
+        #expect(parsed.last.map { [$0.x, $0.y, $0.z] } == [2, -1, 3])
+        #expect(parsed.last?.isSealedLoot == true)
+
+        let url = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("Coordinates")])]),
+                                     to: url.appendingPathComponent("level.dat"))
+        try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: nbt)]),
+                           to: url.appendingPathComponent("dimensions/minecraft/overworld/entities/r.0.0.mca"))
+        let dimension = try #require(try World(contentsOf: url).dimension("overworld"))
+        #expect(try dimension.contents(regionX: 0, regionZ: 0).containers == parsed)
+    }
+
     @Test func playerInventoryEquipmentAndEnderChest() {
         let player = PlayerInfo(uuid: UUID(), nbt: .compound([
             "Inventory": .list([item("minecraft:elytra", 1, slot: 5)]),
