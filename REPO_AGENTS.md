@@ -89,6 +89,12 @@ and integer-array position reader. World-spawn fields become available together;
 record never gains an inferred Overworld dimension. The existing dimension-tag normalization is
 shared by player/map locations through an internal NBT accessor; legacy XYZ/number rules stay intact.
 
+`SavedDate` owns Mojang's saved timestamp grammar for UserCache and AdvancementProgress. Its
+private DateFormatter is fully configured once and never mutated by readers. Apple documents
+modern DateFormatter as thread safe on 64-bit macOS, covering this Mac-only macOS 27 target:
+https://developer.apple.com/documentation/foundation/dateformatter. No custom unchecked-concurrency
+annotation or additional lock is used.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,

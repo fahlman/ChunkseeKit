@@ -77,12 +77,9 @@ public struct AdvancementProgress: Sendable, Equatable {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
-        let format = DateFormatter()
-        format.locale = Locale(identifier: "en_US_POSIX")
-        format.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         return root.compactMap { id, value -> AdvancementProgress? in
             guard let entry = value as? [String: Any] else { return nil }
-            let criteria = (entry["criteria"] as? [String: String] ?? [:]).compactMapValues(format.date(from:))
+            let criteria = (entry["criteria"] as? [String: String] ?? [:]).compactMapValues(SavedDate.parse)
             return AdvancementProgress(id: id, isDone: entry["done"] as? Bool ?? false, criteria: criteria)
         }.sorted { $0.id < $1.id }
     }
