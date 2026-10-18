@@ -271,6 +271,11 @@ The omitted vanilla player base is supplied only for verified 26.3/data-version-
 Unknown defaults, modifier operations or modded effect/item defaults leave the maximum nil.
 Active effects read modern names and legacy numeric IDs, omitting expired/malformed entries
 and queued `hidden_effect` values. They describe the save and do not count down in real time.
+Amplifiers follow 26.3's `UNSIGNED_BYTE` codec: integral tags retain their low eight bits;
+floating tags first narrow to Java's signed-int range (truncate toward zero, NaN to zero,
+overflow/infinity to the corresponding endpoint), then retain their low eight bits. Thus edited
+int `-1` means level 256, short `256` means level 1, and int `300` means level 45. Nonnumeric
+amplifiers remain unavailable; a missing amplifier is level 1. Duration parsing is unchanged.
 
 `ItemStack.durability` now also knows the vanilla 26.3 defaults for armor, tools, weapons,
 elytra, shields and other damageable equipment. Explicit maximum components override those
