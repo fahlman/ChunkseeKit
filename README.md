@@ -112,8 +112,9 @@ For a map of explored terrain, also check `Chunk.isFullyGenerated`.
 // Structures are recorded in the chunk they start in; skip block data for a fast scan.
 let region = try RegionFile(contentsOf: overworld.regionFiles()[0].url)
 for (x, z) in region.chunkCoordinates {
-    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures) else { continue }
-    for start in StructureStart.starts(inChunk: nbt) {
+    guard let nbt = try region.chunkNBT(localX: x, localZ: z, skipping: Chunk.keysNotNeededForStructures),
+          let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { continue }
+    for start in chunk.structureStarts {
         print(start.id, start.bounds as Any, start.pieces.map(\.id))  // e.g. a stronghold's "minecraft:shpr"
     }
 }
@@ -357,6 +358,10 @@ Creature and player coordinates name the containing block (negative fractions ro
 Edited or malformed positions that cannot be represented are printed as `unknown position`;
 the creature/player remains in the list. Creature listing scans entity region files even when
 there is no corresponding terrain file.
+
+The structures command lists starts in fully generated chunks and uses the containing block of
+each inclusive bounding box's center. It keeps unknown placement for piece types without a
+verified placement flag, following `StructureStart`.
 
 For example:
 

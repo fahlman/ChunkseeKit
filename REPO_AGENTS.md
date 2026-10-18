@@ -34,6 +34,8 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 The CLI's `blockPosition` is the checked presentation conversion from exact entity positions to
 whole containing blocks. Creature and player output share it: negative fractions round down,
 and malformed/unrepresentable positions remain listed with their coordinates unavailable.
+The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
+unneeded block data; it does not apply its own chunk-status or placement rules.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
