@@ -71,6 +71,12 @@ World.readSavedData path/existence/NBT reader. Public World.savedData retains na
 and flat-file fallback; dimension records keep modern-only file lookup and their existing
 level.dat fallback. This does not broaden which legacy files are parsed as modern records.
 
+`World.isSlimeChunk(x:z:seed:)` owns Java Edition's chunk classification for the slime overlay.
+It accepts Int32 chunk coordinates and an Int64 seed; seed mixing and the 48-bit bounded random
+draw preserve the game's overflow/rejection semantics. Verified against the official 26.3
+client, including an explicitly constructed rejection case. Spawn conditions remain separate.
+The app uses World.seed() and this public rule after a separately approved minor release.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
