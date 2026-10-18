@@ -40,6 +40,10 @@ import Testing
             let values = try pair(["equipment": .compound(["body": gear])])
             #expect(values.pet.maxHealth == 20 && values.player.maxHealth == 20)
         }
+        let irrelevantLegacyField = try pair(["ArmorItem": item(["minecraft:attribute_modifiers": .list([modifier(100, slot: "body")])])])
+        #expect(irrelevantLegacyField.pet.maxHealth == 20) // ArmorItem is a horse field, not a wolf field.
+        let invalid = try pair(["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])])])
+        #expect(invalid.pet.maxHealth == nil && invalid.player.maxHealth == nil)
     }
 
     @Test func unsupportedModdedDefaultsHaveOneConservativePolicy() throws {

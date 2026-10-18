@@ -4,9 +4,8 @@ enum EntityHealth {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
     static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?, isTamed: Bool?) -> Double? {
-        // Effects are permanent saved modifiers. Custom equipment can add unsaved modifiers;
-        // leave those creature totals unavailable rather than report a partial value.
-        guard !hasTransientHealthModifier(nbt) else { return nil }
+        guard supportsEffects(nbt),
+              let modifiers = EquipmentHealth.modifiers(in: EntityEquipment.creature(nbt, species: species)) else { return nil }
         let base = defaultMaximum(species: species, dataVersion: dataVersion)
         // An unrecognized saved owner can still require the game's old-owner conversion.
         // Do not treat an owner we cannot identify as proof that a wolf is untamed.
@@ -14,7 +13,12 @@ enum EntityHealth {
         // Loading an unowned wolf calls setTame(false, true): reset the base, retaining modifiers.
         // Owned wolves load with setTame(true, false), preserving their saved base.
         let loadedBase = species == "minecraft:wolf" && isTamed == false ? base : nil
-        return value(nbt, defaultBase: base, baseOverride: loadedBase)
+        return value(nbt, defaultBase: base, additionalModifiers: modifiers, baseOverride: loadedBase)
+    }
+
+    /// Keep the existing conservative mod-default boundary the same for players and creatures.
+    static func supportsEffects(_ nbt: NBT) -> Bool {
+        StatusEffect.active(in: nbt).allSatisfy { $0.id.hasPrefix("minecraft:") }
     }
 
     static func value(_ nbt: NBT, defaultBase: Double?, additionalModifiers: [NBT] = [], baseOverride: Double? = nil) -> Double? {
@@ -78,13 +82,4 @@ enum EntityHealth {
         }
     }
 
-    private static func hasTransientHealthModifier(_ nbt: NBT) -> Bool {
-        let equipped = Array((nbt["equipment"]?.compound ?? [:]).values)
-            + ["body_armor_item", "ArmorItem", "SaddleItem", "DecorItem"].compactMap { nbt[$0] }
-        return equipped.compactMap(ItemStack.init).contains { item in
-            let component = item.components?["minecraft:attribute_modifiers"]
-            let modifiers = component?.list ?? component?["modifiers"]?.list ?? item.components?["AttributeModifiers"]?.list ?? []
-            return modifiers.contains { healthNames.contains($0["type"]?.string ?? $0["AttributeName"]?.string ?? "") }
-        }
-    }
 }
