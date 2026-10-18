@@ -201,6 +201,8 @@ by slot. An empty equipment dictionary means a pet that can wear equipment has n
 not applicable or unavailable. Equipment reads current slots, legacy `ArmorItems`/`HandItems`
 lists, older body armor, horse armor/saddle, llama decor and attached chest fields. A current
 creature equipment compound supersedes those older fields, including when explicitly empty.
+Older horse `ArmorItem` conversion clears the former chest entry, as Minecraft's data fix does;
+llama decor conversion retains other armor slots.
 Only the game's eight equipment slots participate in health; an attached storage chest is descriptive.
 Item `durability` uses saved damage and
 maximum components; vanilla wolf armor has an implicit maximum of 64. Unbreakable equipment

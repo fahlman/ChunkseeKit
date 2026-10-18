@@ -31,8 +31,12 @@ enum EntityEquipment {
             for (name, item) in zip(names, nbt[key]?.list ?? []) { items[name] = ItemStack(item) }
         }
         items["body"] = nbt["body_armor_item"].flatMap(ItemStack.init)
-        if species == "minecraft:horse", let armor = nbt["ArmorItem"].flatMap(ItemStack.init) { items["body"] = armor }
-        if llamaSpecies.contains(species), let decor = nbt["DecorItem"].flatMap(ItemStack.init) { items["body"] = decor }
+        if species == "minecraft:horse", let armor = nbt["ArmorItem"] {
+            // HorseBodyArmorItemFix clears the old chest entry, even for an empty ArmorItem.
+            items["chest"] = nil
+            items["body"] = ItemStack(armor)
+        }
+        if llamaSpecies.contains(species), let decor = nbt["DecorItem"] { items["body"] = ItemStack(decor) }
         if saddledSpecies.contains(species) {
             items["saddle"] = (nbt["saddle"] ?? nbt["SaddleItem"]).flatMap(ItemStack.init)
         }
