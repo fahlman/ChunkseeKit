@@ -66,6 +66,11 @@ the hold on #38. These are additive public APIs.
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
 is added. The explicit-height overload is additive public API.
 
+World-level saved data and per-dimension world-border/dragon records share the internal
+World.readSavedData path/existence/NBT reader. Public World.savedData retains namespaced-first
+and flat-file fallback; dimension records keep modern-only file lookup and their existing
+level.dat fallback. This does not broaden which legacy files are parsed as modern records.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
