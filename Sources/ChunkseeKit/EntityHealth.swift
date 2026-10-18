@@ -3,18 +3,30 @@ import Foundation
 enum EntityHealth {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
-    static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?) -> Double? {
-        // Effects are permanent saved modifiers. Custom equipment can add unsaved modifiers;
-        // leave those creature totals unavailable rather than report a partial value.
-        guard !hasTransientHealthModifier(nbt) else { return nil }
-        return value(nbt, defaultBase: defaultMaximum(species: species, dataVersion: dataVersion))
+    static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?, isTamed: Bool?) -> Double? {
+        guard supportsEffects(nbt),
+              let modifiers = EquipmentHealth.modifiers(in: EntityEquipment.creature(nbt, species: species)) else { return nil }
+        let base = defaultMaximum(species: species, dataVersion: dataVersion)
+        // An unrecognized saved owner can still require the game's old-owner conversion.
+        // Do not treat an owner we cannot identify as proof that a wolf is untamed.
+        if species == "minecraft:wolf", base != nil, isTamed == nil { return nil }
+        // Loading an unowned wolf calls setTame(false, true): reset the base, retaining modifiers.
+        // Owned wolves load with setTame(true, false), preserving their saved base.
+        let loadedBase = species == "minecraft:wolf" && isTamed == false ? base : nil
+        return value(nbt, defaultBase: base, additionalModifiers: modifiers, baseOverride: loadedBase)
     }
 
-    static func value(_ nbt: NBT, defaultBase: Double?, additionalModifiers: [NBT] = []) -> Double? {
+    /// Keep the existing conservative mod-default boundary the same for players and creatures.
+    static func supportsEffects(_ nbt: NBT) -> Bool {
+        StatusEffect.active(in: nbt).allSatisfy { $0.id.hasPrefix("minecraft:") }
+    }
+
+    static func value(_ nbt: NBT, defaultBase: Double?, additionalModifiers: [NBT] = [], baseOverride: Double? = nil) -> Double? {
         let attributes = nbt["attributes"]?.list ?? nbt["Attributes"]?.list ?? []
         let attribute = attributes.first { healthNames.contains($0["id"]?.string ?? $0["Name"]?.string ?? "") }
         let base: Double
-        if let attribute {
+        if let baseOverride { base = baseOverride }
+        else if let attribute {
             guard let saved = attribute["base"]?.double ?? attribute["Base"]?.double else { return nil }
             base = saved
         } else if let defaultBase { base = defaultBase }
@@ -46,17 +58,21 @@ enum EntityHealth {
 
     private static func modifierID(_ nbt: NBT) -> String? {
         if let id = nbt["id"]?.string { return id }
-        if let uuid = nbt["UUID"]?.uuid { return uuid.uuidString }
-        if case .long(let most)? = nbt["UUIDMost"], case .long(let least)? = nbt["UUIDLeast"] { return "\(most):\(least)" }
-        return nil
+        return nbt.uuid?.uuidString
     }
 
     private static func defaultMaximum(species: String, dataVersion: Int?) -> Double? {
+        // Exact release data versions only; do not infer defaults for snapshots or newer saves.
+        if let dataVersion, [4786, 4788, 4790, 4903, 5023].contains(dataVersion) {
+            switch species {
+            case "minecraft:cat": return 10
+            case "minecraft:parrot": return 6
+            case "minecraft:wolf": return 8
+            default: break
+            }
+        }
         guard dataVersion == 5023 else { return nil }
         switch species {
-        case "minecraft:cat": return 10
-        case "minecraft:parrot": return 6
-        case "minecraft:wolf": return 8
         case "minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:llama", "minecraft:trader_llama": return 53
         case "minecraft:skeleton_horse": return 15
         case "minecraft:zombie_horse": return 25
@@ -66,13 +82,4 @@ enum EntityHealth {
         }
     }
 
-    private static func hasTransientHealthModifier(_ nbt: NBT) -> Bool {
-        let equipped = Array((nbt["equipment"]?.compound ?? [:]).values)
-            + ["body_armor_item", "ArmorItem", "SaddleItem", "DecorItem"].compactMap { nbt[$0] }
-        return equipped.compactMap(ItemStack.init).contains { item in
-            let component = item.components?["minecraft:attribute_modifiers"]
-            let modifiers = component?.list ?? component?["modifiers"]?.list ?? item.components?["AttributeModifiers"]?.list ?? []
-            return modifiers.contains { healthNames.contains($0["type"]?.string ?? $0["AttributeName"]?.string ?? "") }
-        }
-    }
 }
