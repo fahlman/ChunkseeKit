@@ -150,8 +150,8 @@ public struct World: Sendable {
         try Self.readSavedData(name, namespace: namespace, at: url, includingFlatFile: true)
     }
 
-    /// Dimension metadata moved out of level.dat only in the namespaced layout. Its readers
-    /// opt out of the older world-file fallback rather than reinterpret a flat dimension file.
+    /// The border/fight file readers support the namespaced layout. They opt out of the older
+    /// world-file fallback rather than reinterpret a flat dimension file.
     static func readSavedData(_ name: String, namespace: String = "minecraft", at root: URL,
                               includingFlatFile: Bool) throws -> NBT? {
         let modern = "data/\(namespace)/\(name).dat"
