@@ -1,0 +1,81 @@
+import Foundation
+import Testing
+import ChunkseeKit
+
+/// Exercise the shipped command front end against compressed synthetic saves.
+@Suite struct CLIPositionTests {
+    @Test func namedCreaturesAndPlayersUseTheContainingBlock() throws {
+        let world = try fixture(position: [-8.7, -0.1, -513.1])
+        defer { try? FileManager.default.removeItem(at: world) }
+        let creature = try run(world, command: "creatures")
+        #expect(creature.status == 0)
+        #expect(creature.output.contains("minecraft:wolf \"Check Wolf\" at (-9, -1, -514)"))
+        #expect(creature.output.contains("1 minecraft:wolf"))
+        let player = try run(world, command: "players")
+        #expect(player.status == 0)
+        #expect(player.output.contains("position: minecraft:overworld -9 -1 -514"))
+        #expect(player.output.contains("death:    minecraft:the_nether -16 60 32"))
+        #expect(player.output.contains("respawn:  minecraft:overworld 8 65 -12"))
+    }
+
+    @Test(arguments: [Double.nan, Double.infinity, -Double.infinity, Double(Int.max), -Double.greatestFiniteMagnitude])
+    func unavailableCoordinatesDoNotCrashOrHideTheRecord(_ invalid: Double) throws {
+        for axis in 0..<3 {
+            var position = [1.0, 64.0, -2.0]
+            position[axis] = invalid
+            let world = try fixture(position: position)
+            defer { try? FileManager.default.removeItem(at: world) }
+            for command in ["creatures", "players"] {
+                let result = try run(world, command: command)
+                #expect(result.status == 0, "\(command) must not trap for invalid axis \(axis)")
+                #expect(result.output.contains("unknown position"))
+                #expect(result.output.contains(command == "creatures" ? "Check Wolf" : playerID.uuidString.lowercased()))
+                if command == "creatures" { #expect(result.output.contains("1 minecraft:wolf")) }
+                else { #expect(result.output.contains("respawn:  minecraft:overworld 8 65 -12")) }
+            }
+        }
+    }
+
+    @Test func exactIntegerEdgesAndFractionsRemainRepresentable() throws {
+        let world = try fixture(position: [Double(Int.min), Double(Int.max).nextDown, 0.999])
+        defer { try? FileManager.default.removeItem(at: world) }
+        let player = try run(world, command: "players")
+        #expect(player.status == 0)
+        #expect(player.output.contains("position: minecraft:overworld -9223372036854775808 9223372036854774784 0"))
+    }
+
+    private var playerID: UUID { UUID(uuidString: "01234567-89ab-cdef-0123-456789abcdef")! }
+
+    private func fixture(position: [Double]) throws -> URL {
+        let root = try Fixtures.tempDirectory()
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("CLI positions"), "DataVersion": .int(5023)])]),
+                                    to: root.appendingPathComponent("level.dat"))
+        let pos = NBT.list(position.map(NBT.double))
+        try Fixtures.writeGzippedNBT(.compound([
+            "DataVersion": .int(5023), "Dimension": .string("minecraft:overworld"), "Pos": pos,
+            "LastDeathLocation": .compound(["dimension": .string("minecraft:the_nether"), "pos": .intArray([-16, 60, 32])]),
+            "respawn": .compound(["dimension": .string("minecraft:overworld"), "pos": .intArray([8, 65, -12])]),
+        ]), to: root.appendingPathComponent("players/data/\(playerID.uuidString.lowercased()).dat"))
+        let mob = NBT.compound(["id": .string("minecraft:wolf"), "Health": .float(8),
+                                "Pos": pos, "CustomName": .string("Check Wolf")])
+        try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
+            "DataVersion": .int(5023), "Entities": .list([mob]),
+        ]))]), to: root.appendingPathComponent("dimensions/minecraft/overworld/entities/r.0.0.mca"))
+        // Match the current terrain enumeration to isolate coordinate presentation in this slice.
+        try Fixtures.write(try Fixtures.region([]), to: root.appendingPathComponent("dimensions/minecraft/overworld/region/r.0.0.mca"))
+        return root
+    }
+
+    private func run(_ world: URL, command: String) throws -> (status: Int32, output: String) {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let process = Process(), pipe = Pipe()
+        process.executableURL = root.appendingPathComponent(".build/debug/chunksee")
+        process.arguments = [world.path, command]
+        process.standardOutput = pipe
+        process.standardError = pipe
+        try process.run()
+        let output = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return (process.terminationStatus, String(decoding: output, as: UTF8.self))
+    }
+}
