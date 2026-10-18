@@ -33,7 +33,7 @@ import Testing
             let bits = Int.bitWidth - height.leadingZeroBitCount
             var values = (0..<256).map { $0 % (height + 1) }
             values[255] = height
-            let chunk = try map(Fixtures.pack(values, bits: bits), minSectionY: minimum)
+            let chunk = try map(Fixtures.pack(values, bits: bits), minSectionY: Int64(minimum))
             let expected = values.map { $0 + minimum * 16 }
             #expect(chunk.heightmap("WORLD_SURFACE") == expected)
             #expect(chunk.heightmap("WORLD_SURFACE", height: height) == expected)
