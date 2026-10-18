@@ -39,7 +39,7 @@ public enum UserCache {
             guard let text = entry.uuid, let uuid = UUID(uuidString: text), let name = entry.name, !name.isEmpty else {
                 return nil
             }
-            return Entry(uuid: uuid, name: name, expires: entry.expiresOn.flatMap(parseDate))
+            return Entry(uuid: uuid, name: name, expires: entry.expiresOn.flatMap(SavedDate.parse))
         }
     }
 
@@ -78,13 +78,5 @@ public enum UserCache {
             level = next
         }
         return found
-    }
-
-    /// `2026-11-09 21:40:44 -0500`
-    static func parseDate(_ text: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        return formatter.date(from: text)
     }
 }

@@ -31,8 +31,34 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
 
+The library's public `BlockPosition` owns conversion from exact positions to whole containing
+blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
+entity-container reads and CLI creature/player output share that rule. Negative fractions round
+down, and nonfinite/out-of-range coordinates are unavailable. The CLI retains those records with
+unknown positions; the container reader omits an unmappable container while keeping its neighbors.
+The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
+unneeded block data; it does not apply its own chunk-status or placement rules. Structure-center
+X/Z coordinates use the same public single-axis conversion without inventing a height.
+CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
+terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
+CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than
+expand an array of every block index before counting.
+`NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
+its result, including a return that would create another portal. Existing single-link prediction
+rules and `NetherPortal.Link` are unchanged; the additive API needs a future approved minor tag.
+
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
+
+`Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
+It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
+uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.
+
+`Dimension.forEachChunk` exposes a synchronous, throwing visit without retaining a decoded NBT
+array. Missing regions are empty, damaged chunks are skipped, and opening/callback errors
+propagate. `Chunk.inhabitedTime(in:)` owns the current root/legacy `Level` metadata fallback,
+shared with Chunk and the regional time reader. It does not decode legacy terrain or change
+the hold on #38. These are additive public APIs.
 
 `PackedLongs` owns the non-straddling packed-long traversal used by palettes and heightmaps.
 `Chunk.heightmap(_:)` infers only a unique width from stored length; ambiguous maps require
@@ -41,10 +67,19 @@ absolute Y. Invalid context or overflowing coordinates are unavailable; no legac
 is added. The explicit-height overload is additive public API.
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
-permanent modifiers; only verified 26.3/data-version-5023 pet defaults fill an omitted attribute.
-Health Boost is included once through the permanent saved attribute modifiers. Custom equipment
-that changes maximum health leaves the maximum unavailable rather than report an incomplete
-total. Maximums use the game's Float precision. Pet appearance/order/collar/equipment interpretation
+permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
+26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
+base to 8; owned wolves retain the saved base, and an unidentified saved owner stays unavailable.
+`Dimension.creatures(chunkX:chunkZ:)` retains the entity chunk's saved version, as the existing
+per-region creature read does; raw `entities` remains unchanged.
+Health Boost is included once through the permanent saved attribute modifiers. `EntityEquipment`
+owns current slots and legacy player/creature equipment reading; `EquipmentHealth` selects applicable
+equipped modifiers for both APIs. Empty/broken items, removed components and wrong-slot modifiers
+do not contribute. Unsupported item/effect/active-enchantment defaults leave either maximum
+unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
+book enchantments separate from equipped effects. The 43 vanilla 26.3 enchantment definitions
+have no max-health effects; data packs overriding their IDs are not resolved. Maximums
+use the game's Float precision. Pet appearance/order/collar/equipment interpretation
 also belongs here. All new stored fields are optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
@@ -53,6 +88,28 @@ health arithmetic lives in `EntityHealth`; player maximum health includes applic
 equipment modifiers and Health Boost. Item durability defaults are owned by `VanillaItemDurability`,
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
 `Creature.uuid` is optional for cache/source compatibility and preserves individual identity.
+`NBT.uuid` owns UUID strings, four-int arrays and the enclosing modern/legacy entity compounds.
+Embedded singleplayer records, pet identities/owners and attribute-modifier replacement use that
+reader, so a legacy Most/Least pair and a current array identify the same player or modifier.
+
+`Villager` owns the missing-level default: a `VillagerData` compound with no `level` reads as 1,
+verified against the 26.3 codec. Explicit values are retained, and malformed/absent data does not
+invent a level. Consumers must rescan previously cached creatures to obtain the corrected value.
+
+`MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
+coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
+No map pixels or world files are changed when reading banners.
+
+Modern world spawn and player death/respawn share `SavedBlockLocation`'s paired string-dimension
+and integer-array position reader. World-spawn fields become available together; a partial modern
+record never gains an inferred Overworld dimension. The existing dimension-tag normalization is
+shared by player/map locations through an internal NBT accessor; legacy XYZ/number rules stay intact.
+
+`SavedDate` owns Mojang's saved timestamp grammar for UserCache and AdvancementProgress. Its
+private DateFormatter is fully configured once and never mutated by readers. Apple documents
+modern DateFormatter as thread safe on 64-bit macOS, covering this Mac-only macOS 27 target:
+https://developer.apple.com/documentation/foundation/dateformatter. No custom unchecked-concurrency
+annotation or additional lock is used.
 
 ## Format sources
 
@@ -112,10 +169,12 @@ Ryan approved this process on 2026-10-09.
 
 ## Toolchain and platforms
 
-On 2026-10-09 these were verified as the newest non-beta releases on Apple's and Swift's release
-pages, then compared with what this Mac uses.
+Rechecked on 2026-10-18 against [Apple's releases](https://developer.apple.com/news/releases/),
+[its SDK table](https://developer.apple.com/xcode/system-requirements), and the
+[Swift releases](https://www.swift.org/install/macos/), then compared with the installed tools
+and the project's settings. Xcode 27.2 and Swift snapshots are previews, not the stable toolchain.
 
-- **Compiler:** Xcode 27.0 (`27A266a`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
+- **Compiler:** Xcode 27.1 (`27A9275`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
   package requires `swift-tools-version: 6.4`.
 - **Swift language mode:** 6, set explicitly with `swiftLanguageModes: [.v6]`.
 - **SDK:** macOS 27.0 SDK. The package doesn't pin an SDK version.

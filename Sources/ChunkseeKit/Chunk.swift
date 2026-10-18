@@ -257,7 +257,7 @@ public struct Chunk: Sendable {
         self.z = z
         self.status = (nbt["status"] ?? nbt["Status"])?.string
         self.lastUpdate = nbt["LastUpdate"]?.int
-        self.inhabitedTime = nbt["InhabitedTime"]?.int
+        self.inhabitedTime = Self.inhabitedTime(in: nbt)
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
         self.blockEntities = nbt["block_entities"]?.list ?? []

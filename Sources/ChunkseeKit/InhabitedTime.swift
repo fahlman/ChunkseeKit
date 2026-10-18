@@ -1,6 +1,12 @@
 import Foundation
 
 extension Chunk {
+    /// Saved ticks near a chunk, including pre-1.18 metadata under `Level`. This does not decode
+    /// legacy terrain. Root metadata wins when an upgraded chunk retains a vestigial `Level`.
+    public static func inhabitedTime(in nbt: NBT) -> Int? {
+        nbt["InhabitedTime"]?.int ?? nbt["Level"]?["InhabitedTime"]?.int
+    }
+
     /// Entries a time-spent scan doesn't need: everything big, leaving `InhabitedTime`.
     public static let keysNotNeededForInhabitedTime: Set<String> =
         keysNotNeededForTerrain.union(["sections", "Heightmaps", "structures", "block_entities"])
@@ -12,9 +18,8 @@ extension Dimension {
     /// missing or unreadable.
     public func inhabitedTimes(regionX: Int, regionZ: Int) throws -> [Int] {
         var times = [Int](repeating: 0, count: 1024)
-        for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForInhabitedTime) {
-            // Chunks from before 1.18 keep it under `Level`.
-            times[chunk.localZ * 32 + chunk.localX] = chunk.nbt["InhabitedTime"]?.int ?? chunk.nbt["Level"]?["InhabitedTime"]?.int ?? 0
+        try forEachChunk(regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForInhabitedTime) { x, z, nbt in
+            times[z * 32 + x] = Chunk.inhabitedTime(in: nbt) ?? 0
         }
         return times
     }

@@ -50,7 +50,7 @@ public struct PlayerInfo: Sendable {
         self.lastSaved = lastSaved
         dataVersion = nbt["DataVersion"]?.int
 
-        let dimension = Self.dimensionID(nbt["Dimension"])
+        let dimension = nbt["Dimension"]?.dimensionID
         if let dimension, let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 {
             position = Location(dimension: dimension, x: pos[0], y: pos[1], z: pos[2])
         } else {
@@ -63,7 +63,7 @@ public struct PlayerInfo: Sendable {
         if let respawn = Self.location(nbt["respawn"]) {
             self.respawn = respawn
         } else if let x = nbt["SpawnX"]?.int, let y = nbt["SpawnY"]?.int, let z = nbt["SpawnZ"]?.int {
-            let dimension = Self.dimensionID(nbt["SpawnDimension"]) ?? "minecraft:overworld"
+            let dimension = nbt["SpawnDimension"]?.dimensionID ?? "minecraft:overworld"
             respawn = Location(dimension: dimension, x: Double(x), y: Double(y), z: Double(z))
         } else {
             respawn = nil
@@ -75,21 +75,9 @@ public struct PlayerInfo: Sendable {
 
     /// `{dimension: "…", pos: [I; x, y, z]}`, as used by `LastDeathLocation` and `respawn`.
     static func location(_ nbt: NBT?) -> Location? {
-        guard let nbt, let dimension = nbt["dimension"]?.string,
-              let pos = nbt["pos"]?.intArray, pos.count == 3 else { return nil }
-        return Location(dimension: dimension, x: Double(pos[0]), y: Double(pos[1]), z: Double(pos[2]))
-    }
-
-    /// Maps a dimension tag to a namespaced ID: strings as-is, and the pre-1.16 integers
-    /// 0, -1 and 1 to the Overworld, the Nether and the End. Other integers aren't guessed.
-    static func dimensionID(_ nbt: NBT?) -> String? {
-        if let id = nbt?.string { return id.contains(":") ? id : "minecraft:" + id }
-        switch nbt?.int {
-        case 0: return "minecraft:overworld"
-        case -1: return "minecraft:the_nether"
-        case 1: return "minecraft:the_end"
-        default: return nil
-        }
+        guard let location = SavedBlockLocation(nbt) else { return nil }
+        return Location(dimension: location.dimension, x: Double(location.position.x),
+                        y: Double(location.position.y), z: Double(location.position.z))
     }
 
     private static func describe(_ nbt: NBT) -> String {
@@ -108,7 +96,8 @@ extension World {
             let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
             return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved)
         }
-        if let embedded = level.nbt["Player"], let uuid = embedded["UUID"]?.uuid ?? level.singleplayerUUID,
+        if let embedded = level.nbt["Player"], embedded.compound != nil,
+           let uuid = embedded.uuid ?? level.singleplayerUUID,
            !players.contains(where: { $0.uuid == uuid }) {
             players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed))
         }
@@ -141,9 +130,6 @@ extension PlayerInfo {
 }
 
 extension PlayerInfo {
-    /// Slots of armor and the offhand in the `Inventory` list of files from before 1.21.5.
-    static let legacyEquipmentSlots = [100: "feet", 101: "legs", 102: "chest", 103: "head", -106: "offhand"]
-
     /// The main inventory (slots 9–35) and hotbar (slots 0–8).
     public var inventory: [ItemStack] {
         ItemStack.list(nbt["Inventory"]).filter { ($0.slot ?? 0) >= 0 && ($0.slot ?? 0) < 36 }
@@ -153,11 +139,7 @@ extension PlayerInfo {
     /// `offhand`, and `body`/`saddle` where present): the `equipment` compound in 1.21.5+, or the
     /// special inventory slots before that.
     public var equipment: [String: ItemStack] {
-        var found = (nbt["equipment"]?.compound ?? [:]).compactMapValues(ItemStack.init)
-        for item in ItemStack.list(nbt["Inventory"]) {
-            if let slot = item.slot, let name = Self.legacyEquipmentSlots[slot], found[name] == nil { found[name] = item }
-        }
-        return found
+        EntityEquipment.player(nbt)
     }
 
     /// The player's ender chest, which every ender chest in the world opens for them.
