@@ -77,6 +77,13 @@ draw preserve the game's overflow/rejection semantics. Verified against the offi
 client, including an explicitly constructed rejection case. Spawn conditions remain separate.
 The app uses World.seed() and this public rule after a separately approved minor release.
 
+`PlayerInfo.shoulderPets` owns the two saved shoulder-entity keys and reuses Creature decoding
+with the player's DataVersion. It retains parrots even without a usable player location. Their
+serialized coordinates predate mounting; consumers locate them through the player, including
+its world/dimension restrictions. 26.3 ServerPlayer saves these compounds and places a released
+bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
+adoption waits for a separately approved release; entity-region reads remain region-only.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
