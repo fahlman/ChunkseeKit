@@ -27,7 +27,7 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.33.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.34.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
@@ -630,7 +630,7 @@ to name unopened loot; an opened container no longer has a saved table. This add
 **available starting in v0.31.0**. Older standalone container archives decode with a nil table;
 RegionFacts interpretation version 2 invalidated earlier region archives so they were reread.
 
-`ItemContainer.uuid` is the optional saved identity of an entity container (**unreleased**).
+`ItemContainer.uuid` is the optional saved identity of an entity container (added in **v0.34.0**).
 It uses the shared UUID reader for current arrays, strings and legacy Most/Least pairs, keeping
 colocated minecarts distinct and their identity stable when they move. Blocks and entities with
 no readable saved UUID return nil; no identity is generated. Older standalone container archives

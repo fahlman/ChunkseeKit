@@ -89,7 +89,7 @@ API is available in v0.31.0 and its app adoption remains on fahlman/Chunksee#122
 `NBT.uuid` reader. Fixed block containers have no entity identity, and missing or unreadable IDs
 remain nil. Colocated minecarts stay distinct and moving a cart does not change its saved UUID.
 Standalone older container archives still decode; RegionFacts interpretation version 3 requires
-cached regions to be reread. This additive API is unreleased, for fahlman/Chunksee#122.
+cached regions to be reread. This additive API is introduced for v0.34.0; app adoption remains on fahlman/Chunksee#122.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
