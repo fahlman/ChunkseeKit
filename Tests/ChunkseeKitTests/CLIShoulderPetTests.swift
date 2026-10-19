@@ -23,7 +23,8 @@ import ChunkseeKit
         #expect(result.output.contains("3 minecraft:parrot\n"))
     }
 
-    @Test func carrierWorldAndDimensionRestrictTheListing() throws {
+    @Test(arguments: ["bukkit", "WorldUUIDMost", "SpawnWorld"])
+    func carrierWorldAndDimensionRestrictTheListing(_ serverField: String) throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
         try player(in: root, id: carrier, fields: [
@@ -34,10 +35,16 @@ import ChunkseeKit
             "Dimension": .string("minecraft:the_nether"), "Pos": position([4, 65, 6]),
             "ShoulderEntityLeft": parrot("Nether"),
         ])
-        try player(in: root, id: "22222222-2222-2222-2222-222222222222", fields: [
+        var otherWorld: [String: NBT] = [
             "Dimension": .string("minecraft:overworld"), "Pos": position([1, 64, 2]),
-            "bukkit": .compound([:]), "ShoulderEntityLeft": parrot("Other World"),
-        ])
+            "ShoulderEntityLeft": parrot("Other World"),
+        ]
+        otherWorld[serverField] = switch serverField {
+        case "WorldUUIDMost": .long(1)
+        case "SpawnWorld": .string("another world")
+        default: .compound([:])
+        }
+        try player(in: root, id: "22222222-2222-2222-2222-222222222222", fields: otherWorld)
         try player(in: root, id: "33333333-3333-3333-3333-333333333333", fields: [
             "Pos": position([1, 64, 2]), "ShoulderEntityLeft": parrot("Unknown Dimension"),
         ])

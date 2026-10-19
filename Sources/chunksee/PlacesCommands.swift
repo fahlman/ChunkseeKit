@@ -66,7 +66,7 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
                 show(creature, at: BlockPosition(x: creature.x, y: creature.y, z: creature.z), carrier: nil)
             }
         }
-        for player in world.players() where !player.isFromBukkitServer {
+        for player in world.players() where player.locationsBelongToWorld {
             guard let location = player.position, location.dimension == dim.id else { continue }
             for creature in player.shoulderPets {
                 // A shoulder entity's own saved coordinates predate mounting.

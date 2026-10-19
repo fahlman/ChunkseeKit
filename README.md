@@ -279,8 +279,8 @@ for item in contents.containers.flatMap(\.allItems) {
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
 DataVersion. Saved owner, UUID, name, health and appearance are preserved. These
 entity snapshots contain the position **before mounting**: locate a shoulder pet
-with the player's current `position`, applying the player's dimension/Bukkit
-restrictions. An unavailable player position does not discard its shoulder pets.
+with the player's current `position`, applying `locationsBelongToWorld` and the
+dimension restrictions. An unavailable player position does not discard its shoulder pets.
 The dimension's entity-region reader does not include them; a client combines the
 player and dimension records. Verified against the official 26.3 save/load and
 shoulder-mount code. This additive API is unreleased; the app adoption waits for
@@ -292,6 +292,12 @@ carrier UUID shown separately from the saved owner. A nonfinite or out-of-range
 position prints as unknown; players without a dimension/location record or from
 Bukkit worlds cannot be assigned to this dimension and are omitted from this
 dimension-specific command.
+
+`PlayerInfo.locationsBelongToWorld` owns whether saved locations can be assigned
+to this world. It is false for Bukkit-written files, whose current, death and
+respawn locations may belong to a different server world. Location availability
+and checked coordinate conversion remain separate. This additive API is unreleased;
+the app's location presentation adopts it after an approved release.
 
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {

@@ -42,6 +42,10 @@ public struct PlayerInfo: Sendable {
     /// every location here (position, death, respawn) may be in a different world than the one
     /// being read, even when its dimension looks familiar.
     public let isFromBukkitServer: Bool
+    /// Whether saved current, death and respawn locations belong to the world holding this file.
+    /// Bukkit servers share player files across worlds, so those locations cannot be assigned to
+    /// this world. This does not guarantee a location exists or its coordinates are representable.
+    public var locationsBelongToWorld: Bool { !isFromBukkitServer }
     /// The world a Bukkit server recorded for the player's spawn (`SpawnWorld`), if any.
     public let bukkitWorldName: String?
     /// The full player NBT, for fields this type doesn't model.
