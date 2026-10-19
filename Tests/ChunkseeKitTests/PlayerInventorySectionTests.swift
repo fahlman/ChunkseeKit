@@ -50,7 +50,7 @@ import ChunkseeKit
                        item("gold_ingot"), item("stone", slot: .long(Int64.max)),
                        item("dirt", slot: .long(Int64.min)), item("sand", slot: .int(36))]
         let player = PlayerInfo(uuid: UUID(), nbt: .compound([
-            "Inventory": .list(entries), "EnderItems": .list(entries),
+            "Inventory": .list(entries), "EnderItems": .list(entries), "SelectedItemSlot": .int(4),
         ]))
         for section in [PlayerInventorySection.hotbar, .enderChest] {
             let slots = player.inventorySlots(in: section)
@@ -58,6 +58,7 @@ import ChunkseeKit
             #expect(slots.compactMap { $0 }.count == 1)
         }
         #expect(player.inventorySlots(in: .storage).allSatisfy { $0 == nil })
+        #expect(player.mainHandItem == player.inventorySlots(in: .hotbar)[4])
         #expect(player.inventory.map(\.id) == ["minecraft:diamond", "minecraft:emerald", "minecraft:gold_ingot"])
         #expect(player.enderChest.count == entries.count)
     }

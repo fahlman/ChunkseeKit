@@ -438,8 +438,10 @@ for player in world.players() {                         // most recently saved f
 with empty slots retained as `nil`. ChunkseeKit owns the saved slot ranges; clients supply
 their own labels and visual layout. ItemStack keeps its original saved slot number, including
 storage slots 9–35. Missing/out-of-range slots are omitted from this layout and the last
-readable item wins a repeated slot. Existing raw inventory, ender-chest, equipment and
-selected-hand APIs are unchanged. This additive API is unreleased and needs the next minor tag.
+readable item wins a repeated slot, matching the game's loaded inventory. The selected-hand
+reader uses that same hotbar, correcting its old first-item choice for duplicate slots; an
+explicit saved main hand still wins. Raw inventory, ender-chest and equipment APIs are unchanged.
+This additive API is unreleased and needs the next minor tag.
 
 `GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current
 `minecraft:spawn_wandering_traders` identifier and the legacy `doTraderSpawning` identifier.

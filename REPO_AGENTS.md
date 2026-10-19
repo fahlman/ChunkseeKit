@@ -156,9 +156,11 @@ explicit saved main hand's precedence and excluding unselected inventory. Player
 that same collection. This additive API is unreleased; app adoption follows a minor tag.
 `PlayerInventorySection` owns hotbar/storage/ender-chest slot ranges. `PlayerInfo.inventorySlots(in:)`
 returns ordered optional items, retaining empty positions and the original saved item slot numbers.
-The existing inventory filter and selected-hand range check use that owner too. Layout ignores
+The existing inventory filter and selected-hand reader use that owner too. Layout ignores
 missing/out-of-section slot numbers and keeps the last readable item at a repeated slot, matching
-the app's existing layout. Raw inventory and selected-hand behavior remain unchanged. This additive
+the app's existing layout and the game's loaded inventory. The selected hand now uses that same
+hotbar, correcting its first-item choice for duplicate slots; explicit saved main-hand equipment
+still wins. Raw inventories remain unchanged. This additive
 API is unreleased; Chunksee's numeric section layout moves to it after a minor tag (#51).
 Shared health arithmetic lives in `EntityHealth`; player maximum health includes applicable saved
 equipment modifiers and Health Boost. Item durability defaults are owned by `VanillaItemDurability`,

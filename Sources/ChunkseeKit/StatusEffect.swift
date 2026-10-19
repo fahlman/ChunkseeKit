@@ -72,7 +72,7 @@ extension PlayerInfo {
     public var mainHandItem: ItemStack? {
         if let mainHand = equipment["mainhand"] { return mainHand }
         guard let selectedSlot, PlayerInventorySection.hotbar.slotRange.contains(selectedSlot) else { return nil }
-        return inventory.first { $0.slot == selectedSlot }
+        return inventorySlots(in: .hotbar)[selectedSlot]
     }
 
     /// Saved maximum health in half-hearts, including permanent effects and applicable equipment.
