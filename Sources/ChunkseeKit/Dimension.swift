@@ -42,7 +42,11 @@ public struct Dimension: Sendable {
     /// URL of a region file at region coordinates (not chunk or block coordinates).
     /// This only constructs a path; the file and its parent folder need not exist.
     public func regionURL(_ folder: Folder = .terrain, x: Int, z: Int) -> URL {
-        directory(folder).appendingPathComponent("r.\(x).\(z).mca")
+        regionURL(folder, at: RegionPosition(x: x, z: z))
+    }
+
+    public func regionURL(_ folder: Folder = .terrain, at position: RegionPosition) -> URL {
+        directory(folder).appendingPathComponent("r.\(position.x).\(position.z).mca")
     }
 
     /// The region file at region coordinates in a folder, if it exists.
@@ -75,15 +79,21 @@ public struct Dimension: Sendable {
     }
 
     /// The chunk at absolute chunk coordinates, or `nil` if it hasn't been generated.
-    public func chunk(x: Int, z: Int) throws -> Chunk? {
-        guard let region = try region(x: x >> 5, z: z >> 5),
-              let nbt = try region.chunkNBT(localX: x & 31, localZ: z & 31) else { return nil }
+    public func chunk(x: Int, z: Int) throws -> Chunk? { try chunk(at: ChunkPosition(x: x, z: z)) }
+
+    public func chunk(at position: ChunkPosition) throws -> Chunk? {
+        guard let region = try region(x: position.region.x, z: position.region.z),
+              let nbt = try region.chunkNBT(localX: position.localX, localZ: position.localZ) else { return nil }
         return try Chunk(nbt: nbt)
     }
 
     /// The block at absolute world coordinates. Loads the chunk each call; cache `Chunk`s for bulk reads.
     public func block(x: Int, y: Int, z: Int) throws -> BlockState? {
-        try chunk(x: x >> 4, z: z >> 4)?.block(x: x & 15, y: y, z: z & 15)
+        try block(at: BlockPosition(blockX: x, blockY: y, blockZ: z))
+    }
+
+    public func block(at position: BlockPosition) throws -> BlockState? {
+        try chunk(at: position.chunk)?.block(x: position.x & 15, y: position.y, z: position.z & 15)
     }
 
     /// Entities saved in the given chunk (stored separately from terrain since 1.17).
@@ -94,8 +104,9 @@ public struct Dimension: Sendable {
 
     /// Shared raw read so creature decoding retains the entity chunk's DataVersion.
     func entityChunk(x: Int, z: Int) throws -> NBT? {
-        guard let region = try region(.entities, x: x >> 5, z: z >> 5) else { return nil }
-        return try region.chunkNBT(localX: x & 31, localZ: z & 31)
+        let position = ChunkPosition(x: x, z: z)
+        guard let region = try region(.entities, x: position.region.x, z: position.region.z) else { return nil }
+        return try region.chunkNBT(localX: position.localX, localZ: position.localZ)
     }
 }
 

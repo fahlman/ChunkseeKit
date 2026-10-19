@@ -63,7 +63,7 @@ enum EntityHealth {
 
     private static func defaultMaximum(species: String, dataVersion: Int?) -> Double? {
         // Exact release data versions only; do not infer defaults for snapshots or newer saves.
-        if let dataVersion, [4786, 4788, 4790, 4903, 5023].contains(dataVersion) {
+        if let dataVersion, SaveVersion.verifiedRecentPetHealth.contains(dataVersion) {
             switch species {
             case "minecraft:cat": return 10
             case "minecraft:parrot": return 6
@@ -71,7 +71,7 @@ enum EntityHealth {
             default: break
             }
         }
-        guard dataVersion == 5023 else { return nil }
+        guard dataVersion == SaveVersion.java26_3 else { return nil }
         switch species {
         case "minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:llama", "minecraft:trader_llama": return 53
         case "minecraft:skeleton_horse": return 15

@@ -22,7 +22,8 @@ func chunkCommand(_ world: World, _ arguments: Arguments) throws {
 func blockCommand(_ world: World, _ arguments: Arguments) throws {
         let (x, y, z) = (arguments.int(1), arguments.int(2), arguments.int(3))
         let dim = arguments.dimension(4, in: world)
-        guard let chunk = try dim.chunk(x: x >> 4, z: z >> 4) else { fail("chunk not generated") }
+        let position = BlockPosition(blockX: x, blockY: y, blockZ: z)
+        guard let chunk = try dim.chunk(at: position.chunk) else { fail("chunk not generated") }
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }

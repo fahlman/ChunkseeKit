@@ -80,7 +80,7 @@ public struct Sign: Sendable, Equatable, Codable {
     /// Reads a sign block entity: `front_text`/`back_text` (1.20+) or `Text1`…`Text4` (older).
     public init?(blockEntity nbt: NBT) {
         guard let kind = nbt["id"]?.string, kind.hasSuffix("sign"),
-              let x = nbt["x"]?.int, let y = nbt["y"]?.int, let z = nbt["z"]?.int else { return nil }
+              let position = nbt.blockEntityPosition else { return nil }
         func lines(_ side: NBT?) -> [String] {
             (side?["messages"]?.list ?? []).map { TextComponent.plainText($0) ?? "" }
         }
@@ -88,7 +88,7 @@ public struct Sign: Sendable, Equatable, Codable {
         if nbt["front_text"] == nil {
             front = (1...4).map { nbt["Text\($0)"].flatMap(TextComponent.plainText) ?? "" }
         }
-        self.init(kind: kind, x: x, y: y, z: z, front: front, back: lines(nbt["back_text"]))
+        self.init(kind: kind, x: position.x, y: position.y, z: position.z, front: front, back: lines(nbt["back_text"]))
     }
 
     /// Whether either side has any text.
@@ -96,7 +96,7 @@ public struct Sign: Sendable, Equatable, Codable {
 
     /// Signs with text among a chunk's block entities.
     public static func signs(inChunk nbt: NBT) -> [Sign] {
-        (nbt["block_entities"]?.list ?? []).compactMap(Sign.init(blockEntity:)).filter(\.hasText)
+        Chunk.blockEntities(in: nbt).compactMap(Sign.init(blockEntity:)).filter(\.hasText)
     }
 }
 

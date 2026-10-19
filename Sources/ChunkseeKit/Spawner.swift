@@ -19,10 +19,10 @@ public struct Spawner: Sendable, Equatable, Codable {
 
     /// The spawners among a chunk's block entities.
     public static func spawners(inChunk nbt: NBT) -> [Spawner] {
-        (nbt["block_entities"]?.list ?? []).compactMap { entity in
+        Chunk.blockEntities(in: nbt).compactMap { entity in
             guard entity["id"]?.string == "minecraft:mob_spawner",
-                  let x = entity["x"]?.int, let y = entity["y"]?.int, let z = entity["z"]?.int else { return nil }
-            return Spawner(x: x, y: y, z: z, mob: entity["SpawnData"]?["entity"]?["id"]?.string)
+                  let position = entity.blockEntityPosition else { return nil }
+            return Spawner(x: position.x, y: position.y, z: position.z, mob: entity["SpawnData"]?["entity"]?["id"]?.string)
         }
     }
 }

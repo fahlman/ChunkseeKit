@@ -60,7 +60,7 @@ public struct LevelInfo: Sendable {
         if let spawn = data["spawn"] {
             let location = SavedBlockLocation(spawn)
             spawnDimension = location?.dimension
-            spawnPosition = location?.position
+            spawnPosition = location.map { ($0.position.x, $0.position.y, $0.position.z) }
         } else if let x = data["SpawnX"]?.int, let y = data["SpawnY"]?.int, let z = data["SpawnZ"]?.int {
             spawnDimension = "minecraft:overworld"
             spawnPosition = (x, y, z)

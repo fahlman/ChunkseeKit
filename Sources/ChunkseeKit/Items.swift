@@ -147,8 +147,8 @@ public struct ItemContainer: Sendable, Equatable, Codable {
 
     /// Containers among a chunk's block entities: those with items or sealed loot.
     public static func containers(inChunk nbt: NBT) -> [ItemContainer] {
-        (nbt["block_entities"]?.list ?? []).compactMap { entity in
-            guard let kind = entity["id"]?.string, let x = entity["x"]?.int, let y = entity["y"]?.int, let z = entity["z"]?.int else {
+        Chunk.blockEntities(in: nbt).compactMap { entity in
+            guard let kind = entity["id"]?.string, let position = entity.blockEntityPosition else {
                 return nil
             }
             // Most containers keep `Items`; decorated pots and suspicious blocks keep `item`,
@@ -157,7 +157,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             let items = ItemStack.list(entity["Items"]) + single
             let sealed = entity["LootTable"] != nil
             guard !items.isEmpty || sealed else { return nil }
-            return ItemContainer(kind: kind, x: x, y: y, z: z, items: items,
+            return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z, items: items,
                                  customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  isSealedLoot: sealed && items.isEmpty, isEntity: false)
         }

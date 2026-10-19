@@ -537,3 +537,20 @@ The tests use synthetic worlds and region files, so you don't need any Minecraft
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+### Typed save values (unreleased)
+
+`BlockPosition` retains exact whole integers through `init(blockX:blockY:blockZ:)`; its existing
+failable Double initializer floors exact entity coordinates and rejects unrepresentable values.
+`block.chunk` and `block.region` identify the containing chunk/region even for negative values.
+`ChunkPosition.blockOrigin` and `RegionPosition.blockOrigin` return X/Z columns only, with no
+invented height, and return nil on overflow. Dimension has typed `chunk(at:)`, `block(at:)` and
+`regionURL(_:at:)` overloads; its older integer APIs remain available.
+
+`Identifier` validates namespace/path characters and applies the default `minecraft` namespace.
+Its Codable representation is the qualified string. Syntax matches the official 26.3 codec,
+including empty paths; this does not imply that an identifier exists or is safe as a file path.
+Malformed saved dimension/effect/enchantment IDs are now unavailable instead of being accepted
+as arbitrary strings. `SaveVersion` names verified release numbers and format boundaries;
+`DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
+remain public. These additions await a separately approved minor release.
