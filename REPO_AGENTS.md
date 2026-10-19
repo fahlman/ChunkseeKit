@@ -48,7 +48,7 @@ format boundaries; `DataVersion` remains a source-compatible alias. Unknown newe
 gain verified health defaults. POI, map banners and paired block locations share the int-array
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
-legacy terrain support. New public APIs require a future separately approved minor release.
+legacy terrain support. These public APIs are available starting in v0.30.0.
 The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
 unneeded block data; it does not apply its own chunk-status or placement rules. Structure-center
 X/Z coordinates use the same public single-axis conversion without inventing a height.
@@ -58,7 +58,7 @@ CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed dat
 expand an array of every block index before counting.
 `NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
 its result, including a return that would create another portal. Existing single-link prediction
-rules and `NetherPortal.Link` are unchanged; the additive API needs a future approved minor tag.
+rules and `NetherPortal.Link` are unchanged; the additive API is available starting in v0.28.0.
 
 `Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
 `RegionFacts`. Each present chunk payload is decoded once using the shared format readers.
@@ -71,8 +71,8 @@ returning a cacheable partial value. No cache storage or task scheduling is intr
 `RegionFacts.interpretationVersion` must increase whenever any reader changes a fact's meaning.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
-conformances remain source-compatible until separately migrated. The new API requires a future
-approved minor release; Chunksee's pin and app adoption are separate work.
+conformances remain source-compatible until separately migrated. The new API is available in
+v0.30.0; Chunksee's pin and app adoption are separate work.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
@@ -102,20 +102,20 @@ level.dat fallback. This does not broaden which legacy files are parsed as moder
 It accepts Int32 chunk coordinates and an Int64 seed; seed mixing and the 48-bit bounded random
 draw preserve the game's overflow/rejection semantics. Verified against the official 26.3
 client, including an explicitly constructed rejection case. Spawn conditions remain separate.
-The app uses World.seed() and this public rule after a separately approved minor release.
+The app uses World.seed() and this public rule, available starting in v0.29.0.
 
 `PlayerInfo.shoulderPets` owns the two saved shoulder-entity keys and reuses Creature decoding
 with the player's DataVersion. It retains parrots even without a usable player location. Their
 serialized coordinates predate mounting; consumers locate them through the player, including
 its world/dimension restrictions. 26.3 ServerPlayer saves these compounds and places a released
 bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
-adoption waits for a separately approved release; entity-region reads remain region-only.
+adoption is tracked separately in #74; this API is in v0.30.0 and entity-region reads remain region-only.
 `PlayerInfo.locationsBelongToWorld` owns whether a player's current/death/respawn locations
 belong to this world; Bukkit's shared player files do not. Coordinate availability is separate.
 The CLI `creatures` command uses that property and the selected dimension to include shoulder
 pets with the region records. It prints the carrier's
 checked position and UUID separately from the saved owner, never the stale mounting position.
-The app adopts this unreleased property with its next separately approved library update.
+This property is available in v0.30.0; app adoption is tracked in fahlman/Chunksee#214.
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,

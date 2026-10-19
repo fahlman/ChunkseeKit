@@ -104,7 +104,7 @@ incorrect. It does not add pre-1.18 terrain decoding.
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
-### Region facts (unreleased)
+### Region facts (v0.30.0)
 
 `Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
 pass. Each chunk payload is decoded once. The result contains containers, signs, spawners,
@@ -144,7 +144,7 @@ exposed by the new facts. The lower-level NBT, region and compression APIs remai
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while
 region-open errors and cancellation throw; callers must not cache a failed scan as an empty or
 complete region. Scanning does no disk caching or background scheduling of its own. The API is
-unreleased; the app will adopt it after a separately approved minor release.
+available starting in v0.30.0; app adoption is tracked separately in fahlman/Chunksee#212.
 
 ### Slime chunks
 
@@ -283,8 +283,8 @@ with the player's current `position`, applying `locationsBelongToWorld` and the
 dimension restrictions. An unavailable player position does not discard its shoulder pets.
 The dimension's entity-region reader does not include them; a client combines the
 player and dimension records. Verified against the official 26.3 save/load and
-shoulder-mount code. This additive API is unreleased; the app adoption waits for
-an approved release.
+shoulder-mount code. This additive API is available starting in v0.30.0; app adoption is
+tracked separately in fahlman/ChunkseeKit#74.
 
 The `creatures` command includes shoulder parrots in its selected dimension's
 listing and totals. Their location is the carrier's saved position, with the
@@ -296,8 +296,8 @@ dimension-specific command.
 `PlayerInfo.locationsBelongToWorld` owns whether saved locations can be assigned
 to this world. It is false for Bukkit-written files, whose current, death and
 respawn locations may belong to a different server world. Location availability
-and checked coordinate conversion remain separate. This additive API is unreleased;
-the app's location presentation adopts it after an approved release.
+and checked coordinate conversion remain separate. This additive API is available starting
+in v0.30.0; app adoption is tracked in fahlman/Chunksee#214.
 
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
@@ -593,7 +593,7 @@ The tests use synthetic worlds and region files, so you don't need any Minecraft
 
 MIT. See [LICENSE](LICENSE).
 
-### Typed save values (unreleased)
+### Typed save values (v0.30.0)
 
 `BlockPosition` retains exact whole integers through `init(blockX:blockY:blockZ:)`; its existing
 failable Double initializer floors exact entity coordinates and rejects unrepresentable values.
@@ -608,4 +608,4 @@ including empty paths; this does not imply that an identifier exists or is safe 
 Malformed saved dimension/effect/enchantment IDs are now unavailable instead of being accepted
 as arbitrary strings. `SaveVersion` names verified release numbers and format boundaries;
 `DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
-remain public. These additions await a separately approved minor release.
+remain public. These additions are available starting in v0.30.0.
