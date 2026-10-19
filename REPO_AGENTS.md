@@ -40,6 +40,10 @@ unknown positions; the container reader omits an unmappable container while keep
 including negative containing coordinates and checked multiplication for region/chunk origins.
 Their typed Dimension overloads and the older integer overloads share those rules. PlayerInfo's
 exact Location exposes a checked containing block without changing its saved decimals.
+X/Z-only callers use `ChunkPosition(containingBlockX:blockZ:)` and `localColumnIndex(blockX:blockZ:)`;
+the full BlockPosition conversion delegates to the same initializer. RegionPosition owns its
+public block-side constant, independent of renderer pixels. These additive APIs await the next
+approved minor release; app adoption is tracked on fahlman/Chunksee#214 (Claude-F2 on #232).
 `Identifier` owns the default namespace and 26.3 character validation. Dimension/effect/enchantment
 readers use it; malformed saved identifiers become unavailable. The empty-path codec value is
 retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
