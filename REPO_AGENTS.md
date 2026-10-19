@@ -42,8 +42,7 @@ Their typed Dimension overloads and the older integer overloads share those rule
 exact Location exposes a checked containing block without changing its saved decimals.
 X/Z-only callers use `ChunkPosition(containingBlockX:blockZ:)` and `localColumnIndex(blockX:blockZ:)`;
 the full BlockPosition conversion delegates to the same initializer. RegionPosition owns its
-public block-side constant, independent of renderer pixels. These additive APIs await the next
-approved minor release; app adoption is tracked on fahlman/Chunksee#214 (Claude-F2 on #232).
+public block-side constant, independent of renderer pixels. These additive APIs are available in v0.31.0; app adoption is tracked on fahlman/Chunksee#214 (Claude-F2 on #232).
 `Identifier` owns the default namespace and 26.3 character validation. Dimension/effect/enchantment
 readers use it; malformed saved identifiers become unavailable. The empty-path codec value is
 retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
@@ -84,7 +83,7 @@ v0.30.0; Chunksee's pin and app adoption are separate work.
 `ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
 chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts
 interpretation version 2 forces older cached regions to be reread for the new field. The additive
-API is unreleased and its app adoption remains on fahlman/Chunksee#122.
+API is available in v0.31.0 and its app adoption remains on fahlman/Chunksee#122.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
@@ -126,8 +125,7 @@ The CLI `creatures` command combines shoulder pets with region records in the se
 It prints the carrier's checked position and UUID separately from the saved owner, never the stale
 mounting position. Player locations use vanilla dimension and coordinate rules without a separate
 server-file policy. Unknown values remain unavailable; vanilla's Modded metadata remains. The
-removed server-specific PlayerInfo APIs are a breaking change awaiting the next approved minor
-release, documented in README's migration note (fahlman/ChunkseeKit#90).
+server-specific PlayerInfo APIs were removed in v0.31.0, a breaking change documented in README's migration note (fahlman/ChunkseeKit#90).
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
