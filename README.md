@@ -577,6 +577,12 @@ For example:
 
 Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` compound. These chunks are parsed normally.
 
+`ItemContainer.lootTable` exposes the saved optional loot-table ID on block and entity containers,
+including chest minecarts. It adds no item prediction. Consumers can pair it with `isSealedLoot`
+to name unopened loot; an opened container no longer has a saved table. This additive property is
+**unreleased (not in v0.30.0)**. Older standalone container archives decode with a nil table;
+RegionFacts interpretation version 2 invalidates earlier region archives so they are reread.
+
 Entity containers use the containing block of their saved `Pos`, rounding negative fractions down.
 A missing, nonnumeric, nonfinite or out-of-range coordinate makes that container unavailable;
 other readable containers in the same region are still returned.
