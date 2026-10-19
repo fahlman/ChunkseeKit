@@ -442,6 +442,12 @@ custom qualified IDs stay intact. The reader does not validate world membership 
 syntax. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
 fallback remains.
 
+`PlayerInfo.equippedItems` combines the saved equipment slots and the selected main-hand item.
+An explicit saved main hand takes precedence over the selected hotbar slot; unselected inventory
+items are excluded. Player maximum health uses this same collection. The existing `equipment`,
+`inventory` and `mainHandItem` APIs keep their meanings. `equippedItems` is an additive API on
+unreleased main and needs the next minor release before clients can adopt it.
+
 Player maximum health uses the same saved attribute arithmetic as creatures, including permanent
 Health Boost in modern and legacy saves. It is not reconstructed from the effect list. Equipped-item
 modifiers are added separately. Only the selected hotbar item (or explicit saved

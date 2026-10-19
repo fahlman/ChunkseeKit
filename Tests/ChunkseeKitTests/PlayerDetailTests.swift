@@ -46,6 +46,37 @@ import Testing
         #expect(helmet.enchantments == ["minecraft:protection": 4])
     }
 
+    @Test func equippedItemsIncludeLegacyArmorOffhandAndOnlyTheSelectedHotbarItem() {
+        let info = player(["SelectedItemSlot": .int(2), "Inventory": .list([
+            item("iron_helmet", slot: 103), item("shield", slot: -106),
+            item("iron_sword", slot: 2), item("diamond_sword", slot: 3), item("diamond", slot: 12),
+        ])])
+        #expect(info.equippedItems.mapValues(\.id) == [
+            "head": "minecraft:iron_helmet", "offhand": "minecraft:shield", "mainhand": "minecraft:iron_sword",
+        ])
+        #expect(info.equipment["mainhand"] == nil) // The older public API keeps its saved-slot meaning.
+        #expect(info.inventory.count == 3 && info.mainHandItem?.slot == 2)
+        for slot in [NBT?.none, .some(.int(-1)), .some(.int(9)), .some(.int(7))] {
+            var fields = ["Inventory": NBT.list([item("iron_sword", slot: 2)])]
+            fields["SelectedItemSlot"] = slot
+            #expect(player(fields).equippedItems.isEmpty)
+        }
+    }
+
+    @Test func explicitMainHandWinsInEquippedItemsAndHealth() {
+        let info = player(["SelectedItemSlot": .int(2), "Inventory": .list([
+            item("iron_sword", slot: 2, components: ["minecraft:attribute_modifiers": .list([modifier(100, slot: "mainhand")])]),
+        ]), "equipment": .compound([
+            "mainhand": item("diamond_sword", components: ["minecraft:attribute_modifiers": .list([modifier(6, slot: "mainhand")])]),
+            "head": item("diamond_helmet"), "body": item("diamond_horse_armor"),
+        ])])
+        #expect(info.equippedItems.mapValues(\.id) == [
+            "head": "minecraft:diamond_helmet", "body": "minecraft:diamond_horse_armor", "mainhand": "minecraft:diamond_sword",
+        ])
+        #expect(info.mainHandItem?.id == "minecraft:diamond_sword" && info.maxHealth == 26)
+        #expect(player().equippedItems.isEmpty)
+    }
+
     @Test func maximumIncludesHealthBoostAndOnlyEquippedItemModifiers() {
         let info = player([
             "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(20), "modifiers": .list([

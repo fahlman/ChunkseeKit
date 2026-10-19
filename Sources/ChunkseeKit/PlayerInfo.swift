@@ -135,6 +135,14 @@ extension PlayerInfo {
         EntityEquipment.player(nbt)
     }
 
+    /// Equipped items by slot, including the selected hotbar item in `mainhand` unless an
+    /// explicit saved main-hand item is present. Unselected inventory items are not equipped.
+    public var equippedItems: [String: ItemStack] {
+        var items = equipment
+        items["mainhand"] = mainHandItem
+        return items
+    }
+
     /// The player's ender chest, which every ender chest in the world opens for them.
     public var enderChest: [ItemStack] { ItemStack.list(nbt["EnderItems"]) }
 }
