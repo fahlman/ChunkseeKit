@@ -10,7 +10,7 @@ public struct BlockPosition: Sendable, Hashable, Codable {
         z = blockZ
     }
 
-    public var chunk: ChunkPosition { ChunkPosition(x: x >> 4, z: z >> 4) }
+    public var chunk: ChunkPosition { ChunkPosition(containingBlockX: x, blockZ: z) }
     public var region: RegionPosition { chunk.region }
 
     /// Floors each axis, including negative fractions. Returns nil for a nonfinite or out-of-range axis.
