@@ -88,6 +88,12 @@ API is available in v0.31.0 and its app adoption remains on fahlman/Chunksee#122
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
+`GameRule.wanderingTraderSpawning.value(in:)` looks up the current or legacy saved identifier
+in the existing `World.gameRules()` dictionary. It accepts explicit Boolean values only, gives
+the current ID precedence, and leaves missing/malformed values unknown. Other namespaces and
+display labels do not identify this rule. The raw dictionary API stays unchanged. This additive
+API is unreleased; Chunksee's display-name comparison moves to it after a minor release (#51).
+
 `Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
 It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
 uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.

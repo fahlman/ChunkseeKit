@@ -441,6 +441,13 @@ storage slots 9–35. Missing/out-of-range slots are omitted from this layout an
 readable item wins a repeated slot. Existing raw inventory, ender-chest, equipment and
 selected-hand APIs are unchanged. This additive API is unreleased and needs the next minor tag.
 
+`GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current
+`minecraft:spawn_wandering_traders` identifier and the legacy `doTraderSpawning` identifier.
+It returns an explicit `.bool` value, or `nil` for missing or malformed values; the current
+identifier takes precedence. Display names and other namespaces do not match. The existing
+`World.gameRules()` dictionary is unchanged. This additive lookup is unreleased and requires
+the next minor release before clients can adopt it.
+
 Modern world spawn, player death and player respawn share the `{dimension, pos: [I; x, y, z]}`
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
 `spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.
