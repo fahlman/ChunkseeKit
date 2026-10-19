@@ -257,8 +257,10 @@ public struct Chunk: Sendable {
     public func section(atBlockY y: Int) -> ChunkSection? {
         let sy = y >> 4
         // Sections are normally contiguous from minSectionY, so try direct indexing first.
-        let guess = sy - (sections.first?.y ?? 0)
-        if sections.indices.contains(guess), sections[guess].y == sy { return sections[guess] }
+        let guess = sy.subtractingReportingOverflow(sections.first?.y ?? 0)
+        if !guess.overflow, sections.indices.contains(guess.partialValue), sections[guess.partialValue].y == sy {
+            return sections[guess.partialValue]
+        }
         return sections.first { $0.y == sy }
     }
 

@@ -60,6 +60,20 @@ expand an array of every block index before counting.
 its result, including a return that would create another portal. Existing single-link prediction
 rules and `NetherPortal.Link` are unchanged; the additive API needs a future approved minor tag.
 
+`Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
+`RegionFacts`. Each present chunk payload is decoded once using the shared format readers.
+Typed terrain facts expose used biome IDs, an explicitly chosen middle-column biome sample,
+per-ID block counts/section bounds, heightmaps and generation metadata. UI categories, cave-area
+joining and search stay outside the core. Incomplete generation contributes metadata, not terrain
+search facts; legacy chunks still contribute inhabited time and format counts. Missing files are
+empty, unreadable chunks are counted, and file-open failures/cancellation throw instead of
+returning a cacheable partial value. No cache storage or task scheduling is introduced here.
+`RegionFacts.interpretationVersion` must increase whenever any reader changes a fact's meaning.
+The versioned envelope is the new Codable boundary, with options and dimension/region identity;
+consumers also key all three file fingerprints and their own transform version. Older model
+conformances remain source-compatible until separately migrated. The new API requires a future
+approved minor release; Chunksee's pin and app adoption are separate work.
+
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
