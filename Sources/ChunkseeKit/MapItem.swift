@@ -15,8 +15,7 @@ public struct MapItem: Sendable, Equatable {
 
     /// The number shown on the map item, `map_<id>`.
     public var id: Int
-    /// Namespaced dimension id, or `nil` when it isn't recognized (Bukkit servers stored their
-    /// own world numbers here); see `unrecognizedDimension`.
+    /// Namespaced dimension ID, or `nil` when it is not recognized; see `unrecognizedDimension`.
     public var dimension: String?
     public var unrecognizedDimension: String?
     public var centerX: Int

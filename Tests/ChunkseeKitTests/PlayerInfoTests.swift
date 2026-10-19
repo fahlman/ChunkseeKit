@@ -20,7 +20,6 @@ import Testing
         #expect(info.position == .init(dimension: "minecraft:overworld", x: -2806.6, y: 65, z: -3895.2))
         #expect(info.lastDeath == .init(dimension: "minecraft:overworld", x: -2824, y: 39, z: -4033))
         #expect(info.respawn == .init(dimension: "minecraft:overworld", x: -2811, y: 48, z: -3918))
-        #expect(!info.isFromBukkitServer)
     }
 
     @Test func pre121SpawnFields() {
@@ -33,19 +32,16 @@ import Testing
         #expect(info.lastDeath == nil)
     }
 
-    @Test func legacyIntegerDimensionsAndBukkitWorlds() {
+    @Test func legacyAndUnknownIntegerDimensions() {
         let nether = PlayerInfo(uuid: uuid, nbt: .compound(["Dimension": .int(-1), "Pos": pos(5, 70, 5)]))
         #expect(nether.position?.dimension == "minecraft:the_nether")
 
-        let bukkit = PlayerInfo(uuid: uuid, nbt: .compound([
+        let unknown = PlayerInfo(uuid: uuid, nbt: .compound([
             "Dimension": .int(21), "Pos": pos(176.4, 74, 484.6),
-            "WorldUUIDMost": .long(1), "WorldUUIDLeast": .long(2),
-            "SpawnX": .int(-122), "SpawnY": .int(71), "SpawnZ": .int(321), "SpawnWorld": .string("hannapolis"),
+            "SpawnX": .int(-122), "SpawnY": .int(71), "SpawnZ": .int(321),
         ]))
-        #expect(bukkit.position == nil)  // dimension 21 isn't guessed
-        #expect(bukkit.unrecognizedDimension == "21")
-        #expect(bukkit.isFromBukkitServer)
-        #expect(bukkit.bukkitWorldName == "hannapolis")
+        #expect(unknown.position == nil)  // dimension 21 isn't guessed
+        #expect(unknown.unrecognizedDimension == "21")
     }
 
     @Test func worldListsPlayerFilesAndEmbeddedPlayer() throws {
