@@ -41,10 +41,12 @@ import Testing
         }
     }
 
-    @Test func emptyAndMalformedSidesDoNotHideTheOtherBird() {
+    @Test func emptyAndMalformedSidesDoNotHideTheOtherBird() throws {
+        var wolf = try #require(parrot(id: 4, variant: 0).compound)
+        wolf["id"] = .string("minecraft:wolf")
         for invalid in [NBT.compound([:]), .string("not an entity"),
                         .compound(["id": .string("minecraft:parrot")]),
-                        .compound(["id": .string("minecraft:wolf"), "Health": .float(8)])] {
+                        .compound(wolf)] {
             for key in ["ShoulderEntityLeft", "ShoulderEntityRight"] {
                 let other = key == "ShoulderEntityLeft" ? "ShoulderEntityRight" : "ShoulderEntityLeft"
                 let player = PlayerInfo(uuid: owner, nbt: .compound([key: invalid, other: parrot(id: 2, variant: 0)]))
