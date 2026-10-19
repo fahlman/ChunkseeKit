@@ -104,9 +104,10 @@ enum Fixtures {
 
 extension Fixtures {
     static func runCLI(_ world: URL, command: String, arguments: [String] = []) throws -> (status: Int32, output: String) {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let process = Process(), pipe = Pipe()
-        process.executableURL = root.appendingPathComponent(".build/debug/chunksee")
+        // SwiftPM places the tool beside this test bundle, including Release and --scratch-path builds.
+        process.executableURL = Bundle(for: CLITestBundle.self).bundleURL
+            .deletingLastPathComponent().appendingPathComponent("chunksee")
         process.arguments = [world.path, command] + arguments
         process.standardOutput = pipe
         process.standardError = pipe
@@ -116,3 +117,5 @@ extension Fixtures {
         return (process.terminationStatus, String(decoding: output, as: UTF8.self))
     }
 }
+
+private final class CLITestBundle: NSObject {}
