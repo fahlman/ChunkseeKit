@@ -63,6 +63,9 @@ expand an array of every block index before counting.
 `NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
 its result, including a return that would create another portal. Existing single-link prediction
 rules and `NetherPortal.Link` are unchanged; the additive API is available starting in v0.28.0.
+Portal grouping checks neighbor additions, and dimension scaling clamps before converting to
+Int. Link distances use Double subtraction/squares, matching 26.3 Vec3i/PortalForcer, so extreme
+saved heights cannot trap. Search radii, border bounds and the lower-Y tie rule are unchanged.
 
 `Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
 `RegionFacts`. Each present chunk payload is decoded once using the shared format readers.
