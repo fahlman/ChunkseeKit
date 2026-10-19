@@ -28,4 +28,25 @@ import ChunkseeKit
         let position = try #require(BlockPosition(x: -8.7, y: 63.9, z: -513.1))
         #expect(position.x == -9 && position.y == 63 && position.z == -514)
     }
+
+    @Test(arguments: [
+        (0, 0, 0, 0, 0), (15, 15, 0, 0, 255), (16, 16, 1, 1, 0),
+        (-1, 0, -1, 0, 15), (-16, 16, -1, 1, 0), (-17, -1, -2, -1, 255),
+        (16, -17, 1, -2, 240), (Int.min, Int.max, Int.min / 16, Int.max / 16, 240),
+    ])
+    func columnsLocateChunksAndArrayEntriesWithoutAHeight(x: Int, z: Int, chunkX: Int, chunkZ: Int, index: Int) {
+        let chunk = ChunkPosition(containingBlockX: x, blockZ: z)
+        #expect(chunk == ChunkPosition(x: chunkX, z: chunkZ))
+        #expect(ChunkPosition.localColumnIndex(blockX: x, blockZ: z) == index)
+        for y in [Int.min, 64, Int.max] {
+            #expect(BlockPosition(blockX: x, blockY: y, blockZ: z).chunk == chunk)
+        }
+    }
+
+    @Test func publicRegionSizeMatchesItsCheckedOrigins() throws {
+        #expect(RegionPosition.sideInBlocks == 512)
+        let origin = try #require(RegionPosition(x: -1, z: 1).blockOrigin)
+        #expect(origin.x == -RegionPosition.sideInBlocks && origin.z == RegionPosition.sideInBlocks)
+        #expect(RegionPosition(x: .max, z: 0).blockOrigin == nil)
+    }
 }

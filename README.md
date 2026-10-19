@@ -609,3 +609,10 @@ Malformed saved dimension/effect/enchantment IDs are now unavailable instead of 
 as arbitrary strings. `SaveVersion` names verified release numbers and format boundaries;
 `DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
 remain public. These additions are available starting in v0.30.0.
+
+The next approved minor release also adds `ChunkPosition(containingBlockX:blockZ:)` and
+`ChunkPosition.localColumnIndex(blockX:blockZ:)` for clients that have a block column without a
+height. The latter selects a column in a 256-entry chunk array, with local Z before X. Both accept
+whole block coordinates; use `BlockPosition.coordinate(containing:)` first for exact decimals.
+`RegionPosition.sideInBlocks` supplies continuous geometry's region width independently of a
+renderer's pixel resolution. These three additions are not available in v0.30.0.
