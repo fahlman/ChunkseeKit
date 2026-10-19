@@ -92,7 +92,7 @@ build fixtures, it never writes into a world folder.
 in the existing `World.gameRules()` dictionary. It accepts explicit Boolean values only, gives
 the current ID precedence, and leaves missing/malformed values unknown. Other namespaces and
 display labels do not identify this rule. The raw dictionary API stays unchanged. This additive
-API is unreleased; Chunksee's display-name comparison moves to it after a minor release (#51).
+API is available in v0.32.0; Chunksee's display-name comparison adoption remains on #51.
 
 `Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
 It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
@@ -153,7 +153,7 @@ but must be reread for the values. See README for format coverage and availabili
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
 `PlayerInfo.equippedItems` owns equipment-plus-selected-main-hand composition, preserving the
 explicit saved main hand's precedence and excluding unselected inventory. Player health consumes
-that same collection. This additive API is unreleased; app adoption follows a minor tag.
+that same collection. This additive API is available in v0.32.0; app adoption remains on #51.
 `PlayerInventorySection` owns hotbar/storage/ender-chest slot ranges. `PlayerInfo.inventorySlots(in:)`
 returns ordered optional items, retaining empty positions and the original saved item slot numbers.
 The existing inventory filter and selected-hand reader use that owner too. Layout ignores
@@ -161,7 +161,7 @@ missing/out-of-section slot numbers and keeps the last readable item at a repeat
 the app's existing layout and the game's loaded inventory. The selected hand now uses that same
 hotbar, correcting its first-item choice for duplicate slots; explicit saved main-hand equipment
 still wins. Raw inventories remain unchanged. This additive
-API is unreleased; Chunksee's numeric section layout moves to it after a minor tag (#51).
+API is available in v0.32.0; Chunksee's numeric section layout adoption remains on #51.
 Shared health arithmetic lives in `EntityHealth`; player maximum health includes applicable saved
 equipment modifiers and Health Boost. Item durability defaults are owned by `VanillaItemDurability`,
 checked against 26.3, with explicit overrides and unbreakable/removed components respected.
