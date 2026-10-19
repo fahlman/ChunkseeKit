@@ -15,6 +15,9 @@ public struct PlayerInfo: Sendable {
         public var y: Double
         public var z: Double
 
+        /// The containing whole block, distinct from this location's exact saved decimals.
+        public var blockPosition: BlockPosition? { BlockPosition(x: x, y: y, z: z) }
+
         public init(dimension: String, x: Double, y: Double, z: Double) {
             self.dimension = dimension
             self.x = x

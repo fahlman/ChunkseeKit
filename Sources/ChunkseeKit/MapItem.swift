@@ -56,9 +56,9 @@ public struct MapItem: Sendable, Equatable {
         banners = (data["banners"]?.list ?? []).compactMap { banner in
             let pos = banner["pos"] ?? banner["Pos"]
             let x: Int, y: Int, z: Int
-            if let values = pos?.intArray {
-                guard values.count == 3 else { return nil }
-                (x, y, z) = (Int(values[0]), Int(values[1]), Int(values[2]))
+            if case .intArray? = pos {
+                guard let position = pos?.blockPosition else { return nil }
+                (x, y, z) = (position.x, position.y, position.z)
             } else {
                 guard let oldX = pos?["X"]?.int ?? pos?["x"]?.int,
                       let oldY = pos?["Y"]?.int ?? pos?["y"]?.int,

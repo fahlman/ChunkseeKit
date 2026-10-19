@@ -79,7 +79,7 @@ enum EquipmentHealth {
 
     private static func modifiers(_ item: ItemStack, slot: String) -> [NBT]? {
         guard item.activeEnchantments.keys.allSatisfy({ id in
-            vanillaEnchantments.contains(id.contains(":") ? id : "minecraft:" + id)
+            Identifier(id).map { vanillaEnchantments.contains($0.description) } ?? false
         }) else { return nil }
         if item.components?["!minecraft:attribute_modifiers"] != nil { return [] }
         let component = item.components?["minecraft:attribute_modifiers"]

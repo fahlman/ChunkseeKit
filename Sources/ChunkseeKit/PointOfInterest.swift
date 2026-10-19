@@ -26,8 +26,8 @@ public struct PointOfInterest: Sendable, Equatable, Codable {
         return sections.sorted { (Int($0.key) ?? 0) < (Int($1.key) ?? 0) }.flatMap { _, section -> [PointOfInterest] in
             guard section["Valid"]?.bool ?? true else { return [] }
             return (section["Records"]?.list ?? []).compactMap { record in
-                guard let type = record["type"]?.string, let pos = record["pos"]?.intArray, pos.count == 3 else { return nil }
-                return PointOfInterest(type: type, x: Int(pos[0]), y: Int(pos[1]), z: Int(pos[2]),
+                guard let type = record["type"]?.string, let pos = record["pos"]?.blockPosition else { return nil }
+                return PointOfInterest(type: type, x: pos.x, y: pos.y, z: pos.z,
                                        freeTickets: record["free_tickets"]?.int ?? 0)
             }
         }

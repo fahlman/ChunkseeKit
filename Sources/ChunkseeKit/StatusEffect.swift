@@ -17,7 +17,8 @@ public struct StatusEffect: Sendable, Equatable {
     init?(_ nbt: NBT) {
         let id: String
         if let saved = nbt["id"]?.string, !saved.isEmpty {
-            id = saved.contains(":") ? saved : "minecraft:" + saved
+            guard let identifier = Identifier(saved) else { return nil }
+            id = identifier.description
         } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
             id = "minecraft:" + Self.legacyIDs[number]
         } else { return nil }
@@ -86,7 +87,7 @@ private enum PlayerHealth {
         var equipment = player.equipment
         equipment["mainhand"] = player.mainHandItem
         guard let modifiers = EquipmentHealth.modifiers(in: equipment) else { return nil }
-        return EntityHealth.value(player.nbt, defaultBase: player.dataVersion == 5023 ? 20 : nil,
+        return EntityHealth.value(player.nbt, defaultBase: player.dataVersion == SaveVersion.java26_3 ? 20 : nil,
                                   additionalModifiers: modifiers)
     }
 

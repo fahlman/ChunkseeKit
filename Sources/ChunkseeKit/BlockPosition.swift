@@ -1,8 +1,17 @@
 /// The whole block containing an exact saved position, when all three coordinates are representable.
-public struct BlockPosition: Sendable, Equatable {
+public struct BlockPosition: Sendable, Hashable, Codable {
     public let x: Int
     public let y: Int
     public let z: Int
+
+    public init(blockX: Int, blockY: Int, blockZ: Int) {
+        x = blockX
+        y = blockY
+        z = blockZ
+    }
+
+    public var chunk: ChunkPosition { ChunkPosition(x: x >> 4, z: z >> 4) }
+    public var region: RegionPosition { chunk.region }
 
     /// Floors each axis, including negative fractions. Returns nil for a nonfinite or out-of-range axis.
     public init?(x: Double, y: Double, z: Double) {

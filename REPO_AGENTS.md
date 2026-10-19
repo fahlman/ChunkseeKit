@@ -36,6 +36,19 @@ blocks. Its `coordinate(containing:)` function handles one axis; its failable XY
 entity-container reads and CLI creature/player output share that rule. Negative fractions round
 down, and nonfinite/out-of-range coordinates are unavailable. The CLI retains those records with
 unknown positions; the container reader omits an unmappable container while keeping its neighbors.
+`BlockPosition`, `ChunkPosition` and `RegionPosition` own block/chunk/region conversion,
+including negative containing coordinates and checked multiplication for region/chunk origins.
+Their typed Dimension overloads and the older integer overloads share those rules. PlayerInfo's
+exact Location exposes a checked containing block without changing its saved decimals.
+`Identifier` owns the default namespace and 26.3 character validation. Dimension/effect/enchantment
+readers use it; malformed saved identifiers become unavailable. The empty-path codec value is
+retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
+Identifier syntax is not file-path validation. `SaveVersion` owns verified release numbers and
+format boundaries; `DataVersion` remains a source-compatible alias. Unknown newer versions do not
+gain verified health defaults. POI, map banners and paired block locations share the int-array
+reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
+containers, signs and spawners share modern block-entity list/position readers. This adds no
+legacy terrain support. New public APIs require a future separately approved minor release.
 The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
 unneeded block data; it does not apply its own chunk-status or placement rules. Structure-center
 X/Z coordinates use the same public single-axis conversion without inventing a height.

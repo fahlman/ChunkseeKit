@@ -1,15 +1,5 @@
 import Foundation
 
-/// Data versions at which the chunk format changed in ways this parser cares about.
-public enum DataVersion {
-    /// 1.18 (21w43a): root-level `sections`, `block_states`/`biomes` paletted containers.
-    public static let flatChunkRoot = 2844
-    /// 26.3 Snapshot 7: block palette `Name`/`Properties` became `id`/`properties`, compact entries allowed.
-    public static let lowercaseBlockPalette = 5009
-    /// 26.4 Snapshot 1: biomes stored per block (4096 per section) instead of per 4×4×4 cell; `Status` → `status`.
-    public static let perBlockBiomes = 5119
-}
-
 public enum ChunkError: Error, Equatable {
     /// Pre-1.18 chunks (with a `Level` wrapper) aren't supported.
     case unsupportedLegacyFormat(dataVersion: Int?)
@@ -260,7 +250,7 @@ public struct Chunk: Sendable {
         self.inhabitedTime = Self.inhabitedTime(in: nbt)
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
-        self.blockEntities = nbt["block_entities"]?.list ?? []
+        self.blockEntities = Self.blockEntities(in: nbt)
         self.nbt = nbt
     }
 
@@ -282,10 +272,14 @@ public struct Chunk: Sendable {
         section(atBlockY: y)?.biome(x: x & 15, y: y & 15, z: z & 15)
     }
 
+    /// Modern chunk block entities. This does not opt legacy terrain into modern decoding.
+    static func blockEntities(in nbt: NBT) -> [NBT] { nbt["block_entities"]?.list ?? [] }
+
     /// The block entity at chunk-local x/z and absolute y, if any.
     public func blockEntity(x: Int, y: Int, z: Int) -> NBT? {
         blockEntities.first {
-            $0["x"]?.int.map { $0 & 15 } == x & 15 && $0["y"]?.int == y && $0["z"]?.int.map { $0 & 15 } == z & 15
+            guard let position = $0.blockEntityPosition else { return false }
+            return position.x & 15 == x & 15 && position.y == y && position.z & 15 == z & 15
         }
     }
 
