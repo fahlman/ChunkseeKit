@@ -110,6 +110,18 @@ the hold on #38. These are additive public APIs.
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
 is added. The explicit-height overload is additive public API.
 
+`DimensionType` owns validated build bounds, logical height and the ceiling flag.
+`World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
+or legacy inline settings. Enabled folder packs resolve in reverse priority order; the four vanilla
+definitions are verified for 26.3/5023. Missing, malformed or unresolved values remain absent.
+ZIP/experimental packs, overlays and filters are not resolved, so an unsupported higher-priority
+pack blocks lower fallbacks. This narrow reader does not infer types from dimension IDs, infer roof
+Y from logical height, load a complete game registry, or cache metadata. Path checks keep reads
+within the selected pack; file-read failures propagate. The fields, bounds and pack priority were
+checked against the official 26.3 DimensionType/LevelStem codecs and resource manager; the saved
+mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
+unreleased, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
+
 World-level saved data and per-dimension world-border/dragon records share the internal
 World.readSavedData path/existence/NBT reader. Public World.savedData retains namespaced-first
 and flat-file fallback; dimension records keep modern-only file lookup and their existing

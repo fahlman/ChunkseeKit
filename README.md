@@ -114,6 +114,30 @@ incorrect. It does not add pre-1.18 terrain decoding.
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
+### Dimension build limits (unreleased)
+
+`World.dimensionTypes()` reads each saved dimension's type from modern world-generation data
+or the older inline `WorldGenSettings`. It resolves inline definitions and references in enabled
+folder data packs, with later packs taking priority. The four vanilla definitions are verified
+for 26.3 / data version 5023. A dimension can use a different type from its own ID; neither its
+folder name nor its occupied chunk sections determine the result.
+
+```swift
+if let type = try world.dimensionTypes()["minecraft:the_nether"] {
+    print(type.buildRange)     // 0...255 for the verified vanilla Nether type
+    print(type.logicalHeight) // 128, distinct from its 256-block build height
+    print(type.hasCeiling)     // true; this does not identify the generated roof's Y
+}
+```
+
+Missing, malformed and unresolved types are omitted. ZIP packs, built-in experimental packs,
+pack overlays and resource filters are not resolved yet: an unsupported higher-priority pack
+prevents guessing a lower definition, including vanilla. Vanilla defaults are unavailable for
+unverified save versions. Explicit definitions must have valid aligned bounds and logical height;
+file lookup rejects paths or symlinks escaping the pack. File-read errors propagate. This API
+reads metadata only, has no cache and never writes a world. It does not change terrain decoding,
+`RegionFacts`, or the app's height controls until separate app adoption.
+
 ### Region facts (v0.30.0)
 
 `Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
