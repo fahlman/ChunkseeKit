@@ -23,8 +23,7 @@ import ChunkseeKit
         #expect(result.output.contains("3 minecraft:parrot\n"))
     }
 
-    @Test(arguments: ["bukkit", "WorldUUIDMost", "SpawnWorld"])
-    func carrierWorldAndDimensionRestrictTheListing(_ serverField: String) throws {
+    @Test func carrierDimensionRestrictsTheListing() throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
         try player(in: root, id: carrier, fields: [
@@ -35,16 +34,10 @@ import ChunkseeKit
             "Dimension": .string("minecraft:the_nether"), "Pos": position([4, 65, 6]),
             "ShoulderEntityLeft": parrot("Nether"),
         ])
-        var otherWorld: [String: NBT] = [
-            "Dimension": .string("minecraft:overworld"), "Pos": position([1, 64, 2]),
-            "ShoulderEntityLeft": parrot("Other World"),
-        ]
-        otherWorld[serverField] = switch serverField {
-        case "WorldUUIDMost": .long(1)
-        case "SpawnWorld": .string("another world")
-        default: .compound([:])
-        }
-        try player(in: root, id: "22222222-2222-2222-2222-222222222222", fields: otherWorld)
+        try player(in: root, id: "22222222-2222-2222-2222-222222222222", fields: [
+            "Dimension": .int(21), "Pos": position([1, 64, 2]),
+            "ShoulderEntityLeft": parrot("Unrecognized Dimension"),
+        ])
         try player(in: root, id: "33333333-3333-3333-3333-333333333333", fields: [
             "Pos": position([1, 64, 2]), "ShoulderEntityLeft": parrot("Unknown Dimension"),
         ])
@@ -54,7 +47,7 @@ import ChunkseeKit
             #expect(result.status == 0)
             #expect(result.output.contains("\"\(included)\""))
             #expect(!result.output.contains("\"\(excluded)\""))
-            #expect(!result.output.contains("Other World") && !result.output.contains("Unknown Dimension"))
+            #expect(!result.output.contains("Unrecognized Dimension") && !result.output.contains("Unknown Dimension"))
             #expect(result.output.contains("1 minecraft:parrot\n"))
         }
     }

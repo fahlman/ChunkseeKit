@@ -17,11 +17,11 @@ import Testing
         #expect(current.dimension == "minecraft:overworld" && current.scale == 0 && !current.isLocked && !current.isBlank)
         #expect(current.minX == 192 && current.minZ == -2496 && current.sideInBlocks == 128)
 
-        let bukkit = try #require(MapItem(id: 10, nbt: .compound(["data": .compound([
+        let unknown = try #require(MapItem(id: 10, nbt: .compound(["data": .compound([
             "dimension": .byte(15), "scale": .byte(3), "xCenter": .int(-576), "zCenter": .int(448), "colors": colors(),
         ])])))
-        #expect(bukkit.dimension == nil && bukkit.unrecognizedDimension == "15" && bukkit.isBlank)
-        #expect(bukkit.blocksPerPixel == 8 && bukkit.minX == -576 - 512)
+        #expect(unknown.dimension == nil && unknown.unrecognizedDimension == "15" && unknown.isBlank)
+        #expect(unknown.blocksPerPixel == 8 && unknown.minX == -576 - 512)
 
         let nether = MapItem(id: 1, nbt: .compound(["data": .compound(["dimension": .byte(-1), "colors": colors(),
             "banners": .list([.compound(["pos": .compound(["X": .int(1), "Y": .int(2), "Z": .int(3)]), "color": .string("red"), "name": .string("Home")])])])]))

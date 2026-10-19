@@ -34,6 +34,16 @@ targets: [
 ]
 ```
 
+## Unreleased API change
+
+The next minor release removes `PlayerInfo.isFromBukkitServer`, `bukkitWorldName`
+and `locationsBelongToWorld`. Player locations now follow vanilla dimension and
+coordinate rules regardless of unrelated extra fields. Consumers should use
+`position`, `lastDeath` and `respawn` and check coordinate availability. Unknown
+dimension values remain unavailable; vanilla legacy numeric dimensions and datapack
+dimensions remain supported. `LevelInfo.wasModded` and `serverBrands` remain because
+vanilla writes them. These removals are not part of v0.30.0.
+
 ## Library usage
 
 ### Open a world
@@ -279,8 +289,8 @@ for item in contents.containers.flatMap(\.allItems) {
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
 DataVersion. Saved owner, UUID, name, health and appearance are preserved. These
 entity snapshots contain the position **before mounting**: locate a shoulder pet
-with the player's current `position`, applying `locationsBelongToWorld` and the
-dimension restrictions. An unavailable player position does not discard its shoulder pets.
+with the player's current `position`, applying dimension and coordinate checks. An
+unavailable player position does not discard its shoulder pets.
 The dimension's entity-region reader does not include them; a client combines the
 player and dimension records. Verified against the official 26.3 save/load and
 shoulder-mount code. This additive API is available starting in v0.30.0; app adoption is
@@ -289,15 +299,8 @@ tracked separately in fahlman/ChunkseeKit#74.
 The `creatures` command includes shoulder parrots in its selected dimension's
 listing and totals. Their location is the carrier's saved position, with the
 carrier UUID shown separately from the saved owner. A nonfinite or out-of-range
-position prints as unknown; players without a dimension/location record or from
-Bukkit worlds cannot be assigned to this dimension and are omitted from this
-dimension-specific command.
-
-`PlayerInfo.locationsBelongToWorld` owns whether saved locations can be assigned
-to this world. It is false for Bukkit-written files, whose current, death and
-respawn locations may belong to a different server world. Location availability
-and checked coordinate conversion remain separate. This additive API is available starting
-in v0.30.0; app adoption is tracked in fahlman/Chunksee#214.
+position prints as unknown; players without a recognized dimension/location record
+are omitted from this dimension-specific command.
 
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
@@ -424,7 +427,6 @@ for player in world.players() {                         // most recently saved f
     for effect in player.activeEffects {
         print(effect.id, effect.level, effect.durationTicks) // ticks at save time; -1 is infinite
     }
-    if player.isFromBukkitServer { print("  locations may be in another world:", player.bukkitWorldName ?? "?") }
     let stats = try world.statistics(for: player.uuid)            // statistics(forName:) for files from before 1.7.6
     print("  played", (stats?.playTime ?? 0) / 72_000, "hours, mined", stats?.value("minecraft:stone", in: "minecraft:mined") ?? 0, "stone")
     let advancements = try world.advancements(for: player.uuid) ?? []

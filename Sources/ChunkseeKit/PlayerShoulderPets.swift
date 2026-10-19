@@ -6,7 +6,7 @@ extension PlayerInfo {
     ///
     /// These are serialized entity snapshots from when the birds mounted the player. Their
     /// `x`, `y` and `z` are not their current location. Use this player's `position` to locate
-    /// shoulder pets, with the same unavailable-dimension/Bukkit checks as the player itself.
+    /// shoulder pets, with the same dimension and coordinate checks as the player itself.
     /// Pets remain available here even when the player's current location is unavailable.
     public var shoulderPets: [Creature] {
         ["ShoulderEntityLeft", "ShoulderEntityRight"].compactMap { key in

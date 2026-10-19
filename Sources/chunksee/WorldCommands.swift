@@ -75,6 +75,5 @@ func playersCommand(_ world: World, _ arguments: Arguments) {
             let done = ((try? world.advancements(for: player.uuid)) ?? nil)?.filter { $0.isDone && !$0.isRecipe }.count
             print("  played:   \(stats?.playTime.map { "\($0 / 72_000) hours" } ?? "?"), \(done.map { "\($0) advancements" } ?? "no advancements file")")
             print("  items:    \(player.inventory.count) inventory stacks, \(player.enderChest.count) in the ender chest\(worn.isEmpty ? "" : "; wearing \(worn)")")
-            if player.isFromBukkitServer { print("  written by a Bukkit server\(player.bukkitWorldName.map { " (world \"\($0)\")" } ?? "")") }
         }
 }
