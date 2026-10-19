@@ -286,6 +286,13 @@ player and dimension records. Verified against the official 26.3 save/load and
 shoulder-mount code. This additive API is unreleased; the app adoption waits for
 an approved release.
 
+The `creatures` command includes shoulder parrots in its selected dimension's
+listing and totals. Their location is the carrier's saved position, with the
+carrier UUID shown separately from the saved owner. A nonfinite or out-of-range
+position prints as unknown; players without a dimension/location record or from
+Bukkit worlds cannot be assigned to this dimension and are omitted from this
+dimension-specific command.
+
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     if let owner = creature.owner { print(creature.id, creature.customName ?? "", "tamed by", owner) }

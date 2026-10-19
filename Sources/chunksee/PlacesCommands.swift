@@ -53,14 +53,24 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
 func creaturesCommand(_ world: World, _ arguments: Arguments) {
         let dim = arguments.dimension(1, in: world)
         var kinds: [String: Int] = [:]
+        func show(_ creature: Creature, at block: BlockPosition?, carrier: UUID?) {
+            kinds[creature.id, default: 0] += 1
+            guard carrier != nil || creature.customName != nil || creature.owner != nil else { return }
+            let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
+            let position = block.map { "(\($0.x), \($0.y), \($0.z))" } ?? "unknown position"
+            let shoulder = carrier.map { " on shoulder of \($0.uuidString.lowercased())" } ?? ""
+            print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at \(position)\(owner)\(shoulder)")
+        }
         for (rx, rz, _) in dim.regionFiles(.entities) {
             for creature in (try? dim.creatures(regionX: rx, regionZ: rz)) ?? [] {
-                kinds[creature.id, default: 0] += 1
-                guard creature.customName != nil || creature.owner != nil else { continue }
-                let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
-                let position = BlockPosition(x: creature.x, y: creature.y, z: creature.z)
-                    .map { "(\($0.x), \($0.y), \($0.z))" } ?? "unknown position"
-                print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at \(position)\(owner)")
+                show(creature, at: BlockPosition(x: creature.x, y: creature.y, z: creature.z), carrier: nil)
+            }
+        }
+        for player in world.players() where !player.isFromBukkitServer {
+            guard let location = player.position, location.dimension == dim.id else { continue }
+            for creature in player.shoulderPets {
+                // A shoulder entity's own saved coordinates predate mounting.
+                show(creature, at: location.blockPosition, carrier: player.uuid)
             }
         }
         for (kind, count) in kinds.sorted(by: byCount) { print("\(count) \(kind)") }

@@ -110,6 +110,9 @@ serialized coordinates predate mounting; consumers locate them through the playe
 its world/dimension restrictions. 26.3 ServerPlayer saves these compounds and places a released
 bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
 adoption waits for a separately approved release; entity-region reads remain region-only.
+The CLI `creatures` command combines those region records with shoulder pets whose carrier
+belongs to the selected dimension and is not from a Bukkit world. It prints the carrier's
+checked position and UUID separately from the saved owner, never the stale mounting position.
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
