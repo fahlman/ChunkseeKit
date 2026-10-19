@@ -63,6 +63,8 @@ import Testing
         let blocks = ItemContainer.containers(inChunk: chunk)
         #expect(blocks.map(\.kind) == ["minecraft:chest", "minecraft:chest", "minecraft:lectern"])
         #expect(blocks[1].isSealedLoot && blocks[1].items.isEmpty)
+        #expect(blocks[1].lootTable == "minecraft:chests/simple_dungeon")
+        #expect(blocks[0].lootTable == nil && !blocks[0].isSealedLoot)
         #expect(blocks[2].items.first?.id == "minecraft:written_book")
 
         let entities = NBT.compound(["Entities": .list([
@@ -113,6 +115,7 @@ import Testing
         #expect(parsed.first?.allItems.first?.id == "minecraft:diamond")
         #expect(parsed.last.map { [$0.x, $0.y, $0.z] } == [2, -1, 3])
         #expect(parsed.last?.isSealedLoot == true)
+        #expect(parsed.last?.lootTable == "minecraft:chests/abandoned_mineshaft")
 
         let url = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: url) }

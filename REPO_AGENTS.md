@@ -78,6 +78,11 @@ consumers also key all three file fingerprints and their own transform version. 
 conformances remain source-compatible until separately migrated. The new API is available in
 v0.30.0; Chunksee's pin and app adoption are separate work.
 
+`ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
+chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts
+interpretation version 2 forces older cached regions to be reread for the new field. The additive
+API is unreleased and its app adoption remains on fahlman/Chunksee#122.
+
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
 
