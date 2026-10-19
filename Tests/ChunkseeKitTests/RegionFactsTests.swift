@@ -39,6 +39,7 @@ import Testing
                        "Owner": Fixtures.uuidInts(UUID(uuidString: "06D119DA-BC79-410F-8F7B-062CE442A86D")!),
                        "Pos": .list([.double(-4), .double(63), .double(0)])]),
             .compound(["id": .string("minecraft:chest_minecart"), "Pos": .list([.double(-2.5), .double(30), .double(0)]),
+                       "UUID": .intArray([1, 2, 3, 4]),
                        "Items": .list([.compound(["id": .string("minecraft:rail"), "count": .int(16)])])]),
         ])])
     }
@@ -68,6 +69,7 @@ import Testing
         #expect(facts.dimension == dimension.id && facts.region == region)
         #expect(facts.containers == old.containers && facts.signs == old.signs && facts.spawners == old.spawners)
         #expect(facts.containers.count == 2 && facts.signs.count == 1 && facts.spawners.count == 1)
+        #expect(facts.containers.first(where: \.isEntity)?.uuid == UUID(uuidString: "00000001-0000-0002-0000-000300000004"))
         #expect(facts.creatures == Creature.creatures(inEntityChunk: entityChunk))
         #expect(facts.creatures.first?.health == 6 && facts.creatures.first?.maxHealth != nil)
         #expect(facts.pointsOfInterest == PointOfInterest.records(inChunk: poiChunk))

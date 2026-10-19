@@ -82,8 +82,14 @@ v0.30.0; Chunksee's pin and app adoption are separate work.
 
 `ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
 chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts
-interpretation version 2 forces older cached regions to be reread for the new field. The additive
+interpretation version 2 forced older cached regions to be reread for the new field. The additive
 API is available in v0.31.0 and its app adoption remains on fahlman/Chunksee#122.
+
+`ItemContainer.uuid` retains the optional saved identity of entity containers through the shared
+`NBT.uuid` reader. Fixed block containers have no entity identity, and missing or unreadable IDs
+remain nil. Colocated minecarts stay distinct and moving a cart does not change its saved UUID.
+Standalone older container archives still decode; RegionFacts interpretation version 3 requires
+cached regions to be reread. This additive API is unreleased, for fahlman/Chunksee#122.
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.

@@ -628,7 +628,14 @@ Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` c
 including chest minecarts. It adds no item prediction. Consumers can pair it with `isSealedLoot`
 to name unopened loot; an opened container no longer has a saved table. This additive property is
 **available starting in v0.31.0**. Older standalone container archives decode with a nil table;
-RegionFacts interpretation version 2 invalidates earlier region archives so they are reread.
+RegionFacts interpretation version 2 invalidated earlier region archives so they were reread.
+
+`ItemContainer.uuid` is the optional saved identity of an entity container (**unreleased**).
+It uses the shared UUID reader for current arrays, strings and legacy Most/Least pairs, keeping
+colocated minecarts distinct and their identity stable when they move. Blocks and entities with
+no readable saved UUID return nil; no identity is generated. Older standalone container archives
+still decode with a nil UUID. RegionFacts interpretation version 3 invalidates earlier region
+archives so entity IDs are reread from the world.
 
 Entity containers use the containing block of their saved `Pos`, rounding negative fractions down.
 A missing, nonnumeric, nonfinite or out-of-range coordinate makes that container unavailable;
