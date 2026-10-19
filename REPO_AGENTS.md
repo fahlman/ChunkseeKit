@@ -58,7 +58,7 @@ CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed dat
 expand an array of every block index before counting.
 `NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
 its result, including a return that would create another portal. Existing single-link prediction
-rules and `NetherPortal.Link` are unchanged; the additive API is available starting in v0.29.0.
+rules and `NetherPortal.Link` are unchanged; the additive API is available starting in v0.28.0.
 
 `Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
 `RegionFacts`. Each present chunk payload is decoded once using the shared format readers.
