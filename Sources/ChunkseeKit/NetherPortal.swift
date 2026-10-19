@@ -49,7 +49,10 @@ public struct NetherPortal: Sendable, Equatable {
             while let block = stack.popLast() {
                 members.append(block)
                 for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
-                    let next = Block(x: block.x + dx, y: block.y + dy, z: block.z + dz)
+                    let x = block.x.addingReportingOverflow(dx), y = block.y.addingReportingOverflow(dy)
+                    let z = block.z.addingReportingOverflow(dz)
+                    guard !x.overflow, !y.overflow, !z.overflow else { continue }
+                    let next = Block(x: x.partialValue, y: y.partialValue, z: z.partialValue)
                     if unvisited.remove(next) != nil { stack.append(next) }
                 }
             }
@@ -92,16 +95,17 @@ public struct NetherPortal: Sendable, Equatable {
     /// The matching coordinates in the target dimension: X and Z ÷ 8 (rounded down) into the
     /// Nether, × 8 into the Overworld, kept inside the world border; Y unchanged.
     public static func destination(of block: Block, from dimension: String) -> Block? {
-        func clamp(_ v: Int) -> Int { min(max(v, -29_999_984), 29_999_983) }
+        let scale: Double
         switch dimension {
-        case overworld:
-            return Block(x: clamp(Int((Double(block.x) / 8).rounded(.down))), y: block.y,
-                         z: clamp(Int((Double(block.z) / 8).rounded(.down))))
-        case nether:
-            return Block(x: clamp(block.x * 8), y: block.y, z: clamp(block.z * 8))
-        default:
-            return nil
+        case overworld: scale = 1.0 / 8
+        case nether: scale = 8
+        default: return nil
         }
+        // Clamp before converting: public coordinates can exceed the game's border or Int / 8.
+        func scaled(_ value: Int) -> Int {
+            Int(min(max((Double(value) * scale).rounded(.down), -29_999_984), 29_999_983))
+        }
+        return Block(x: scaled(block.x), y: block.y, z: scaled(block.z))
     }
 
     /// How far, in blocks along X and Z, the game looks for an existing portal around the
@@ -119,11 +123,14 @@ public struct NetherPortal: Sendable, Equatable {
         guard let target = Self.targetDimension(from: dimension),
               let destination = Self.destination(of: entry ?? self.entry, from: dimension) else { return nil }
         let radius = Self.searchRadius(arrivingIn: target)
-        var best: (portal: NetherPortal, block: Block, distance: Int)?
+        var best: (portal: NetherPortal, block: Block, distance: Double)?
         for portal in candidates where portal.dimension == target {
-            for block in portal.blocks
-            where abs(block.x - destination.x) <= radius && abs(block.z - destination.z) <= radius {
-                let dx = block.x - destination.x, dy = block.y - destination.y, dz = block.z - destination.z
+            for block in portal.blocks {
+                // Minecraft's Vec3i.distSqr converts before subtracting and squaring. Saved
+                // Int32 heights can overflow an Int square even with X/Z inside the radius.
+                let dx = Double(block.x) - Double(destination.x), dy = Double(block.y) - Double(destination.y)
+                let dz = Double(block.z) - Double(destination.z)
+                guard abs(dx) <= Double(radius), abs(dz) <= Double(radius) else { continue }
                 let distance = dx * dx + dy * dy + dz * dz
                 if best == nil || distance < best!.distance || (distance == best!.distance && block.y < best!.block.y) {
                     best = (portal, block, distance)
