@@ -157,11 +157,12 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             // lecterns `Book` and jukeboxes `RecordItem`.
             let single = ["item", "Book", "RecordItem"].compactMap { entity[$0].flatMap(ItemStack.init) }
             let items = ItemStack.list(entity["Items"]) + single
-            let sealed = entity["LootTable"] != nil
+            let lootTable = entity["LootTable"]
+            let sealed = lootTable != nil
             guard !items.isEmpty || sealed else { return nil }
             return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z, items: items,
                                  customName: entity["CustomName"].flatMap(TextComponent.plainText),
-                                 lootTable: entity["LootTable"]?.string, isSealedLoot: sealed && items.isEmpty, isEntity: false)
+                                 lootTable: lootTable?.string, isSealedLoot: sealed && items.isEmpty, isEntity: false)
         }
     }
 
@@ -177,11 +178,12 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             // Dropped items despawn and players' items are read from player files, so neither counts.
             guard kind != "minecraft:item", kind != "minecraft:player" else { return nil }
             let items = ItemStack.list(entity["Items"]) + (entity["Item"].flatMap(ItemStack.init).map { [$0] } ?? [])
-            let sealed = entity["LootTable"] != nil
+            let lootTable = entity["LootTable"]
+            let sealed = lootTable != nil
             guard !items.isEmpty || sealed else { return nil }
             return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z,
                                  items: items, customName: entity["CustomName"].flatMap(TextComponent.plainText),
-                                 lootTable: entity["LootTable"]?.string, isSealedLoot: sealed && items.isEmpty, isEntity: true)
+                                 lootTable: lootTable?.string, isSealedLoot: sealed && items.isEmpty, isEntity: true)
         }
     }
 }
