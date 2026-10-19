@@ -116,15 +116,15 @@ The app uses World.seed() and this public rule, available starting in v0.29.0.
 `PlayerInfo.shoulderPets` owns the two saved shoulder-entity keys and reuses Creature decoding
 with the player's DataVersion. It retains parrots even without a usable player location. Their
 serialized coordinates predate mounting; consumers locate them through the player, including
-its world/dimension restrictions. 26.3 ServerPlayer saves these compounds and places a released
-bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
+its dimension and coordinate availability. 26.3 ServerPlayer saves these compounds and places a
+released bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
 adoption is tracked separately in #74; this API is in v0.30.0 and entity-region reads remain region-only.
-`PlayerInfo.locationsBelongToWorld` owns whether a player's current/death/respawn locations
-belong to this world; Bukkit's shared player files do not. Coordinate availability is separate.
-The CLI `creatures` command uses that property and the selected dimension to include shoulder
-pets with the region records. It prints the carrier's
-checked position and UUID separately from the saved owner, never the stale mounting position.
-This property is available in v0.30.0; app adoption is tracked in fahlman/Chunksee#214.
+The CLI `creatures` command combines shoulder pets with region records in the selected dimension.
+It prints the carrier's checked position and UUID separately from the saved owner, never the stale
+mounting position. Player locations use vanilla dimension and coordinate rules without a separate
+server-file policy. Unknown values remain unavailable; vanilla's Modded metadata remains. The
+removed server-specific PlayerInfo APIs are a breaking change awaiting the next approved minor
+release, documented in README's migration note (fahlman/ChunkseeKit#90).
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,

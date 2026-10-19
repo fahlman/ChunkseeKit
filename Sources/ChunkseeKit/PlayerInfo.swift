@@ -4,8 +4,7 @@ import Foundation
 ///
 /// Player files are upgraded only when that player joins, so one world can hold several formats:
 /// 1.16+ string dimensions, older integer dimensions, the 1.21+ `respawn` compound, older
-/// `SpawnX`/`SpawnY`/`SpawnZ` fields, and files written by Bukkit servers, whose positions may
-/// belong to a different world of the same server.
+/// `SpawnX`/`SpawnY`/`SpawnZ` fields.
 public struct PlayerInfo: Sendable {
     /// A position in a dimension.
     public struct Location: Sendable, Equatable {
@@ -33,21 +32,11 @@ public struct PlayerInfo: Sendable {
     /// Where the player was when the file was saved, or `nil` if the dimension isn't recognized
     /// (see `unrecognizedDimension`).
     public let position: Location?
-    /// The raw dimension value when it couldn't be mapped, e.g. `"21"` for a Bukkit world ID.
+    /// The raw dimension value when it could not be mapped, such as an unknown number.
     public let unrecognizedDimension: String?
     public let lastDeath: Location?
     /// The bed or respawn anchor the player will respawn at, if set.
     public let respawn: Location?
-    /// True when the file was written by a Bukkit-based server, whose worlds share player files:
-    /// every location here (position, death, respawn) may be in a different world than the one
-    /// being read, even when its dimension looks familiar.
-    public let isFromBukkitServer: Bool
-    /// Whether saved current, death and respawn locations belong to the world holding this file.
-    /// Bukkit servers share player files across worlds, so those locations cannot be assigned to
-    /// this world. This does not guarantee a location exists or its coordinates are representable.
-    public var locationsBelongToWorld: Bool { !isFromBukkitServer }
-    /// The world a Bukkit server recorded for the player's spawn (`SpawnWorld`), if any.
-    public let bukkitWorldName: String?
     /// The full player NBT, for fields this type doesn't model.
     public let nbt: NBT
 
@@ -75,9 +64,6 @@ public struct PlayerInfo: Sendable {
         } else {
             respawn = nil
         }
-
-        bukkitWorldName = nbt["SpawnWorld"]?.string
-        isFromBukkitServer = nbt["WorldUUIDMost"] != nil || nbt["bukkit"] != nil || bukkitWorldName != nil
     }
 
     /// `{dimension: "…", pos: [I; x, y, z]}`, as used by `LastDeathLocation` and `respawn`.
