@@ -135,6 +135,8 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     public var y: Int
     public var z: Int
     public var items: [ItemStack]
+    /// Saved identity for a moving entity container; absent for blocks or unreadable entity IDs.
+    public var uuid: UUID?
     /// A name given to the container itself (renamed in an anvil before placing).
     public var customName: String?
     /// The saved loot-table ID, when present as a string. This does not roll or predict its items.
@@ -182,7 +184,8 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             let sealed = lootTable != nil
             guard !items.isEmpty || sealed else { return nil }
             return ItemContainer(kind: kind, x: position.x, y: position.y, z: position.z,
-                                 items: items, customName: entity["CustomName"].flatMap(TextComponent.plainText),
+                                 items: items, uuid: entity.uuid,
+                                 customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  lootTable: lootTable?.string, isSealedLoot: sealed && items.isEmpty, isEntity: true)
         }
     }

@@ -53,7 +53,7 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
     /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 2
+    public static let interpretationVersion = 3
 
     public let dimension: String
     public let region: RegionPosition
