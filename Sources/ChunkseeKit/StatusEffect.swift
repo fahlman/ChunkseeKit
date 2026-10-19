@@ -84,9 +84,7 @@ private enum PlayerHealth {
     static func maximum(_ player: PlayerInfo) -> Double? {
         guard EntityHealth.supportsEffects(player.nbt) else { return nil }
         // Health Boost is already a permanent saved attribute modifier, including legacy UUIDs.
-        var equipment = player.equipment
-        equipment["mainhand"] = player.mainHandItem
-        guard let modifiers = EquipmentHealth.modifiers(in: equipment) else { return nil }
+        guard let modifiers = EquipmentHealth.modifiers(in: player.equippedItems) else { return nil }
         return EntityHealth.value(player.nbt, defaultBase: player.dataVersion == SaveVersion.java26_3 ? 20 : nil,
                                   additionalModifiers: modifiers)
     }
