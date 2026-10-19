@@ -434,6 +434,13 @@ for player in world.players() {                         // most recently saved f
 }
 ```
 
+`player.inventorySlots(in: .hotbar)`, `.storage` and `.enderChest` expose ordered contents
+with empty slots retained as `nil`. ChunkseeKit owns the saved slot ranges; clients supply
+their own labels and visual layout. ItemStack keeps its original saved slot number, including
+storage slots 9–35. Missing/out-of-range slots are omitted from this layout and the last
+readable item wins a repeated slot. Existing raw inventory, ender-chest, equipment and
+selected-hand APIs are unchanged. This additive API is unreleased and needs the next minor tag.
+
 Modern world spawn, player death and player respawn share the `{dimension, pos: [I; x, y, z]}`
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
 `spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.

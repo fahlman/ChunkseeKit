@@ -125,7 +125,7 @@ extension PlayerInfo {
 extension PlayerInfo {
     /// The main inventory (slots 9–35) and hotbar (slots 0–8).
     public var inventory: [ItemStack] {
-        ItemStack.list(nbt["Inventory"]).filter { ($0.slot ?? 0) >= 0 && ($0.slot ?? 0) < 36 }
+        ItemStack.list(nbt["Inventory"]).filter { PlayerInventorySection.carriedSlots.contains($0.slot ?? 0) }
     }
 
     /// Worn armor and the offhand item, keyed by slot name (`head`, `chest`, `legs`, `feet`,
