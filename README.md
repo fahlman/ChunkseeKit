@@ -27,7 +27,7 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.32.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.33.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
@@ -114,7 +114,7 @@ incorrect. It does not add pre-1.18 terrain decoding.
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
-### Dimension build limits (unreleased)
+### Dimension build limits (v0.33.0)
 
 `World.dimensionTypes()` reads each saved dimension's type from modern world-generation data
 or the older inline `WorldGenSettings`. It resolves inline definitions and references in enabled

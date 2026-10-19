@@ -120,7 +120,7 @@ Y from logical height, load a complete game registry, or cache metadata. Path ch
 within the selected pack; file-read failures propagate. The fields, bounds and pack priority were
 checked against the official 26.3 DimensionType/LevelStem codecs and resource manager; the saved
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
-unreleased, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
+introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
 World-level saved data and per-dimension world-border/dragon records share the internal
 World.readSavedData path/existence/NBT reader. Public World.savedData retains namespaced-first
