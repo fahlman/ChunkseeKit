@@ -233,6 +233,17 @@ for item in contents.containers.flatMap(\.allItems) {
 
 ### Creatures
 
+`PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
+`ShoulderEntityRight`, left first, through the same `Creature` reader and player
+DataVersion. Saved owner, UUID, name, health and appearance are preserved. These
+entity snapshots contain the position **before mounting**: locate a shoulder pet
+with the player's current `position`, applying the player's dimension/Bukkit
+restrictions. An unavailable player position does not discard its shoulder pets.
+The dimension's entity-region reader does not include them; a client combines the
+player and dimension records. Verified against the official 26.3 save/load and
+shoulder-mount code. This additive API is unreleased; the app adoption waits for
+an approved release.
+
 ```swift
 for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
     if let owner = creature.owner { print(creature.id, creature.customName ?? "", "tamed by", owner) }
