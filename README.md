@@ -27,22 +27,22 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", branch: "main"),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.31.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
 
-## Unreleased API change
+## Migrating to v0.31.0
 
-The next minor release removes `PlayerInfo.isFromBukkitServer`, `bukkitWorldName`
+v0.31.0 removes `PlayerInfo.isFromBukkitServer`, `bukkitWorldName`
 and `locationsBelongToWorld`. Player locations now follow vanilla dimension and
 coordinate rules regardless of unrelated extra fields. Consumers should use
 `position`, `lastDeath` and `respawn` and check coordinate availability. Unknown
 dimension values remain unavailable; vanilla legacy numeric dimensions and datapack
 dimensions remain supported. `LevelInfo.wasModded` and `serverBrands` remain because
-vanilla writes them. These removals are not part of v0.30.0.
+vanilla writes them. These removals are a breaking change from v0.30.0.
 
 ## Library usage
 
@@ -582,7 +582,7 @@ Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` c
 `ItemContainer.lootTable` exposes the saved optional loot-table ID on block and entity containers,
 including chest minecarts. It adds no item prediction. Consumers can pair it with `isSealedLoot`
 to name unopened loot; an opened container no longer has a saved table. This additive property is
-**unreleased (not in v0.30.0)**. Older standalone container archives decode with a nil table;
+**available starting in v0.31.0**. Older standalone container archives decode with a nil table;
 RegionFacts interpretation version 2 invalidates earlier region archives so they are reread.
 
 Entity containers use the containing block of their saved `Pos`, rounding negative fractions down.
@@ -618,9 +618,9 @@ as arbitrary strings. `SaveVersion` names verified release numbers and format bo
 `DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
 remain public. These additions are available starting in v0.30.0.
 
-The next approved minor release also adds `ChunkPosition(containingBlockX:blockZ:)` and
+v0.31.0 also adds `ChunkPosition(containingBlockX:blockZ:)` and
 `ChunkPosition.localColumnIndex(blockX:blockZ:)` for clients that have a block column without a
 height. The latter selects a column in a 256-entry chunk array, with local Z before X. Both accept
 whole block coordinates; use `BlockPosition.coordinate(containing:)` first for exact decimals.
 `RegionPosition.sideInBlocks` supplies continuous geometry's region width independently of a
-renderer's pixel resolution. These three additions are not available in v0.30.0.
+renderer's pixel resolution. These three additions first appear in v0.31.0.
