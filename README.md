@@ -27,7 +27,7 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.31.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.32.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
@@ -441,14 +441,13 @@ storage slots 9–35. Missing/out-of-range slots are omitted from this layout an
 readable item wins a repeated slot, matching the game's loaded inventory. The selected-hand
 reader uses that same hotbar, correcting its old first-item choice for duplicate slots; an
 explicit saved main hand still wins. Raw inventory, ender-chest and equipment APIs are unchanged.
-This additive API is unreleased and needs the next minor tag.
+This additive API is available starting in v0.32.0.
 
 `GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current
 `minecraft:spawn_wandering_traders` identifier and the legacy `doTraderSpawning` identifier.
 It returns an explicit `.bool` value, or `nil` for missing or malformed values; the current
 identifier takes precedence. Display names and other namespaces do not match. The existing
-`World.gameRules()` dictionary is unchanged. This additive lookup is unreleased and requires
-the next minor release before clients can adopt it.
+`World.gameRules()` dictionary is unchanged. This additive lookup is available starting in v0.32.0.
 
 Modern world spawn, player death and player respawn share the `{dimension, pos: [I; x, y, z]}`
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
@@ -461,8 +460,8 @@ fallback remains.
 `PlayerInfo.equippedItems` combines the saved equipment slots and the selected main-hand item.
 An explicit saved main hand takes precedence over the selected hotbar slot; unselected inventory
 items are excluded. Player maximum health uses this same collection. The existing `equipment`,
-`inventory` and `mainHandItem` APIs keep their meanings. `equippedItems` is an additive API on
-unreleased main and needs the next minor release before clients can adopt it.
+`inventory` and `mainHandItem` APIs keep their meanings. `equippedItems` is an additive API
+available starting in v0.32.0.
 
 Player maximum health uses the same saved attribute arithmetic as creatures, including permanent
 Health Boost in modern and legacy saves. It is not reconstructed from the effect list. Equipped-item
