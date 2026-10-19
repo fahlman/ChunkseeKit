@@ -104,6 +104,48 @@ incorrect. It does not add pre-1.18 terrain decoding.
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
+### Region facts (unreleased)
+
+`Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
+pass. Each chunk payload is decoded once. The result contains containers, signs, spawners,
+placed structure starts, creatures, POIs, inhabited time and format counts. Its typed terrain
+chunks include decoded heightmaps, actually used biome IDs (including cave biomes), a sampled
+biome, and block counts with the enclosing section-height ranges. It does not choose UI groups,
+combine biome areas, name ores, or run search queries.
+
+```swift
+let region = RegionPosition(x: -1, z: 2)
+let options = RegionScanOptions(
+    blockIDs: ["minecraft:diamond_ore", "minecraft:deepslate_diamond_ore"],
+    biomeSampleY: overworld.id == "minecraft:the_nether" ? 64 : nil
+)
+let facts = try overworld.scan(region: region, options: options)
+print(facts.containers.count, facts.creatures.count, facts.formats.legacy)
+let cacheData = try JSONEncoder().encode(facts)
+let restored = try JSONDecoder().decode(RegionFacts.self, from: cacheData)
+```
+
+A nil block-ID set counts all IDs; an empty set skips counting. Nil biome-sampling Y uses the
+middle column's `WORLD_SURFACE` height minus one, falling back to the highest non-air palette
+section's top when no usable heightmap is saved. Supply a Y for a different sample (for example,
+64 under the Nether roof). Optional `height` is the dimension's actual build height, for decoding
+ambiguous heightmaps; it is never inferred from occupied sections. The used-biome list excludes
+unused palette entries. Partial-generation chunks keep metadata/heightmaps but contribute no
+structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
+time and format counts without enabling legacy terrain decoding.
+
+Cache keys must include all three source-file fingerprints, the options,
+`RegionFacts.interpretationVersion`, and the consumer's transform version. Kit must bump the
+interpretation version whenever any fact's meaning changes. Decoding rejects other versions and
+malformed grid sizes. `RegionFacts` owns the new persistence contract; existing model Codable
+conformances remain source-compatible but are not independently versioned caches. No raw NBT is
+exposed by the new facts. The lower-level NBT, region and compression APIs remain public.
+
+Missing region files are empty. Unreadable individual chunks are counted and skipped, while
+region-open errors and cancellation throw; callers must not cache a failed scan as an empty or
+complete region. Scanning does no disk caching or background scheduling of its own. The API is
+unreleased; the app will adopt it after a separately approved minor release.
+
 ### Slime chunks
 
 ```swift
@@ -438,7 +480,7 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
-`ItemStack`, `ItemContainer`, `Spawner`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` are `Codable`, so an app can cache scan results; `NBT` encodes as binary NBT.
+`ItemStack`, `ItemContainer`, `Spawner`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` retain their existing `Codable` conformances; `NBT` encodes as binary NBT. For new combined scan caches, use the versioned `RegionFacts` envelope described above rather than treating each model as an independently versioned cache.
 
 Every decoded type keeps its source NBT (`chunk.nbt` and `world.level.nbt`), so you can read fields the typed API doesn't cover.
 
