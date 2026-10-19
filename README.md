@@ -434,6 +434,13 @@ for player in world.players() {                         // most recently saved f
 }
 ```
 
+`GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current
+`minecraft:spawn_wandering_traders` identifier and the legacy `doTraderSpawning` identifier.
+It returns an explicit `.bool` value, or `nil` for missing or malformed values; the current
+identifier takes precedence. Display names and other namespaces do not match. The existing
+`World.gameRules()` dictionary is unchanged. This additive lookup is unreleased and requires
+the next minor release before clients can adopt it.
+
 Modern world spawn, player death and player respawn share the `{dimension, pos: [I; x, y, z]}`
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
 `spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.
