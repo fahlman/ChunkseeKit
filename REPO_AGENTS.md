@@ -232,6 +232,14 @@ modern DateFormatter as thread safe on 64-bit macOS, covering this Mac-only macO
 https://developer.apple.com/documentation/foundation/dateformatter. No custom unchecked-concurrency
 annotation or additional lock is used.
 
+`PlayerStatistics.unit(of:in:)` owns scaled-statistic units, verified against 26.3 Stats and
+StatFormatter. It recognizes vanilla general-statistic IDs and retains legacy play-time/diving
+IDs; the latter share the time/distance formatters in the official 1.12.2 client. Damage scaling
+is limited to verified data version 5023. Unknown or unscaled values remain raw. The existing
+distances projection uses this owner instead of guessing from an arbitrary ID's suffix.
+This is an unreleased additive API; app names, locale, rounding and presentation stay in Chunksee,
+with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
+
 ## Format sources
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
