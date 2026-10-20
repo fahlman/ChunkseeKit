@@ -27,19 +27,20 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.34.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.35.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
 
-## Synthetic test data (unreleased)
+## Synthetic test data (v0.35.0)
 
-`ChunkseeKitTestSupport` is a separate library product on main; it is not part of v0.34.0.
-After its minor release, add it to a test target with
+`ChunkseeKitTestSupport` is a separate library product available starting in v0.35.0.
+Add it to a test target with
 `.product(name: "ChunkseeKitTestSupport", package: "ChunkseeKit")`.
-The reader and CLI do not depend on this product.
+The reader and CLI do not depend on this product. This release adds no breaking reader APIs
+and does not change saved-data interpretation or cache versions.
 
 Its public `Fixtures` builders are the same ones used by the library and CLI tests:
 packed indices, sections, chunks, region files, UUID int arrays and compressed NBT files.

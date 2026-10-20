@@ -17,7 +17,8 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 - **Products:**
   - `ChunkseeKit`, the library.
   - `ChunkseeKitTestSupport`, synthetic save builders for test targets, using the reader's public
-    NBT and compression APIs. This additive product needs a minor release before app adoption.
+    NBT and compression APIs. This additive product is introduced in v0.35.0; app adoption
+    follows that release, tracked on #82.
   - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
