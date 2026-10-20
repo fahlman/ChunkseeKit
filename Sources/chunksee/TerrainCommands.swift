@@ -26,7 +26,7 @@ func blockCommand(_ world: World, _ arguments: Arguments) throws {
         guard let chunk = try dim.chunk(at: position.chunk) else { fail("chunk not generated") }
         print("Block: \(chunk.block(x: x & 15, y: y, z: z & 15)?.description ?? "none")")
         print("Biome: \(chunk.biome(x: x & 15, y: y, z: z & 15) ?? "none")")
-        if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be["id"]?.string ?? "?")") }
+        if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be.id ?? "?")") }
 }
 
 func timeCommand(_ world: World, _ arguments: Arguments) async {

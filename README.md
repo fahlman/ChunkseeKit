@@ -75,8 +75,14 @@ Item enchantments, durability and other typed properties keep their existing beh
 continues preserving the saved item components.
 Raw-file tools can continue using the public NBT, region-file and compression APIs directly.
 
-This is a breaking API change for the next minor release. Saved-data interpretation and the
-typed properties are unchanged. The change is not included in v0.36.0.
+`Chunk.blockEntities` and `blockEntity(x:y:z:)` now return `BlockEntity` values with optional
+`id` and absolute `position`, rather than NBT. Read `entity.id` instead of `entity["id"]?.string`.
+The list retains saved order and incomplete entries; coordinate lookup retains its first-match
+and chunk-local X/Z behavior. Use the existing container, sign and spawner readers for their
+typed details, or read NBT through `RegionFile` for fields without a typed reader.
+
+These are breaking API changes for the next minor release. Saved-data interpretation is
+unchanged. The changes are not included in v0.36.0.
 
 ## Migrating to v0.31.0
 
@@ -134,7 +140,8 @@ if let chunk = try overworld.chunk(x: 0, z: -1) {        // chunk coordinates
     print(chunk.status ?? "?", block?.id ?? "-", block?.properties ?? [:], biome ?? "-")
 
     let surface = chunk.heightmap("WORLD_SURFACE")       // 256 Y values, index = z * 16 + x
-    let chest = chunk.blockEntity(x: 3, y: 64, z: 7)     // raw NBT
+    let chest = chunk.blockEntity(x: 3, y: 64, z: 7)     // typed identity and position
+    print(chest?.id ?? "no saved ID")
 }
 
 let entities = try overworld.entities(chunkX: 0, chunkZ: -1)
