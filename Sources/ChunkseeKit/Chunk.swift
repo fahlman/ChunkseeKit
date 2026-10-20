@@ -182,23 +182,26 @@ public struct ChunkSection: Sendable {
         skyLight = nbt["SkyLight"]?.byteArray.map { $0.withUnsafeBytes { [UInt8]($0) } }
     }
 
-    /// Index within the section's 4096 blocks; blocks are ordered YZX.
-    @inline(__always) static func blockIndex(_ x: Int, _ y: Int, _ z: Int) -> Int { (y & 15) << 8 | (z & 15) << 4 | (x & 15) }
+    /// Index within the section's 4096 blocks, including decoded palette-index arrays.
+    /// Blocks are ordered YZX. Coordinates wrap to 0..<16, matching the section's block,
+    /// per-block biome and light accessors; the result is always in 0..<4096.
+    @inlinable @inline(__always)
+    public static func blockIndex(x: Int, y: Int, z: Int) -> Int { (y & 15) << 8 | (z & 15) << 4 | (x & 15) }
 
     /// Block at section-local coordinates (each 0..<16).
     public func block(x: Int, y: Int, z: Int) -> BlockState? {
-        blockStates?[Self.blockIndex(x, y, z)]
+        blockStates?[Self.blockIndex(x: x, y: y, z: z)]
     }
 
     /// Biome at section-local block coordinates (each 0..<16).
     public func biome(x: Int, y: Int, z: Int) -> String? {
         guard let biomes else { return nil }
-        if biomes.entryCount == 4096 { return biomes[Self.blockIndex(x, y, z)] }
+        if biomes.entryCount == 4096 { return biomes[Self.blockIndex(x: x, y: y, z: z)] }
         return biomes[((y & 15) >> 2) << 4 | ((z & 15) >> 2) << 2 | ((x & 15) >> 2)]
     }
 
-    public func blockLight(x: Int, y: Int, z: Int) -> Int? { Self.nibble(blockLight, Self.blockIndex(x, y, z)) }
-    public func skyLight(x: Int, y: Int, z: Int) -> Int? { Self.nibble(skyLight, Self.blockIndex(x, y, z)) }
+    public func blockLight(x: Int, y: Int, z: Int) -> Int? { Self.nibble(blockLight, Self.blockIndex(x: x, y: y, z: z)) }
+    public func skyLight(x: Int, y: Int, z: Int) -> Int? { Self.nibble(skyLight, Self.blockIndex(x: x, y: y, z: z)) }
 
     private static func nibble(_ array: [UInt8]?, _ i: Int) -> Int? {
         guard let array, array.count == 2048 else { return nil }

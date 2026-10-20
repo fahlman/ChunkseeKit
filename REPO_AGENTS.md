@@ -115,6 +115,10 @@ shared with Chunk and the regional time reader. It does not decode legacy terrai
 the hold on #38. These are additive public APIs.
 
 `PackedLongs` owns the non-straddling packed-long traversal used by palettes and heightmaps.
+`ChunkSection.blockIndex(x:y:z:)` exposes the existing YZX section-index owner for batched
+consumers. Blocks, per-block biomes and lights call it too. Coordinates retain the existing
+0–15 wrapping; the inlinable public body lets a renderer share the rule in its inner loop.
+This additive API awaits a minor release and app adoption under #51; reader/cache meaning is unchanged.
 `Chunk.heightmap(_:)` infers only a unique width from stored length; ambiguous maps require
 `heightmap(_:height:)` with the dimension's actual build height. Both return first-free-block
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
