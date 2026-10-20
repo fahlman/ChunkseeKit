@@ -13,7 +13,7 @@ A Swift library and command-line tool for reading Minecraft: Java Edition world 
 - **UUIDs**: strings, four-int arrays and legacy `UUIDMost`/`UUIDLeast` pairs share one reader;
   older embedded singleplayer records use the same identity and player-data fallback as current saves.
 
-It is read-only apart from the NBT writer, and it never modifies world files.
+The ChunkseeKit reader is read-only apart from the NBT writer, and it never modifies world files.
 
 ## Requirements
 
@@ -33,6 +33,36 @@ targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
+
+## Synthetic test data (unreleased)
+
+`ChunkseeKitTestSupport` is a separate library product on main; it is not part of v0.34.0.
+After its minor release, add it to a test target with
+`.product(name: "ChunkseeKitTestSupport", package: "ChunkseeKit")`.
+The reader and CLI do not depend on this product.
+
+Its public `Fixtures` builders are the same ones used by the library and CLI tests:
+packed indices, sections, chunks, region files, UUID int arrays and compressed NBT files.
+They accept explicit NBT so tests can describe unusual or incomplete saves. For example:
+
+```swift
+import Foundation
+import ChunkseeKit
+import ChunkseeKitTestSupport
+
+let directory = try Fixtures.tempDirectory()
+defer { try? FileManager.default.removeItem(at: directory) }
+let section = Fixtures.section(y: 0, palette: [.string("minecraft:stone")])
+let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [section])
+let bytes = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: chunk)])
+try Fixtures.write(bytes, to: directory.appendingPathComponent("r.0.0.mca"))
+```
+
+Region coordinates passed to `RegionChunk` are local, from 0 through 31. It defaults to zlib
+compression and a fixed timestamp. `chunk` retains its existing `DataVersion.perBlockBiomes`
+default; pass a version explicitly for version-specific fixtures. The helpers expect valid
+packing widths and indices, and write only to caller-supplied paths; tests own their temporary
+directories and cleanup. The CLI executable-location helper remains private to the Kit tests.
 
 ## Migrating to v0.31.0
 
