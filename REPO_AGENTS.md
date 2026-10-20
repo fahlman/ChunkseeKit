@@ -19,7 +19,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   - `ChunkseeKit`, the library.
   - `ChunkseeIndex`, shared aggregation over the reader's typed facts. Its first API,
     `StoredItemTotal.totals(in:)`, owns per-ID quantities and outer-container counts, including
-    nested contents. This product is unreleased; app adoption follows the next minor release.
+    nested contents. This product is available in v0.37.0; app adoption follows this release.
   - `ChunkseeKitTestSupport`, synthetic save builders for test targets, using the reader's public
     NBT and compression APIs. This additive product is introduced in v0.35.0; app adoption
     follows that release, tracked on #82.
@@ -191,8 +191,9 @@ They retain list order/count and first local-column match, including unavailable
 shared saved-position reader. The values are projected only when requested; a lookup stops at
 its first match, so region scans do not materialize an unused list. The CLI consumes the typed ID; low-level region/NBT reads and
 specialized container/sign/spawner readers remain available.
-The public NBT-taking initializers and low-level NBT/region/compression APIs remain public. This unreleased breaking boundary change
-requires the next minor release and a migration note; it is not in v0.36.0 (fahlman/Chunksee#214).
+The public NBT-taking initializers and low-level NBT/region/compression APIs remain public. These
+breaking boundary changes are available in v0.37.0, with the README migration note
+(fahlman/Chunksee#214). Saved-data interpretation and cache versions are unchanged.
 `PlayerInfo.equippedItems` owns equipment-plus-selected-main-hand composition, preserving the
 explicit saved main hand's precedence and excluding unselected inventory. Player health consumes
 that same collection. This additive API is available in v0.32.0; app adoption remains on #51.

@@ -27,16 +27,17 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.36.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.37.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
 
-## Shared indexing (unreleased)
+## Shared indexing (v0.37.0)
 
 `ChunkseeIndex` is a separate library product in this package, depending on the core reader.
+Add `.product(name: "ChunkseeIndex", package: "ChunkseeKit")` to the consuming target's dependencies.
 Its first API, `StoredItemTotal.totals(in:)`, aggregates quantities and outer-container counts
 by saved item ID. It includes nested box/bundle contents, keeps differently named stacks of the
 same ID together, and never predicts unopened loot. Results are ordered by ID; clients supply
@@ -49,7 +50,7 @@ let totals = StoredItemTotal.totals(in: containers)  // [ItemContainer] from the
 for item in totals { print(item.id, item.count, item.containers) }
 ```
 
-This product is not in v0.36.0. App adoption follows its first release. The remaining world index,
+This product is introduced in v0.37.0. App adoption follows this release. The remaining world index,
 search, biome areas, spatial lookup and CLI adoption are tracked in fahlman/Chunksee#214; they
 have not moved into this module yet. Core decoding and low-level file APIs stay in ChunkseeKit.
 
@@ -84,7 +85,7 @@ default; pass a version explicitly for version-specific fixtures. The helpers ex
 packing widths and indices, and write only to caller-supplied paths; tests own their temporary
 directories and cleanup. The CLI executable-location helper remains private to the Kit tests.
 
-## Unreleased API change: typed save data
+## Migrating to v0.37.0
 
 `PlayerInfo.nbt`, `LevelInfo.nbt`, `Chunk.nbt` and `ItemStack.components` are no longer public.
 Use each model's typed properties for the fields it models. Tests that construct saves should retain their original
@@ -100,8 +101,8 @@ The list retains saved order and incomplete entries; coordinate lookup retains i
 and chunk-local X/Z behavior. Use the existing container, sign and spawner readers for their
 typed details, or read NBT through `RegionFile` for fields without a typed reader.
 
-These are breaking API changes for the next minor release. Saved-data interpretation is
-unchanged. The changes are not included in v0.36.0.
+v0.37.0 includes these breaking API changes and the additive ChunkseeIndex product.
+Saved-data interpretation and cache versions are unchanged.
 
 ## Migrating to v0.31.0
 
