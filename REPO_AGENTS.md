@@ -5,9 +5,10 @@ Read with the shared `AGENTS.md`. Project record: fahlman/ChunkseeKit#1.
 ## Project
 
 ChunkseeKit is the engine for reading Minecraft: Java Edition world saves. Ryan intends to
-open-source it so others can build their own GUIs on it. It owns the file formats and nothing
-else: NBT, Anvil region files, chunk decoding, and the world-folder layout. It has no UI and no
-app code. The Mac app **Chunksee** (`com.fahlsing.Chunksee`, fahlman/Chunksee) lives in its own
+open-source it so others can build their own GUIs on it. The core library owns the file formats:
+NBT, Anvil region files, chunk decoding, and the world-folder layout. The package's separate
+ChunkseeIndex library owns aggregation over typed facts. Neither has UI or app code.
+The Mac app **Chunksee** (`com.fahlsing.Chunksee`, fahlman/Chunksee) lives in its own
 repository and depends on this package, the way Euchre depends on EuchreKit. Dependency direction:
 **Chunksee app → ChunkseeKit**. Both were renamed from MCWorld and MCWorldKit on 2026-10-10
 (fahlman/Chunksee#75).
@@ -16,6 +17,9 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   no `.xcodeproj`.
 - **Products:**
   - `ChunkseeKit`, the library.
+  - `ChunkseeIndex`, shared aggregation over the reader's typed facts. Its first API,
+    `StoredItemTotal.totals(in:)`, owns per-ID quantities and outer-container counts, including
+    nested contents. This product is unreleased; app adoption follows the next minor release.
   - `ChunkseeKitTestSupport`, synthetic save builders for test targets, using the reader's public
     NBT and compression APIs. This additive product is introduced in v0.35.0; app adoption
     follows that release, tracked on #82.
@@ -31,9 +35,11 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
+| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID. No display names, localization, UI state or file decoding | `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
+| `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs | `ChunkseeIndex`, `ChunkseeKit` |
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
