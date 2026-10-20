@@ -65,6 +65,17 @@ default; pass a version explicitly for version-specific fixtures. The helpers ex
 packing widths and indices, and write only to caller-supplied paths; tests own their temporary
 directories and cleanup. The CLI executable-location helper remains private to the Kit tests.
 
+## Unreleased API change: typed player data
+
+`PlayerInfo.nbt` is no longer public. Use the player's typed properties for the fields it models.
+Tests that construct player saves should retain their original NBT input for file writes rather
+than retrieving it from a `PlayerInfo`. The public `PlayerInfo(uuid:nbt:lastSaved:)` initializer
+still accepts that input. Raw-file tools can continue using the public NBT, region-file and
+compression APIs directly.
+
+This is a breaking API change for the next minor release. Saved-data interpretation and the
+typed player properties are unchanged. The change is not included in v0.36.0.
+
 ## Migrating to v0.31.0
 
 v0.31.0 removes `PlayerInfo.isFromBukkitServer`, `bukkitWorldName`

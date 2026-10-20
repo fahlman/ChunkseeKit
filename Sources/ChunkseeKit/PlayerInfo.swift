@@ -37,8 +37,8 @@ public struct PlayerInfo: Sendable {
     public let lastDeath: Location?
     /// The bed or respawn anchor the player will respawn at, if set.
     public let respawn: Location?
-    /// The full player NBT, for fields this type doesn't model.
-    public let nbt: NBT
+    /// Typed accessors own saved-key interpretation; raw-file callers use the NBT API directly.
+    let nbt: NBT
 
     public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil) {
         self.uuid = uuid
