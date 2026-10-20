@@ -224,8 +224,8 @@ public struct Chunk: Sendable {
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
     public let blockEntities: [NBT]
-    /// The undecoded NBT, for fields this type doesn't model.
-    public let nbt: NBT
+    /// Saved input retained for typed readers within the library.
+    let nbt: NBT
 
     /// Chunk entries that terrain readers (blocks, biomes, heightmaps) don't use: ticks, light,
     /// structures, entities and generation bookkeeping. Pass to `RegionFile.chunkNBT(localX:localZ:skipping:)`

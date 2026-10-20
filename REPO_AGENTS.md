@@ -177,8 +177,8 @@ also belongs here. All new stored fields are optional, so older cached creatures
 but must be reread for the values. See README for format coverage and availability.
 
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
-PlayerInfo's saved NBT is internal; typed accessors own its keys. Its NBT-taking initializer and
-the low-level NBT/region/compression APIs remain public. This unreleased breaking boundary change
+PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
+The public NBT-taking initializers and low-level NBT/region/compression APIs remain public. This unreleased breaking boundary change
 requires the next minor release and a migration note; it is not in v0.36.0 (fahlman/Chunksee#214).
 `PlayerInfo.equippedItems` owns equipment-plus-selected-main-hand composition, preserving the
 explicit saved main hand's precedence and excluding unselected inventory. Player health consumes
