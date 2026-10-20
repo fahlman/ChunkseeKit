@@ -34,6 +34,25 @@ targets: [
 ]
 ```
 
+## Shared indexing (unreleased)
+
+`ChunkseeIndex` is a separate library product in this package, depending on the core reader.
+Its first API, `StoredItemTotal.totals(in:)`, aggregates quantities and outer-container counts
+by saved item ID. It includes nested box/bundle contents, keeps differently named stacks of the
+same ID together, and never predicts unopened loot. Results are ordered by ID; clients supply
+display names and their preferred display order. For example:
+
+```swift
+import ChunkseeIndex
+
+let totals = StoredItemTotal.totals(in: containers)  // [ItemContainer] from the core reader
+for item in totals { print(item.id, item.count, item.containers) }
+```
+
+This product is not in v0.36.0. App adoption follows its first release. The remaining world index,
+search, biome areas, spatial lookup and CLI adoption are tracked in fahlman/Chunksee#214; they
+have not moved into this module yet. Core decoding and low-level file APIs stay in ChunkseeKit.
+
 ## Synthetic test data (v0.35.0)
 
 `ChunkseeKitTestSupport` is a separate library product available starting in v0.35.0.
