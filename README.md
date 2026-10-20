@@ -27,12 +27,24 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.37.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.38.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
+
+## v0.38.0
+
+`PlayerStatistics.unit(of:in:)` adds the saved units for known vanilla general statistics:
+ticks, centimeters and tenths of a damage point. Counts and unknown units remain raw numbers;
+front ends own names, rounding and localized formatting. Time and distance retain the supported
+legacy IDs; damage scaling is verified only for 26.3 (data version 5023).
+
+The `distances` convenience projection now uses that same lookup instead of guessing from an
+arbitrary `_one_cm` suffix. Unknown or custom IDs remain in `values`, but are no longer included
+as distances. This additive API and classification correction do not change region-cache
+interpretation or the existing raw statistics. Chunksee adoption is tracked in fahlman/Chunksee#298.
 
 ## Shared indexing (v0.37.0)
 
@@ -551,7 +563,7 @@ units belong to the front end. The original `values` dictionary is unchanged.
 Time/distance IDs include legacy play-time and diving names. Damage scaling is verified only
 for data version 5023 (26.3); other versions leave it unavailable. `distances` uses the same unit
 lookup and no longer assumes that every unknown or custom ID ending in `_one_cm` is a distance.
-Those values remain in `values`. This additive API and corrected classification are unreleased;
+Those values remain in `values`. This additive API and corrected classification are available in v0.38.0;
 the app adoption is tracked in fahlman/Chunksee#298.
 
 `GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current

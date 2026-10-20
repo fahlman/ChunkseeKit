@@ -237,7 +237,7 @@ StatFormatter. It recognizes vanilla general-statistic IDs and retains legacy pl
 IDs; the latter share the time/distance formatters in the official 1.12.2 client. Damage scaling
 is limited to verified data version 5023. Unknown or unscaled values remain raw. The existing
 distances projection uses this owner instead of guessing from an arbitrary ID's suffix.
-This is an unreleased additive API; app names, locale, rounding and presentation stay in Chunksee,
+This additive API is available in v0.38.0; app names, locale, rounding and presentation stay in Chunksee,
 with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
