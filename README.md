@@ -544,6 +544,16 @@ reader uses that same hotbar, correcting its old first-item choice for duplicate
 explicit saved main hand still wins. Raw inventory, ender-chest and equipment APIs are unchanged.
 This additive API is available starting in v0.32.0.
 
+`PlayerStatistics.unit(of:in:)` exposes the saved scale of known vanilla general statistics:
+centimeters, ticks (20 per second), or tenths of a damage point. Unscaled counts and unknown
+units return `nil`, so callers retain the raw number. Names, rounding and localized display
+units belong to the front end. The original `values` dictionary is unchanged.
+Time/distance IDs include legacy play-time and diving names. Damage scaling is verified only
+for data version 5023 (26.3); other versions leave it unavailable. `distances` uses the same unit
+lookup and no longer assumes that every unknown or custom ID ending in `_one_cm` is a distance.
+Those values remain in `values`. This additive API and corrected classification are unreleased;
+the app adoption is tracked in fahlman/Chunksee#298.
+
 `GameRule.wanderingTraderSpawning.value(in: rules)` recognizes the current
 `minecraft:spawn_wandering_traders` identifier and the legacy `doTraderSpawning` identifier.
 It returns an explicit `.bool` value, or `nil` for missing or malformed values; the current
