@@ -182,7 +182,8 @@ ItemStack likewise keeps its components internal, preserving typed accessors, ra
 and the existing Codable representation.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
-shared saved-position reader. The CLI consumes the typed ID; low-level region/NBT reads and
+shared saved-position reader. The values are projected only when requested; a lookup stops at
+its first match, so region scans do not materialize an unused list. The CLI consumes the typed ID; low-level region/NBT reads and
 specialized container/sign/spawner readers remain available.
 The public NBT-taking initializers and low-level NBT/region/compression APIs remain public. This unreleased breaking boundary change
 requires the next minor release and a migration note; it is not in v0.36.0 (fahlman/Chunksee#214).

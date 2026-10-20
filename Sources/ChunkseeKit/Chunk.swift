@@ -237,7 +237,7 @@ public struct Chunk: Sendable {
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
     /// Saved order is preserved, including entries with unavailable identity or position.
-    public let blockEntities: [BlockEntity]
+    public var blockEntities: [BlockEntity] { Self.blockEntities(in: nbt).map(BlockEntity.init(nbt:)) }
     /// Saved input retained for typed readers within the library.
     let nbt: NBT
 
@@ -267,7 +267,6 @@ public struct Chunk: Sendable {
         self.inhabitedTime = Self.inhabitedTime(in: nbt)
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
-        self.blockEntities = Self.blockEntities(in: nbt).map(BlockEntity.init(nbt:))
         self.nbt = nbt
     }
 
@@ -296,7 +295,7 @@ public struct Chunk: Sendable {
 
     /// The first block entity at chunk-local x/z and absolute y, if any.
     public func blockEntity(x: Int, y: Int, z: Int) -> BlockEntity? {
-        blockEntities.first {
+        Self.blockEntities(in: nbt).lazy.map(BlockEntity.init(nbt:)).first {
             guard let position = $0.position else { return false }
             return position.x & 15 == x & 15 && position.y == y && position.z & 15 == z & 15
         }
