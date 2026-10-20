@@ -16,6 +16,8 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   no `.xcodeproj`.
 - **Products:**
   - `ChunkseeKit`, the library.
+  - `ChunkseeKitTestSupport`, synthetic save builders for test targets, using the reader's public
+    NBT and compression APIs. This additive product needs a minor release before app adoption.
   - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
@@ -29,7 +31,8 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
-| `ChunkseeKitTests` | Tests built on synthetic worlds (`Fixtures.swift`) | `ChunkseeKit`, `CZlib` |
+| `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
+| `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
