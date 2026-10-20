@@ -209,6 +209,19 @@ public struct ChunkSection: Sendable {
     }
 }
 
+/// The saved identity and position of a block entity, including unfamiliar kinds.
+public struct BlockEntity: Sendable, Equatable {
+    /// The saved ID, without guessing a kind when it is missing or unreadable.
+    public let id: String?
+    /// Absolute block coordinates, or nil when any saved coordinate is unreadable.
+    public let position: BlockPosition?
+
+    init(nbt: NBT) {
+        id = nbt["id"]?.string
+        position = nbt.blockEntityPosition
+    }
+}
+
 /// A decoded terrain chunk (1.18+ format, including the 26.x changes).
 public struct Chunk: Sendable {
     public let dataVersion: Int
@@ -223,7 +236,8 @@ public struct Chunk: Sendable {
     public let inhabitedTime: Int?
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
-    public let blockEntities: [NBT]
+    /// Saved order is preserved, including entries with unavailable identity or position.
+    public var blockEntities: [BlockEntity] { Self.blockEntities(in: nbt).map(BlockEntity.init(nbt:)) }
     /// Saved input retained for typed readers within the library.
     let nbt: NBT
 
@@ -253,7 +267,6 @@ public struct Chunk: Sendable {
         self.inhabitedTime = Self.inhabitedTime(in: nbt)
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
-        self.blockEntities = Self.blockEntities(in: nbt)
         self.nbt = nbt
     }
 
@@ -280,10 +293,10 @@ public struct Chunk: Sendable {
     /// Modern chunk block entities. This does not opt legacy terrain into modern decoding.
     static func blockEntities(in nbt: NBT) -> [NBT] { nbt["block_entities"]?.list ?? [] }
 
-    /// The block entity at chunk-local x/z and absolute y, if any.
-    public func blockEntity(x: Int, y: Int, z: Int) -> NBT? {
-        blockEntities.first {
-            guard let position = $0.blockEntityPosition else { return false }
+    /// The first block entity at chunk-local x/z and absolute y, if any.
+    public func blockEntity(x: Int, y: Int, z: Int) -> BlockEntity? {
+        Self.blockEntities(in: nbt).lazy.map(BlockEntity.init(nbt:)).first {
+            guard let position = $0.position else { return false }
             return position.x & 15 == x & 15 && position.y == y && position.z & 15 == z & 15
         }
     }
