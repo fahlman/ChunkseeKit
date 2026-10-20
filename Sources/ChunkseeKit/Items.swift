@@ -16,7 +16,7 @@ public struct ItemStack: Sendable, Equatable, Codable {
     /// Items stored inside this one: a shulker box's or bundle's contents.
     public var contents: [ItemStack]
     /// The item's components (or legacy `tag`, including normalized top-level `Damage`).
-    public var components: NBT?
+    var components: NBT?
 
     public init(id: String, count: Int = 1, slot: Int? = nil, customName: String? = nil, contents: [ItemStack] = [], components: NBT? = nil) {
         self.id = id
