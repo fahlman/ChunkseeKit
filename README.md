@@ -145,6 +145,11 @@ incorrect. It does not add pre-1.18 terrain decoding.
 
 A `BlockState` whose `properties` is empty is in its default state. Since 26.3, the game no longer saves the properties of default states.
 
+For batched readers, `ChunkSection.blockIndex(x:y:z:)` addresses the array returned by
+`blockStates.allPaletteIndices()` using the same order as block and light lookups. It wraps each
+coordinate to the section's 0–15 range, including negative coordinates. This additive helper is
+on `main` and awaits the next minor release; it is not in v0.35.0.
+
 ### Dimension build limits (v0.33.0)
 
 `World.dimensionTypes()` reads each saved dimension's type from modern world-generation data

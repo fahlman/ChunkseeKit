@@ -55,6 +55,26 @@ import Testing
         #expect(uniform.blockStates?.paletteCounts() == [4096])
     }
 
+    @Test func sectionIndexLocatesDecodedBlocksAndNormalizesCoordinates() throws {
+        var stored = [Int](repeating: 0, count: 4096)
+        stored[804] = 1   // x4, y3, z2 in the saved section.
+        stored[4095] = 2
+        let raw = Fixtures.section(y: -4, palette: [air, .string("minecraft:gold_block"), .string("minecraft:stone")],
+                                   indices: stored)
+        let section = try ChunkSection(raw)
+        let states = try #require(section.blockStates)
+        let decoded = states.allPaletteIndices()
+        for (x, y, z, expected) in [(4, 3, 2, "minecraft:gold_block"),
+                                    (20, 19, 18, "minecraft:gold_block"),
+                                    (-12, -13, -14, "minecraft:gold_block"),
+                                    (Int.min, Int.min, Int.min, "minecraft:air"),
+                                    (Int.max, Int.max, Int.max, "minecraft:stone")] {
+            let index = ChunkSection.blockIndex(x: x, y: y, z: z)
+            #expect(states.palette[decoded[index]].id == expected)
+            #expect(section.block(x: x, y: y, z: z)?.id == expected)
+        }
+    }
+
     @Test func minimumBlockBitsIsFour() throws {
         let indices = (0..<4096).map { $0 % 2 }
         let section = try ChunkSection(Fixtures.section(y: 0, palette: [air, .string("minecraft:dirt")], indices: indices, bits: 4))
