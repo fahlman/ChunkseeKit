@@ -118,7 +118,7 @@ the hold on #38. These are additive public APIs.
 `ChunkSection.blockIndex(x:y:z:)` exposes the existing YZX section-index owner for batched
 consumers. Blocks, per-block biomes and lights call it too. Coordinates retain the existing
 0–15 wrapping; the inlinable public body lets a renderer share the rule in its inner loop.
-This additive API awaits a minor release and app adoption under #51; reader/cache meaning is unchanged.
+This additive API is available in v0.36.0; app adoption remains on #51. Reader/cache meaning is unchanged.
 `Chunk.heightmap(_:)` infers only a unique width from stored length; ambiguous maps require
 `heightmap(_:height:)` with the dimension's actual build height. Both return first-free-block
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support

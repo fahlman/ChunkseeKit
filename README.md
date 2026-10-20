@@ -27,7 +27,7 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.35.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.36.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
@@ -148,7 +148,8 @@ A `BlockState` whose `properties` is empty is in its default state. Since 26.3, 
 For batched readers, `ChunkSection.blockIndex(x:y:z:)` addresses the array returned by
 `blockStates.allPaletteIndices()` using the same order as block and light lookups. It wraps each
 coordinate to the section's 0–15 range, including negative coordinates. This additive helper is
-on `main` and awaits the next minor release; it is not in v0.35.0.
+available starting in v0.36.0. This release has no breaking APIs, reader behavior changes or
+cache-version changes.
 
 ### Dimension build limits (v0.33.0)
 
