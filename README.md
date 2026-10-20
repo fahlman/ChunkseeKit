@@ -67,10 +67,12 @@ directories and cleanup. The CLI executable-location helper remains private to t
 
 ## Unreleased API change: typed save data
 
-`PlayerInfo.nbt`, `LevelInfo.nbt` and `Chunk.nbt` are no longer public. Use each model's typed
-properties for the fields it models. Tests that construct saves should retain their original
+`PlayerInfo.nbt`, `LevelInfo.nbt`, `Chunk.nbt` and `ItemStack.components` are no longer public.
+Use each model's typed properties for the fields it models. Tests that construct saves should retain their original
 NBT input for file writes rather than retrieving it from a typed model. The public
-`PlayerInfo(uuid:nbt:lastSaved:)` and `Chunk(nbt:)` initializers still accept that input.
+`PlayerInfo(uuid:nbt:lastSaved:)`, `Chunk(nbt:)` and `ItemStack` initializers still accept that input.
+Item enchantments, durability and other typed properties keep their existing behavior; Codable
+continues preserving the saved item components.
 Raw-file tools can continue using the public NBT, region-file and compression APIs directly.
 
 This is a breaking API change for the next minor release. Saved-data interpretation and the
