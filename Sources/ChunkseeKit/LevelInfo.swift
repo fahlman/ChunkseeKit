@@ -23,8 +23,8 @@ public struct LevelInfo: Sendable {
     public let spawnPosition: (x: Int, y: Int, z: Int)?
     public let enabledFeatures: [String]
     public let enabledDataPacks: [String]
-    /// The `Data` compound, for fields this type doesn't model.
-    public let nbt: NBT
+    /// Saved `Data` input retained for typed readers within the library.
+    let nbt: NBT
 
     init(_ root: NBT) throws {
         guard let data = root["Data"] else { throw WorldError.invalidLevelDat }
