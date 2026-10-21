@@ -10,8 +10,8 @@ func chunkCommand(_ world: World, _ arguments: Arguments) throws {
         print("Block entities: \(chunk.blockEntities.count)")
         for s in chunk.sections {
             guard let states = s.blockStates else { continue }
+            if states.palette.allSatisfy(\.isAir) { continue }
             let names = states.palette.map(\.description)
-            if names == ["minecraft:air"] { continue }
             let biomes = s.biomes?.palette.joined(separator: ", ") ?? "-"
             print("  section y=\(s.y): \(names.count) states (\(states.bitsPerEntry) bits), biomes [\(biomes)]")
             for n in names.prefix(8) { print("    \(n)") }
