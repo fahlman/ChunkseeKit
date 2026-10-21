@@ -26,16 +26,15 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
-- **Dependencies:** Foundation, system zlib through `CZlib`, and system libarchive through `CArchive`. There are
-  no package dependencies, so there is no `Package.resolved` to track (it is git-ignored).
+- **Dependencies:** Foundation and system zlib through `CZlib`. There are no package
+  dependencies, so there is no `Package.resolved` to track (it is git-ignored).
 
 ## Modules
 
 | Module | Owns | May depend on |
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
-| `CArchive` | Narrow documented read-only API declarations for the system `libarchive`; no archive writer | — |
-| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib`, `CArchive` |
+| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
 | `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID. No display names, localization, UI state or file decoding | `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
@@ -161,13 +160,15 @@ checked against the official 26.3 DimensionType/LevelStem codecs and resource ma
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
-Enabled ZIP packs now use the same priority as folders. `ZipResources` reads through macOS's
-system libarchive and never extracts files. A complete directory is required before a missing
-resource can permit fallback. Duplicate paths, encrypted archives and malformed directories
-stay unavailable. Only requested JSON payloads are decompressed, with integrity checks and a
-16 MiB per-resource bound; an invalid present override still blocks fallback. The narrow CArchive
-declarations match Apple's published headers and the SDK's link stub/manuals. No third-party
-package is added. This support is unreleased, with separate app adoption on #51.
+Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
+central directory and matching local headers before a missing resource can permit fallback.
+It reads ordinary stored/deflated entries with exact UTF-8 names, using the existing public
+zlib API through `Compression` for bounded raw deflate and checking CRC and exact output size.
+Duplicate names, overlapping records, encrypted, ZIP64, multipart, unsupported compression and
+malformed archives stay unavailable. Requested JSON payloads have a 16 MiB bound; an invalid
+present override still blocks fallback. No file is extracted, no private SDK declarations or
+new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
+is unreleased, with separate app adoption on #51.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline

@@ -51,6 +51,27 @@ public enum Compression {
         return output
     }
 
+    /// ZIP entries contain raw deflate, with their size and checksum stored separately.
+    /// One spare byte detects a stream that exceeds its declared size without growing memory.
+    static func inflateRaw(_ input: UnsafeRawBufferPointer, size: Int) -> [UInt8]? {
+        guard size >= 0, size < Int.max, let inputCount = uInt(exactly: input.count),
+              let capacity = uInt(exactly: size + 1) else { return nil }
+        var stream = z_stream()
+        guard inflateInit2_(&stream, -15, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { return nil }
+        defer { inflateEnd(&stream) }
+        var output = [UInt8](repeating: 0, count: size + 1)
+        let result = output.withUnsafeMutableBufferPointer { buffer in
+            stream.next_in = UnsafeMutablePointer(mutating: input.bindMemory(to: UInt8.self).baseAddress)
+            stream.avail_in = inputCount
+            stream.next_out = buffer.baseAddress
+            stream.avail_out = capacity
+            return CZlib.inflate(&stream, Z_FINISH)
+        }
+        guard result == Z_STREAM_END, stream.avail_in == 0, stream.total_out == size else { return nil }
+        output.removeLast()
+        return output
+    }
+
     /// Deflates `input` with a zlib header, or a gzip header when `gzip` is true.
     public static func deflate(_ input: [UInt8], gzip: Bool = false) throws -> [UInt8] {
         var stream = z_stream()
