@@ -82,6 +82,13 @@ public struct Creature: Sendable, Equatable, Codable {
 public struct Villager: Sendable, Equatable, Codable {
     /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
     public var profession: String?
+    /// Whether the saved profession is Minecraft's explicit `none` category. Missing, empty
+    /// or malformed identifiers are unknown. Nitwits have a distinct category and return false;
+    /// this does not determine whether a villager can work or trade.
+    public var isUnemployed: Bool? {
+        guard let profession, let id = Identifier(profession), !id.path.isEmpty else { return nil }
+        return id.namespace == "minecraft" && id.path == "none"
+    }
     /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?
     /// The biome style, e.g. `minecraft:desert`.
