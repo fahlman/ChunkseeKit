@@ -27,12 +27,34 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.39.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.40.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
+
+## v0.40.0
+
+`World.dimensionSettings()` exposes independently available dimension types and noise-generation
+bounds through `DimensionSettings` and `NoiseGenerationSettings`. They share the saved mapping
+and resource priorities with `dimensionTypes()`. The type-only query does not read generator
+resources. Unknown definitions stay unavailable, and empty noise heights remain valid.
+`surfaceRuleRange(in:)` follows verified 26.3 surface-rule anchors; it does not locate a physical roof.
+
+Enabled ordinary ZIP data packs now use the same resolver as folders. Requested resources use
+bounded raw deflate and CRC checks through the existing public system zlib. No files are extracted;
+malformed or unsupported archives remain unavailable rather than permit an incorrect fallback.
+
+`Chunk.ColumnStart`, `ColumnRun` and `forEachColumnRun(from:_:)` let callers use the shared surface
+rule or an explicit Y and resolve their result during one downward traversal. Uniform sections
+produce spans; each reached nonuniform section is unpacked once. Missing sections remain gaps,
+and each column can stop independently. Existing surface queries share this traversal.
+
+These are additive APIs, with no serialized shape or existing surface-meaning changes.
+RegionFacts interpretation remains version 6. App colors, water shading, roof-view policy and
+performance validation remain separate adoption work on fahlman/ChunkseeKit#51. This release
+adds no legacy terrain support, cave-biome inference or world writes.
 
 ## v0.39.0
 
@@ -246,8 +268,8 @@ system zlib for raw deflate and CRC checks. Encrypted, ZIP64, multipart or unsup
 duplicate names, overlapping entries and malformed records remain unavailable. Only requested
 JSON resources are decompressed, with exact-size checks and a 16 MiB limit per resource.
 A malformed present override never permits a lower definition to take over.
-ZIP support is unreleased. Built-in experimental packs, pack overlays and resource filters
-are not resolved yet: an unsupported higher-priority pack
+ZIP support is available starting in v0.40.0. Built-in experimental packs, pack overlays and
+resource filters are not resolved yet: an unsupported higher-priority pack
 prevents guessing a lower definition, including vanilla. Vanilla defaults are unavailable for
 unverified save versions. Explicit definitions must have valid aligned bounds and logical height;
 file lookup rejects paths or symlinks escaping the pack. File-read errors propagate. This API
@@ -271,8 +293,8 @@ for a saved `minecraft:noise` generator. The seven vanilla noise definitions are
 it starts at the larger minimum Y and uses the smaller height. This differs from intersecting
 range endpoints. For the vanilla Nether, build bounds are `0...255` but the surface-rule range
 is `0..<128`. Neither this range nor `hasCeiling` proves where a physical roof block exists;
-view selection and colors remain the caller's policy. These companion APIs are unreleased;
-app adoption follows a reviewed minor release (fahlman/ChunkseeKit#51).
+view selection and colors remain the caller's policy. These companion APIs are available starting
+in v0.40.0; app adoption is tracked separately on fahlman/ChunkseeKit#51.
 
 
 ### Region facts (v0.30.0)
@@ -313,7 +335,7 @@ references stay unavailable; air variants are skipped, while plants and water co
 `MOTION_BLOCKING` is not used because it describes a different set of blocks. Roof hiding,
 water shading and cave-biome classification are separate from this reader.
 
-The unreleased additive `Chunk.forEachColumnRun(from:_:)` API visits the saved blocks of all
+Starting in v0.40.0, the additive `Chunk.forEachColumnRun(from:_:)` API visits saved blocks in all
 256 columns in one downward traversal. Use `.surface(height: knownBuildHeight)` for the same
 WORLD_SURFACE/actual-block starting rule, or `.height(y)` for an explicit cutaway. Uniform
 sections produce a clipped inclusive Y range; other sections produce one block per run. The

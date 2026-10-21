@@ -140,8 +140,8 @@ sample while preserving explicit-Y sampling. RegionFacts interpretation version 
 older sampled biomes, which could use a section top or an unused palette entry without a real
 surface. These additive APIs are available in v0.39.0; app adoption is tracked on #51.
 Colors, water shading, roof-view selection and the held cave-biome rule are unchanged here.
-The additive, unreleased `Chunk.forEachColumnRun(from:_:)` shares that fallback traversal with
-surface queries. It visits all columns from the shared surface rule or an explicit Y, emitting
+The additive `Chunk.forEachColumnRun(from:_:)`, available in v0.40.0, shares that fallback
+traversal with surface queries. It visits all columns from the shared surface rule or an explicit Y, emitting
 uniform-section spans and individual nonuniform blocks with their original section/palette
 references. Missing sections remain gaps; invalid references cannot establish a surface.
 Callers stop each column independently, while each reached nonuniform section is unpacked once.
@@ -177,7 +177,7 @@ Duplicate names, overlapping records, encrypted, ZIP64, multipart, unsupported c
 malformed archives stay unavailable. Requested JSON payloads have a 16 MiB bound; an invalid
 present override still blocks fallback. No file is extracted, no private SDK declarations or
 new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
-is unreleased, with separate app adoption on #51.
+is available in v0.40.0, with separate app adoption on #51.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline
@@ -189,7 +189,7 @@ DimensionType owns the common packed-Y validation, with its extra nonempty-heigh
 min-of-heights calculation, not range intersection or logical height. It describes surface-rule
 anchors, not a verified physical roof. Official 26.3 bytecode/JSON and the frozen world copy's
 saved generator references were checked without writing to the copy. These additive APIs are
-unreleased; app ceiling-context adoption follows a reviewed minor tag on #51. Cave inference
+available in v0.40.0; app ceiling-context adoption remains on #51. Cave inference
 and app colors/view policy are unchanged.
 
 World-level saved data and per-dimension world-border/dragon records share the internal
