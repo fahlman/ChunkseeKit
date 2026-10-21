@@ -131,6 +131,16 @@ This additive API is available in v0.36.0; app adoption remains on #51. Reader/c
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
 is added. The explicit-height overload is additive public API.
 
+`Chunk.surfaceY(x:z:height:)` and `surfaceHeights(height:)` share the WORLD_SURFACE reader and
+actual-block fallback. Surface means the highest non-air block, including plants and water,
+matching 26.3 Heightmap.Types/NOT_AIR; MOTION_BLOCKING is not an equivalent fallback. Empty
+columns remain unavailable. Single-column reads inspect only that column; batched reads unpack
+each reached nonuniform section once. RegionScan uses the same owner for its surface biome
+sample while preserving explicit-Y sampling. RegionFacts interpretation version 4 invalidates
+older sampled biomes, which could use a section top or an unused palette entry without a real
+surface. These additive APIs are not yet released; app adoption follows a reviewed minor release.
+Colors, water shading, roof-view selection and the held cave-biome rule are unchanged here.
+
 `DimensionType` owns validated build bounds, logical height and the ceiling flag.
 `World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
 or legacy inline settings. Enabled folder packs resolve in reverse priority order; the four vanilla
