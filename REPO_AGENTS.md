@@ -26,15 +26,15 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
-- **Dependencies:** Foundation, plus the system zlib through the `CZlib` module map. There are
-  no package dependencies, so there is no `Package.resolved` to track (it is git-ignored).
+- **Dependencies:** Foundation and system zlib through `CZlib`. There are no package
+  dependencies, so there is no `Package.resolved` to track (it is git-ignored).
 
 ## Modules
 
 | Module | Owns | May depend on |
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
-| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
+| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
 | `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID. No display names, localization, UI state or file decoding | `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
@@ -152,13 +152,23 @@ item reads with the old literal-only rule. No public API or serialized shape cha
 `World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
 or legacy inline settings. Enabled folder packs resolve in reverse priority order; the four vanilla
 definitions are verified for 26.3/5023. Missing, malformed or unresolved values remain absent.
-ZIP/experimental packs, overlays and filters are not resolved, so an unsupported higher-priority
+Experimental packs, overlays and filters are not resolved, so an unsupported higher-priority
 pack blocks lower fallbacks. This narrow reader does not infer types from dimension IDs, infer roof
 Y from logical height, load a complete game registry, or cache metadata. Path checks keep reads
 within the selected pack; file-read failures propagate. The fields, bounds and pack priority were
 checked against the official 26.3 DimensionType/LevelStem codecs and resource manager; the saved
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
+
+Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
+central directory and matching local headers before a missing resource can permit fallback.
+It reads ordinary stored/deflated entries with exact UTF-8 names, using the existing public
+zlib API through `Compression` for bounded raw deflate and checking CRC and exact output size.
+Duplicate names, overlapping records, encrypted, ZIP64, multipart, unsupported compression and
+malformed archives stay unavailable. Requested JSON payloads have a 16 MiB bound; an invalid
+present override still blocks fallback. No file is extracted, no private SDK declarations or
+new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
+is unreleased, with separate app adoption on #51.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline

@@ -239,13 +239,24 @@ if let type = try world.dimensionTypes()["minecraft:the_nether"] {
 }
 ```
 
-Missing, malformed and unresolved types are omitted. ZIP packs, built-in experimental packs,
-pack overlays and resource filters are not resolved yet: an unsupported higher-priority pack
+Missing, malformed and unresolved types are omitted. Enabled folder and ZIP packs share the same
+priority. ZIP reading validates the complete central directory and matching local headers without
+extracting files. It supports ordinary stored/deflated entries with UTF-8 names, using public
+system zlib for raw deflate and CRC checks. Encrypted, ZIP64, multipart or unsupported compression,
+duplicate names, overlapping entries and malformed records remain unavailable. Only requested
+JSON resources are decompressed, with exact-size checks and a 16 MiB limit per resource.
+A malformed present override never permits a lower definition to take over.
+ZIP support is unreleased. Built-in experimental packs, pack overlays and resource filters
+are not resolved yet: an unsupported higher-priority pack
 prevents guessing a lower definition, including vanilla. Vanilla defaults are unavailable for
 unverified save versions. Explicit definitions must have valid aligned bounds and logical height;
 file lookup rejects paths or symlinks escaping the pack. File-read errors propagate. This API
 reads metadata only, has no cache and never writes a world. It does not change terrain decoding,
 `RegionFacts`, or the app's height controls until separate app adoption.
+
+The resource reader follows [PKWARE's ZIP format specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT)
+(6.3.10, sections 4.3–4.4). It uses the existing `CZlib` module; no new library, private SDK
+declarations, archive-writing API or external package is added.
 
 
 `World.dimensionSettings()` is the companion query when both the type and generator context
