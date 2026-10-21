@@ -54,8 +54,8 @@ extension World {
     /// Resolves saved dimension-to-type links, not dimension folder names or occupied sections.
     ///
     /// Reads modern world_gen_settings or legacy WorldGenSettings, including inline definitions.
-    /// References resolve through enabled folder data packs, in priority order, and verified
-    /// 26.3 vanilla definitions. ZIP/built-in experimental packs, overlays and resource filters
+    /// References resolve through enabled folder/ZIP data packs, in priority order, and verified
+    /// 26.3 vanilla definitions. Built-in experimental packs, overlays and resource filters
     /// are unsupported: an unresolved higher-priority pack prevents falling back to lower ones.
     /// Missing/malformed/unresolved types are omitted. Read errors propagate. No files are written.
     public func dimensionTypes() throws -> [String: DimensionType] {
@@ -89,6 +89,8 @@ extension World {
     }
 
     private static func resolve(_ id: Identifier, in packs: [DimensionTypePack], version: Int?) throws -> DimensionType? {
+        let path = "data/\(id.namespace)/dimension_type/\(id.path).json"
+        guard DimensionTypePack.validPath(path) else { return nil }
         for pack in packs {
             switch pack {
             case .vanilla:
@@ -96,10 +98,15 @@ extension World {
                 if let value = DimensionType.vanilla(id.description, version: version) { return value }
             case .unavailable: return nil
             case .folder(let root):
-                guard let file = DimensionTypePack.file("data/\(id.namespace)/dimension_type/\(id.path).json", under: root) else { return nil }
+                guard let file = DimensionTypePack.file(path, under: root) else { return nil }
                 if FileManager.default.fileExists(atPath: file.path) {
                     // A malformed override is still an override; never substitute a lower definition.
                     return DimensionType(json: try Data(contentsOf: file))
+                }
+            case .zip(let resources):
+                if resources.contains(path) {
+                    guard let data = resources.read(path) else { return nil }
+                    return DimensionType(json: data)
                 }
             }
         }
@@ -110,6 +117,7 @@ extension World {
 private enum DimensionTypePack {
     case vanilla
     case folder(URL)
+    case zip(ZipResources)
     case unavailable
 
     static func load(_ id: String, in world: URL) throws -> Self {
@@ -119,17 +127,30 @@ private enum DimensionTypePack {
         guard !name.isEmpty, !name.contains("/"), let root = file("datapacks", under: world),
               let folder = file(name, under: root) else { return .unavailable }
         var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory), isDirectory.boolValue,
-              let metadata = file("pack.mcmeta", under: folder), FileManager.default.fileExists(atPath: metadata.path) else { return .unavailable }
-        let data = try Data(contentsOf: metadata)
+        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory) else { return .unavailable }
+        let result: Self, data: Data
+        if isDirectory.boolValue {
+            guard let metadata = file("pack.mcmeta", under: folder), FileManager.default.fileExists(atPath: metadata.path) else { return .unavailable }
+            data = try Data(contentsOf: metadata)
+            result = .folder(folder)
+        } else {
+            guard name.hasSuffix(".zip"), let resources = ZipResources(data: try Data(contentsOf: folder)),
+                  let metadata = resources.read("pack.mcmeta") else { return .unavailable }
+            data = metadata
+            result = .zip(resources)
+        }
         guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               json["pack"] is [String: Any], json["overlays"] == nil, json["filter"] == nil else { return .unavailable }
-        return .folder(folder)
+        return result
+    }
+
+    static func validPath(_ path: String) -> Bool {
+        !path.split(separator: "/", omittingEmptySubsequences: false).contains { $0.isEmpty || $0 == "." || $0 == ".." }
     }
 
     /// Identifier syntax permits dot segments; file lookup must separately stay inside the pack.
     static func file(_ path: String, under root: URL) -> URL? {
-        guard !path.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else { return nil }
+        guard validPath(path) else { return nil }
         let root = root.resolvingSymlinksInPath().standardizedFileURL
         let file = root.appendingPathComponent(path).resolvingSymlinksInPath().standardizedFileURL
         guard file.pathComponents.starts(with: root.pathComponents), file.pathComponents.count > root.pathComponents.count else { return nil }

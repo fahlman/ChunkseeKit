@@ -12,7 +12,8 @@ let package = Package(
     ],
     targets: [
         .systemLibrary(name: "CZlib", path: "Sources/CZlib"),
-        .target(name: "ChunkseeKit", dependencies: ["CZlib"]),
+        .systemLibrary(name: "CArchive", path: "Sources/CArchive"),
+        .target(name: "ChunkseeKit", dependencies: ["CZlib", "CArchive"]),
         .target(name: "ChunkseeIndex", dependencies: ["ChunkseeKit"]),
         .target(name: "ChunkseeKitTestSupport", dependencies: ["ChunkseeKit"]),
         .executableTarget(name: "chunksee", dependencies: ["ChunkseeKit"]),

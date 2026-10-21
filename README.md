@@ -239,13 +239,23 @@ if let type = try world.dimensionTypes()["minecraft:the_nether"] {
 }
 ```
 
-Missing, malformed and unresolved types are omitted. ZIP packs, built-in experimental packs,
-pack overlays and resource filters are not resolved yet: an unsupported higher-priority pack
+Missing, malformed and unresolved types are omitted. Enabled folder and ZIP packs share the same
+priority. ZIP reading uses macOS's system libarchive without extracting files. Its complete
+directory must be readable and unambiguous; encrypted, corrupt or duplicate-path archives remain
+unavailable. Only requested JSON resources are decompressed, with integrity checks and a 16 MiB
+limit per resource. A malformed present override never permits a lower definition to take over.
+ZIP support is unreleased. Built-in experimental packs, pack overlays and resource filters
+are not resolved yet: an unsupported higher-priority pack
 prevents guessing a lower definition, including vanilla. Vanilla defaults are unavailable for
 unverified save versions. Explicit definitions must have valid aligned bounds and logical height;
 file lookup rejects paths or symlinks escaping the pack. File-read errors propagate. This API
 reads metadata only, has no cache and never writes a world. It does not change terrain decoding,
 `RegionFacts`, or the app's height controls until separate app adoption.
+
+The `CArchive` module declares only the documented system ZIP-reading API. macOS 27's SDK
+ships libarchive's link stub and manual pages but omits its headers; the declarations are
+verified against Apple's published headers, whose notice is retained in `Sources/CArchive/LICENSE`.
+No external package or archive-writing API is added.
 
 ### Region facts (v0.30.0)
 
