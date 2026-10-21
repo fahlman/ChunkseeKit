@@ -27,7 +27,8 @@ extension Chunk {
         }
     }
 
-    /// Visits saved blocks down all 256 columns. Return false to finish only the visited column;
+    /// Visits saved blocks down all 256 columns. Order between columns is unspecified.
+    /// Return false to finish only the visited column;
     /// throwing stops the entire traversal. Each reached nonuniform section is unpacked once.
     /// Missing/light-only sections are gaps, not invented air or water. Compare run Y ranges when
     /// continuity matters. After the surface is found, air and invalid references are reported too.
@@ -88,31 +89,34 @@ extension Chunk {
             let uniform = blocks.isUniform
             let indices = uniform || columns.count == 1 ? nil : blocks.allPaletteIndices()
             let air = seeking.contains(true) ? blocks.palette.map(\.isAir) : []
-            for offset in 0..<(uniform ? 1 : 16) {
-                guard remaining > 0 else { break }
-                let upper = high.partialValue - offset
-                let lower = uniform ? max(low.partialValue, bottom.partialValue) : upper
-                guard lower >= bottom.partialValue else { break }
-                let plane = ChunkSection.blockIndex(x: 0, y: 15 - offset, z: 0)
-                for i in columns.indices {
-                    guard let nextY = next[i], nextY >= lower else { continue }
-                    let p = uniform ? 0 : indices?[plane + columns[i]] ?? blocks.paletteIndex(at: plane + columns[i])
+            // Finish each eligible column in this section before moving to the next. Its saved
+            // start skips higher blocks directly, and completed columns need no per-plane checks.
+            for i in columns.indices {
+                guard let nextY = next[i], nextY >= low.partialValue else { continue }
+                var y = min(high.partialValue, nextY)
+                var lookingForSurface = seeking[i]
+                var continuing = true
+                repeat {
+                    let lower = uniform ? max(low.partialValue, bottom.partialValue) : y
+                    let index = ChunkSection.blockIndex(x: 0, y: y - low.partialValue, z: 0) + columns[i]
+                    let p = uniform ? 0 : indices?[index] ?? blocks.paletteIndex(at: index)
                     let valid = p < blocks.palette.count
-                    if seeking[i] {
+                    if lookingForSurface {
                         // An unreadable block cannot establish air or a surface below it.
-                        guard valid else { next[i] = nil; remaining -= 1; continue }
-                        if air[p] { continue }
-                        seeking[i] = false
+                        guard valid else { continuing = false; break }
+                        lookingForSurface = air[p]
                     }
-                    let run = ColumnRun(column: columns[i], y: lower...min(upper, nextY),
-                                        sectionIndex: s, paletteIndex: valid ? p : nil)
-                    if try body(i, run), lower > bottom.partialValue {
-                        next[i] = lower - 1
-                    } else {
-                        next[i] = nil
-                        remaining -= 1
+                    if !lookingForSurface {
+                        let run = ColumnRun(column: columns[i], y: lower...y,
+                                            sectionIndex: s, paletteIndex: valid ? p : nil)
+                        guard try body(i, run) else { continuing = false; break }
                     }
-                }
+                    guard lower > bottom.partialValue else { continuing = false; break }
+                    y = lower - 1
+                } while y >= low.partialValue
+                next[i] = continuing ? y : nil
+                seeking[i] = lookingForSurface
+                if !continuing { remaining -= 1 }
             }
         }
     }

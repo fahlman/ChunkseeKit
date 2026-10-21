@@ -92,6 +92,40 @@ import Testing
         #expect(runs[1][0].count + runs[1][1].count == 22)
     }
 
+    @Test func mixedColumnsRespectDifferentSavedStartsAndStopsAcrossGaps() throws {
+        let palette: [NBT] = [.string("air"), .string("stone"), .string("water")]
+        let sections = [-1, 0, 2].map { y in
+            Fixtures.section(y: y, palette: palette,
+                             indices: (0..<4096).map { ($0 + $0 / 256) % 3 })
+        }
+        let starts: [Int?] = (0..<256).map { $0.isMultiple(of: 13) ? nil : $0 % 64 - 16 }
+        let stops = (0..<256).map { (starts[$0] ?? 0) - $0 % 23 }
+        let chunk = try decode(sections, bottom: -1, extra: ["Heightmaps": .compound([
+            "WORLD_SURFACE": .longArray(Fixtures.pack(starts.map { $0.map { $0 + 17 } ?? 0 }, bits: 9)),
+        ])])
+        var visited = [[Int]](repeating: [], count: 256)
+        try chunk.forEachColumnRun(from: .surface(height: 384)) { run in
+            #expect(run.y.lowerBound == run.y.upperBound)
+            let y = run.y.upperBound
+            let p = try #require(run.paletteIndex)
+            let block = try #require(chunk.sections[run.sectionIndex].blockStates?.palette[p])
+            #expect(block.id == chunk.block(x: run.column % 16, y: y, z: run.column / 16)?.id)
+            visited[run.column].append(y)
+            return y > stops[run.column]
+        }
+        for i in 0..<256 {
+            var expected = [Int]()
+            if let start = starts[i] {
+                for y in stride(from: start, through: -16, by: -1) {
+                    guard chunk.block(x: i % 16, y: y, z: i / 16) != nil else { continue }
+                    expected.append(y)
+                    if y <= stops[i] { break }
+                }
+            }
+            #expect(visited[i] == expected)
+        }
+    }
+
     @Test func traversalReportsAirAndBadReferencesBelowTheStartingSurface() throws {
         var indices = [Int](repeating: 0, count: 4096)
         indices[5 * 256] = 1
