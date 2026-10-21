@@ -247,6 +247,23 @@ file lookup rejects paths or symlinks escaping the pack. File-read errors propag
 reads metadata only, has no cache and never writes a world. It does not change terrain decoding,
 `RegionFacts`, or the app's height controls until separate app adoption.
 
+
+`World.dimensionSettings()` is the companion query when both the type and generator context
+are needed. Each value has independently optional `type` and `noiseGeneration` fields. Noise
+settings resolve through the same saved mapping and enabled-pack rules; they are available only
+for a saved `minecraft:noise` generator. The seven vanilla noise definitions are verified for
+26.3, and inline/custom bounds are validated without assuming a complete game registry.
+`dimensionTypes()` remains a type-only read and never opens generator resources.
+
+`NoiseGenerationSettings.range` is the saved noise range, including a valid empty range.
+`surfaceRuleRange(in:)` reproduces 26.3's `WorldGenerationContext` range for vertical anchors:
+it starts at the larger minimum Y and uses the smaller height. This differs from intersecting
+range endpoints. For the vanilla Nether, build bounds are `0...255` but the surface-rule range
+is `0..<128`. Neither this range nor `hasCeiling` proves where a physical roof block exists;
+view selection and colors remain the caller's policy. These companion APIs are unreleased;
+app adoption follows a reviewed minor release (fahlman/ChunkseeKit#51).
+
+
 ### Region facts (v0.30.0)
 
 `Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
