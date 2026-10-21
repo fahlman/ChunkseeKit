@@ -62,8 +62,9 @@ extension Chunk {
     }
 
     /// The single owner of section order, Y clipping, palette lookup and independent column stops.
-    /// Inlining lets a renderer specialize its nonescaping visitor without a per-block ABI call.
-    @inlinable
+    /// Keep this loop in its caller so the nested nonescaping visitor can specialize there;
+    /// otherwise Release can retain an indirect callback for every visited block.
+    @inlinable @inline(__always)
     func visitColumnRuns(at columns: [Int], starts: [Int?]?, seekingSurface: Bool,
                          _ body: (Int, ColumnRun) throws -> Bool) rethrows {
         let bottom = minSectionY.multipliedReportingOverflow(by: 16)
