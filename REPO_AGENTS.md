@@ -138,7 +138,7 @@ columns remain unavailable. Single-column reads inspect only that column; batche
 each reached nonuniform section once. RegionScan uses the same owner for its surface biome
 sample while preserving explicit-Y sampling. RegionFacts interpretation version 4 invalidates
 older sampled biomes, which could use a section top or an unused palette entry without a real
-surface. These additive APIs are not yet released; app adoption follows a reviewed minor release.
+surface. These additive APIs are available in v0.39.0; app adoption is tracked on #51.
 Colors, water shading, roof-view selection and the held cave-biome rule are unchanged here.
 `BlockState.isAir` uses Identifier's shared namespace rules while retaining raw IDs. Short and
 empty-default-namespace air names therefore match their qualified vanilla names; foreign
@@ -237,8 +237,8 @@ invent a level. Consumers must rescan previously cached creatures to obtain the 
 The computed `Villager.isUnemployed` owns the explicit `minecraft:none` profession category,
 using Identifier's namespace and validation rules. Missing/empty/malformed values stay unknown;
 nitwits and custom professions remain distinct. This is not a work/trade capability check. Raw
-profession, Codable data and cache interpretation are unchanged. This additive API is unreleased;
-the app's job labels adopt it after the next minor release, tracked on #51.
+profession, Codable data and cache interpretation are unchanged. This additive API is available in v0.39.0;
+the app's job-label adoption is tracked on #51.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.

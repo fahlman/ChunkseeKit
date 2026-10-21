@@ -27,12 +27,32 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.38.0")),
+    .package(url: "https://github.com/fahlman/ChunkseeKit.git", .upToNextMinor(from: "0.39.0")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["ChunkseeKit"]),
 ]
 ```
+
+## v0.39.0
+
+`Chunk.surfaceY(x:z:height:)` and `surfaceHeights(height:)` expose the highest non-air block
+in one or all 256 columns. They share the WORLD_SURFACE heightmap and actual-block fallback
+used by region biome sampling. Missing heightmaps no longer make a section top or unused
+palette entry count as a surface. Empty columns stay unavailable; colors and roof hiding
+remain front-end choices.
+
+`Villager.isUnemployed` interprets the explicit unemployed profession through the shared
+identifier rules, retaining unknown values, nitwits, custom professions and raw saved data.
+
+Block-air classification, the CLI's air-section filter and empty-item reading recognize valid
+default-namespace spellings. Foreign namespaces remain distinct. The CLI's structures command
+also uses the library's shared chunk visitor.
+
+These are additive APIs. RegionFacts interpretation version 6 invalidates earlier cached surface
+samples and air-item reads; rebuild old facts caches. No serialized shape changes or new legacy
+terrain support. Chunksee adoption and the remaining shared-reader work are tracked in
+fahlman/ChunkseeKit#51.
 
 ## v0.38.0
 
@@ -256,7 +276,7 @@ unused palette entries. Partial-generation chunks keep metadata/heightmaps but c
 structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
 time and format counts without enabling legacy terrain decoding.
 
-The unreleased `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
+Starting in v0.39.0, `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
 one column. `Chunk.surfaceHeights(height:)` returns the same values for all 256 columns, indexed
 by `z * 16 + x`, with each reached nonuniform section decoded once. Both use a decodable
 `WORLD_SURFACE` heightmap (first-free-block Y minus one), otherwise the actual referenced blocks.
@@ -464,7 +484,7 @@ to current, wrapped and legacy item formats. Vanilla definitions are assumed unc
 that override vanilla enchantment IDs are not resolved and can still make a total incomplete.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
-The unreleased computed `Villager.isUnemployed` interprets the saved profession's explicit
+Starting in v0.39.0, the computed `Villager.isUnemployed` interprets the saved profession's explicit
 `minecraft:none` category, using the shared identifier rules (so `none` means the same thing).
 Missing, empty or malformed identifiers return nil. Nitwits and custom professions remain
 distinct; false does not mean that the villager can work or trade. The raw `profession` and
