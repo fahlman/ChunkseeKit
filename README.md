@@ -459,6 +459,12 @@ to current, wrapped and legacy item formats. Vanilla definitions are assumed unc
 that override vanilla enchantment IDs are not resolved and can still make a total incomplete.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
+The unreleased computed `Villager.isUnemployed` interprets the saved profession's explicit
+`minecraft:none` category, using the shared identifier rules (so `none` means the same thing).
+Missing, empty or malformed identifiers return nil. Nitwits and custom professions remain
+distinct; false does not mean that the villager can work or trade. The raw `profession` and
+serialized data are retained, so older cached values use this interpretation without a rescan.
+
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
 matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
 unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
