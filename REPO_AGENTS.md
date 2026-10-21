@@ -160,6 +160,19 @@ checked against the official 26.3 DimensionType/LevelStem codecs and resource ma
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
+The companion `World.dimensionSettings()` reads that same mapping once for independently
+available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline
+or referenced `minecraft:noise` settings; its seven vanilla bounds are verified for 26.3.
+The existing type-only API shares the resolver but never opens generator resources. Empty noise
+heights remain valid; unknown generator kinds and unresolved settings remain unavailable.
+DimensionType owns the common packed-Y validation, with its extra nonempty-height requirement.
+`surfaceRuleRange(in:)` follows WorldGenerationContext/VerticalAnchor's max-of-minima and
+min-of-heights calculation, not range intersection or logical height. It describes surface-rule
+anchors, not a verified physical roof. Official 26.3 bytecode/JSON and the frozen world copy's
+saved generator references were checked without writing to the copy. These additive APIs are
+unreleased; app ceiling-context adoption follows a reviewed minor tag on #51. Cave inference
+and app colors/view policy are unchanged.
+
 World-level saved data and per-dimension world-border/dragon records share the internal
 World.readSavedData path/existence/NBT reader. Public World.savedData retains namespaced-first
 and flat-file fallback; dimension records keep modern-only file lookup and their existing
