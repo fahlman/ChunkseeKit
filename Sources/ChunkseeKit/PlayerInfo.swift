@@ -52,7 +52,7 @@ public struct PlayerInfo: Sendable {
         } else {
             position = nil
         }
-        unrecognizedDimension = dimension == nil ? nbt["Dimension"].map(Self.describe) : nil
+        unrecognizedDimension = dimension == nil ? nbt["Dimension"]?.dimensionDescription : nil
 
         lastDeath = Self.location(nbt["LastDeathLocation"])
 
@@ -71,10 +71,6 @@ public struct PlayerInfo: Sendable {
         guard let location = SavedBlockLocation(nbt) else { return nil }
         return Location(dimension: location.dimension, x: Double(location.position.x),
                         y: Double(location.position.y), z: Double(location.position.z))
-    }
-
-    private static func describe(_ nbt: NBT) -> String {
-        nbt.string ?? nbt.int.map(String.init) ?? "\(nbt)"
     }
 }
 

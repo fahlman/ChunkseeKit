@@ -46,7 +46,7 @@ public struct MapItem: Sendable, Equatable {
         self.id = id
         let dimensionTag = data["dimension"]
         dimension = dimensionTag?.dimensionID
-        unrecognizedDimension = dimension == nil ? dimensionTag.map { $0.string ?? $0.int.map(String.init) ?? "?" } : nil
+        unrecognizedDimension = dimension == nil ? dimensionTag?.dimensionDescription : nil
         centerX = data["xCenter"]?.int ?? 0
         centerZ = data["zCenter"]?.int ?? 0
         scale = min(max(data["scale"]?.int ?? 0, 0), 4)

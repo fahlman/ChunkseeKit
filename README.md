@@ -695,9 +695,12 @@ Modern world spawn, player death and player respawn share the `{dimension, pos: 
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
 `spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.
 Bare dimension strings use the `minecraft:` namespace, as player/map dimensions already do;
-custom qualified IDs stay intact. The reader does not validate world membership or identifier
-syntax. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
-fallback remains.
+custom qualified IDs stay intact. The shared identifier reader validates syntax, not world
+membership. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
+fallback remains. Player and map `unrecognizedDimension` values share one description: unknown
+strings and integers retain their raw text, unsupported tag shapes use `?`, and missing tags remain
+`nil`. Malformed player tags no longer expose a debug NBT dump. Public signatures and region-cache
+interpretation are unchanged.
 
 `PlayerInfo.equippedItems` combines the saved equipment slots and the selected main-hand item.
 An explicit saved main hand takes precedence over the selected hotbar slot; unselected inventory
