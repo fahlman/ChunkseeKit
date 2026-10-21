@@ -58,7 +58,10 @@ readers use it; malformed saved identifiers become unavailable. The empty-path c
 retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
 Identifier syntax is not file-path validation. `SaveVersion` owns verified release numbers and
 format boundaries; `DataVersion` remains a source-compatible alias. Unknown newer versions do not
-gain verified health defaults. POI, map banners and paired block locations share the int-array
+gain verified health defaults. PlayerInfo and MapItem share the unknown-dimension description
+next to the NBT dimension-tag reader: raw strings and integers remain readable, unsupported tag
+shapes use `?`, and missing values remain absent. This replaces the player's debug-NBT fallback;
+it changes no public signature or RegionFacts value. POI, map banners and paired block locations share the int-array
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
 legacy terrain support. These public APIs are available starting in v0.30.0.

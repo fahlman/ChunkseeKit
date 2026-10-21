@@ -13,6 +13,10 @@ struct SavedBlockLocation {
 }
 
 extension NBT {
+    /// Raw dimension text for a value the reader cannot recognize. Unsupported tag shapes do
+    /// not expose debug NBT syntax; player and map diagnostics use the same placeholder.
+    var dimensionDescription: String { string ?? int.map(String.init) ?? "?" }
+
     /// Stored dimension IDs: strings get the default namespace; legacy numeric values only
     /// identify the three vanilla dimensions. Syntax is validated; world membership is separate.
     var dimensionID: String? {
