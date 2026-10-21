@@ -26,7 +26,10 @@ public struct BlockState: Hashable, Sendable, CustomStringConvertible {
         return id + "[" + properties.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ",") + "]"
     }
 
-    public var isAir: Bool { id == "minecraft:air" || id == "minecraft:cave_air" || id == "minecraft:void_air" }
+    public var isAir: Bool {
+        guard let id = Identifier(id), id.namespace == "minecraft" else { return false }
+        return id.path == "air" || id.path == "cave_air" || id.path == "void_air"
+    }
 
     /// Accepts every palette entry shape seen across versions:
     /// - `"minecraft:stone"` (26.3+, list-of-strings palette)

@@ -140,6 +140,10 @@ sample while preserving explicit-Y sampling. RegionFacts interpretation version 
 older sampled biomes, which could use a section top or an unused palette entry without a real
 surface. These additive APIs are not yet released; app adoption follows a reviewed minor release.
 Colors, water shading, roof-view selection and the held cave-biome rule are unchanged here.
+`BlockState.isAir` uses Identifier's shared namespace rules while retaining raw IDs. Short and
+empty-default-namespace air names therefore match their qualified vanilla names; foreign
+namespaces do not. RegionFacts interpretation version 5 invalidates cached surface samples
+that treated valid short air names as solid blocks. No public API or serialized shape changes.
 
 `DimensionType` owns validated build bounds, logical height and the ceiling flag.
 `World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
