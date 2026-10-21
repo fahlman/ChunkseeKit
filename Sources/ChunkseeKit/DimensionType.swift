@@ -12,11 +12,16 @@ public struct DimensionType: Sendable, Equatable {
     public var buildRange: ClosedRange<Int> { minY...maxY }
 
     private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool) {
-        // DimensionType's 26.3 codec/constructor: 12 packed Y bits, less two reserved sections.
-        guard (-2032...2031).contains(minY), (16...4064).contains(height),
-              minY.isMultiple(of: 16), height.isMultiple(of: 16),
-              minY + height <= 2032, (0...height).contains(logicalHeight) else { return nil }
+        guard height > 0, Self.validYBounds(minY: minY, height: height),
+              (0...height).contains(logicalHeight) else { return nil }
         self.minY = minY; self.height = height; self.logicalHeight = logicalHeight; self.hasCeiling = hasCeiling
+    }
+
+    // DimensionType and NoiseSettings share the 26.3 packed-Y bounds. Noise alone permits
+    // an empty height; a dimension's constructor above requires at least one section.
+    static func validYBounds(minY: Int, height: Int) -> Bool {
+        (-2032...2031).contains(minY) && (0...4064).contains(height)
+            && minY.isMultiple(of: 16) && height.isMultiple(of: 16) && minY + height <= 2032
     }
 
     init?(_ nbt: NBT) {
@@ -47,113 +52,5 @@ public struct DimensionType: Sendable, Equatable {
         case "minecraft:the_end": return Self(minY: 0, height: 256, logicalHeight: 256, hasCeiling: false)
         default: return nil
         }
-    }
-}
-
-extension World {
-    /// Resolves saved dimension-to-type links, not dimension folder names or occupied sections.
-    ///
-    /// Reads modern world_gen_settings or legacy WorldGenSettings, including inline definitions.
-    /// References resolve through enabled folder/ZIP data packs, in priority order, and verified
-    /// 26.3 vanilla definitions. Built-in experimental packs, overlays and resource filters
-    /// are unsupported: an unresolved higher-priority pack prevents falling back to lower ones.
-    /// Missing/malformed/unresolved types are omitted. Read errors propagate. No files are written.
-    public func dimensionTypes() throws -> [String: DimensionType] {
-        let settings: NBT?, version: Int?
-        if let saved = try savedData("world_gen_settings") {
-            settings = saved["data"]
-            version = saved["DataVersion"]?.int ?? level.dataVersion
-        } else {
-            settings = level.nbt["WorldGenSettings"]
-            version = level.dataVersion
-        }
-        guard let dimensions = settings?["dimensions"]?.compound else { return [:] }
-        let hasReferences = dimensions.values.contains { $0["type"]?.string != nil }
-        let packs = try hasReferences ? level.enabledDataPacks.reversed().map { try DimensionTypePack.load($0, in: url) } : []
-        var result: [String: DimensionType] = [:]
-        var seen = Set<String>()
-        var duplicates = Set<String>()
-        for (key, dimension) in dimensions {
-            guard let id = Identifier(key), !id.path.isEmpty else { continue }
-            if !seen.insert(id.description).inserted { duplicates.insert(id.description); continue }
-            guard let saved = dimension["type"] else { continue }
-            if let reference = saved.string {
-                guard let typeID = Identifier(reference), !typeID.path.isEmpty else { continue }
-                result[id.description] = try Self.resolve(typeID, in: packs, version: version)
-            } else {
-                result[id.description] = DimensionType(saved)
-            }
-        }
-        for id in duplicates { result[id] = nil }
-        return result
-    }
-
-    private static func resolve(_ id: Identifier, in packs: [DimensionTypePack], version: Int?) throws -> DimensionType? {
-        let path = "data/\(id.namespace)/dimension_type/\(id.path).json"
-        guard DimensionTypePack.validPath(path) else { return nil }
-        for pack in packs {
-            switch pack {
-            case .vanilla:
-                guard version == SaveVersion.java26_3 else { return nil }
-                if let value = DimensionType.vanilla(id.description, version: version) { return value }
-            case .unavailable: return nil
-            case .folder(let root):
-                guard let file = DimensionTypePack.file(path, under: root) else { return nil }
-                if FileManager.default.fileExists(atPath: file.path) {
-                    // A malformed override is still an override; never substitute a lower definition.
-                    return DimensionType(json: try Data(contentsOf: file))
-                }
-            case .zip(let resources):
-                if resources.contains(path) {
-                    guard let data = resources.read(path) else { return nil }
-                    return DimensionType(json: data)
-                }
-            }
-        }
-        return nil
-    }
-}
-
-private enum DimensionTypePack {
-    case vanilla
-    case folder(URL)
-    case zip(ZipResources)
-    case unavailable
-
-    static func load(_ id: String, in world: URL) throws -> Self {
-        if id == "vanilla" { return .vanilla }
-        guard id.hasPrefix("file/") else { return .unavailable }
-        let name = String(id.dropFirst(5))
-        guard !name.isEmpty, !name.contains("/"), let root = file("datapacks", under: world),
-              let folder = file(name, under: root) else { return .unavailable }
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory) else { return .unavailable }
-        let result: Self, data: Data
-        if isDirectory.boolValue {
-            guard let metadata = file("pack.mcmeta", under: folder), FileManager.default.fileExists(atPath: metadata.path) else { return .unavailable }
-            data = try Data(contentsOf: metadata)
-            result = .folder(folder)
-        } else {
-            guard name.hasSuffix(".zip"), let resources = ZipResources(data: try Data(contentsOf: folder)),
-                  let metadata = resources.read("pack.mcmeta") else { return .unavailable }
-            data = metadata
-            result = .zip(resources)
-        }
-        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              json["pack"] is [String: Any], json["overlays"] == nil, json["filter"] == nil else { return .unavailable }
-        return result
-    }
-
-    static func validPath(_ path: String) -> Bool {
-        !path.split(separator: "/", omittingEmptySubsequences: false).contains { $0.isEmpty || $0 == "." || $0 == ".." }
-    }
-
-    /// Identifier syntax permits dot segments; file lookup must separately stay inside the pack.
-    static func file(_ path: String, under root: URL) -> URL? {
-        guard validPath(path) else { return nil }
-        let root = root.resolvingSymlinksInPath().standardizedFileURL
-        let file = root.appendingPathComponent(path).resolvingSymlinksInPath().standardizedFileURL
-        guard file.pathComponents.starts(with: root.pathComponents), file.pathComponents.count > root.pathComponents.count else { return nil }
-        return file
     }
 }

@@ -59,13 +59,15 @@ import Testing
     }
 
     private func world(at root: URL, pack: [UInt8], reference: String = "overworld",
-                       packs: [String] = ["vanilla", "file/Test.zip"]) throws -> World {
+                       packs: [String] = ["vanilla", "file/Test.zip"], noise: String = "overworld") throws -> World {
         try Fixtures.write(pack, to: root.appendingPathComponent("datapacks/Test.zip"))
         try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
             "LevelName": .string("ZIP Resources"), "DataVersion": .int(5023),
             "DataPacks": .compound(["Enabled": .list(.string, packs.map(NBT.string))]),
             "WorldGenSettings": .compound(["dimensions": .compound([
-                "example:mine": .compound(["type": .string(reference)])
+                "example:mine": .compound(["type": .string(reference), "generator": .compound([
+                    "type": .string("minecraft:noise"), "settings": .string(noise)
+                ])])
             ])])
         ])]), to: root.appendingPathComponent("level.dat"))
         return try World(contentsOf: root)
@@ -146,6 +148,24 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom),
                              Entry(path: "data/example/worldgen/noise_settings/broken.json", text: "{}", compressed: true, wrongCRC: true)])
-        #expect(try world(at: root, pack: bytes).dimensionTypes()["example:mine"]?.buildRange == 0...127)
+        let world = try world(at: root, pack: bytes, noise: "example:broken")
+        #expect(try world.dimensionTypes()["example:mine"]?.buildRange == 0...127)
+        let settings = try #require(try world.dimensionSettings()["example:mine"])
+        #expect(settings.type?.buildRange == 0...127)
+        #expect(settings.noiseGeneration == nil)
+    }
+
+    @Test func noiseAndTypeUseTheSameZIPResolverAndPriority() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom),
+                             Entry(path: "data/example/worldgen/noise_settings/custom.json",
+                                   text: "{\"noise\":{\"min_y\":16,\"height\":64}}", compressed: true)])
+        let world = try world(at: root, pack: bytes, noise: "example:custom")
+        let settings = try #require(try world.dimensionSettings()["example:mine"])
+        let type = try #require(settings.type)
+        #expect(type.buildRange == 0...127)
+        #expect(settings.noiseGeneration?.range == 16..<80)
+        #expect(settings.noiseGeneration?.surfaceRuleRange(in: type) == 16..<80)
     }
 }
