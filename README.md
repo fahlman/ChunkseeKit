@@ -249,13 +249,25 @@ let restored = try JSONDecoder().decode(RegionFacts.self, from: cacheData)
 ```
 
 A nil block-ID set counts all IDs; an empty set skips counting. Nil biome-sampling Y uses the
-middle column's `WORLD_SURFACE` height minus one, falling back to the highest non-air palette
-section's top when no usable heightmap is saved. Supply a Y for a different sample (for example,
+middle column's surface from the shared reader below. Supply a Y for a different sample (for example,
 64 under the Nether roof). Optional `height` is the dimension's actual build height, for decoding
 ambiguous heightmaps; it is never inferred from occupied sections. The used-biome list excludes
 unused palette entries. Partial-generation chunks keep metadata/heightmaps but contribute no
 structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
 time and format counts without enabling legacy terrain decoding.
+
+The unreleased `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
+one column. `Chunk.surfaceHeights(height:)` returns the same values for all 256 columns, indexed
+by `z * 16 + x`, with each reached nonuniform section decoded once. Both use a decodable
+`WORLD_SURFACE` heightmap (first-free-block Y minus one), otherwise the actual referenced blocks.
+The optional build height disambiguates tall-world heightmaps. Empty columns and malformed
+references stay unavailable; air variants are skipped, while plants and water count as surface.
+`MOTION_BLOCKING` is not used because it describes a different set of blocks. Roof hiding,
+water shading and cave-biome classification are separate from this reader.
+
+Region scans now use this surface owner instead of sampling a section's top when a heightmap
+is absent. RegionFacts interpretation version 4 invalidates older cached biome samples; rebuild
+them after adopting this change. Explicit sampling Y and the used-biome list are unchanged.
 
 Cache keys must include all three source-file fingerprints, the options,
 `RegionFacts.interpretationVersion`, and the consumer's transform version. Kit must bump the
