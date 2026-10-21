@@ -55,11 +55,9 @@ func structuresCommand(_ world: World, _ arguments: Arguments) {
         let dims = arguments.dimensions(1, in: world)
         for dim in dims {
             var byKind: [String: [StructureStart]] = [:]
-            for (_, _, url) in dim.regionFiles() {
-                guard let region = try? RegionFile(contentsOf: url) else { continue }
-                for (lx, lz) in region.chunkCoordinates {
-                    guard let nbt = try? region.chunkNBT(localX: lx, localZ: lz, skipping: Chunk.keysNotNeededForStructures),
-                          let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { continue }
+            for region in dim.regionFiles() {
+                try? dim.forEachChunk(regionX: region.x, regionZ: region.z, skipping: Chunk.keysNotNeededForStructures) { _, _, nbt in
+                    guard let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { return }
                     for start in chunk.structureStarts { byKind[start.id, default: []].append(start) }
                 }
             }
