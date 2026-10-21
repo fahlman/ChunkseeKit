@@ -241,8 +241,8 @@ if let type = try world.dimensionTypes()["minecraft:the_nether"] {
 
 Missing, malformed and unresolved types are omitted. Enabled folder and ZIP packs share the same
 priority. ZIP reading uses macOS's system libarchive without extracting files. Its complete
-directory must be readable and unambiguous; encrypted, corrupt or duplicate-path archives remain
-unavailable. Only requested JSON resources are decompressed, with integrity checks and a 16 MiB
+directory must be readable and unambiguous; encrypted archives, duplicate paths and malformed
+directories remain unavailable. Only requested JSON resources are decompressed, with integrity checks and a 16 MiB
 limit per resource. A malformed present override never permits a lower definition to take over.
 ZIP support is unreleased. Built-in experimental packs, pack overlays and resource filters
 are not resolved yet: an unsupported higher-priority pack
