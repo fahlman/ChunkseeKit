@@ -62,8 +62,9 @@ gain verified health defaults. POI, map banners and paired block locations share
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
 legacy terrain support. These public APIs are available starting in v0.30.0.
-The CLI structure scan uses `Chunk.isFullyGenerated` and `structureStarts` after skipping
-unneeded block data; it does not apply its own chunk-status or placement rules. Structure-center
+The CLI structure scan streams each region through `Dimension.forEachChunk`, then uses
+`Chunk.isFullyGenerated` and `structureStarts` after skipping unneeded block data; it does not
+repeat region/chunk reads or apply its own chunk-status or placement rules. Structure-center
 X/Z coordinates use the same public single-axis conversion without inventing a height.
 CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
