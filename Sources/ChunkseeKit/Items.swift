@@ -29,7 +29,8 @@ public struct ItemStack: Sendable, Equatable, Codable {
 
     /// Reads an item; `nil` for an empty or malformed entry.
     public init?(_ nbt: NBT) {
-        guard let id = nbt["id"]?.string, !id.isEmpty, id != "minecraft:air" else { return nil }
+        guard let id = nbt["id"]?.string, !id.isEmpty,
+              Identifier(id)?.description != "minecraft:air" else { return nil }
         self.id = id
         count = nbt["count"]?.int ?? nbt["Count"]?.int ?? 1
         slot = nbt["Slot"]?.int ?? nbt["slot"]?.int

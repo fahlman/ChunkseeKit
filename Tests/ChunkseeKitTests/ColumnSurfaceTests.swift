@@ -4,6 +4,24 @@ import Testing
 import ChunkseeKit
 
 @Suite struct ColumnSurfaceTests {
+    @Test func defaultNamespaceAirDoesNotSupplyASurface() throws {
+        for id in ["air", "cave_air", "void_air", ":air", ":cave_air", ":void_air",
+                   "minecraft:air", "minecraft:cave_air", "minecraft:void_air"] {
+            let chunk = try decode([Fixtures.section(y: 0, palette: [.string(id)])])
+            #expect(chunk.surfaceY(x: 8, z: 8) == nil, "Air spelling: \(id)")
+            #expect(chunk.surfaceHeights().allSatisfy { $0 == nil }, "Air spelling: \(id)")
+            #expect(chunk.block(x: 8, y: 0, z: 8)?.id == id)
+        }
+        var blocks = [Int](repeating: 0, count: 4096)
+        blocks[8 * 16 + 8] = 1
+        let mixed = try decode([Fixtures.section(y: 0, palette: [.string("air"), .string("stone")], indices: blocks)])
+        #expect(mixed.surfaceY(x: 8, z: 8) == 0 && mixed.surfaceHeights()[8 * 16 + 8] == 0)
+        for id in ["example:air", "example:cave_air", "example:void_air", "minecraft:stone"] {
+            let chunk = try decode([Fixtures.section(y: 0, palette: [.string(id)])])
+            #expect(chunk.surfaceY(x: 8, z: 8) == 15)
+        }
+    }
+
     @Test func missingHeightmapsSampleTheActualMiddleColumn() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

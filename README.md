@@ -266,8 +266,13 @@ references stay unavailable; air variants are skipped, while plants and water co
 water shading and cave-biome classification are separate from this reader.
 
 Region scans now use this surface owner instead of sampling a section's top when a heightmap
-is absent. RegionFacts interpretation version 4 invalidates older cached biome samples; rebuild
-them after adopting this change. Explicit sampling Y and the used-biome list are unchanged.
+is absent. Air classification uses Identifier's default namespace, so `air` and `:air` are
+equivalent to `minecraft:air`; foreign-namespace names are not treated as vanilla air. Raw block
+IDs remain unchanged. Item reads use the same namespace rule for the empty `minecraft:air` item,
+including nested contents; the CLI chunk listing uses the shared block-air classification.
+RegionFacts interpretation version 6 invalidates older cached biome samples and empty-item
+interpretations; rebuild them after adopting this change. Explicit sampling Y and the used-biome
+list are unchanged.
 
 Cache keys must include all three source-file fingerprints, the options,
 `RegionFacts.interpretationVersion`, and the consumer's transform version. Kit must bump the
