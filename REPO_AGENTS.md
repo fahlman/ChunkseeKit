@@ -217,6 +217,11 @@ reader, so a legacy Most/Least pair and a current array identify the same player
 `Villager` owns the missing-level default: a `VillagerData` compound with no `level` reads as 1,
 verified against the 26.3 codec. Explicit values are retained, and malformed/absent data does not
 invent a level. Consumers must rescan previously cached creatures to obtain the corrected value.
+The computed `Villager.isUnemployed` owns the explicit `minecraft:none` profession category,
+using Identifier's namespace and validation rules. Missing/empty/malformed values stay unknown;
+nitwits and custom professions remain distinct. This is not a work/trade capability check. Raw
+profession, Codable data and cache interpretation are unchanged. This additive API is unreleased;
+the app's job labels adopt it after the next minor release, tracked on #51.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
