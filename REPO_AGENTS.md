@@ -140,6 +140,15 @@ sample while preserving explicit-Y sampling. RegionFacts interpretation version 
 older sampled biomes, which could use a section top or an unused palette entry without a real
 surface. These additive APIs are available in v0.39.0; app adoption is tracked on #51.
 Colors, water shading, roof-view selection and the held cave-biome rule are unchanged here.
+The additive, unreleased `Chunk.forEachColumnRun(from:_:)` shares that fallback traversal with
+surface queries. It visits all columns from the shared surface rule or an explicit Y, emitting
+uniform-section spans and individual nonuniform blocks with their original section/palette
+references. Missing sections remain gaps; invalid references cannot establish a surface.
+Callers stop each column independently, while each reached nonuniform section is unpacked once.
+Single-column surface queries retain direct lookups without unpacking the whole section.
+Checked Y arithmetic, heightmap starts and section/column iteration belong here; colors, water
+shading and roof hiding stay in the app. App adoption and its separate measured comparison are
+tracked on #51 and fahlman/Chunksee#354. No existing surface or cache interpretation changes.
 `BlockState.isAir` uses Identifier's shared namespace rules while retaining raw IDs. Short and
 empty-default-namespace air names therefore match their qualified vanilla names; foreign
 namespaces do not. RegionFacts interpretation version 5 invalidates cached surface samples

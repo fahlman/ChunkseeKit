@@ -21,55 +21,23 @@ extension Chunk {
         surfaceHeights(at: [ChunkSection.blockIndex(x: x, y: 0, z: z)], heightmap: heightmap)[0]
     }
 
-    private static func validSurfaceHeight(_ height: Int?) -> Bool {
+    static func validSurfaceHeight(_ height: Int?) -> Bool {
         height.map { heightmapBitWidth(for: $0) != nil } ?? true
     }
 
-    private func surfaceHeightmap(height: Int?) -> [Int]? {
+    func surfaceHeightmap(height: Int?) -> [Int]? {
         if let height { return heightmap("WORLD_SURFACE", height: height) }
         return heightmap("WORLD_SURFACE")
     }
 
     private func surfaceHeights(at columns: [Int], heightmap: [Int]?) -> [Int?] {
         var result = [Int?](repeating: nil, count: columns.count)
-        let bottom = minSectionY.multipliedReportingOverflow(by: 16)
-        guard !bottom.overflow else { return result }
-        if let heightmap {
-            // A height equal to the dimension's bottom represents an empty column, not a block
-            // below the build range. Other saved values are first-free-block Y, hence minus one.
-            return columns.map { heightmap[$0] > bottom.partialValue ? heightmap[$0] - 1 : nil }
+        if let starts = surfaceStarts(heightmap: heightmap) {
+            return columns.map { starts[$0] }
         }
-
-        var pending = [Bool](repeating: true, count: columns.count)
-        var remaining = columns.count
-        for section in sections.reversed() {
-            guard remaining > 0 else { break }
-            guard let blocks = section.blockStates else { continue }
-            let low = section.y.multipliedReportingOverflow(by: 16)
-            let high = low.partialValue.addingReportingOverflow(15)
-            guard !low.overflow, !high.overflow else { return result }
-            guard high.partialValue >= bottom.partialValue else { break }
-            if blocks.isUniform {
-                if blocks.palette[0].isAir { continue }
-                for i in columns.indices where pending[i] { result[i] = high.partialValue }
-                return result
-            }
-
-            let air = blocks.palette.map(\.isAir)
-            let indices = columns.count == 1 ? nil : blocks.allPaletteIndices()
-            for y in stride(from: 15, through: 0, by: -1) {
-                guard remaining > 0, low.partialValue + y >= bottom.partialValue else { break }
-                let plane = ChunkSection.blockIndex(x: 0, y: y, z: 0)
-                for i in columns.indices where pending[i] {
-                    let p = indices?[plane + columns[i]] ?? blocks.paletteIndex(at: plane + columns[i])
-                    // An invalid reference cannot establish air or a lower surface.
-                    if p >= air.count || !air[p] {
-                        if p < air.count { result[i] = low.partialValue + y }
-                        pending[i] = false
-                        remaining -= 1
-                    }
-                }
-            }
+        visitColumnRuns(at: columns, starts: nil, seekingSurface: true) { i, run in
+            result[i] = run.y.upperBound
+            return false
         }
         return result
     }

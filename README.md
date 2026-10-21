@@ -313,6 +313,32 @@ references stay unavailable; air variants are skipped, while plants and water co
 `MOTION_BLOCKING` is not used because it describes a different set of blocks. Roof hiding,
 water shading and cave-biome classification are separate from this reader.
 
+The unreleased additive `Chunk.forEachColumnRun(from:_:)` API visits the saved blocks of all
+256 columns in one downward traversal. Use `.surface(height: knownBuildHeight)` for the same
+WORLD_SURFACE/actual-block starting rule, or `.height(y)` for an explicit cutaway. Uniform
+sections produce a clipped inclusive Y range; other sections produce one block per run. The
+run identifies its column, original section index and palette index, so clients can resolve
+their own presentation once per palette entry instead of copying block names at every step.
+
+```swift
+chunk.forEachColumnRun(from: .surface()) { run in
+    guard let palette = run.paletteIndex,
+          let blocks = chunk.sections[run.sectionIndex].blockStates else { return false }
+    print(run.column, run.y, blocks.palette[palette].id)
+    return false // Finish this column; other columns continue independently.
+}
+```
+
+Return true to continue below that run; throwing stops the whole traversal. Missing/light-only
+sections stay gaps. Clients counting contiguous water, for example, must compare neighboring
+run ranges rather than fill a gap. Saved empty surface columns and invalid build heights produce
+no visits. Without a readable heightmap, air is skipped and an invalid reference stops that column
+before a surface is established. After the starting surface (or from an explicit Y), air and
+invalid palette references are reported so the caller can choose its policy. Each reached
+nonuniform section is unpacked once. The existing single/batched surface fallback uses this
+same traversal, with single-column queries reading only their requested column. No colors,
+roof-hiding policy, cache format or region-fact interpretation changes are introduced here.
+
 Region scans now use this surface owner instead of sampling a section's top when a heightmap
 is absent. Air classification uses Identifier's default namespace, so `air` and `:air` are
 equivalent to `minecraft:air`; foreign-namespace names are not treated as vanilla air. Raw block
