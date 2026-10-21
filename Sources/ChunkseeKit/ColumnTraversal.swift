@@ -32,7 +32,7 @@ extension Chunk {
     /// Missing/light-only sections are gaps, not invented air or water. Compare run Y ranges when
     /// continuity matters. After the surface is found, air and invalid references are reported too.
     /// Colors, roof hiding and water-depth limits belong to the caller.
-    @inlinable
+    @inlinable @inline(__always)
     public func forEachColumnRun(from start: ColumnStart = .surface(),
                                  _ body: (ColumnRun) throws -> Bool) rethrows {
         guard let (starts, seekingSurface) = columnTraversalStart(start) else { return }
