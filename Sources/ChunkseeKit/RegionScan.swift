@@ -12,7 +12,7 @@ extension Dimension {
     public func scan(region position: RegionPosition, options: RegionScanOptions = .init()) throws -> RegionFacts {
         try Task.checkCancellation()
         guard let origin = position.chunkOrigin else { throw RegionScanError.invalidRegion(position) }
-        if let height = options.height, height <= 0 || height > Int(UInt32.max) { throw RegionScanError.invalidHeight(height) }
+        if let height = options.height, Chunk.heightmapBitWidth(for: height) == nil { throw RegionScanError.invalidHeight(height) }
         var facts = RegionFacts(dimension: id, region: position, options: options)
         let omitted = Chunk.keysNotNeededForTerrain.subtracting(["block_entities", "structures"])
 
@@ -99,18 +99,7 @@ extension TerrainChunkFacts {
     }
 
     private static func sampleBiome(_ chunk: Chunk, heights: [String: [Int]], y requested: Int?) -> String? {
-        let y: Int
-        if let requested { y = requested }
-        else if let height = heights["WORLD_SURFACE"]?[8 * 16 + 8] {
-            let top = height.subtractingReportingOverflow(1)
-            guard !top.overflow else { return nil }
-            y = top.partialValue
-        } else if let section = chunk.sections.last(where: { $0.blockStates?.palette.contains { !$0.isAir } == true }) {
-            let bottom = section.y.multipliedReportingOverflow(by: 16)
-            let top = bottom.partialValue.addingReportingOverflow(15)
-            guard !bottom.overflow, !top.overflow else { return nil }
-            y = top.partialValue
-        } else { return nil }
+        guard let y = requested ?? chunk.surfaceY(x: 8, z: 8, heightmap: heights["WORLD_SURFACE"]) else { return nil }
         return chunk.biome(x: 8, y: y, z: 8)
     }
 }

@@ -318,11 +318,15 @@ public struct Chunk: Sendable {
     /// Decodes using the dimension's actual build height (number of blocks, not its maximum Y).
     /// Minecraft stores ceil(log2(height + 1)) bits per entry. Inconsistent data is unavailable.
     public func heightmap(_ name: String, height: Int) -> [Int]? {
-        guard height > 0 else { return nil }
-        let bits = Int.bitWidth - height.leadingZeroBitCount
-        guard bits <= 32, let longs = nbt["Heightmaps"]?[name]?.longArray,
+        guard let bits = Self.heightmapBitWidth(for: height), let longs = nbt["Heightmaps"]?[name]?.longArray,
               PackedLongs.wordCount(entries: 256, bits: bits) == longs.count else { return nil }
         return decodedHeightmap(longs, bits: bits, maximum: height)
+    }
+
+    static func heightmapBitWidth(for height: Int) -> Int? {
+        guard height > 0 else { return nil }
+        let bits = Int.bitWidth - height.leadingZeroBitCount
+        return bits <= 32 ? bits : nil
     }
 
     private func decodedHeightmap(_ longs: [Int64], bits: Int, maximum: Int?) -> [Int]? {
