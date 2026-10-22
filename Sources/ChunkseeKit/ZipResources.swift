@@ -4,12 +4,12 @@ import Foundation
 /// Reads ordinary stored/deflated ZIP resources without extracting files. Unknown archive
 /// features stay unavailable: absence permits fallback only after validating the whole directory.
 /// Layout: PKWARE APPNOTE 6.3.10, sections 4.3 and 4.4.
-struct ZipResources {
+struct ZipResources: Sendable {
     private let data: Data
     private let entries: [Data: Entry]
     static let maximumResourceSize = 16 * 1024 * 1024
 
-    private struct Entry {
+    private struct Entry: Sendable {
         let payload: Range<Int>
         let size: Int
         let method: UInt16
