@@ -143,7 +143,7 @@ omitted. The range is not an exact ore position. The core scan still accepts any
 this catalog does not expand the app's existing scan or search scope. Names and display wording
 remain in the app; adoption is tracked on fahlman/Chunksee#386.
 
-**Unreleased:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
+**v0.46.0:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
 terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
 notable deposits. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
 available replacements retain the last good data, selected missing regions are removed, and a nil
@@ -168,8 +168,23 @@ let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiom
 let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
 ```
 
-The remaining world index, typed search results, CLI adoption and app adoption are tracked in
-fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
+**Unreleased:** `WorldIndex<Dimension>` holds the world's dimension catalog and supplies typed
+`Placed<Value>` records through `all(_:)`. Each record keeps its dimension ID, including when
+different dimensions contain identical values. Member order is preserved; dimension order is
+unspecified, as in the app's original SearchIndex. Replacing one dictionary entry leaves the other
+dimensions and earlier value snapshots intact. The payload can be `DimensionIndex` or a client's
+native projection of it, without adding UI dependencies to the shared module. There is no second
+catalog, file access, task, or persistence owner.
+
+```swift
+let worldIndex = WorldIndex(dimensions: [current.dimension: current])
+for entry in worldIndex.all(\.containers) {
+    print(entry.dimension, entry.value.kind)
+}
+```
+
+Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
+Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)
 
