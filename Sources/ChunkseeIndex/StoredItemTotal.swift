@@ -12,9 +12,8 @@ public struct StoredItemTotal: Sendable, Equatable {
     public static func totals(in containers: [ItemContainer]) -> [StoredItemTotal] {
         var totals: [String: (count: Int, containers: Int)] = [:]
         for container in containers {
-            var here: [String: Int] = [:]
-            for item in container.allItems { here[item.id, default: 0] += item.count }
-            for (id, count) in here {
+            let here = ItemTotals(in: container.items, groupingBy: \.id)
+            for (id, count) in here.quantities {
                 totals[id, default: (0, 0)].count += count
                 totals[id, default: (0, 0)].containers += 1
             }

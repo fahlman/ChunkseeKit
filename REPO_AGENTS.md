@@ -35,7 +35,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; matching-item and storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
@@ -103,6 +103,13 @@ member order is preserved and dimension order is unspecified. Dictionary value s
 earlier snapshots when a later one replaces a dimension. The app's reader catalog, background tasks,
 cancellation and publication stay app-owned. This additive API is unreleased; app adoption and
 remaining typed search-result work are tracked on fahlman/Chunksee#214.
+
+`ItemTotals<Key>` owns matching-stack quantities, using the core ItemStack.allItems traversal for
+nested contents. The caller supplies its predicate and grouping identity; searchable fields,
+localized labels, ordering and output remain client-owned. CLI find uses its existing custom-name
+or saved-ID key; StoredItemTotal uses saved IDs and keeps outer-container counts. A matching
+zero-count stack remains a result. This additive API is unreleased; app adoption follows the
+release on fahlman/Chunksee#214. No reader, inventory selection or cache meaning changes.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,

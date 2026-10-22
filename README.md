@@ -183,6 +183,18 @@ for entry in worldIndex.all(\.containers) {
 }
 ```
 
+**Unreleased:** `ItemTotals` adds up matching stacks, including nested box and bundle contents.
+Clients supply the match predicate and grouping key, so the app can match localized item labels
+while the CLI keeps its saved-ID/custom-name search and alphabetical output. `quantities` holds
+each group's count; `count` is their total. A matching zero-count stack still makes `isEmpty` false.
+The CLI's `find` command and storage totals use this owner; app adoption follows its release.
+Storage still counts each outer container once for each saved item ID it contains.
+
+```swift
+let matches = ItemTotals(in: items, matching: { query.matches($0.id) }, groupingBy: \.id)
+for (id, quantity) in matches.quantities { print(id, quantity) }
+```
+
 Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
 Core decoding and low-level file APIs stay in ChunkseeKit.
 

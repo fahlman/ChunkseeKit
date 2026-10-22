@@ -4,6 +4,25 @@ import Testing
 import ChunkseeKit
 
 @Suite struct CLISearchTests {
+    @Test func findKeepsSameNamedKindsTogetherIncludingNestedItems() throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        func item(_ id: String, _ count: Int32) -> NBT {
+            .compound(["id": .string(id), "count": .int(count),
+                       "components": .compound(["minecraft:custom_name": .string("Shared")])])
+        }
+        let bundle = NBT.compound(["id": .string("minecraft:bundle"), "count": .int(1),
+                                   "components": .compound(["minecraft:bundle_contents": .list([item("minecraft:stone", 4)])])])
+        try Fixtures.writeGzippedNBT(.compound(["Inventory": .list([
+            item("minecraft:diamond", 2), item("minecraft:stone", 3), bundle,
+        ])]), to: root.appendingPathComponent("players/data/01234567-89ab-cdef-0123-456789abcdef.dat"))
+        let result = try Fixtures.runCLI(root, command: "find", arguments: ["shared"])
+        #expect(result.status == 0)
+        #expect(result.output.split(separator: "\n").map(String.init) == [
+            "player 01234567 inventory: 9 \"Shared\"", "0 containers",
+        ])
+    }
+
     @Test(arguments: [false, true])
     func textIncludesOffhandBooksAndFindKeepsEveryPlayerStore(_ legacy: Bool) throws {
         let root = try world()
