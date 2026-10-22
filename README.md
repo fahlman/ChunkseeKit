@@ -393,8 +393,9 @@ for a saved `minecraft:noise` generator. The seven vanilla noise definitions are
 `NoiseGenerationSettings.seaLevel` is the saved `sea_level`, independently optional when missing
 or not a readable signed 32-bit integer. It uses the same inline definitions and enabled folder/ZIP
 packs as the bounds. An absent or malformed value does not discard readable bounds or fall back to
-another pack's sea level. It is not clamped to the generation/build range: the verified 26.3
-floating-islands preset has sea level −64 with a `0..<256` generation range. This is a generation
+another pack's sea level. Numeric decoding follows the bounds reader's strict checks rather than
+the game's permissive `Number.intValue` conversion. It is not clamped to the generation/build range:
+the verified 26.3 floating-islands preset has sea level −64 with a `0..<256` generation range. This is a generation
 setting, not a measurement of water in saved chunks; display scales and colours belong to the app.
 
 `NoiseGenerationSettings.range` is the saved noise range, including a valid empty range.

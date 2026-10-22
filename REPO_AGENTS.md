@@ -268,10 +268,13 @@ or referenced `minecraft:noise` settings; its seven vanilla bounds and sea level
 Its optional `seaLevel` reads the root `sea_level` signed 32-bit integer independently of the bounds.
 Absent or malformed sea levels stay nil without discarding readable bounds or taking another
 pack's value. Values outside the generation/build range remain unchanged, matching the game's
-Codec.INT and floating-islands preset. Existing integral NBT tags are accepted within Int32;
-fractional tags and noninteger JSON values are not invented as heights. The app owns how to use
-these facts in a height scale; no actual water surface is inferred. This additive field supports
-fahlman/Chunksee#388 and #356, with publication and app adoption handled separately.
+Codec.INT's lack of a range constraint and the floating-islands preset. Numeric decoding follows
+the existing bounds reader: integral NBT tags and integer-valued JSON numbers (including `63.0`)
+within Int32 are accepted; floating-point NBT tags, fractional JSON values and overflow stay nil.
+This is deliberately stricter than the game's `Number.intValue` conversion, which can truncate or
+narrow such numbers. The app owns how to use these facts in a height scale; no actual water surface
+is inferred. This additive field supports fahlman/Chunksee#388 and #356, with publication and app
+adoption handled separately.
 The existing type-only API shares the resolver but never opens generator resources. Empty noise
 heights remain valid; unknown generator kinds and unresolved settings remain unavailable.
 DimensionType owns the common packed-Y validation, with its extra nonempty-height requirement.

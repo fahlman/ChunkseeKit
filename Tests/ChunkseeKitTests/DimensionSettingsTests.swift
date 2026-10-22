@@ -182,7 +182,7 @@ import Testing
         let cases: [(NBT?, Int?)] = [
             (.int(0), 0), (.int(-64), -64), (.int(10_000), 10_000),
             (.int(.min), Int(Int32.min)), (.long(Int64(Int32.max)), Int(Int32.max)),
-            (nil, nil), (.string("63"), nil), (.float(63), nil), (.compound([:]), nil),
+            (nil, nil), (.string("63"), nil), (.float(63), nil), (.double(63), nil), (.compound([:]), nil),
             (.long(Int64(Int32.min) - 1), nil), (.long(Int64(Int32.max) + 1), nil),
         ]
         let definitions = Dictionary(uniqueKeysWithValues: cases.enumerated().map {
@@ -205,6 +205,7 @@ import Testing
                               packs: ["vanilla", "file/Lower", "file/Upper"])
         let cases: [(String?, Int?)] = [
             ("-64", -64), ("0", 0), ("2147483647", Int(Int32.max)), ("-2147483648", Int(Int32.min)),
+            ("63.0", 63), ("6.3e1", 63),
             (nil, nil), ("null", nil), ("true", nil), ("\"63\"", nil), ("1.5", nil),
             ("2147483648", nil), ("-2147483649", nil), ("{}", nil),
         ]
