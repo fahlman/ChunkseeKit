@@ -10,9 +10,10 @@ func findCommand(_ world: World, _ arguments: Arguments) {
             query.matches(item.id) || (item.customName.map(query.matches) ?? false)
         }
         func summary(_ items: [ItemStack]) -> String {
-            let hits = items.flatMap(\.allItems).filter(matches)
-            let byID = Dictionary(grouping: hits, by: { $0.customName.map { "\"\($0)\"" } ?? $0.id }).mapValues { $0.reduce(0) { $0 + $1.count } }
-            return byID.sorted { $0.key < $1.key }.map { "\($0.value) \($0.key)" }.joined(separator: ", ")
+            let totals = ItemTotals(in: items, matching: matches) {
+                $0.customName.map { "\"\($0)\"" } ?? $0.id
+            }
+            return totals.quantities.sorted { $0.key < $1.key }.map { "\($0.value) \($0.key)" }.joined(separator: ", ")
         }
         for player in world.players() {
             for (label, items) in [("inventory", player.searchableInventory), ("ender chest", player.enderChest)] {
