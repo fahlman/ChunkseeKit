@@ -15,22 +15,26 @@ public struct StatusEffect: Sendable, Equatable {
     }
 
     init?(_ nbt: NBT) {
-        let id: String
-        if let saved = nbt["id"]?.string, !saved.isEmpty {
-            guard let identifier = Identifier(saved) else { return nil }
-            id = identifier.description
-        } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
-            id = "minecraft:" + Self.legacyIDs[number]
-        } else { return nil }
-        guard let amplifier = Self.savedAmplifier(nbt["amplifier"] ?? nbt["Amplifier"]),
+        guard let id = Self.savedID(nbt),
+              let amplifier = Self.savedAmplifier(nbt["amplifier"] ?? nbt["Amplifier"]),
               let duration = nbt["duration"]?.int ?? nbt["Duration"]?.int,
               duration == -1 || duration > 0 else { return nil }
         self.init(id: id, amplifier: amplifier, durationTicks: duration)
     }
 
+    /// Shared by active effects and potion contents; only active effects require a live duration.
+    static func savedID(_ nbt: NBT) -> String? {
+        if let saved = nbt["id"]?.string, !saved.isEmpty {
+            return Identifier(saved)?.description
+        } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
+            return "minecraft:" + Self.legacyIDs[number]
+        }
+        return nil
+    }
+
     /// 26.3's UNSIGNED_BYTE codec narrows Number.byteValue before unsigned interpretation.
     /// Edited numeric tags therefore wrap, while a missing amplifier still defaults to zero.
-    private static func savedAmplifier(_ tag: NBT?) -> Int? {
+    static func savedAmplifier(_ tag: NBT?) -> Int? {
         guard let tag else { return 0 }
         return tag.javaInt.map { Int(UInt8(truncatingIfNeeded: $0)) }
     }

@@ -352,6 +352,17 @@ readers and the existing effect-amplifier reader without changing the latter's b
 field or RegionFacts version changes: retained components already contain these facts. These APIs
 are unreleased on #145 for fahlman/Chunksee#390; normal potion-effect colors and app tinting remain
 separate work. Missing explicit colors never become invented defaults.
+
+`ItemStack.potionColor(gameDataVersion:defaultColor:)` owns the effect-based potion tint, using
+that same explicit override reader and shared StatusEffect ID/amplifier interpretation. Visible
+effects are weighted by level; zero duration does not remove a potion color. Removed/missing
+contents or no visible effects uses the caller's definition default. Unknown needed registry
+facts and unreadable color-driving fields remain unavailable. Sums are bounded to 4,096 saved
+effects. Vanilla recipes/colors are verified for 26.3/5023 only, against official bytecode and
+the game's built-in registries (46 potions, 40 effects); these facts have no asset JSON. There
+is no global inference for other versions. This additive computed API is unreleased on #149,
+with no serialized/cache interpretation change or player-active-effect behavior change. Image
+tinting remains app-owned on fahlman/Chunksee#390.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
 shared saved-position reader. The values are projected only when requested; a lookup stops at

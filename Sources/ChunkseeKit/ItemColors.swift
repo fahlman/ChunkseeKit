@@ -10,18 +10,9 @@ extension ItemStack {
         return ItemColor.integer(components?["display"]?["color"])
     }
 
-    /// An explicit saved potion override as 0xRRGGBB, not a color inferred from potion effects.
-    /// Absent overrides leave the normal effect/definition color to a separate resolver.
-    public var customPotionColor: UInt32? {
-        guard components?["!minecraft:potion_contents"] == nil else { return nil }
-        if let value = components?["minecraft:potion_contents"] {
-            return ItemColor.integer(value["custom_color"])
-        }
-        return ItemColor.integer(components?["CustomPotionColor"])
-    }
 }
 
-private enum ItemColor {
+enum ItemColor {
     static func integer(_ value: NBT?) -> UInt32? {
         value?.javaInt.map { UInt32(bitPattern: $0) & 0x00ff_ffff }
     }
