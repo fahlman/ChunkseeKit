@@ -580,6 +580,18 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+`ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
+`UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
+the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed
+or malformed-present components do not fall back to old tags. Numeric tags follow Java's integer
+narrowing, including signed colors; vector channels use Float precision and floor(channel × 255).
+Nonfinite/out-of-range channel vectors remain unavailable. These are computed from the retained
+components, so existing cached ItemStacks gain them without a rescan or Codable change.
+
+Absent colors remain nil. `customPotionColor` does not calculate the normal color of a potion's
+effects; it is the explicit override only. Clients apply these values to the appropriate model
+tint layers, leaving default colors and normal potion-effect resolution to their respective owners.
+
 ### Block coordinates
 
 `BlockPosition` converts exact coordinates to the containing block, rounding negative fractions

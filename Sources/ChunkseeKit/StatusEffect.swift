@@ -31,26 +31,8 @@ public struct StatusEffect: Sendable, Equatable {
     /// 26.3's UNSIGNED_BYTE codec narrows Number.byteValue before unsigned interpretation.
     /// Edited numeric tags therefore wrap, while a missing amplifier still defaults to zero.
     private static func savedAmplifier(_ tag: NBT?) -> Int? {
-        switch tag {
-        case nil: return 0
-        case .byte(let value)?: return Int(UInt8(bitPattern: value))
-        case .short(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .int(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .long(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .float(let value)?: return floatingAmplifier(Double(value))
-        case .double(let value)?: return floatingAmplifier(value)
-        default: return nil
-        }
-    }
-
-    private static func floatingAmplifier(_ value: Double) -> Int {
-        // Java first truncates to a signed int (NaN -> 0, overflow -> endpoint), then a byte.
-        let narrowed: Int32
-        if value.isNaN { narrowed = 0 }
-        else if value >= Double(Int32.max) { narrowed = .max }
-        else if value <= Double(Int32.min) { narrowed = .min }
-        else { narrowed = Int32(value) }
-        return Int(UInt8(truncatingIfNeeded: narrowed))
+        guard let tag else { return 0 }
+        return tag.javaInt.map { Int(UInt8(truncatingIfNeeded: $0)) }
     }
 
     // Before 1.20.2 effects used numeric IDs; player files can remain in the older format.
