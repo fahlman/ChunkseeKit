@@ -1,9 +1,12 @@
 import Foundation
 
-/// Saved noise-generation bounds, separate from a dimension's build limits and logical height.
+/// Saved noise-generation facts, separate from a dimension's build limits and logical height.
 public struct NoiseGenerationSettings: Sendable, Equatable {
     public let minY: Int
     public let height: Int
+    /// The saved sea level, or nil when absent or not a readable signed 32-bit integer.
+    /// It can be outside the generation/build range; no water surface is inferred from it.
+    public let seaLevel: Int?
 
     /// The noise settings' own range. A zero height is valid and produces an empty range.
     public var range: Range<Int> { minY ..< minY + height }
@@ -16,25 +19,37 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
         return start ..< start + min(height, type.height)
     }
 
-    private init?(minY: Int, height: Int) {
+    private init?(minY: Int, height: Int, seaLevel: Int?) {
         guard DimensionType.validYBounds(minY: minY, height: height) else { return nil }
         self.minY = minY
         self.height = height
+        self.seaLevel = seaLevel
     }
 
     init?(_ nbt: NBT) {
         guard let minY = nbt["noise"]?["min_y"]?.int,
               let height = nbt["noise"]?["height"]?.int else { return nil }
-        self.init(minY: minY, height: height)
+        self.init(minY: minY, height: height,
+                  seaLevel: nbt["sea_level"]?.int.flatMap(Int32.init(exactly:)).map(Int.init))
     }
 
     init?(json: Data) {
         guard let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
-        self.init(minY: value.noise.minY, height: value.noise.height)
+        self.init(minY: value.noise.minY, height: value.noise.height, seaLevel: value.seaLevel)
     }
 
     private struct Definition: Decodable {
         let noise: Bounds
+        let seaLevel: Int?
+        enum CodingKeys: String, CodingKey { case noise, seaLevel = "sea_level" }
+
+        init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            noise = try values.decode(Bounds.self, forKey: .noise)
+            // A bad sea level must not discard independently readable generation bounds.
+            seaLevel = (try? values.decode(Int32.self, forKey: .seaLevel)).map(Int.init)
+        }
+
         struct Bounds: Decodable {
             let minY: Int, height: Int
             enum CodingKeys: String, CodingKey { case minY = "min_y", height }
@@ -45,10 +60,11 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
         guard version == SaveVersion.java26_3 else { return nil }
         switch id {
         case "minecraft:overworld", "minecraft:amplified", "minecraft:large_biomes":
-            return Self(minY: -64, height: 384)
-        case "minecraft:nether", "minecraft:end": return Self(minY: 0, height: 128)
-        case "minecraft:caves": return Self(minY: -64, height: 192)
-        case "minecraft:floating_islands": return Self(minY: 0, height: 256)
+            return Self(minY: -64, height: 384, seaLevel: 63)
+        case "minecraft:nether": return Self(minY: 0, height: 128, seaLevel: 32)
+        case "minecraft:end": return Self(minY: 0, height: 128, seaLevel: 0)
+        case "minecraft:caves": return Self(minY: -64, height: 192, seaLevel: 32)
+        case "minecraft:floating_islands": return Self(minY: 0, height: 256, seaLevel: -64)
         default: return nil
         }
     }
