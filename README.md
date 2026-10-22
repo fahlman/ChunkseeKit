@@ -566,6 +566,16 @@ Missing, empty or malformed identifiers return nil. Nitwits and custom professio
 distinct; false does not mean that the villager can work or trade. The raw `profession` and
 serialized data are retained, so older cached values use this interpretation without a rescan.
 
+The additive `Villager.supportsTrading` fact uses the vanilla 26.3 profession registrations
+when there are no readable saved offers: the 13 trading professions return true, `none` and
+`nitwit` return false, and unknown/custom/malformed professions return nil. A farmer that has
+never been traded with still returns true because Minecraft creates offers lazily. Readable
+saved trades take precedence, including custom or command-edited villagers. This does not
+describe current interaction readiness (age, sleeping or sold-out offers). Custom registry
+definitions are not loaded, and vanilla profession definitions are assumed unchanged.
+The property is computed from existing fields: saved levels, Codable data and RegionFacts
+interpretation are unchanged, and older cached records need no rescan for it.
+
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
 matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
 unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
