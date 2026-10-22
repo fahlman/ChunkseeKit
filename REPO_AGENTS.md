@@ -309,6 +309,22 @@ within the existing -16...32 model range, and special parts share the item/model
 No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
 This is unreleased work for fahlman/Chunksee#395; app adoption follows its own release and tests.
 
+`GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
+variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
+retains weighted alternatives, model IDs, X/Y/Z quarter turns and UV locking; it does not pick a
+random model or project faces. Missing properties remain unknown unless another predicate term
+settles the result. The jar's artwork does not supply the registry defaults omitted by compact
+26.3 saved states, so clients retain their fallback when selection is unresolved. No default-state
+table or registry inference is introduced. Per-term multipart negation is verified for 5023 only;
+unknown versions with negation stay unavailable. Property domains are not registry-validated.
+The Variant/Quadrant, BlockStateModelDispatcher and multipart codecs establish the format.
+Strict JSON primitives share `AssetJSON` with item definitions; archive reads, parent resolution,
+textures and the cumulative JSON/element budget retain their existing owners. Block selection
+is additionally bounded to 256 selected models, 4,096 selectors/condition nodes or terms and
+64 condition levels. This additive API is unreleased for fahlman/Chunksee#363; default-state
+coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
+No world, serialized model or RegionFacts version change.
+
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
 or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.

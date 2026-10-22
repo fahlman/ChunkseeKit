@@ -1,4 +1,4 @@
-/// One budget spans an item definition and every model reached through its selected branches.
+/// One budget spans an asset definition and every model reached through its selected branches.
 struct AssetReadBudget {
     private var remainingBytes = ZipResources.maximumResourceSize
     private var remainingElements = 4096

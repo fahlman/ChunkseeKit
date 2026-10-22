@@ -900,7 +900,7 @@ for map in world.mapItems() where !map.isBlank {
 }
 ```
 
-### Game asset models (unreleased)
+### Game asset models (v0.50.0 and later)
 
 `GameAssets` reads a supplied Minecraft game jar through the same validated ZIP reader as data
 packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
@@ -927,13 +927,13 @@ Parents and texture references have cycle detection and a 64-step limit. Each re
 combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or
 unresolvable required resources return nil, as do nonfinite/invalid numeric fields; valid empty
 geometry stays empty. These reader bounds intentionally reject unusually large custom models.
-No resource-pack layering, blockstate selection, sprite-atlas remapping or animation interpretation
-is included. Those follow separately for fahlman/Chunksee#390 and #363 using this shared reader.
+No resource-pack layering, sprite-atlas remapping or animation interpretation is included.
+Those follow separately for fahlman/Chunksee#390 and #363 using this shared reader.
 The model format and defaults were checked against the official 26.3 client JSON and its
 cuboid/model resolver bytecode.
 
 `assets.defaultItemModel("minecraft:leather_helmet")` resolves the static default variant from
-an item definition (unreleased, #147). Its ordered `AssetItem.parts` reuse `AssetModel` and carry
+an item definition. Its ordered `AssetItem.parts` reuse `AssetModel` and carry
 indexed tint sources: constant RGB, saved dye/potion/firework with definition defaults, or a
 pixel in the supplied grass colormap. The client decodes that 256×256 PNG and applies colors to
 the corresponding layer/face tint index; an absent index is untinted. Saved dye and custom-potion
@@ -956,7 +956,7 @@ finite Float channels in 0...1; Boolean, fractional scalar, overflow and invalid
 Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
 tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
 
-Closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
+Since v0.50.2, closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
 resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.
 The chest body, lid and latch and the two shulker boxes use verified game-code geometry and UVs;
 their texture IDs and inherited GUI presentation come from the supplied jar. Normal, trapped,
@@ -972,6 +972,46 @@ of positive scale, translation and identity or a half-turn around X, with an ide
 rotation. This includes the shulker's transform; unsupported transforms are rejected instead
 of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
 element/JSON/part budgets. No public type or cache interpretation changes.
+
+### Blockstate model selection (unreleased)
+
+`GameAssets.blockModel(for:)` matches a `BlockState` against its jar definition and returns
+an `AssetBlock`. Explicit variants take precedence over multipart selectors. All matching
+multipart pieces are retained, in definition order. Each part contains one or more weighted
+alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and UV-lock flag.
+The rotations remain separate from the model's inventory transform. This API preserves the
+choices; it does not choose a random alternative or project a top face.
+
+```swift
+let horizontalLog = BlockState("minecraft:oak_log", properties: ["axis": "x"])
+if let models = assets.blockModel(for: horizontalLog) {
+    for part in models.parts {
+        for choice in part.alternatives {
+            print(choice.modelID, choice.weight, choice.rotation, choice.uvLock)
+        }
+    }
+}
+```
+
+The supplied properties must settle every relevant predicate. **Missing properties are not
+guessed.** In 26.3, a saved default state can omit its properties, and the artwork files do not
+contain the registry defaults. Such a state returns nil when it prevents a unique decision;
+clients can retain their existing fallback. Property domains are not validated against the
+game registry. Multipart AND/OR and pipe-separated alternatives are supported, including the
+26.3 per-term `!` negation only for data version 5023; negation in other versions stays unavailable.
+Integer and Boolean condition values retain the codec's legacy representations. Numeric fields
+use strict JSON types and signed 32-bit bounds rather than coercing strings or fractions.
+
+Missing or unsupported selected models, overlapping variants, malformed selectors and exhausted
+bounds return nil for the whole result. Unselected model resources are not loaded. An empty
+multipart result remains empty. Reads share a 16 MiB JSON / 4,096-element budget across at most
+256 selected models. Definitions allow at most 4,096 selectors; condition traversal allows
+4,096 nodes/terms and 64 nested levels. Weighted alternatives have positive weights with a
+signed 32-bit total; a standalone model ignores the weight field, as in the game.
+
+This additive API reuses the existing archive/model/texture owners. Image decoding, position-based
+randomization, caching, tinting, color averaging and map drawing remain client/adoption work on
+fahlman/Chunksee#363. No world data, persisted shape or RegionFacts interpretation changes.
 
 ### Raw NBT
 
