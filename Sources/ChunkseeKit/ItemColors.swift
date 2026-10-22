@@ -9,7 +9,6 @@ extension ItemStack {
         }
         return ItemColor.integer(components?["display"]?["color"])
     }
-
 }
 
 enum ItemColor {

@@ -285,8 +285,9 @@ budgets span all selected models. RGB conversion is shared with ItemStack's save
 grass tint sources expose the official 256×256 colormap sample without decoding an image.
 JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are
 unreleased, tracked on #147. The app selects this static representation, applies saved colors,
-and owns images and caching. Normal potion-effect/saved firework tint calculation, blockstate
-selection and resource-pack layering remain separate; no UI or world writing is added here.
+and owns images and caching. Potion color calculation uses ItemStack.potionColor. Saved firework
+colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
+is added here.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
