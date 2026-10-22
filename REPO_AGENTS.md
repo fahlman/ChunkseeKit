@@ -35,11 +35,11 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas, immutable point-region lookup and search query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas, immutable point-region lookup, grouped block deposits and search query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
-| `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs | `ChunkseeIndex`, `ChunkseeKit` |
+| `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs and shared save fixtures | Foundation, `ChunkseeIndex`, `ChunkseeKit`, `ChunkseeKitTestSupport` |
 
 `ChunkseeIndex.BiomeArea.connected(in:)` owns edge-connected biome grouping, representative-member
 selection and exposed chunk sides. It preserves every area and ignores unmappable chunk origins.
@@ -61,8 +61,17 @@ Recognized prefixes ignore case and trim horizontal whitespace; unknown prefixes
 Its explicit phrase initializer preserves the CLI's contiguous, case-insensitive `find`/`text`
 queries, including spaces and colons. Both forms share one substring matcher. The CLI consumes
 that owner; app names, prompts, symbols, category membership and result formatting remain outside
-the library. This additive API is unreleased, with app adoption following its next minor tag on
-fahlman/Chunksee#214. Retained world-index state and typed result aggregation remain separate work.
+the library. This additive API is available in v0.44.0 and adopted by fahlman/Chunksee#385.
+Retained world-index state and typed result aggregation remain separate work on fahlman/Chunksee#214.
+
+`ChunkseeIndex.NotableBlock` owns the app's existing nine block-search groups and exact ID catalog.
+Its nested Deposit groups the core reader's per-ID counts and enclosing section-height bounds,
+combining ore variants and ordering by the group's raw value. Unknown IDs and common blocks outside
+the catalog remain excluded. These are indexed section ranges, not exact block locations. Core
+scan options and file interpretation are unchanged; client names and search-result wording stay
+outside the module. This additive API is unreleased, with separate app adoption on fahlman/Chunksee#214.
+It prepares compact typed region contributions without retaining unused heightmaps or repeating
+group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,

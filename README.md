@@ -120,20 +120,28 @@ Unusable query bounds return the full snapshot. Large sparse queries visit occup
 instead of enumerating empty space. The app's existing marker lookup is the source of this API;
 its adoption is tracked on fahlman/Chunksee#384. No file access, scheduling or cache is introduced.
 
-**Unreleased:** `SearchQuery` interprets the existing app query grammar and matches searchable
+**v0.44.0:** `SearchQuery` interprets the existing app query grammar and matches searchable
 text. Recognized `structure:`, `place:`, `creature:`, `pet:`, `villager:`, `trade:`, `biome:` and
 `block:` prefixes select a filter. Other colons remain literal search text. Every whitespace-separated
 word must occur, ignoring case, in any order; an empty filter can list all of its category.
 Clients choose the category's records and provide names, searchable text and result presentation.
 The `phrase:` initializer preserves the CLI's existing `find`/`text` grammar: one literal phrase,
 including its spaces and colons, without parsing filters. Both use the same substring matcher.
-The CLI consumes this API; the app's adoption follows a reviewed release on fahlman/Chunksee#214.
+The CLI consumes this API; the app adopted it in fahlman/Chunksee#385.
 
 ```swift
 let query = SearchQuery("pet: summer wolf")
 if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching pet */ }
 let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
 ```
+
+**Unreleased:** `NotableBlock` owns the existing block-search catalog and its exact saved IDs.
+`NotableBlock.Deposit.grouped(_:)` combines the core reader's per-ID deposits into those groups,
+including ordinary/deepslate ore variants, and returns counts and enclosing section-height ranges.
+Results are ordered by the group's raw value; unknown IDs and blocks outside this catalog are
+omitted. The range is not an exact ore position. The core scan still accepts any chosen block IDs;
+this catalog does not expand the app's existing scan or search scope. Names and display wording
+remain in the app, whose adoption follows the next reviewed release on fahlman/Chunksee#214.
 
 The remaining world index, typed search results and app adoption are tracked in
 fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
