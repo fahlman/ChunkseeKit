@@ -36,6 +36,8 @@ public struct GameAssets: Sendable {
     /// This explicitly chooses a default variant, not live property evaluation or a saved override.
     /// Selected unsupported/malformed resources return nil. Resolution shares a 16 MiB JSON
     /// and 4096-element budget across at most 64 selected nodes and 32 model parts.
+    /// Closed single chests and shulker boxes use verified 26.3 geometry as ordinary elements;
+    /// unverified versions, textures and special transforms remain unsupported.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
         try? AssetItemReader(assets: self).read(identifier)
     }
