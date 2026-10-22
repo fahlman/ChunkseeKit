@@ -32,9 +32,12 @@ struct AssetItemReader {
             let children = try array(node["models"])
             guard children.count <= 64 else { throw Invalid.asset }
             for child in children { try visit(child, parts: &parts, nodes: &nodes, budget: &budget) }
-        case "minecraft:condition", "minecraft:select":
+        case "minecraft:condition":
             _ = try identifier(node["property"])
-            let child = node[type.path == "condition" ? "on_false" : "fallback"]
+            try visit(node["on_false"], parts: &parts, nodes: &nodes, budget: &budget)
+        case "minecraft:select":
+            let property = try identifier(node["property"])
+            let child = property.description == "minecraft:display_context" ? try inventoryCase(node) : node["fallback"]
             try visit(child, parts: &parts, nodes: &nodes, budget: &budget)
         case "minecraft:range_dispatch":
             _ = try identifier(node["property"])
@@ -54,6 +57,27 @@ struct AssetItemReader {
         case "minecraft:empty": break
         default: throw Invalid.asset
         }
+    }
+
+    /// Inventory is a known context, unlike live properties such as use state or compass angle.
+    /// Validate the case table but resolve only its selected model, as for other static branches.
+    private func inventoryCase(_ node: [String: Any]) throws -> Any? {
+        let cases = try array(node["cases"])
+        guard !cases.isEmpty, cases.count <= 4096 else { throw Invalid.asset }
+        var selected = node["fallback"], seen = Set<String>()
+        for raw in cases {
+            let entry = try object(raw)
+            let values: [String]
+            if let value = entry["when"] as? String { values = [value] }
+            else if let list = entry["when"] as? [String] { values = list }
+            else { throw Invalid.asset }
+            guard !values.isEmpty, values.count <= 4096 - seen.count else { throw Invalid.asset }
+            for value in values {
+                guard !value.isEmpty, seen.insert(value).inserted else { throw Invalid.asset }
+                if value == "gui" { selected = entry["model"] }
+            }
+        }
+        return selected
     }
 
     private func tint(_ raw: Any) throws -> AssetItem.Tint {

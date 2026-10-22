@@ -277,10 +277,15 @@ projection, compositing and display policy for fahlman/Chunksee#390 and #363.
 
 `GameAssets.defaultItemModel` resolves a caller-requested static fallback variant from item
 definitions using that same model owner. `AssetItem` retains ordered model parts and typed tint
-sources. Select/range fallbacks, false condition branches and a range's lowest-threshold entry
-when no fallback exists implement app #390's recorded default-variant choice; this API does not
+sources. Display-context selects use their explicit GUI case (string or list), otherwise the
+fallback. Other select/range fallbacks, false condition branches and a range's lowest-threshold
+entry when no fallback exists implement app #390's recorded default-variant choice; this API does not
 evaluate live properties or saved model/trim overrides. Unsupported selected renderers/tints
-return nil for the whole item; unselected branches are ignored. JSON, element, node and part
+return nil for the whole item; unselected model branches are ignored. GUI case tables reject
+empty or duplicate match values, following the official 26.3 DisplayContext, SelectItemModel.SwitchCase
+and SelectItemModelProperty.Type codecs. The reader also bounds these tables to 4,096 cases/values.
+This corrects in-hand spear/spyglass choices and makes the flat trident illustration available
+(Claude-F148-1). JSON, element, node and part
 budgets span all selected models. RGB conversion is shared with ItemStack's saved-color reader;
 grass tint sources expose the official 256×256 colormap sample without decoding an image.
 JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are

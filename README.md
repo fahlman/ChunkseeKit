@@ -940,16 +940,19 @@ the corresponding layer/face tint index; an absent index is untinted. Saved dye 
 overrides are available on ItemStack; normal potion-effect and saved firework colors are not
 calculated by this asset reader.
 
-Calling this API explicitly requests a static illustration: select/range fallbacks, false
-condition branches, and the lowest-threshold range entry (first on a tie) if no fallback exists.
+Calling this API explicitly requests a static inventory illustration. A `minecraft:display_context`
+select uses its `gui` case (a string or a member of a string list), or its fallback if none matches.
+Other selects and ranges use fallbacks, conditions use their false branch, and a range without a
+fallback uses its lowest-threshold entry (first on a tie).
 It does not evaluate live compass angles, time, trim, custom model data or saved item-model
 overrides. Only the selected branches are interpreted; unsupported unselected branches do not
 prevent a usable default. A selected special/entity renderer, unknown tint or malformed value
 makes the entire item unavailable, rather than returning part of a composite. Valid empty
 definitions stay empty. Limits across the definition and its resolved models are 16 MiB of JSON,
 4,096 elements, 64 selected nodes and 32 parts. Tint lists are limited to 32; range tables without
-a fallback to 4,096 entries. Numeric JSON colors require signed 32-bit integers or three finite
-Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
+a fallback and inventory-context tables are limited to 4,096 entries. Inventory-context tables
+require nonempty cases and unique, nonempty match values, with at most 4,096 values in total. Numeric JSON colors require signed 32-bit integers or three
+finite Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
 Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
 tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
 
