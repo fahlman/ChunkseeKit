@@ -168,7 +168,7 @@ let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiom
 let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
 ```
 
-**Unreleased:** `WorldIndex<Dimension>` holds the world's dimension catalog and supplies typed
+**v0.47.0:** `WorldIndex<Dimension>` holds the world's dimension catalog and supplies typed
 `Placed<Value>` records through `all(_:)`. Each record keeps its dimension ID, including when
 different dimensions contain identical values. Member order is preserved; dimension order is
 unspecified, as in the app's original SearchIndex. Replacing one dictionary entry leaves the other
@@ -183,7 +183,7 @@ for entry in worldIndex.all(\.containers) {
 }
 ```
 
-**Unreleased:** `ItemTotals` adds up matching stacks, including nested box and bundle contents.
+**v0.47.0:** `ItemTotals` adds up matching stacks, including nested box and bundle contents.
 Clients supply the match predicate and grouping key, so the app can match localized item labels
 while the CLI keeps its saved-ID/custom-name search and alphabetical output. `quantities` holds
 each group's count; `count` is their total. A matching zero-count stack still makes `isEmpty` false.
@@ -194,6 +194,18 @@ Storage still counts each outer container once for each saved item ID it contain
 let matches = ItemTotals(in: items, matching: { query.matches($0.id) }, groupingBy: \.id)
 for (id, quantity) in matches.quantities { print(id, quantity) }
 ```
+
+**Unreleased:** Search input selection also lives in this module. `PlayerInfo.searchableInventory`
+combines inventory and saved equipment, leaving the ender chest separate and avoiding an extra
+inferred main-hand copy. `BookContent.searchText` joins saved title, author and pages with newlines;
+`Sign.searchLines` keeps both sides without empty lines, preserving whitespace for phrase queries.
+The CLI uses these inputs; clients still supply localized names and display formatting.
+
+`SearchQuery.Filter.includes(_:)` supplies creature-category membership, including villagers for
+trade searches. `WorldIndex.richestDeposits(matching:limit:in:)` selects the strongest matching
+deposits across dimensions from richest-first arrays such as `DimensionIndex.blocks`. It keeps
+each result's dimension and height bounds; equal-count order remains unspecified. Clients choose
+the result limit, match localized block names to kinds, and convert selected chunks to map pins.
 
 Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
 Core decoding and low-level file APIs stay in ChunkseeKit.

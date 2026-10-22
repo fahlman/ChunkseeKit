@@ -4,6 +4,23 @@ import Testing
 import ChunkseeKit
 
 @Suite struct CLISearchTests {
+    @Test func textSearchPreservesSignPhraseSpacingAcrossSides() throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sign = NBT.compound([
+            "id": .string("minecraft:sign"), "x": .int(1), "y": .int(64), "z": .int(1),
+            "front_text": .compound(["messages": .list([.string("Red"), .string(""), .string("Blue")])]),
+            "back_text": .compound(["messages": .list([.string("  Green  "), .string("")])]),
+        ])
+        try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: Fixtures.chunk(x: 0, z: 0, sections: [], extra: [
+            "block_entities": .list([sign]),
+        ]))]), to: root.appendingPathComponent("dimensions/minecraft/overworld/region/r.0.0.mca"))
+        let found = try Fixtures.runCLI(root, command: "text", arguments: ["red blue"])
+        #expect(found.status == 0 && found.output.contains("Red / Blue /   Green  \n1 matches"))
+        let spaced = try Fixtures.runCLI(root, command: "text", arguments: ["blue green"])
+        #expect(spaced.status == 0 && spaced.output == "0 matches\n")
+    }
+
     @Test func findKeepsSameNamedKindsTogetherIncludingNestedItems() throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
