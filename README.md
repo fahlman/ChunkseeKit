@@ -104,9 +104,17 @@ let totals = StoredItemTotal.totals(in: containers)  // [ItemContainer] from the
 for item in totals { print(item.id, item.count, item.containers) }
 ```
 
-This product is introduced in v0.37.0. App adoption follows this release. The remaining world index,
-search, biome areas, spatial lookup and CLI adoption are tracked in fahlman/Chunksee#214; they
-have not moved into this module yet. Core decoding and low-level file APIs stay in ChunkseeKit.
+This product was introduced in v0.37.0 and Chunksee uses its storage totals.
+
+**Unreleased:** `BiomeArea.connected(in:)` groups a dictionary of chunk positions and biome IDs
+into edge-connected areas. Every area is kept, including single chunks; corners do not connect.
+Each area supplies its members, exposed chunk sides and a representative member nearest its
+mean position, with ties ordered by X then Z. Chunks whose block origins cannot be represented
+are omitted. Clients select surface/cave membership and supply paths, colors and names. Chunksee's
+adoption follows the next minor release; its existing grouping rule is the source of this API.
+
+The remaining world index, search, spatial lookup and CLI adoption are tracked in
+fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)
 
