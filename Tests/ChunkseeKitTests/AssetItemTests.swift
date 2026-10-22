@@ -44,6 +44,40 @@ import Testing
         #expect(try assets(duplicate).defaultItemModel("sample")?.parts.isEmpty == true)
     }
 
+    @Test func inventoryContextSelectsItsStringOrListCaseInsteadOfTheHandModel() throws {
+        for property in ["display_context", "minecraft:display_context"] {
+            for value in [#""gui""#, #"["ground","gui","fixed","on_shelf"]"#] {
+                let selected = "{\"type\":\"select\",\"property\":\"\(property)\",\"cases\":[{\"when\":\(value),\"model\":\(node)}],\"fallback\":{\"type\":\"special\"}}"
+                #expect(try assets(selected).defaultItemModel("sample") == assets(node).defaultItemModel("sample"))
+                let noFallback = selected.replacingOccurrences(of: ",\"fallback\":{\"type\":\"special\"}", with: "")
+                #expect(try assets(noFallback).defaultItemModel("sample") == assets(node).defaultItemModel("sample"))
+            }
+        }
+        let unrelated = "{\"type\":\"select\",\"property\":\"mod:display_context\",\"cases\":[{\"when\":\"gui\",\"model\":{\"type\":\"special\"}}],\"fallback\":\(node)}"
+        #expect(try assets(unrelated).defaultItemModel("sample") == assets(node).defaultItemModel("sample"))
+    }
+
+    @Test func inventoryContextFallsBackOnlyWhenNoGUICaseMatches() throws {
+        let definition = "{\"type\":\"select\",\"property\":\"display_context\",\"cases\":[{\"when\":\"ground\",\"model\":{\"type\":\"special\"}}],\"fallback\":\(node)}"
+        #expect(try assets(definition).defaultItemModel("sample") == assets(node).defaultItemModel("sample"))
+        #expect(try assets(definition.replacingOccurrences(of: "ground", with: "gui")).defaultItemModel("sample") == nil)
+        let empty = definition.replacingOccurrences(of: "ground", with: "gui").replacingOccurrences(of: "special", with: "empty")
+        #expect(try assets(empty).defaultItemModel("sample")?.parts.isEmpty == true)
+        let bundle = "{\"type\":\"select\",\"property\":\"display_context\",\"cases\":[{\"when\":\"gui\",\"model\":{\"type\":\"condition\",\"property\":\"bundle/has_selected_item\",\"on_true\":{\"type\":\"special\"},\"on_false\":\(node)}}]}"
+        #expect(try assets(bundle).defaultItemModel("sample") == assets(node).defaultItemModel("sample"))
+    }
+
+    @Test func malformedOrUnboundedInventoryCaseTablesStayUnavailable() throws {
+        let duplicate = "{\"when\":\"gui\",\"model\":\(node)}"
+        for cases in ["null", "{}", "[]", "[{}]", #"[{"when":true}]"#, #"[{"when":[]}]"#,
+                      #"[{"when":["gui",false]}]"#, #"[{"when":["gui","gui"]}]"#,
+                      #"[{"when":"gui"}]"#, "[\(duplicate),\(duplicate)]",
+                      "[\(Array(repeating: duplicate, count: 4097).joined(separator: ","))]"] {
+            let definition = "{\"type\":\"select\",\"property\":\"display_context\",\"cases\":\(cases),\"fallback\":\(node)}"
+            #expect(try assets(definition).defaultItemModel("sample") == nil, "\(cases.prefix(100))")
+        }
+    }
+
     @Test func compositePartsKeepOrderAndNeverReturnAPartialPicture() throws {
         let tinted = #"{"type":"model","model":"item/flat","tints":[{"type":"constant","value":123}]}"#
         let composite = "{\"type\":\"composite\",\"models\":[\(tinted),{\"type\":\"empty\"},\(node)]}"

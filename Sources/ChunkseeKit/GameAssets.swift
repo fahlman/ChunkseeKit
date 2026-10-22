@@ -31,9 +31,9 @@ public struct GameAssets: Sendable {
         try? AssetModelReader(assets: self).read(identifier)
     }
 
-    /// Resolves a static illustration using select/range fallbacks, false condition branches,
-    /// and the lowest-threshold range entry when no fallback is supplied. This explicitly
-    /// chooses a default variant, not the game's live property evaluation or a saved override.
+    /// Resolves a static inventory illustration using display-context GUI cases, other select/range
+    /// fallbacks, false condition branches, and the lowest-threshold range entry without a fallback.
+    /// This explicitly chooses a default variant, not live property evaluation or a saved override.
     /// Selected unsupported/malformed resources return nil. Resolution shares a 16 MiB JSON
     /// and 4096-element budget across at most 64 selected nodes and 32 model parts.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
