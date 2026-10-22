@@ -35,8 +35,8 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas and immutable point-region lookup. No display names, localization, UI state or file decoding | `ChunkseeKit` |
-| `chunksee` | Command-line presentation only | `ChunkseeKit` |
+| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas, immutable point-region lookup and search query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
 | `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs | `ChunkseeIndex`, `ChunkseeKit` |
@@ -53,8 +53,16 @@ the core checked coordinate conversion and region size. Results preserve input o
 unbucketable entries for the client's final checks; unusable bounds return the full snapshot.
 Sparse queries inspect occupied buckets instead of enumerating huge empty ranges. This is the
 app's existing PointMarkers lookup, with viewport conversion, precise geometry, visibility and
-presentation kept outside the library. The additive API is unreleased; app adoption follows the
-next minor tag on fahlman/Chunksee#214. It adds no reader, cache or task owner.
+presentation kept outside the library. The additive API is available in v0.43.0; app adoption is
+tracked on fahlman/Chunksee#384 and #214. It adds no reader, cache or task owner.
+
+`ChunkseeIndex.SearchQuery` owns the app's existing category-prefix parsing and all-word matching.
+Recognized prefixes ignore case and trim horizontal whitespace; unknown prefixes stay literal.
+Its explicit phrase initializer preserves the CLI's contiguous, case-insensitive `find`/`text`
+queries, including spaces and colons. Both forms share one substring matcher. The CLI consumes
+that owner; app names, prompts, symbols, category membership and result formatting remain outside
+the library. This additive API is unreleased, with app adoption following its next minor tag on
+fahlman/Chunksee#214. Retained world-index state and typed result aggregation remain separate work.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,

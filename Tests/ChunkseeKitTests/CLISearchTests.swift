@@ -55,6 +55,26 @@ import ChunkseeKit
         }
     }
 
+    @Test(arguments: ["find", "text"])
+    func searchesRetainLiteralPhraseAndColonBehavior(_ command: String) throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let uuid = "01234567-89ab-cdef-0123-456789abcdef"
+        try Fixtures.writeGzippedNBT(.compound(["Inventory": .list([book("red and blue"), book("pet: River")])]),
+                                    to: root.appendingPathComponent("players/data/\(uuid).dat"))
+        let separateWords = try Fixtures.runCLI(root, command: command, arguments: ["red blue"])
+        #expect(separateWords.status == 0)
+        #expect(!separateWords.output.contains("player "))
+        let phrase = try Fixtures.runCLI(root, command: command, arguments: ["RED AND BLUE"])
+        #expect(phrase.status == 0)
+        #expect(phrase.output.contains("Needle red and blue"))
+        #expect(!phrase.output.contains("pet: River"))
+        let colon = try Fixtures.runCLI(root, command: command, arguments: ["pet:"])
+        #expect(colon.status == 0)
+        #expect(colon.output.contains("Needle pet: River"))
+        #expect(!colon.output.contains("red and blue"))
+    }
+
     private func world() throws -> URL {
         let root = try Fixtures.tempDirectory()
         try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("CLI search"), "DataVersion": .int(5023)])]),
