@@ -285,8 +285,9 @@ budgets span all selected models. RGB conversion is shared with ItemStack's save
 grass tint sources expose the official 256×256 colormap sample without decoding an image.
 JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are
 unreleased, tracked on #147. The app selects this static representation, applies saved colors,
-and owns images and caching. Normal potion-effect/saved firework tint calculation, blockstate
-selection and resource-pack layering remain separate; no UI or world writing is added here.
+and owns images and caching. Potion color calculation uses ItemStack.potionColor. Saved firework
+colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
+is added here.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
@@ -364,6 +365,17 @@ readers and the existing effect-amplifier reader without changing the latter's b
 field or RegionFacts version changes: retained components already contain these facts. These APIs
 are unreleased on #145 for fahlman/Chunksee#390; normal potion-effect colors and app tinting remain
 separate work. Missing explicit colors never become invented defaults.
+
+`ItemStack.potionColor(gameDataVersion:defaultColor:)` owns the effect-based potion tint, using
+that same explicit override reader and shared StatusEffect ID/amplifier interpretation. Visible
+effects are weighted by level; zero duration does not remove a potion color. Removed/missing
+contents or no visible effects uses the caller's definition default. Unknown needed registry
+facts and unreadable color-driving fields remain unavailable. Sums are bounded to 4,096 saved
+effects. Vanilla recipes/colors are verified for 26.3/5023 only, against official bytecode and
+the game's built-in registries (46 potions, 40 effects); these facts have no asset JSON. There
+is no global inference for other versions. This additive computed API is unreleased on #149,
+with no serialized/cache interpretation change or player-active-effect behavior change. Image
+tinting remains app-owned on fahlman/Chunksee#390.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
 shared saved-position reader. The values are projected only when requested; a lookup stops at

@@ -592,6 +592,23 @@ Absent colors remain nil. `customPotionColor` does not calculate the normal colo
 effects; it is the explicit override only. Clients apply these values to the appropriate model
 tint layers, leaving default colors and normal potion-effect resolution to their respective owners.
 
+`ItemStack.potionColor(gameDataVersion:defaultColor:)` resolves the full potion tint (unreleased,
+#149). Pass the matching game's data version and the default from the item's tint definition.
+An explicit custom color wins. Otherwise visible base and custom effects contribute their RGB
+channels weighted by amplifier + 1, with integer division as in the game. Zero/missing duration
+does not remove an effect from this color calculation; hidden particles do. Current components,
+the potion-ID shorthand and legacy `Potion`/`CustomPotionEffects` tags share the same path.
+Removal suppresses older tags and uses the supplied default. Missing contents or no visible
+effects also uses that default. Unknown needed recipes/effect colors, unreadable color-driving
+fields and more than 4,096 effects return nil, so clients can keep their unavailable-image fallback.
+
+The vanilla registry facts are verified for **26.3 / 5023 only**, through the official game code
+and a read-only registry probe (46 potions, 40 effects). They are defined in Minecraft's code,
+not asset JSON. Other versions cannot borrow these inferred colors; an explicit saved override
+or an empty effect set needs no registry lookup. This computed API changes no saved ItemStack
+fields or cache version. It reuses active-effect ID/amplifier reading without changing which
+effects count as active on a player.
+
 ### Block coordinates
 
 `BlockPosition` converts exact coordinates to the containing block, rounding negative fractions
