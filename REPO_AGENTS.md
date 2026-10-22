@@ -35,7 +35,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas, immutable point-region lookup, grouped block deposits and search query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `ChunkseeIndex` | Compact retained region inputs and dimension reconciliation/aggregation; storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
@@ -69,9 +69,27 @@ Its nested Deposit groups the core reader's per-ID counts and enclosing section-
 combining ore variants and ordering by the group's raw value. Unknown IDs and common blocks outside
 the catalog remain excluded. These are indexed section ranges, not exact block locations. Core
 scan options and file interpretation are unchanged; client names and search-result wording stay
-outside the module. This additive API is unreleased, with separate app adoption on fahlman/Chunksee#214.
+outside the module. This additive API is available in v0.45.0; app adoption is fahlman/Chunksee#386.
 It prepares compact typed region contributions without retaining unused heightmaps or repeating
 group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
+
+`ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
+failed-read retention, selected deletion and complete cross-region aggregates. A broad pass removes
+all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
+the dimension, selected/available coordinates and explicit cave-membership set. Empty successful
+reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
+native marker sort/presentation remains a client concern. Portal and biome joins happen after all
+retained contributions are combined. Heightmaps, inhabited-time grids and ordinary unnamed mobs
+are not retained. These are in-memory values, with no persistence or file/task owner.
+
+`CreatureEntry` owns the app's existing villager > owned pet > named category precedence, stable
+UUID/fallback identity and checked location eligibility (floored X/Z fit Int32, Y fits Int).
+Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
+player-carried projections remain in the app. The additive region/dimension APIs are unreleased;
+separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native
+marker projections for unchanged regions. Background-work scheduling and canceled-publication
+guards remain app-owned. Tests use real synthetic scans, including cross-region joins and incremental
+versus complete reads. No renderer, scan-ID, cave-membership or RegionFacts version change.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
