@@ -42,8 +42,7 @@ func textCommand(_ world: World, _ arguments: Arguments) {
         func books(_ items: [ItemStack]) -> [String] {
             items.flatMap(\.allItems).compactMap { item in
                 guard let book = item.book else { return nil }
-                let text = ([book.title, book.author].compactMap(\.self) + book.pages).joined(separator: "\n")
-                guard query.matches(text) else { return nil }
+                guard query.matches(book.searchText) else { return nil }
                 return book.title.map { "\"\($0)\" by \(book.author ?? "?")" } ?? "book and quill"
             }
         }
@@ -58,7 +57,7 @@ func textCommand(_ world: World, _ arguments: Arguments) {
             for region in searchRegions(in: dim) {
                 guard let contents = try? dim.contents(regionX: region.x, regionZ: region.z) else { continue }
                 for sign in contents.signs {
-                    let lines = (sign.front + sign.back).filter { !$0.isEmpty }
+                    let lines = sign.searchLines
                     guard query.matches(lines.joined(separator: " ")) else { continue }
                     total += 1
                     print("\(dim.id) \(sign.kind) at (\(sign.x), \(sign.y), \(sign.z)): \(lines.joined(separator: " / "))")

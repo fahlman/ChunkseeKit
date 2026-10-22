@@ -101,15 +101,25 @@ The generic payload lets clients keep native projections with their shared facts
 world catalog or UI imports here. Matching values in different dimensions remain separate records;
 member order is preserved and dimension order is unspecified. Dictionary value semantics retain
 earlier snapshots when a later one replaces a dimension. The app's reader catalog, background tasks,
-cancellation and publication stay app-owned. This additive API is unreleased; app adoption and
+cancellation and publication stay app-owned. This additive API is available in v0.47.0; app adoption and
 remaining typed search-result work are tracked on fahlman/Chunksee#214.
 
 `ItemTotals<Key>` owns matching-stack quantities, using the core ItemStack.allItems traversal for
 nested contents. The caller supplies its predicate and grouping identity; searchable fields,
 localized labels, ordering and output remain client-owned. CLI find uses its existing custom-name
 or saved-ID key; StoredItemTotal uses saved IDs and keeps outer-container counts. A matching
-zero-count stack remains a result. This additive API is unreleased; app adoption follows the
+zero-count stack remains a result. This additive API is available in v0.47.0; app adoption follows the
 release on fahlman/Chunksee#214. No reader, inventory selection or cache meaning changes.
+
+SearchSelection owns the inventory-plus-saved-equipment input, saved book/sign search fields,
+creature-filter membership and strongest-deposit selection across dimensions. The CLI consumes
+PlayerInfo.searchableInventory, BookContent.searchText and Sign.searchLines from this module.
+Saved sign whitespace and book line boundaries remain significant to phrase queries; the app can
+trim captions separately. Filter.includes shares creature/pet/villager/trade membership, with
+offer matching still required for trades. WorldIndex.richestDeposits expects each dimension's
+canonical richest-first array and preserves the existing equal-count ordering freedom. The app
+retains its display limit, localized search labels and marker/title/detail construction. These
+additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
