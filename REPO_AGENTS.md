@@ -35,7 +35,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Compact retained region inputs and dimension reconciliation/aggregation; storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
@@ -90,11 +90,19 @@ UUID/fallback identity and checked location eligibility through core BlockPositi
 (floored X/Z fit Int32, supplied Y fits Int, unknown Y stays nil). Native map navigation and creature
 eligibility share this public helper; it does not enforce the game world border.
 Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
-player-carried projections remain in the app. The additive region/dimension APIs are unreleased;
+player-carried projections remain in the app. The additive region/dimension APIs are available in v0.46.0;
 separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native
 marker projections for unchanged regions. Background-work scheduling and canceled-publication
 guards remain app-owned. Tests use real synthetic scans, including cross-region joins and incremental
 versus complete reads. No renderer, scan-ID, cave-membership or RegionFacts version change.
+
+`WorldIndex<Dimension>` owns the dimension-keyed world snapshot and its typed Placed/all enumeration.
+The generic payload lets clients keep native projections with their shared facts, without a second
+world catalog or UI imports here. Matching values in different dimensions remain separate records;
+member order is preserved and dimension order is unspecified. Dictionary value semantics retain
+earlier snapshots when a later one replaces a dimension. The app's reader catalog, background tasks,
+cancellation and publication stay app-owned. This additive API is unreleased; app adoption and
+remaining typed search-result work are tracked on fahlman/Chunksee#214.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
