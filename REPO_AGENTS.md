@@ -35,7 +35,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID and connected biome areas. No display names, localization, UI state or file decoding | `ChunkseeKit` |
+| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID, connected biome areas and immutable point-region lookup. No display names, localization, UI state or file decoding | `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
@@ -45,8 +45,16 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 selection and exposed chunk sides. It preserves every area and ignores unmappable chunk origins.
 This pure aggregation takes chosen biome membership; file reads, surface/cave policy, display
 names, colors and drawing paths stay outside it. Membership and boundary discovery share one walk.
-This additive API is unreleased; app adoption after the next minor tag is tracked on
-fahlman/Chunksee#214. It changes no save reader, cache interpretation or held cave-biome rule.
+This additive API is available in v0.42.0; app adoption is tracked on fahlman/Chunksee#383 and #214.
+It changes no save reader, cache interpretation or held cave-biome rule.
+
+`ChunkseeIndex.PointIndex` owns immutable region buckets and broad point-candidate lookup, using
+the core checked coordinate conversion and region size. Results preserve input order and retain
+unbucketable entries for the client's final checks; unusable bounds return the full snapshot.
+Sparse queries inspect occupied buckets instead of enumerating huge empty ranges. This is the
+app's existing PointMarkers lookup, with viewport conversion, precise geometry, visibility and
+presentation kept outside the library. The additive API is unreleased; app adoption follows the
+next minor tag on fahlman/Chunksee#214. It adds no reader, cache or task owner.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,

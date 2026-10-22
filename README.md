@@ -106,14 +106,21 @@ for item in totals { print(item.id, item.count, item.containers) }
 
 This product was introduced in v0.37.0 and Chunksee uses its storage totals.
 
-**Unreleased:** `BiomeArea.connected(in:)` groups a dictionary of chunk positions and biome IDs
+**v0.42.0:** `BiomeArea.connected(in:)` groups a dictionary of chunk positions and biome IDs
 into edge-connected areas. Every area is kept, including single chunks; corners do not connect.
 Each area supplies its members, exposed chunk sides and a representative member nearest its
 mean position, with ties ordered by X then Z. Chunks whose block origins cannot be represented
 are omitted. Clients select surface/cave membership and supply paths, colors and names. Chunksee's
-adoption follows the next minor release; its existing grouping rule is the source of this API.
+adoption is tracked on fahlman/Chunksee#383; its existing grouping rule is the source of this API.
 
-The remaining world index, search, spatial lookup and CLI adoption are tracked in
+**Unreleased:** `PointIndex<Element>` stores an immutable snapshot and indexes its exact X/Z
+positions by region. `candidates(minX:maxX:minZ:maxZ:)` returns broad candidates in input order,
+including entries without a usable bucket; clients apply their precise geometry and visibility.
+Unusable query bounds return the full snapshot. Large sparse queries visit occupied buckets
+instead of enumerating empty space. The app's existing marker lookup is the source of this API;
+its adoption follows the next minor release. No file access, scheduling or cache is introduced.
+
+The remaining world index, search, spatial adoption and CLI adoption are tracked in
 fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)
