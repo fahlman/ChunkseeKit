@@ -964,8 +964,10 @@ ender and copper chests (including oxidation/waxed variants), and undyed/all 16 
 boxes are covered. The normal chest fallback is used instead of evaluating Christmas dates.
 No artwork is included. Clients still handle absent or undecodable PNGs as for ordinary models.
 
-Special geometry stays unavailable for other game versions, unknown texture IDs, open lids or
-double chests. The definition's local transform is baked into the geometry only when it consists
+Texture identifiers retain their namespace and path: for example, a chest's `example:painted`
+reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
+Special geometry stays unavailable for other game versions, open lids or double chests.
+The definition's local transform is baked into the geometry only when it consists
 of positive scale, translation and identity or a half-turn around X, with an identity right
 rotation. This includes the shulker's transform; unsupported transforms are rejected instead
 of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared

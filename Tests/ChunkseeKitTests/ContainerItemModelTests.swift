@@ -13,7 +13,7 @@ import Testing
     }
 
     private func assets(_ definition: String, version: String = "26.3", dataVersion: Int = 5023,
-                        base: String? = nil) throws -> GameAssets {
+                        base: String? = nil, resources: [TestZIP.Entry] = []) throws -> GameAssets {
         let inherited = #"{"gui_light":"front","ambientocclusion":false,"display":{"gui":{"rotation":[30,45,0],"translation":[1,2,3],"scale":[0.625,0.625,0.625]}}}"#
         let entries: [TestZIP.Entry] = [
             .init(path: "version.json", text: "{\"id\":\"\(version)\",\"world_version\":\(dataVersion)}"),
@@ -21,7 +21,7 @@ import Testing
             .init(path: "assets/minecraft/models/item/container.json", text: base ?? #"{"parent":"item/template"}"#),
             .init(path: "assets/minecraft/models/item/template.json", text: inherited)
         ]
-        return try #require(GameAssets(data: Data(TestZIP.zip(entries))))
+        return try #require(GameAssets(data: Data(TestZIP.zip(entries + resources))))
     }
 
     private func elements(_ reader: GameAssets) throws -> [AssetModel.Element] {
@@ -44,7 +44,7 @@ import Testing
             let shulker = type == "shulker_box"
             var node = definition(type, texture: texture, transform: shulker ? transform : nil)
             if item == "chest" || item == "trapped_chest" {
-                // The unsupported seasonal branch must not replace the normal static fallback.
+                // The seasonal branch must not replace the normal static fallback.
                 node = "{\"type\":\"select\",\"property\":\"local_time\",\"cases\":[{\"when\":\"12-25\",\"model\":\(definition(texture: "christmas"))}],\"fallback\":\(node)}"
             }
             let reader = try assets(node), model = try #require(reader.defaultItemModel("sample"))
@@ -98,8 +98,7 @@ import Testing
             #expect(reader.defaultItemModel("sample") == nil)
             #expect(reader.model("item/container") != nil)
         }
-        for node in [definition(texture: "christmas"), definition(texture: "unknown"), definition(texture: "mod:normal"),
-                     definition(texture: "../normal"), definition("shulker_box", texture: "shulker_unknown", transform: transform),
+        for node in [definition(texture: "../normal"), definition(texture: "mod:../normal"),
                      definition("mod:chest"), definition("bed"), definition(extra: #", "chest_type":"left""#),
                      definition(extra: #", "chest_type":null"#), definition(extra: #", "openness":0.5"#),
                      definition(extra: #", "openness":true"#), definition(extra: #", "openness":null"#),
@@ -107,6 +106,26 @@ import Testing
             #expect(try assets(node).defaultItemModel("sample") == nil, "\(node)")
         }
         #expect(try assets(definition(extra: #", "chest_type":"single", "openness":0"#)).defaultItemModel("sample") != nil)
+    }
+
+    @Test func textureResourcesKeepTheirNamespaceAndPathWithoutACatalog() throws {
+        for (kind, folder) in [("chest", "chest"), ("shulker_box", "shulker")] {
+            for (name, expected) in [("custom:boxes/painted", "custom:entity/\(folder)/boxes/painted"),
+                                     ("new_texture", "minecraft:entity/\(folder)/new_texture")] {
+                let parts = expected.split(separator: ":")
+                let path = "assets/\(parts[0])/textures/\(parts[1]).png"
+                // The reader returns original bytes. Image interpretation belongs to the client.
+                let resource = TestZIP.Entry(path: path, text: "synthetic image payload")
+                let node = definition(kind, texture: name, transform: kind == "shulker_box" ? transform : nil)
+                let reader = try assets(node, resources: [resource])
+                let boxes = try elements(reader)
+                #expect(boxes.allSatisfy { $0.faces.values.allSatisfy { $0.material.texture.description == expected } })
+                #expect(reader.texture(expected) == Data(resource.text.utf8))
+                let missing = try assets(node)
+                #expect(missing.defaultItemModel("sample") != nil)
+                #expect(missing.texture(expected) == nil)
+            }
+        }
     }
 
     @Test func unsupportedOrMalformedLocalTransformsNeverDisappearSilently() throws {
@@ -128,7 +147,7 @@ import Testing
         let node = definition()
         let wide = "{\"type\":\"composite\",\"models\":[\(Array(repeating: node, count: 33).joined(separator: ","))]}"
         #expect(try assets(wide).defaultItemModel("sample") == nil)
-        let mixed = "{\"type\":\"composite\",\"models\":[\(node),\(definition(texture: "unknown"))]}"
+        let mixed = "{\"type\":\"composite\",\"models\":[\(node),\(definition("bed"))]}"
         #expect(try assets(mixed).defaultItemModel("sample") == nil)
         let element = ##"{"from":[0,0,0],"to":[16,16,16],"faces":{"up":{"texture":"#all"}}}"##
         let base = "{\"textures\":{\"all\":\"block/stone\"},\"elements\":[\(Array(repeating: element, count: 4094).joined(separator: ","))]}"

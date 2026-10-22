@@ -5,17 +5,9 @@ enum ContainerItemModel: String {
     case shulker = "minecraft:shulker_box"
 
     func texture(_ name: Identifier) -> Identifier? {
-        guard name.namespace == "minecraft" else { return nil }
-        let folder: String
-        switch self {
-        case .chest:
-            guard ["normal", "trapped", "ender", "copper", "copper_exposed", "copper_weathered", "copper_oxidized"].contains(name.path) else { return nil }
-            folder = "chest"
-        case .shulker:
-            guard name.path == "shulker" || PetData.dyeNames.contains(where: { name.path == "shulker_" + $0 }) else { return nil }
-            folder = "shulker"
-        }
-        return GameAssets.resourceID("minecraft:entity/\(folder)/\(name.path)")
+        // Sheets' SpriteMapper preserves the identifier's namespace and prefixes its path.
+        let folder = self == .chest ? "chest" : "shulker"
+        return GameAssets.resourceID("\(name.namespace):entity/\(folder)/\(name.path)")
     }
 
     func elements(texture: Identifier, scale: SIMD3<Float>, translation: SIMD3<Float>, turnX: Bool) -> [AssetModel.Element]? {
