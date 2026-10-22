@@ -24,6 +24,7 @@ public struct DimensionIndex: Sendable {
 
     public let dimension: String
     public let caveBiomeIDs: Set<String>
+    private var hasCompletedPass = false
     public private(set) var regions: [RegionPosition: RegionIndex] = [:]
     public private(set) var containers: [ItemContainer] = []
     public private(set) var storage: [StoredItemTotal] = []
@@ -44,8 +45,19 @@ public struct DimensionIndex: Sendable {
         self.dimension = dimension; self.caveBiomeIDs = caveBiomeIDs
     }
 
-    /// Reconciles a completed read without changing this snapshot. A nil selection is a full
-    /// pass; a subset leaves unselected contributions untouched, even if absent from `available`.
+    /// The single read-set rule used by callers and reconciliation. A never-read index needs a
+    /// complete first pass even when a partial notification started it. After a completed pass,
+    /// an empty index still respects partial selections; emptiness does not mean "never read".
+    public func regionsToRead(available: Set<RegionPosition>, selected: Set<RegionPosition>?) -> Set<RegionPosition> {
+        effectiveSelection(selected).map { $0.intersection(available) } ?? available
+    }
+
+    private func effectiveSelection(_ selected: Set<RegionPosition>?) -> Set<RegionPosition>? {
+        hasCompletedPass ? selected : nil
+    }
+
+    /// Reconciles a completed read without changing this snapshot. A first pass or nil selection
+    /// is a full pass; later subsets leave unselected contributions untouched, even if unavailable.
     /// A missing replacement for an available region means its read failed, so its old value stays.
     /// A selected region absent from `available` is deleted. Successful empty replacements clear it.
     /// Only available, selected replacements with this dimension and cave policy are accepted;
@@ -54,11 +66,13 @@ public struct DimensionIndex: Sendable {
     public func updating(available: Set<RegionPosition>, selected: Set<RegionPosition>?,
                          replacements: [RegionIndex]) -> Self {
         var next = Self(dimension: dimension, caveBiomeIDs: caveBiomeIDs)
+        next.hasCompletedPass = true
+        let selection = effectiveSelection(selected)
         next.regions = regions.filter { coordinate, _ in
-            if let selected, !selected.contains(coordinate) { return true }
+            if let selection, !selection.contains(coordinate) { return true }
             return available.contains(coordinate)
         }
-        let changed = selected.map { $0.intersection(available) } ?? available
+        let changed = regionsToRead(available: available, selected: selected)
         for region in replacements where changed.contains(region.region) && region.dimension == dimension
             && region.caveBiomeIDs == caveBiomeIDs {
             next.regions[region.region] = region

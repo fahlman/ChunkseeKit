@@ -147,13 +147,18 @@ remain in the app; adoption is tracked on fahlman/Chunksee#386.
 terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
 notable deposits. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
 available replacements retain the last good data, selected missing regions are removed, and a nil
-selection reconciles the whole dimension. A partial selection leaves other regions untouched.
+selection reconciles the whole dimension. A partial selection leaves other regions untouched after
+the first completed pass. Call `regionsToRead(available:selected:)` to schedule the reads: the first
+pass always reads all available regions, even after a partial notification. `updating` uses that same
+read-set rule. A completed empty or failed pass is distinct from a never-read index.
 Only replacements with matching dimension/cave policy and selected available coordinates are accepted.
 
 Callers explicitly supply the cave-biome IDs; the library does not define a new cave-membership rule.
 `CreatureEntry` keeps villagers, owned pets and named creatures with supported locations, using that
 category precedence and the existing stable UUID (or exact saved-position fallback) identity.
-Floored X/Z must fit Int32 and Y must fit Int. Client wording, native geometry, scheduling, cancellation
+The core `BlockPosition.mapCoordinates(x:y:z:)` supplies the shared map bounds: floored X/Z must fit
+Int32 and a supplied Y must fit Int; unknown Y stays nil. It does not impose the game world border.
+Client wording, native geometry, scheduling, cancellation
 and publication remain outside the index. These values introduce no persisted cache format.
 
 ```swift

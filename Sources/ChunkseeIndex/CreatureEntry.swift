@@ -23,8 +23,7 @@ public struct CreatureEntry: Identifiable, Equatable, Sendable {
 
     public init?(_ creature: Creature) {
         guard let group = Group.group(for: creature),
-              let block = BlockPosition(x: creature.x, y: creature.y, z: creature.z),
-              Int32(exactly: block.x) != nil, Int32(exactly: block.z) != nil else { return nil }
+              BlockPosition.mapCoordinates(x: creature.x, y: creature.y, z: creature.z) != nil else { return nil }
         self.creature = creature
         self.group = group
         id = creature.uuid.map { "creature:\($0.uuidString.lowercased())" }

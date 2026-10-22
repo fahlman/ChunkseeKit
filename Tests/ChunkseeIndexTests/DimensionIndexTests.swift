@@ -10,6 +10,29 @@ import Testing
     private let a = RegionPosition(x: 0, z: 0)
     private let b = RegionPosition(x: 1, z: 0)
 
+    @Test func firstPartialNotificationUsesTheCompleteReadSetButACompletedEmptyPassDoesNot() throws {
+        let world = try SavedWorld()
+        defer { world.remove() }
+        try world.terrain(chunkX: 31, count: 2)
+        try world.terrain(chunkX: 32, count: 5)
+        let neverRead = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
+        let available: Set<RegionPosition> = [a, b]
+        #expect(neverRead.regionsToRead(available: available, selected: [a]) == available)
+        #expect(neverRead.regionsToRead(available: available, selected: []) == available)
+        let replacements = try neverRead.regionsToRead(available: available, selected: [a])
+            .map { try world.scan($0, caves: caves) }
+        let partial = neverRead.updating(available: available, selected: [a], replacements: replacements)
+        let full = neverRead.updating(available: available, selected: nil, replacements: replacements)
+        expectEquivalent(partial, full)
+        #expect(partial.storage.first?.count == 7)
+        #expect(partial.regionsToRead(available: available, selected: [a]) == [a])
+        #expect(partial.regionsToRead(available: [b], selected: [a]) == [])
+        let emptyPass = neverRead.updating(available: available, selected: nil, replacements: [])
+        #expect(emptyPass.regions.isEmpty)
+        #expect(emptyPass.regionsToRead(available: available, selected: [a]) == [a])
+        #expect(emptyPass.regionsToRead(available: available, selected: []) == [])
+    }
+
     @Test func completeDimensionJoinsBoundaryFactsAndRetainsCompactContributions() throws {
         let world = try SavedWorld()
         defer { world.remove() }

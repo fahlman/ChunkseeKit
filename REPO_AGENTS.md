@@ -74,7 +74,10 @@ It prepares compact typed region contributions without retaining unused heightma
 group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
 
 `ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
-failed-read retention, selected deletion and complete cross-region aggregates. A broad pass removes
+failed-read retention, selected deletion and complete cross-region aggregates. Its public
+regionsToRead method supplies the read set for both the client scheduler and updating. The first
+pass always covers all available regions; a completed empty/failed pass is distinct from never-read.
+A broad pass removes
 all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
 the dimension, selected/available coordinates and explicit cave-membership set. Empty successful
 reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
@@ -83,7 +86,9 @@ retained contributions are combined. Heightmaps, inhabited-time grids and ordina
 are not retained. These are in-memory values, with no persistence or file/task owner.
 
 `CreatureEntry` owns the app's existing villager > owned pet > named category precedence, stable
-UUID/fallback identity and checked location eligibility (floored X/Z fit Int32, Y fits Int).
+UUID/fallback identity and checked location eligibility through core BlockPosition.mapCoordinates
+(floored X/Z fit Int32, supplied Y fits Int, unknown Y stays nil). Native map navigation and creature
+eligibility share this public helper; it does not enforce the game world border.
 Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
 player-carried projections remain in the app. The additive region/dimension APIs are unreleased;
 separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native
