@@ -13,8 +13,8 @@ import Testing
         #expect(CreatureEntry(creature)?.id == "minecraft:wolf@-8.7,62.0,0.0")
         creature.owner = uuid
         #expect(CreatureEntry(creature)?.group == .pet)
-        creature.villager = try #require(Villager(.compound(["VillagerData": .compound([
-            "profession": .string("minecraft:farmer")]) ])))
+        creature.villager = Villager(.compound(["VillagerData": .compound([
+            "profession": .string("minecraft:farmer")])]))
         #expect(CreatureEntry(creature)?.group == .villager)
         creature.uuid = uuid
         let original = try #require(CreatureEntry(creature))

@@ -2,6 +2,8 @@ import ChunkseeKit
 
 /// Existing block-search groups. Names and presentation belong to clients.
 /// Common ores stay excluded from this catalog; a caller can still scan any ID through the core reader.
+/// The app's original measurements on Ryan's Realm found coal, iron, copper and redstone in about
+/// a third of sections, making their counting several times costlier (fahlman/Chunksee#81).
 public enum NotableBlock: String, CaseIterable, Sendable {
     case diamond, emerald, gold, netherGold, lapis, ancientDebris, spawner, trialSpawner, buddingAmethyst
 
