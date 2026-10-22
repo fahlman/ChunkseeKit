@@ -910,10 +910,31 @@ Parents and texture references have cycle detection and a 64-step limit. Each re
 combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or
 unresolvable required resources return nil, as do nonfinite/invalid numeric fields; valid empty
 geometry stays empty. These reader bounds intentionally reject unusually large custom models.
-No resource-pack layering, item-definition selection, saved tint components, blockstate selection,
-sprite-atlas remapping or animation interpretation is included in this foundation. Those follow
-separately for fahlman/Chunksee#390 and #363 using this shared reader. The model format and defaults
-were checked against the official 26.3 client JSON and its cuboid/model resolver bytecode.
+No resource-pack layering, blockstate selection, sprite-atlas remapping or animation interpretation
+is included. Those follow separately for fahlman/Chunksee#390 and #363 using this shared reader.
+The model format and defaults were checked against the official 26.3 client JSON and its
+cuboid/model resolver bytecode.
+
+`assets.defaultItemModel("minecraft:leather_helmet")` resolves the static default variant from
+an item definition (unreleased, #147). Its ordered `AssetItem.parts` reuse `AssetModel` and carry
+indexed tint sources: constant RGB, saved dye/potion/firework with definition defaults, or a
+pixel in the supplied grass colormap. The client decodes that 256×256 PNG and applies colors to
+the corresponding layer/face tint index; an absent index is untinted. Saved dye and custom-potion
+overrides are available on ItemStack; normal potion-effect and saved firework colors are not
+calculated by this asset reader.
+
+Calling this API explicitly requests a static illustration: select/range fallbacks, false
+condition branches, and the lowest-threshold range entry (first on a tie) if no fallback exists.
+It does not evaluate live compass angles, time, trim, custom model data or saved item-model
+overrides. Only the selected branches are interpreted; unsupported unselected branches do not
+prevent a usable default. A selected special/entity renderer, unknown tint or malformed value
+makes the entire item unavailable, rather than returning part of a composite. Valid empty
+definitions stay empty. Limits across the definition and its resolved models are 16 MiB of JSON,
+4,096 elements, 64 selected nodes and 32 parts. Tint lists are limited to 32; range tables without
+a fallback to 4,096 entries. Numeric JSON colors require signed 32-bit integers or three finite
+Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
+Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
+tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
 
 ### Raw NBT
 

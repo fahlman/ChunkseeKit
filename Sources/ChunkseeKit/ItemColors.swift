@@ -23,7 +23,7 @@ extension ItemStack {
 
 private enum ItemColor {
     static func integer(_ value: NBT?) -> UInt32? {
-        value?.javaInt.map { UInt32(bitPattern: $0) & 0x00ff_ffff }
+        value?.javaInt.map(RGBColor.integer)
     }
 
     /// ExtraCodecs.RGB_COLOR_CODEC accepts an integer or three floating-point channels.
@@ -46,10 +46,6 @@ private enum ItemColor {
             values = list.map(Double.init)
         default: return nil
         }
-        let channels = values.map(Float.init)
-        guard channels.count == 3, channels.allSatisfy({ $0.isFinite && (0...1).contains($0) }) else { return nil }
-        // ARGB.as8BitChannel uses floor(channel * 255) at Float precision.
-        let rgb = channels.map { UInt32(($0 * 255).rounded(.down)) }
-        return rgb[0] << 16 | rgb[1] << 8 | rgb[2]
+        return RGBColor.channels(values.map(Float.init))
     }
 }
