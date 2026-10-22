@@ -43,7 +43,7 @@ private enum ItemColor {
             values = list.map(Double.init)
         case .byteArray(let list):
             guard list.count == 3 else { return nil }
-            values = list.map { Double(Int8(bitPattern: $0)) }
+            values = list.map(Double.init)
         default: return nil
         }
         let channels = values.map(Float.init)
