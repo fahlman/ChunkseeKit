@@ -113,14 +113,29 @@ mean position, with ties ordered by X then Z. Chunks whose block origins cannot 
 are omitted. Clients select surface/cave membership and supply paths, colors and names. Chunksee's
 adoption is tracked on fahlman/Chunksee#383; its existing grouping rule is the source of this API.
 
-**Unreleased:** `PointIndex<Element>` stores an immutable snapshot and indexes its exact X/Z
+**v0.43.0:** `PointIndex<Element>` stores an immutable snapshot and indexes its exact X/Z
 positions by region. `candidates(minX:maxX:minZ:maxZ:)` returns broad candidates in input order,
 including entries without a usable bucket; clients apply their precise geometry and visibility.
 Unusable query bounds return the full snapshot. Large sparse queries visit occupied buckets
 instead of enumerating empty space. The app's existing marker lookup is the source of this API;
-its adoption follows the next minor release. No file access, scheduling or cache is introduced.
+its adoption is tracked on fahlman/Chunksee#384. No file access, scheduling or cache is introduced.
 
-The remaining world index, search, spatial adoption and CLI adoption are tracked in
+**Unreleased:** `SearchQuery` interprets the existing app query grammar and matches searchable
+text. Recognized `structure:`, `place:`, `creature:`, `pet:`, `villager:`, `trade:`, `biome:` and
+`block:` prefixes select a filter. Other colons remain literal search text. Every whitespace-separated
+word must occur, ignoring case, in any order; an empty filter can list all of its category.
+Clients choose the category's records and provide names, searchable text and result presentation.
+The `phrase:` initializer preserves the CLI's existing `find`/`text` grammar: one literal phrase,
+including its spaces and colons, without parsing filters. Both use the same substring matcher.
+The CLI consumes this API; the app's adoption follows a reviewed release on fahlman/Chunksee#214.
+
+```swift
+let query = SearchQuery("pet: summer wolf")
+if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching pet */ }
+let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
+```
+
+The remaining world index, typed search results and app adoption are tracked in
 fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)

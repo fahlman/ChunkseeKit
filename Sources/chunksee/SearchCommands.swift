@@ -1,12 +1,13 @@
 import Foundation
 import ChunkseeKit
+import ChunkseeIndex
 
 /// Commands that search containers, players, signs and books.
 
 func findCommand(_ world: World, _ arguments: Arguments) {
-        let query = arguments.text(1).lowercased()
+        let query = SearchQuery(phrase: arguments.text(1))
         func matches(_ item: ItemStack) -> Bool {
-            item.id.lowercased().contains(query) || (item.customName?.lowercased().contains(query) ?? false)
+            query.matches(item.id) || (item.customName.map(query.matches) ?? false)
         }
         func summary(_ items: [ItemStack]) -> String {
             let hits = items.flatMap(\.allItems).filter(matches)
@@ -36,12 +37,12 @@ func findCommand(_ world: World, _ arguments: Arguments) {
 }
 
 func textCommand(_ world: World, _ arguments: Arguments) {
-        let query = arguments.text(1).lowercased()
+        let query = SearchQuery(phrase: arguments.text(1))
         func books(_ items: [ItemStack]) -> [String] {
             items.flatMap(\.allItems).compactMap { item in
                 guard let book = item.book else { return nil }
                 let text = ([book.title, book.author].compactMap(\.self) + book.pages).joined(separator: "\n")
-                guard text.lowercased().contains(query) else { return nil }
+                guard query.matches(text) else { return nil }
                 return book.title.map { "\"\($0)\" by \(book.author ?? "?")" } ?? "book and quill"
             }
         }
@@ -57,7 +58,7 @@ func textCommand(_ world: World, _ arguments: Arguments) {
                 guard let contents = try? dim.contents(regionX: region.x, regionZ: region.z) else { continue }
                 for sign in contents.signs {
                     let lines = (sign.front + sign.back).filter { !$0.isEmpty }
-                    guard lines.joined(separator: " ").lowercased().contains(query) else { continue }
+                    guard query.matches(lines.joined(separator: " ")) else { continue }
                     total += 1
                     print("\(dim.id) \(sign.kind) at (\(sign.x), \(sign.y), \(sign.z)): \(lines.joined(separator: " / "))")
                 }
