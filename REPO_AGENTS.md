@@ -329,6 +329,15 @@ but must be reread for the values. See README for format coverage and availabili
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
 ItemStack likewise keeps its components internal, preserving typed accessors, raw-input initializers
 and the existing Codable representation.
+Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
+legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
+fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other
+vectors stay unavailable. The current codecs, legacy data fixers and item tint sources were checked
+in the official 26.3 jar. Core NBTNumber owns Java numeric-to-int narrowing, shared by these color
+readers and the existing effect-amplifier reader without changing the latter's behavior. No serialized
+field or RegionFacts version changes: retained components already contain these facts. These APIs
+are unreleased on #145 for fahlman/Chunksee#390; normal potion-effect colors and app tinting remain
+separate work. Missing explicit colors never become invented defaults.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
 shared saved-position reader. The values are projected only when requested; a lookup stops at
