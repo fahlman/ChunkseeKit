@@ -275,6 +275,14 @@ nitwits and custom professions remain distinct. This is not a work/trade capabil
 profession, Codable data and cache interpretation are unchanged. This additive API is available in v0.39.0;
 the app's job-label adoption is tracked on #51.
 
+`Villager.supportsTrading` owns the vanilla 26.3 trading-profession rule beside `isUnemployed`.
+Saved readable offers establish trading first; otherwise the 13 vanilla trading professions
+return true, `none`/`nitwit` false, and unknown/custom/malformed professions nil. Offers are
+created lazily in the game, so their absence alone cannot rule out trading. The fact does not
+claim current interaction readiness or resolve custom registries. It is an additive computed
+API over existing fields, with no Codable or RegionFacts interpretation change. App adoption
+and the Profession label follow a published release, tracked on fahlman/Chunksee#295 and #131.
+
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.

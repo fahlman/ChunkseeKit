@@ -1,7 +1,7 @@
 import Foundation
 
 /// A living mob from an entity chunk (`entities/` region files): its kind, position, name, owner
-/// and, for villagers, their job and trades.
+/// and, for villagers, their profession and trades.
 public struct Creature: Sendable, Equatable, Codable {
     /// Entity id, e.g. `minecraft:wolf`.
     public var id: String
@@ -78,7 +78,7 @@ public struct Creature: Sendable, Equatable, Codable {
     }
 }
 
-/// A villager's (or wandering trader's) job and trades.
+/// A villager's (or wandering trader's) profession and trades.
 public struct Villager: Sendable, Equatable, Codable {
     /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
     public var profession: String?
@@ -86,14 +86,34 @@ public struct Villager: Sendable, Equatable, Codable {
     /// or malformed identifiers are unknown. Nitwits have a distinct category and return false;
     /// this does not determine whether a villager can work or trade.
     public var isUnemployed: Bool? {
-        guard let profession, let id = Identifier(profession), !id.path.isEmpty else { return nil }
-        return id.namespace == "minecraft" && id.path == "none"
+        professionID.map { $0.namespace == "minecraft" && $0.path == "none" }
+    }
+    /// Whether saved offers or a vanilla 26.3 profession establish trading. Readable saved
+    /// trades take precedence, including command-edited villagers. Without them, the 13
+    /// trading professions return true, `none` and `nitwit` return false, and unknown,
+    /// custom or malformed professions return nil. Does not determine interaction readiness
+    /// (such as age or sleeping), nor whether an offer is sold out.
+    public var supportsTrading: Bool? {
+        if !trades.isEmpty { return true }
+        guard let id = professionID, id.namespace == "minecraft" else { return nil }
+        switch id.path {
+        case "none", "nitwit": return false
+        case "armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
+             "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
+             "weaponsmith": return true
+        default: return nil
+        }
     }
     /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?
     /// The biome style, e.g. `minecraft:desert`.
     public var type: String?
     public var trades: [Trade]
+
+    private var professionID: Identifier? {
+        guard let profession, let id = Identifier(profession), !id.path.isEmpty else { return nil }
+        return id
+    }
 
     public init?(_ nbt: NBT) {
         let data = nbt["VillagerData"]
