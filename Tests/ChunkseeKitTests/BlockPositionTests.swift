@@ -2,6 +2,26 @@ import Testing
 import ChunkseeKit
 
 @Suite struct BlockPositionTests {
+    @Test func mapCoordinatesShareBoundsAndKeepUnknownHeightAbsent() throws {
+        let position = try #require(BlockPosition.mapCoordinates(x: -8.7, y: 63.9, z: -513.1))
+        #expect(position.x == -9 && position.y == 63 && position.z == -514)
+        let flat = try #require(BlockPosition.mapCoordinates(x: -0.1, y: nil, z: 0.1))
+        #expect(flat.x == -1 && flat.y == nil && flat.z == 0)
+        let limits = try #require(BlockPosition.mapCoordinates(x: Double(Int32.min), y: Double(Int.min),
+                                                               z: Double(Int32.max) + 0.5))
+        #expect(limits.x == Int32.min && limits.y == Int.min && limits.z == Int32.max)
+        #expect(BlockPosition.mapCoordinates(x: Double(Int32.min) - 0.5, y: nil, z: 0) == nil)
+        #expect(BlockPosition.mapCoordinates(x: 0, y: nil, z: Double(Int32.max) + 1) == nil)
+    }
+
+    @Test func invalidMapAxesAreRejectedWithoutInventingAHeight() {
+        for value in [Double.nan, .infinity, -.infinity, Double(Int.max), Double(Int.min).nextDown] {
+            #expect(BlockPosition.mapCoordinates(x: value, y: nil, z: 0) == nil)
+            #expect(BlockPosition.mapCoordinates(x: 0, y: value, z: 0) == nil)
+            #expect(BlockPosition.mapCoordinates(x: 0, y: nil, z: value) == nil)
+        }
+    }
+
     @Test(arguments: [
         (0.0, 0), (-0.0, 0), (1.0, 1), (-1.0, -1),
         (Double.leastNonzeroMagnitude, 0), (-Double.leastNonzeroMagnitude, -1),

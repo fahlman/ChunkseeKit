@@ -135,15 +135,40 @@ if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching 
 let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
 ```
 
-**Unreleased:** `NotableBlock` owns the existing block-search catalog and its exact saved IDs.
+**v0.45.0:** `NotableBlock` owns the existing block-search catalog and its exact saved IDs.
 `NotableBlock.Deposit.grouped(_:)` combines the core reader's per-ID deposits into those groups,
 including ordinary/deepslate ore variants, and returns counts and enclosing section-height ranges.
 Results are ordered by the group's raw value; unknown IDs and blocks outside this catalog are
 omitted. The range is not an exact ore position. The core scan still accepts any chosen block IDs;
 this catalog does not expand the app's existing scan or search scope. Names and display wording
-remain in the app, whose adoption follows the next reviewed release on fahlman/Chunksee#214.
+remain in the app; adoption is tracked on fahlman/Chunksee#386.
 
-The remaining world index, typed search results and app adoption are tracked in
+**Unreleased:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
+terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
+notable deposits. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
+available replacements retain the last good data, selected missing regions are removed, and a nil
+selection reconciles the whole dimension. A partial selection leaves other regions untouched after
+the first completed pass. Call `regionsToRead(available:selected:)` to schedule the reads: the first
+pass always reads all available regions, even after a partial notification. `updating` uses that same
+read-set rule. A completed empty or failed pass is distinct from a never-read index.
+Only replacements with matching dimension/cave policy and selected available coordinates are accepted.
+
+Callers explicitly supply the cave-biome IDs; the library does not define a new cave-membership rule.
+`CreatureEntry` keeps villagers, owned pets and named creatures with supported locations, using that
+category precedence and the existing stable UUID (or exact saved-position fallback) identity.
+The core `BlockPosition.mapCoordinates(x:y:z:)` supplies the shared map bounds: floored X/Z must fit
+Int32 and a supplied Y must fit Int; unknown Y stays nil. It does not impose the game world border.
+Client wording, native geometry, scheduling, cancellation
+and publication remain outside the index. These values introduce no persisted cache format.
+
+```swift
+let caves: Set<String> = ["minecraft:lush_caves"] // example client policy
+let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves)
+let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves)
+let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
+```
+
+The remaining world index, typed search results, CLI adoption and app adoption are tracked in
 fahlman/Chunksee#214. Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)
