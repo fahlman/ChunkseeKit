@@ -31,6 +31,15 @@ public struct GameAssets: Sendable {
         try? AssetModelReader(assets: self).read(identifier)
     }
 
+    /// Resolves a static illustration using select/range fallbacks, false condition branches,
+    /// and the lowest-threshold range entry when no fallback is supplied. This explicitly
+    /// chooses a default variant, not the game's live property evaluation or a saved override.
+    /// Selected unsupported/malformed resources return nil. Resolution shares a 16 MiB JSON
+    /// and 4096-element budget across at most 64 selected nodes and 32 model parts.
+    public func defaultItemModel(_ identifier: String) -> AssetItem? {
+        try? AssetItemReader(assets: self).read(identifier)
+    }
+
     /// Original PNG bytes, CRC-checked and bounded to 16 MiB. Decoding and animation are client work.
     public func texture(_ identifier: String) -> Data? {
         resource(identifier, directory: "textures", extension: "png")

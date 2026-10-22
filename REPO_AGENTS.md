@@ -272,9 +272,21 @@ fields reject Boolean, nonfinite and nonintegral integer values rather than appl
 The official 26.3 JSON, CuboidModel/Element/Face deserializers, TextureSlots, ResolvedModel,
 ItemModelGenerator, FaceBakery and ItemTransform establish the format/defaults. Synthetic tests
 share the existing independent TestZIP writer; no game artwork is checked in. These additive APIs
-are unreleased, tracked on #143. Item definitions, saved item tints and blockstate selection follow
-separately. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
+are unreleased, tracked on #143. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
 projection, compositing and display policy for fahlman/Chunksee#390 and #363.
+
+`GameAssets.defaultItemModel` resolves a caller-requested static fallback variant from item
+definitions using that same model owner. `AssetItem` retains ordered model parts and typed tint
+sources. Select/range fallbacks, false condition branches and a range's lowest-threshold entry
+when no fallback exists implement app #390's recorded default-variant choice; this API does not
+evaluate live properties or saved model/trim overrides. Unsupported selected renderers/tints
+return nil for the whole item; unselected branches are ignored. JSON, element, node and part
+budgets span all selected models. RGB conversion is shared with ItemStack's saved-color reader;
+grass tint sources expose the official 256×256 colormap sample without decoding an image.
+JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are
+unreleased, tracked on #147. The app selects this static representation, applies saved colors,
+and owns images and caching. Normal potion-effect/saved firework tint calculation, blockstate
+selection and resource-pack layering remain separate; no UI or world writing is added here.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline

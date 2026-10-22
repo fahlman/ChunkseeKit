@@ -4,10 +4,15 @@ struct AssetModelReader {
     let assets: GameAssets
 
     func read(_ identifier: String) throws -> AssetModel {
+        var budget = AssetReadBudget()
+        return try read(identifier, budget: &budget)
+    }
+
+    func read(_ identifier: String, budget: inout AssetReadBudget) throws -> AssetModel {
         var next: String? = identifier
         var seen = Set<Identifier>(), textures = [String: TextureSlot]()
         var elements: [RawElement]?, gui: AssetModel.Transform?, light: AssetModel.GuiLight?, ambient: Bool?
-        var generated = false, bytes = 0
+        var generated = false
         while let name = next {
             guard let id = GameAssets.resourceID(name), seen.count < 64, seen.insert(id).inserted else { throw Invalid.asset }
             if id.description == "minecraft:builtin/generated" {
@@ -15,9 +20,8 @@ struct AssetModelReader {
                 light = light ?? .front
                 break
             }
-            guard let data = assets.resource(id.description, directory: "models", extension: "json"),
-                  data.count <= ZipResources.maximumResourceSize - bytes else { throw Invalid.asset }
-            bytes += data.count
+            guard let data = assets.resource(id.description, directory: "models", extension: "json") else { throw Invalid.asset }
+            try budget.consume(bytes: data.count)
             let model = try JSONDecoder().decode(RawModel.self, from: data)
             textures.merge(model.textures) { child, _ in child }
             elements = elements ?? model.elements
@@ -28,6 +32,7 @@ struct AssetModelReader {
         }
         let geometry: AssetModel.Geometry
         if let elements {
+            try budget.consume(elements: elements.count)
             geometry = .elements(try elements.map { try $0.resolved(in: textures) })
         } else if generated {
             var layers = [AssetModel.Layer]()
