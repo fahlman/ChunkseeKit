@@ -28,6 +28,9 @@ struct AssetItemReader {
             let tints = try rawTints.map(tint)
             let model = try AssetModelReader(assets: assets).read(modelID.description, budget: &budget)
             parts.append(.init(model: model, tints: tints))
+        case "minecraft:special":
+            guard parts.count < 32 else { throw Invalid.asset }
+            parts.append(.init(model: try container(node, budget: &budget), tints: []))
         case "minecraft:composite":
             let children = try array(node["models"])
             guard children.count <= 64 else { throw Invalid.asset }
@@ -57,6 +60,36 @@ struct AssetItemReader {
         case "minecraft:empty": break
         default: throw Invalid.asset
         }
+    }
+
+    private func container(_ node: [String: Any], budget: inout AssetReadBudget) throws -> AssetModel {
+        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else { throw Invalid.asset }
+        let model = try object(node["model"]), type = try identifier(model["type"])
+        guard let shape = ContainerItemModel(rawValue: type.description),
+              let texture = shape.texture(try identifier(model["texture"])),
+              (try model["openness"].map(number) ?? 0) == 0 else { throw Invalid.asset }
+        if shape == .chest, let type = model["chest_type"], type as? String != "single" { throw Invalid.asset }
+        var scale = SIMD3<Float>.one, translation = SIMD3<Float>.zero, turnX = false
+        if let raw = node["transformation"] {
+            let transform = try object(raw)
+            let left = try numbers(transform["left_rotation"], count: 4)
+            let right = try numbers(transform["right_rotation"], count: 4)
+            let s = try numbers(transform["scale"], count: 3), t = try numbers(transform["translation"], count: 3)
+            // Only the axis-aligned transforms used by these verified item definitions can
+            // become ordinary cuboids. Other transforms remain unsupported, never discarded.
+            guard right[0...2].allSatisfy({ $0 == 0 }), abs(right[3]) == 1,
+                  left[1] == 0, left[2] == 0,
+                  (left[0] == 0 && abs(left[3]) == 1) || (abs(left[0]) == 1 && left[3] == 0),
+                  s.allSatisfy({ $0 > 0 }) else { throw Invalid.asset }
+            turnX = left[0] != 0
+            scale = SIMD3(s[0], s[1], s[2])
+            translation = SIMD3(t[0], t[1], t[2])
+        }
+        guard let elements = shape.elements(texture: texture, scale: scale, translation: translation, turnX: turnX) else { throw Invalid.asset }
+        try budget.consume(elements: elements.count)
+        let base = try AssetModelReader(assets: assets).read(try identifier(node["base"]).description, budget: &budget)
+        return .init(geometry: .elements(elements), guiTransform: base.guiTransform,
+                     guiLight: base.guiLight, ambientOcclusion: base.ambientOcclusion)
     }
 
     /// Inventory is a known context, unlike live properties such as use state or compass angle.
@@ -126,6 +159,12 @@ private func number(_ value: Any?) throws -> Float {
     let number = try jsonNumber(value).floatValue
     guard number.isFinite else { throw Invalid.asset }
     return number
+}
+
+private func numbers(_ value: Any?, count: Int) throws -> [Float] {
+    let values = try array(value)
+    guard values.count == count else { throw Invalid.asset }
+    return try values.map(number)
 }
 
 private func color(_ value: Any?) throws -> UInt32 {

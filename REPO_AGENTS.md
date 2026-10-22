@@ -294,6 +294,21 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
+`ContainerItemModel` supplies closed single-chest and shulker cuboids for selected special item
+definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
+ChestModel, ShulkerModel and ModelPart.Cube, including an independent export of their baked
+face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
+shares SpriteMapper's namespace-preserving `entity/chest/` or `entity/shulker/` path prefix;
+there is no list of accepted texture names. Waxed variants share their definition's texture.
+Static selection uses the normal chest fallback, without evaluating Christmas dates. Missing
+images remain a client fallback, as for ordinary models. Nonzero openness, double chests and
+unverified versions return nil. The item-local transform is baked into cuboids only for positive
+scale, translation and identity/X-half-turn rotations; other transforms remain unavailable.
+The shulker's local transform comes from its definition, not its GUI base. Final coordinates stay
+within the existing -16...32 model range, and special parts share the item/model budgets.
+No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
+This is unreleased work for fahlman/Chunksee#395; app adoption follows its own release and tests.
+
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
 or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.

@@ -946,7 +946,7 @@ Other selects and ranges use fallbacks, conditions use their false branch, and a
 fallback uses its lowest-threshold entry (first on a tie).
 It does not evaluate live compass angles, time, trim, custom model data or saved item-model
 overrides. Only the selected branches are interpreted; unsupported unselected branches do not
-prevent a usable default. A selected special/entity renderer, unknown tint or malformed value
+prevent a usable default. An unsupported selected special/entity renderer, unknown tint or malformed value
 makes the entire item unavailable, rather than returning part of a composite. Valid empty
 definitions stay empty. Limits across the definition and its resolved models are 16 MiB of JSON,
 4,096 elements, 64 selected nodes and 32 parts. Tint lists are limited to 32; range tables without
@@ -955,6 +955,23 @@ require nonempty cases and unique, nonempty match values, with at most 4,096 val
 finite Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
 Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
 tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
+
+Closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
+resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.
+The chest body, lid and latch and the two shulker boxes use verified game-code geometry and UVs;
+their texture IDs and inherited GUI presentation come from the supplied jar. Normal, trapped,
+ender and copper chests (including oxidation/waxed variants), and undyed/all 16 colored shulker
+boxes are covered. The normal chest fallback is used instead of evaluating Christmas dates.
+No artwork is included. Clients still handle absent or undecodable PNGs as for ordinary models.
+
+Texture identifiers retain their namespace and path: for example, a chest's `example:painted`
+reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
+Special geometry stays unavailable for other game versions, open lids or double chests.
+The definition's local transform is baked into the geometry only when it consists
+of positive scale, translation and identity or a half-turn around X, with an identity right
+rotation. This includes the shulker's transform; unsupported transforms are rejected instead
+of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
+element/JSON/part budgets. No public type or cache interpretation changes.
 
 ### Raw NBT
 
