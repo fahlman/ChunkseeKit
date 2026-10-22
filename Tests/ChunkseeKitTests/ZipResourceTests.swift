@@ -165,12 +165,13 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom),
                              Entry(path: "data/example/worldgen/noise_settings/custom.json",
-                                   text: "{\"noise\":{\"min_y\":16,\"height\":64}}", compressed: true)])
+                                   text: "{\"noise\":{\"min_y\":16,\"height\":64},\"sea_level\":45}", compressed: true)])
         let world = try world(at: root, pack: bytes, noise: "example:custom")
         let settings = try #require(try world.dimensionSettings()["example:mine"])
         let type = try #require(settings.type)
         #expect(type.buildRange == 0...127)
         #expect(settings.noiseGeneration?.range == 16..<80)
+        #expect(settings.noiseGeneration?.seaLevel == 45)
         #expect(settings.noiseGeneration?.surfaceRuleRange(in: type) == 16..<80)
     }
 

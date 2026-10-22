@@ -263,8 +263,15 @@ new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.
 is available in v0.40.0, with separate app adoption on #51.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
-available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline
-or referenced `minecraft:noise` settings; its seven vanilla bounds are verified for 26.3.
+available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
+or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.
+Its optional `seaLevel` reads the root `sea_level` signed 32-bit integer independently of the bounds.
+Absent or malformed sea levels stay nil without discarding readable bounds or taking another
+pack's value. Values outside the generation/build range remain unchanged, matching the game's
+Codec.INT and floating-islands preset. Existing integral NBT tags are accepted within Int32;
+fractional tags and noninteger JSON values are not invented as heights. The app owns how to use
+these facts in a height scale; no actual water surface is inferred. This additive field supports
+fahlman/Chunksee#388 and #356, with publication and app adoption handled separately.
 The existing type-only API shares the resolver but never opens generator resources. Empty noise
 heights remain valid; unknown generator kinds and unresolved settings remain unavailable.
 DimensionType owns the common packed-Y validation, with its extra nonempty-height requirement.

@@ -8,8 +8,10 @@ import Testing
         .compound(["min_y": .int(minY), "height": .int(height), "logical_height": .int(logical), "has_ceiling": .byte(1)])
     }
 
-    private func noise(minY: Int32 = 0, height: Int32 = 128) -> NBT {
-        .compound(["noise": .compound(["min_y": .int(minY), "height": .int(height)])])
+    private func noise(minY: Int32 = 0, height: Int32 = 128, seaLevel: NBT? = nil) -> NBT {
+        var fields: [String: NBT] = ["noise": .compound(["min_y": .int(minY), "height": .int(height)])]
+        fields["sea_level"] = seaLevel
+        return .compound(fields)
     }
 
     private func definition(type: NBT, noise: NBT, generator: String = "minecraft:noise") -> NBT {
@@ -58,11 +60,14 @@ import Testing
         let generator = try #require(underground.noiseGeneration)
         #expect(dimensionType.buildRange == 0...255 && dimensionType.hasCeiling)
         #expect(generator.range == 0..<128)
+        #expect(generator.seaLevel == 32)
         #expect(generator.surfaceRuleRange(in: dimensionType).upperBound - 1 == 127)
         #expect(settings["minecraft:the_nether"]?.type?.hasCeiling == false)
         #expect(settings["minecraft:the_nether"]?.noiseGeneration?.range == 0..<256)
+        #expect(settings["minecraft:the_nether"]?.noiseGeneration?.seaLevel == -64)
         let inline = try #require(settings["example:inline"])
         #expect(inline.noiseGeneration?.surfaceRuleRange(in: try #require(inline.type)) == 0..<128)
+        #expect(inline.noiseGeneration?.seaLevel == nil)
         #expect(try world.dimensionTypes() == settings.compactMapValues(\.type))
         #expect(try files.map { try Data(contentsOf: $0) } == before)
     }
@@ -77,6 +82,9 @@ import Testing
         let world = try world(at: root, definitions: Dictionary(uniqueKeysWithValues: definitions))
         let settings = try world.dimensionSettings()
         for (name, range) in expected { #expect(settings["example:" + name]?.noiseGeneration?.range == range) }
+        let seaLevels = ["overworld": 63, "amplified": 63, "large_biomes": 63,
+                         "nether": 32, "end": 0, "caves": 32, "floating_islands": -64]
+        for (name, seaLevel) in seaLevels { #expect(settings["example:" + name]?.noiseGeneration?.seaLevel == seaLevel) }
     }
 
     @Test func surfaceAnchorsUseGenerationContextRatherThanAHeightIntersection() throws {
@@ -100,11 +108,12 @@ import Testing
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(at: root, definitions: [
-            "example:inline": definition(type: type(), noise: noise(minY: -2032, height: 4064)),
+            "example:inline": definition(type: type(), noise: noise(minY: -2032, height: 4064, seaLevel: .int(47))),
             "example:reference": definition(type: .string("the_nether"), noise: .string("nether")),
         ], version: 9999, modern: false)
         let settings = try world.dimensionSettings()
         #expect(settings["example:inline"]?.noiseGeneration?.range == -2032..<2032)
+        #expect(settings["example:inline"]?.noiseGeneration?.seaLevel == 47)
         #expect(settings["example:inline"]?.type?.buildRange == 0...255)
         #expect(settings["example:reference"]?.type == nil)
         #expect(settings["example:reference"]?.noiseGeneration == nil)
@@ -151,17 +160,60 @@ import Testing
     @Test func noiseResourcesSharePackPriorityAndMalformedOverridesBlockFallback() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        _ = try pack("Lower", at: root)
-        let upper = try pack("Upper", at: root, json: "{\"noise\":{\"min_y\":0,\"height\":64}}")
+        _ = try pack("Lower", at: root, json: "{\"noise\":{\"min_y\":-64,\"height\":192},\"sea_level\":-32}")
+        let upper = try pack("Upper", at: root, json: "{\"noise\":{\"min_y\":0,\"height\":64},\"sea_level\":47}")
         let world = try world(at: root, definitions: ["example:mine": definition(type: type(), noise: .string("example:custom"))],
                               packs: ["vanilla", "file/Lower", "file/Upper"])
         #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.range == 0..<64)
+        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.seaLevel == 47)
         try FileManager.default.removeItem(at: upper)
         #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.range == -64..<128)
+        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.seaLevel == -32)
         for bad in ["{}", "{\"noise\":{\"min_y\":0.5,\"height\":128}}", "{\"noise\":{\"min_y\":0,\"height\":1e100}}"] {
             try Fixtures.write(Array(bad.utf8), to: upper)
             let value = try #require(try world.dimensionSettings()["example:mine"])
             #expect(value.type?.height == 256 && value.noiseGeneration == nil)
+        }
+    }
+
+    @Test func inlineSeaLevelsKeepReadableBoundsAndDoNotClampToTheirRange() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cases: [(NBT?, Int?)] = [
+            (.int(0), 0), (.int(-64), -64), (.int(10_000), 10_000),
+            (.int(.min), Int(Int32.min)), (.long(Int64(Int32.max)), Int(Int32.max)),
+            (nil, nil), (.string("63"), nil), (.float(63), nil), (.compound([:]), nil),
+            (.long(Int64(Int32.min) - 1), nil), (.long(Int64(Int32.max) + 1), nil),
+        ]
+        let definitions = Dictionary(uniqueKeysWithValues: cases.enumerated().map {
+            ("example:case\($0.offset)", definition(type: type(), noise: noise(seaLevel: $0.element.0)))
+        })
+        let settings = try world(at: root, definitions: definitions).dimensionSettings()
+        for (index, entry) in cases.enumerated() {
+            let generation = try #require(settings["example:case\(index)"]?.noiseGeneration)
+            #expect(generation.range == 0..<128)
+            #expect(generation.seaLevel == entry.1)
+        }
+    }
+
+    @Test func JSONSeaLevelValidationNeverFallsBackToAnotherResource() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try pack("Lower", at: root, json: "{\"noise\":{\"min_y\":-64,\"height\":192},\"sea_level\":32}")
+        let upper = try pack("Upper", at: root)
+        let world = try world(at: root, definitions: ["example:mine": definition(type: type(), noise: .string("example:custom"))],
+                              packs: ["vanilla", "file/Lower", "file/Upper"])
+        let cases: [(String?, Int?)] = [
+            ("-64", -64), ("0", 0), ("2147483647", Int(Int32.max)), ("-2147483648", Int(Int32.min)),
+            (nil, nil), ("null", nil), ("true", nil), ("\"63\"", nil), ("1.5", nil),
+            ("2147483648", nil), ("-2147483649", nil), ("{}", nil),
+        ]
+        for (raw, expected) in cases {
+            let field = raw.map { ",\"sea_level\":\($0)" } ?? ""
+            try Fixtures.write(Array("{\"noise\":{\"min_y\":0,\"height\":64}\(field)}".utf8), to: upper)
+            let generation = try #require(try world.dimensionSettings()["example:mine"]?.noiseGeneration)
+            #expect(generation.range == 0..<64)
+            #expect(generation.seaLevel == expected)
         }
     }
 

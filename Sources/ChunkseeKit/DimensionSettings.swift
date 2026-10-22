@@ -3,7 +3,8 @@ import Foundation
 /// Independently available facts from one saved dimension definition.
 public struct DimensionSettings: Sendable, Equatable {
     public let type: DimensionType?
-    /// Nil for non-noise generators or missing, malformed or unresolved settings.
+    /// Nil for non-noise generators or missing, unreadable or unresolved generation bounds.
+    /// Other facts, such as sea level, can be independently unavailable.
     public let noiseGeneration: NoiseGenerationSettings?
 }
 
@@ -20,7 +21,7 @@ extension World {
         try readDimensionSettings(includeGeneration: false).compactMapValues(\.type)
     }
 
-    /// Reads each saved dimension's type and noise-generation bounds together. The two facts
+    /// Reads each saved dimension's type and noise-generation facts together. The two values
     /// resolve independently; an unavailable generator does not discard a known dimension type.
     /// Uses the same version, pack priority and unsupported-resource rules as dimensionTypes().
     /// Only minecraft:noise generators have noiseGeneration. No roof or biome is inferred.
