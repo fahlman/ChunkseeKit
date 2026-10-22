@@ -871,6 +871,38 @@ for map in world.mapItems() where !map.isBlank {
 }
 ```
 
+### Game asset models (unreleased)
+
+`GameAssets` reads a supplied Minecraft game jar through the same validated ZIP reader as data
+packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
+world data version. The client chooses an installed jar matching its world and caches results
+for that jar; no Minecraft artwork is bundled in this package.
+
+```swift
+if let assets = try GameAssets(contentsOf: gameJarURL),
+   let model = assets.model("minecraft:block/stone") {
+    // model.geometry has resolved cuboid faces or generated item layers.
+    // Each material's texture identifier can be passed to assets.texture(_:).
+    print(assets.version.id, model.guiTransform)
+}
+```
+
+`AssetModel` contains inherited model geometry, resolved material references, tint indices,
+face UVs/rotation, element rotation, light-emission/shade metadata and the game's GUI transform.
+Cuboid positions and UVs retain the 16-unit model coordinate system; GUI translation is converted
+to block units and clamped as in the game. Generated items expose ordered layer0...layer4, stopping
+at the first absent layer. Texture reads return the original PNG bytes; image decoding, compositing,
+projection, tint application and color averaging belong to the client.
+
+Parents and texture references have cycle detection and a 64-step limit. Each resource and the
+combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or
+unresolvable required resources return nil, as do nonfinite/invalid numeric fields; valid empty
+geometry stays empty. These reader bounds intentionally reject unusually large custom models.
+No resource-pack layering, item-definition selection, saved tint components, blockstate selection,
+sprite-atlas remapping or animation interpretation is included in this foundation. Those follow
+separately for fahlman/Chunksee#390 and #363 using this shared reader. The model format and defaults
+were checked against the official 26.3 client JSON and its cuboid/model resolver bytecode.
+
 ### Raw NBT
 
 ```swift

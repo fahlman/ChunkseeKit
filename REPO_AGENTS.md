@@ -262,6 +262,20 @@ present override still blocks fallback. No file is extracted, no private SDK dec
 new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
 is available in v0.40.0, with separate app adoption on #51.
 
+`GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
+that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
+resolved materials, tint indices, default/explicit UVs, rotations and GUI settings. It retains the
+26.3 translucent-material and element-shading facts. The reader is immutable and Sendable; it has
+no UI imports, image decoder, background-task owner or mutable cache. Parent/reference traversal,
+JSON bytes and element counts are bounded; invalid/cyclic resources stay unavailable. Numeric
+fields reject Boolean, nonfinite and nonintegral integer values rather than apply Gson coercions.
+The official 26.3 JSON, CuboidModel/Element/Face deserializers, TextureSlots, ResolvedModel,
+ItemModelGenerator, FaceBakery and ItemTransform establish the format/defaults. Synthetic tests
+share the existing independent TestZIP writer; no game artwork is checked in. These additive APIs
+are unreleased, tracked on #143. Item definitions, saved item tints and blockstate selection follow
+separately. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
+projection, compositing and display policy for fahlman/Chunksee#390 and #363.
+
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
 or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.
