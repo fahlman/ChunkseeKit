@@ -13,6 +13,9 @@ public struct LightingTimeline: Sendable, Equatable {
     private let color: TimelineTrack<SIMD3<Float>>?
     private let phase: TimelineTrack<SkyLighting.MoonPhase>?
 
+    // Unrelated tracks must not require their clock when composing this lighting projection.
+    var hasLightingTracks: Bool { sun != nil || moon != nil || factor != nil || color != nil || phase != nil }
+
     /// Applies this timeline at whole ticks from clockID, preserving absent attributes from base.
     /// Periodic tracks wrap negative times; nonperiodic tracks hold their first/last values.
     /// Returns nil on nonfinite arithmetic or an unsolvable easing curve, never partial lighting.
