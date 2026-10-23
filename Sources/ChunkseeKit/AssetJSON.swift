@@ -55,6 +55,16 @@ enum AssetJSON {
         return color
     }
 
+    /// STRING_RGB_VEC3_COLOR keeps list channels as floats, unlike the packed RGB codec.
+    static func colorVector(_ value: Any?) throws -> SIMD3<Float> {
+        if value is [Any] {
+            let channels = try numbers(value, count: 3)
+            return SIMD3(channels[0], channels[1], channels[2])
+        }
+        let color = try stringColor(value)
+        return SIMD3(Float((color >> 16) & 255), Float((color >> 8) & 255), Float(color & 255)) / 255
+    }
+
     static func integer(_ value: Any?) throws -> Int {
         guard let value = Int32(exactly: try jsonNumber(value).doubleValue) else { throw Invalid.asset }
         return Int(value)
