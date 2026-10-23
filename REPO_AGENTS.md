@@ -379,13 +379,23 @@ static default-variant API. Nonzero container openness, double chests and unveri
 return nil. `AssetItemTransform` composes selected ancestor and local transforms in parent-to-child
 order, matching Transformation.compose. The supported subset has positive X scale, same-sign
 nonzero Y/Z scales, translation, identity/X-half-turn left rotation and identity right rotation.
-Other transforms and nonidentity transforms on ordinary model parts remain unavailable rather
-than being dropped. This includes the shulker's local quaternion turn and the shield's parent
-Y/Z sign flip. Both come from their item definitions, not their GUI bases. Final coordinates stay
+This subset handles the shulker's local quaternion turn and the shield's parent Y/Z sign flip.
+Both come from their item definitions, not their GUI bases. Unsupported special transforms
+remain unavailable rather than being dropped. Final special-model coordinates stay
 within the existing -16...32 model range, and special parts share the item/model budgets.
 No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
-Containers shipped for fahlman/Chunksee#395; the unreleased shield extension is part of
-fahlman/Chunksee#390. App adoption follows its own release and tests.
+Containers shipped for fahlman/Chunksee#395; the shield extension shipped in v0.55.0 for
+fahlman/Chunksee#390. App adoption follows its own checks.
+
+Ordinary element models now preserve translation-only item-node transforms through that same
+`AssetItemTransform` owner. The shift is in block units and moves both element corners and
+rotation origins in the resolved 16-unit model space; existing UVs, rotations/rescaling, faces,
+tints and GUI presentation remain intact. This places the 16 colored beds' feet after their
+heads, as their 26.3 item definitions request. Translations may place a model outside its source
+JSON's corner bounds, but nonfinite results are rejected. Nonidentity scale/rotation on ordinary
+parts and transforms on generated layers remain unsupported; the straw bed's Y half-turn is
+still separate #390 work. Selected-node composition and whole-item budgets are unchanged.
+This is an unreleased reader fix with no public API or app drawing-path change.
 
 `GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
 variants or every selected multipart piece through the existing model reader. Its `AssetBlock`

@@ -1007,16 +1007,22 @@ Texture identifiers retain their namespace and path: for example, a chest's `exa
 reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
 Special geometry stays unavailable for other game versions, open lids or double chests.
 
-The unreleased shield change adds the plain shield's plate and handle from the official
+Since v0.55.0, the plain shield's plate and handle come from the official
 `ShieldModel`, using `entity/shield/shield_base_nopattern` and the definition's base GUI settings.
 Saved banner patterns and base colors remain outside this static default-variant API.
 Selected ancestor and local transforms compose in parent-to-child order. They are baked into
 special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or
 a half-turn around X, with an identity right rotation. This covers both the shulker's quaternion
-turn and the shield's parent Y/Z sign flip. Other transforms, and nonidentity transforms on
-ordinary model parts, return nil instead of being ignored. Final coordinates obey the existing
--16...32 model bounds and the same shared element/JSON/part budgets. No public type or cache
-interpretation changes.
+turn and the shield's parent Y/Z sign flip. Unsupported special-model transforms return nil
+instead of being ignored; their final coordinates stay within the existing -16...32 model bounds.
+
+The unreleased translation fix also supports translation-only transforms on ordinary element
+models, including the two-part colored beds. Translation moves the element corners and any
+rotation origin while preserving UVs, rotation/rescaling, tints and GUI settings. Transformed
+coordinates may extend beyond the source model's bounds, but must remain finite. Scale and
+rotation on ordinary parts, including the straw bed's Y half-turn, and transforms on generated
+layers remain unsupported. All selected parts keep the shared element/JSON/part budgets.
+No public type or cache interpretation changes.
 
 ### Biome color definitions (v0.52.0)
 
