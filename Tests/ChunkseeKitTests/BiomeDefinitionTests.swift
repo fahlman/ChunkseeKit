@@ -7,6 +7,138 @@ import Testing
     private let metadata = #"{"pack":{"min_format":121,"max_format":121,"description":"Fixture"}}"#
     private let plain = ##"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":"#3f76e4"}}"##
 
+    @Test func completeCatalogUsesTheRequestedReaderPriorityAndKeepsNestedIDs() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let low = plain.replacingOccurrences(of: "#3f76e4", with: "#102030")
+        let high = plain.replacingOccurrences(of: "#3f76e4", with: "#abcdef")
+        _ = try folder("low", at: root, entries: [resource(low), resource("example:nested/meadow", low),
+                                                resource("example:blocked", low)])
+        var corrupt = resource("example:corrupt", plain)
+        corrupt.wrongCRC = true
+        try zip("high.zip", at: root, entries: [resource(high), resource("example:blocked", "invalid JSON"), corrupt])
+        let reader = try assets([resource(plain), resource("example:vanilla_only", plain), resource("example:corrupt", plain)])
+        let world = try world(root, packs: ["vanilla", "file/low", "file/high.zip"])
+        let files = ["level.dat", "datapacks/low/pack.mcmeta", "datapacks/low/data/minecraft/worldgen/biome/plains.json", "datapacks/high.zip"]
+            .map { root.appendingPathComponent($0) }
+        let before = try files.map { try Data(contentsOf: $0) }
+        let result = try world.biomeDefinitions(assets: reader)
+        #expect(Set(result.keys) == ["minecraft:plains", "example:nested/meadow", "example:vanilla_only"])
+        #expect(result["minecraft:plains"]?.waterColor == 0xabcdef)
+        #expect(result["example:nested/meadow"]?.waterColor == 0x102030)
+        #expect(try result == world.biomeDefinitions(for: ["plains", "example:nested/meadow", "example:vanilla_only",
+                                                       "example:blocked", "example:corrupt"], assets: reader))
+        #expect(try files.map { try Data(contentsOf: $0) } == before)
+    }
+
+    @Test func completeCatalogDoesNotInventVanillaOrEnabledPacks() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try folder("override", at: root, entries: [resource("example:custom", plain)])
+        let world = try world(root, packs: ["vanilla", "file/override"])
+        for reader in [nil, try assets([resource(plain)], version: 9999)] {
+            #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["example:custom"])
+        }
+        let reader = try assets([resource(plain)])
+        for version in [nil, 1000, 9999] as [Int32?] {
+            let old = try self.world(root, packs: ["vanilla", "file/override"], version: version)
+            #expect(try old.biomeDefinitions(assets: reader).isEmpty)
+        }
+        let disabled = try self.world(root, packs: [])
+        #expect(try disabled.biomeDefinitions(assets: reader).isEmpty)
+        let blocked = try self.world(root, packs: ["vanilla", "file/override", "experiment"])
+        #expect(try blocked.biomeDefinitions(assets: reader).isEmpty)
+        let higher = try self.world(root, packs: ["vanilla", "experiment", "file/override"])
+        #expect(Set(try higher.biomeDefinitions(assets: reader).keys) == ["example:custom"])
+    }
+
+    @Test func discoveryAcceptsOnlyCanonicalBiomeResourcePaths() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let unrelated = ["data/minecraft/worldgen/noise_settings/fake.json", "assets/minecraft/worldgen/biome/fake.json",
+                         "data/Bad/worldgen/biome/fake.json", "data/./worldgen/biome/fake.json",
+                         "data/minecraft/worldgen/biome/../fake.json", "data/minecraft/worldgen/biome//fake.json",
+                         "data/minecraft/worldgen/biome/.json", "data/minecraft/worldgen/biome/fake.json.extra"]
+        let reader = try assets([resource("example:nested/real", plain)] + unrelated.map { .init(path: $0, text: plain) })
+        let world = try world(root, packs: ["vanilla"])
+        #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["example:nested/real"])
+    }
+
+    @Test func folderCatalogSkipsCategoryAndDescendantLinksButAllowsNamespaceAliases() throws {
+        let root = try Fixtures.tempDirectory(), outside = try Fixtures.tempDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let pack = try folder("links", at: root, entries: [resource("example:nested/meadow", plain)])
+        let biomes = pack.appendingPathComponent("data/example/worldgen/biome")
+        let fm = FileManager.default
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("alias"), withDestinationURL: biomes.appendingPathComponent("nested"))
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("nested/cycle"), withDestinationURL: biomes)
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("escape"), withDestinationURL: outside)
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("link.json"), withDestinationURL: biomes.appendingPathComponent("nested/meadow.json"))
+        try fm.createSymbolicLink(at: pack.appendingPathComponent("data/namespace_alias"), withDestinationURL: pack.appendingPathComponent("data/example"))
+        let linkedCategory = pack.appendingPathComponent("data/category_alias/worldgen/biome")
+        try fm.createDirectory(at: linkedCategory.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: linkedCategory, withDestinationURL: biomes)
+        let external = outside.appendingPathComponent("outside.json")
+        try Fixtures.write(Array(plain.utf8), to: external)
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("blocked.json"), withDestinationURL: external)
+        let world = try world(root, packs: ["vanilla", "file/links"])
+        let reader = try assets([resource("example:blocked", plain)])
+        let result = try world.biomeDefinitions(assets: reader)
+        #expect(Set(result.keys) == ["example:nested/meadow", "namespace_alias:nested/meadow", "example:blocked"])
+        #expect(result["example:nested/meadow"] == result["namespace_alias:nested/meadow"])
+        #expect(result["example:blocked"]?.waterColor == 0x3f76e4)
+        // Minecraft's direct getResource follows contained aliases; registry listing does not.
+        let direct = try world.biomeDefinitions(for: ["example:alias/meadow", "example:link"], assets: reader)
+        #expect(direct["example:alias/meadow"] == result["example:nested/meadow"])
+        #expect(direct["example:link"] == result["example:nested/meadow"])
+        #expect(try Data(contentsOf: external) == Data(plain.utf8))
+    }
+
+    @Test func catalogLinksCannotOverrideLowerResourcesButMalformedRegularFilesCan() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let low = plain.replacingOccurrences(of: "#3f76e4", with: "#102030")
+        let high = plain.replacingOccurrences(of: "#3f76e4", with: "#abcdef")
+        _ = try folder("low", at: root, entries: [resource("example:linked", low), resource("example:invalid", low)])
+        let pack = try folder("high", at: root, entries: [resource("example:target", high), resource("example:invalid", "invalid JSON")])
+        let biomes = pack.appendingPathComponent("data/example/worldgen/biome")
+        try FileManager.default.createSymbolicLink(at: biomes.appendingPathComponent("linked.json"), withDestinationURL: biomes.appendingPathComponent("target.json"))
+        let world = try world(root, packs: ["file/low", "file/high"])
+        let catalog = try world.biomeDefinitions(assets: nil)
+        #expect(Set(catalog.keys) == ["example:linked", "example:target"])
+        #expect(catalog["example:linked"]?.waterColor == 0x102030)
+        #expect(catalog["example:target"]?.waterColor == 0xabcdef)
+        #expect(try world.biomeDefinitions(for: ["example:linked"], assets: nil)["example:linked"]?.waterColor == 0xabcdef)
+    }
+
+    @Test func changedGameArchiveDoesNotExposeLowerPackDefinitions() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try folder("low", at: root, entries: [resource(plain)])
+        let jar = root.appendingPathComponent("fixture.jar")
+        let bytes = try TestZIP.zip([.init(path: "version.json", text: #"{"id":"26.3","world_version":5023}"#), resource(plain)])
+        try Fixtures.write(bytes, to: jar)
+        let reader = try #require(try GameAssets(contentsOf: jar))
+        let world = try world(root, packs: ["file/low", "vanilla"])
+        #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["minecraft:plains"])
+        try Fixtures.write(Array("truncated".utf8), to: jar)
+        #expect(try world.biomeDefinitions(assets: reader).isEmpty)
+    }
+
+    @Test func cancelledCatalogReadStopsWithoutPublishingPartialDefinitions() async throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(root, packs: ["vanilla"]), reader = try assets([resource(plain)])
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try world.biomeDefinitions(assets: reader)
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
+    }
+
     private func resource(_ id: String, _ json: String) -> TestZIP.Entry {
         let parts = id.split(separator: ":", maxSplits: 1)
         return .init(path: "data/\(parts[0])/worldgen/biome/\(parts[1]).json", text: json)
