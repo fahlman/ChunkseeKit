@@ -161,6 +161,37 @@ import Testing
         #expect(surfaceOnly.caveBiomes.isEmpty && surfaceOnly.biomeAreas.count == 1)
     }
 
+    @Test func paletteCatalogTracksRetainedRegionsWithoutBecomingNotableDeposits() throws {
+        let world = try SavedWorld()
+        defer { world.remove() }
+        try world.terrain(chunkX: 31, count: 2, unusedBlockID: "minecraft:oak_leaves")
+        try world.terrain(chunkX: 32, count: 5, unusedBlockID: "example:ruby_block")
+        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
+        let initial = empty.updating(available: [a, b], selected: nil,
+                                    replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
+        let common: Set<String> = ["minecraft:air", "minecraft:stone", "minecraft:diamond_ore"]
+        #expect(initial.paletteBlockIDs == common.union(["minecraft:oak_leaves", "example:ruby_block"]))
+        #expect(initial.regions[a]?.paletteBlockIDs == common.union(["minecraft:oak_leaves"]))
+        #expect(initial.blocks.map(\.deposit.count) == [5, 2])
+        let failed = initial.updating(available: [a, b], selected: [b], replacements: [])
+        #expect(failed.paletteBlockIDs == initial.paletteBlockIDs)
+
+        try world.terrain(chunkX: 32, count: 7, unusedBlockID: "minecraft:farmland")
+        let replacement = try world.scan(b, caves: caves)
+        let changed = initial.updating(available: [a, b], selected: [b], replacements: [replacement])
+        #expect(changed.paletteBlockIDs == common.union(["minecraft:oak_leaves", "minecraft:farmland"]))
+        #expect(initial.paletteBlockIDs.contains("example:ruby_block"))
+        expectEquivalent(changed, empty.updating(available: [a, b], selected: nil,
+                                                replacements: [try world.scan(a, caves: caves), replacement]))
+
+        let deleted = changed.updating(available: [b], selected: [a], replacements: [])
+        #expect(deleted.paletteBlockIDs == common.union(["minecraft:farmland"]))
+        try world.empty(b)
+        let cleared = deleted.updating(available: [b], selected: [b], replacements: [try world.scan(b, caves: caves)])
+        #expect(cleared.paletteBlockIDs.isEmpty && cleared.regions.count == 1)
+        #expect(deleted.updating(available: [], selected: nil, replacements: []).paletteBlockIDs.isEmpty)
+    }
+
     private func expectEquivalent(_ a: DimensionIndex, _ b: DimensionIndex) {
         #expect(Set(a.regions.keys) == Set(b.regions.keys))
         #expect(a.containers == b.containers && a.storage == b.storage && a.signs == b.signs)
@@ -168,6 +199,7 @@ import Testing
         #expect(a.pointsOfInterest == b.pointsOfInterest && a.portals == b.portals)
         #expect(a.biomes == b.biomes && a.caveBiomes == b.caveBiomes && a.formats == b.formats)
         #expect(a.blocks == b.blocks)
+        #expect(a.paletteBlockIDs == b.paletteBlockIDs)
         #expect(Set(a.biomeAreas.map(\.id)) == Set(b.biomeAreas.map(\.id)))
         #expect(a.biomeAreas.map(\.chunkCount).sorted() == b.biomeAreas.map(\.chunkCount).sorted())
     }
@@ -192,10 +224,12 @@ import Testing
             RegionIndex(try dimension(id).scan(region: region,
                 options: .init(blockIDs: Set(NotableBlock.byID.keys))), caveBiomeIDs: caves)
         }
-        func terrain(chunkX: Int, count: Int, biome: String = "minecraft:plains", dimension id: String = "overworld") throws {
+        func terrain(chunkX: Int, count: Int, biome: String = "minecraft:plains", dimension id: String = "overworld",
+                     unusedBlockID: String? = nil) throws {
             var indices = [Int](repeating: 0, count: 4096)
             for i in 0..<count { indices[i] = 1 }
-            let section = Fixtures.section(y: 0, palette: ["minecraft:stone", "minecraft:diamond_ore"].map {
+            let palette = ["minecraft:stone", "minecraft:diamond_ore"] + (unusedBlockID.map { [$0] } ?? [])
+            let section = Fixtures.section(y: 0, palette: palette.map {
                 .compound(["Name": .string($0)])
             }, indices: indices, biomes: [biome])
             let cave = Fixtures.section(y: -1, palette: [.compound(["Name": .string("minecraft:air")])],
