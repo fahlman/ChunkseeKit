@@ -1061,8 +1061,11 @@ No chunks are scanned or world files written.
 The unreleased `world.biomeDefinitions(assets:)` overload discovers all available biome
 definitions in those same sources, including nested data-pack IDs, without first scanning
 the world's chunks. It loads the enabled packs once and shares the requested-ID query's
-priority and invalid-override handling. ZIP discovery uses the validated central directory;
-folder discovery follows internal directory aliases, stops cycles, and cannot leave the pack.
+priority and invalid-override handling. ZIP discovery uses the validated central directory.
+Folder registry discovery follows the game's rule: symbolic links at or below the biome category
+folder are not entries, while contained namespace aliases are supported. A higher linked resource
+therefore cannot override a lower listed definition. The existing requested-ID API remains a direct
+resource lookup and can resolve contained aliases, as the game's direct `getResource` does.
 Malformed definitions remain absent, and an unknown or changed higher pack cannot expose a
 lower definition. Cancellation and file-read errors propagate. Retain the returned value as
 a snapshot; reread after changing enabled packs or their contents. Image decoding, color

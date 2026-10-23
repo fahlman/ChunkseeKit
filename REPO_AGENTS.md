@@ -310,8 +310,12 @@ The new `World.biomeDefinitions(assets:)` overload discovers the complete biome-
 catalog without reading chunks. `WorldResourcePack` lists candidate IDs from its enabled folder
 or ZIP sources, then the same requested-ID reader applies priority, version checks and invalid
 override shadowing. ZIP names come from the existing validated directory without reading entry
-payloads. Folder discovery resolves paths through the existing containment rule, follows internal
-directory aliases and stops at an ancestor cycle. Unknown or changed archives cannot expose lower
+payloads. Folder discovery preserves containment and matches 26.3 `PathPackResources.listPath`:
+`Files.find` receives no `FOLLOW_LINKS`, so linked category folders, descendant directories and
+files are not registered. Contained namespace aliases are allowed. Only listed entries participate
+in catalog priority, so a higher link cannot override a lower real entry. The shared resource
+reader still owns payload/invalid-present handling. Requested-ID queries retain direct-resource
+lookup semantics (26.3 `getResource` can resolve contained aliases). Unknown or changed archives cannot expose lower
 definitions. Nested IDs remain canonical; unrelated resources and invalid names are excluded.
 The app can retain the resolved snapshot and derive tile identity from its values, rereading it
 when resources change. No chunk scan, mutable cache, image decoder or second pack reader is added.

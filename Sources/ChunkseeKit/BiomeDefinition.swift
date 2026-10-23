@@ -72,17 +72,10 @@ extension World {
     /// Uses the same version, priority, path and invalid-override rules as the requested-ID query.
     /// No chunks are read. Clients can retain this color snapshot and derive their cache identity
     /// from its values, then reread it when the enabled packs or resources change.
-    /// Internal folder links are bounded by directory ancestry; escaping links are not followed.
+    /// Registry discovery ignores symbolic links at or below the biome category folder.
     public func biomeDefinitions(assets: GameAssets?) throws -> [String: BiomeDefinition] {
         guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
-        let packs = try biomePacks(assets: assets)
-        var ids = Set<String>()
-        for pack in packs {
-            try Task.checkCancellation()
-            guard let found = try pack.identifiers(in: "worldgen/biome") else { break }
-            ids.formUnion(found)
-        }
-        return try Self.biomeDefinitions(for: ids, in: packs)
+        return try WorldResourcePack.readAll(directory: "worldgen/biome", in: biomePacks(assets: assets), json: BiomeDefinition.init(json:))
     }
 
     private func biomePacks(assets: GameAssets?) throws -> [WorldResourcePack] {

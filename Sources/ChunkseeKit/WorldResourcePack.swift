@@ -3,7 +3,7 @@ import Foundation
 /// One enabled data-pack order and safe-path policy for dimension and biome definitions.
 enum WorldResourcePack {
     case vanilla
-    case folder(URL)
+    case folder(URL, listed: Set<String>? = nil)
     case zip(ZipResources)
     case unavailable
 
@@ -25,7 +25,8 @@ enum WorldResourcePack {
             case .vanilla:
                 if let value = vanilla(id.description) { return value }
             case .unavailable: return nil
-            case .folder(let root):
+            case .folder(let root, let listed):
+                if let listed, !listed.contains(id.description) { continue }
                 guard let file = Self.file(path, under: root) else { return nil }
                 if FileManager.default.fileExists(atPath: file.path) {
                     // An invalid override is still an override, never a reason to try a lower pack.
@@ -45,6 +46,28 @@ enum WorldResourcePack {
         try ids.reversed().map { try load($0, in: world, vanilla: vanilla) }
     }
 
+    /// Registry discovery considers only resources a pack lists. A higher linked file is not
+    /// a registry entry and cannot override a lower real file; a listed malformed file can.
+    static func readAll<Value>(directory: String, in packs: [Self], json: (Data) -> Value?) throws -> [String: Value] {
+        var ids = Set<String>(), sources: [Self] = []
+        for pack in packs {
+            try Task.checkCancellation()
+            guard let found = try pack.identifiers(in: directory) else {
+                sources.append(.unavailable)
+                break
+            }
+            ids.formUnion(found)
+            if case .folder(let root, _) = pack { sources.append(.folder(root, listed: found)) }
+            else { sources.append(pack) }
+        }
+        var result: [String: Value] = [:]
+        for id in ids.sorted() {
+            try Task.checkCancellation()
+            result[id] = try read(id, directory: directory, in: sources, vanilla: { _ in nil }, json: json)
+        }
+        return result
+    }
+
     /// Candidate IDs only. The ordinary reader still decides priority and whether a present
     /// resource is usable; listing an invalid override must never expose a lower definition.
     /// Nil means this source has unknown contents, so lower sources cannot add candidates.
@@ -56,7 +79,7 @@ enum WorldResourcePack {
             return Set(paths.compactMap {
                 Self.identifier(for: $0, in: directory)
             })
-        case .folder(let root):
+        case .folder(let root, _):
             let fm = FileManager.default
             guard let data = Self.file("data", under: root) else { return nil }
             guard Self.isDirectory(data) else { return [] }
@@ -65,22 +88,22 @@ enum WorldResourcePack {
                 try Task.checkCancellation()
                 let base = "data/\(namespace)/\(directory)"
                 guard GameAssets.resourceID("\(namespace):probe") != nil,
-                      let folder = Self.file(base, under: root), Self.isDirectory(folder) else { continue }
-                var pending: [(path: String, url: URL, ancestors: Set<URL>)] = [(base, folder, [folder])]
+                      let folder = Self.file(base, under: root),
+                      try Self.fileType(root.appendingPathComponent(base)) == .typeDirectory else { continue }
+                var pending: [(path: String, url: URL)] = [(base, folder)]
                 while let current = pending.popLast() {
                     try Task.checkCancellation()
                     for name in try fm.contentsOfDirectory(atPath: current.url.path).sorted() {
                         try Task.checkCancellation()
                         let path = current.path + "/" + name
                         guard let url = Self.file(path, under: root) else { continue }
-                        if Self.isDirectory(url) {
-                            // Internal directory links can name resources too; do not follow a
-                            // cycle back into an ancestor or walk outside the existing pack root.
-                            if !current.ancestors.contains(url) {
-                                pending.append((path, url, current.ancestors.union([url])))
-                            }
-                        } else if let id = Self.identifier(for: path, in: directory) {
-                            result.insert(id)
+                        // PathPackResources.listPath uses Files.find without FOLLOW_LINKS.
+                        // Inspect the original node, not the resolved destination used for containment.
+                        switch try Self.fileType(root.appendingPathComponent(path)) {
+                        case .some(.typeDirectory): pending.append((path, url))
+                        case .some(.typeRegular):
+                            if let id = Self.identifier(for: path, in: directory) { result.insert(id) }
+                        default: break
                         }
                     }
                 }
@@ -101,6 +124,12 @@ enum WorldResourcePack {
     private static func isDirectory(_ url: URL) -> Bool {
         var directory: ObjCBool = false
         return FileManager.default.fileExists(atPath: url.path, isDirectory: &directory) && directory.boolValue
+    }
+
+    private static func fileType(_ url: URL) throws -> FileAttributeType? {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return nil }
+        return try fm.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType
     }
 
     private static func load(_ id: String, in world: URL, vanilla: Self) throws -> Self {

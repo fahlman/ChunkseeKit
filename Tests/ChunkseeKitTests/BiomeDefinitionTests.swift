@@ -64,7 +64,7 @@ import Testing
         #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["example:nested/real"])
     }
 
-    @Test func folderCatalogFollowsInternalLinksButStopsCyclesAndEscapes() throws {
+    @Test func folderCatalogSkipsCategoryAndDescendantLinksButAllowsNamespaceAliases() throws {
         let root = try Fixtures.tempDirectory(), outside = try Fixtures.tempDirectory()
         defer {
             try? FileManager.default.removeItem(at: root)
@@ -76,16 +76,42 @@ import Testing
         try fm.createSymbolicLink(at: biomes.appendingPathComponent("alias"), withDestinationURL: biomes.appendingPathComponent("nested"))
         try fm.createSymbolicLink(at: biomes.appendingPathComponent("nested/cycle"), withDestinationURL: biomes)
         try fm.createSymbolicLink(at: biomes.appendingPathComponent("escape"), withDestinationURL: outside)
+        try fm.createSymbolicLink(at: biomes.appendingPathComponent("link.json"), withDestinationURL: biomes.appendingPathComponent("nested/meadow.json"))
+        try fm.createSymbolicLink(at: pack.appendingPathComponent("data/namespace_alias"), withDestinationURL: pack.appendingPathComponent("data/example"))
+        let linkedCategory = pack.appendingPathComponent("data/category_alias/worldgen/biome")
+        try fm.createDirectory(at: linkedCategory.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: linkedCategory, withDestinationURL: biomes)
         let external = outside.appendingPathComponent("outside.json")
         try Fixtures.write(Array(plain.utf8), to: external)
         try fm.createSymbolicLink(at: biomes.appendingPathComponent("blocked.json"), withDestinationURL: external)
         let world = try world(root, packs: ["vanilla", "file/links"])
         let reader = try assets([resource("example:blocked", plain)])
         let result = try world.biomeDefinitions(assets: reader)
-        #expect(Set(result.keys) == ["example:nested/meadow", "example:alias/meadow"])
-        #expect(result["example:nested/meadow"] == result["example:alias/meadow"])
-        #expect(try result == world.biomeDefinitions(for: ["example:nested/meadow", "example:alias/meadow", "example:blocked"], assets: reader))
+        #expect(Set(result.keys) == ["example:nested/meadow", "namespace_alias:nested/meadow", "example:blocked"])
+        #expect(result["example:nested/meadow"] == result["namespace_alias:nested/meadow"])
+        #expect(result["example:blocked"]?.waterColor == 0x3f76e4)
+        // Minecraft's direct getResource follows contained aliases; registry listing does not.
+        let direct = try world.biomeDefinitions(for: ["example:alias/meadow", "example:link"], assets: reader)
+        #expect(direct["example:alias/meadow"] == result["example:nested/meadow"])
+        #expect(direct["example:link"] == result["example:nested/meadow"])
         #expect(try Data(contentsOf: external) == Data(plain.utf8))
+    }
+
+    @Test func catalogLinksCannotOverrideLowerResourcesButMalformedRegularFilesCan() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let low = plain.replacingOccurrences(of: "#3f76e4", with: "#102030")
+        let high = plain.replacingOccurrences(of: "#3f76e4", with: "#abcdef")
+        _ = try folder("low", at: root, entries: [resource("example:linked", low), resource("example:invalid", low)])
+        let pack = try folder("high", at: root, entries: [resource("example:target", high), resource("example:invalid", "invalid JSON")])
+        let biomes = pack.appendingPathComponent("data/example/worldgen/biome")
+        try FileManager.default.createSymbolicLink(at: biomes.appendingPathComponent("linked.json"), withDestinationURL: biomes.appendingPathComponent("target.json"))
+        let world = try world(root, packs: ["file/low", "file/high"])
+        let catalog = try world.biomeDefinitions(assets: nil)
+        #expect(Set(catalog.keys) == ["example:linked", "example:target"])
+        #expect(catalog["example:linked"]?.waterColor == 0x102030)
+        #expect(catalog["example:target"]?.waterColor == 0xabcdef)
+        #expect(try world.biomeDefinitions(for: ["example:linked"], assets: nil)["example:linked"]?.waterColor == 0xabcdef)
     }
 
     @Test func changedGameArchiveDoesNotExposeLowerPackDefinitions() throws {
