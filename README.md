@@ -437,8 +437,8 @@ either a tag or an ordered list (including a single-reference shorthand). As the
 specifies, an absent or JSON-null fixed-time field means false, an absent or null clock means no
 default clock, and absent or null timelines mean an empty list. A missing skylight flag, malformed time field or unverified
 version leaves the entire time value nil while independently valid build limits remain readable.
-The library does not expand timeline tags, validate clock/timeline registry membership, evaluate
-lighting or simulate elapsed time here. These unreleased APIs are the metadata prerequisite for
+This metadata query does not expand timeline tags, validate clock/timeline registry membership,
+evaluate lighting or simulate elapsed time. The savedSkyLighting query below resolves its lighting projection. These unreleased APIs are the metadata prerequisite for
 fahlman/Chunksee#357, tracked in fahlman/ChunkseeKit#175.
 
 `GameAssets.lightingTimeline(_:)` reads a supplied 26.3/5023 jar's five lighting tracks:
@@ -448,7 +448,7 @@ its own `clockID` and optional `periodTicks`. Pass that clock's saved whole tick
 RGB channels retain float precision. The result is an intermediate attribute layer, without
 final range clamping, weather, spatial effects or rendered brightness. Nonfinite input/results
 remain unavailable. The dimension base comes from `DimensionType.baseSkyLighting` below;
-enabled-pack/tag resolution for timelines and app drawing are separate.
+enabled-pack/tag resolution is supplied by savedSkyLighting below. App drawing remains separate.
 
 The shared keyframe sampler preserves ordered duplicate-tick jumps, negative-time wrapping,
 constant endpoints and the game's Float arithmetic. Supported easing is linear, constant or
@@ -481,6 +481,29 @@ or time metadata. Other attributes are ignored, so this is not full registry val
 save versions and the no-jar build-limit fallback provide no base. No weather, biome/spatial
 layers, timeline application, final range clamping or rendering happens in this query. This
 additive API is unreleased on fahlman/ChunkseeKit#179 for fahlman/Chunksee#357.
+
+`World.savedSkyLighting(assets:)` composes each readable dimension's base and timeline layers
+using each timeline's own named saved clock. It uses the shared type, clock, resource and sampler
+readers rather than an app-owned vanilla table. Fixed-time flags do not bypass tracks, and the
+dimension's default clock never substitutes for a track's clock. Empty lighting tracks require
+no unrelated clock; dimensions with no timelines need no timeline-resource or clock read.
+
+Enabled folder/ZIP packs and a matching supplied 26.3 jar share normal definition priority.
+Timeline tags combine resource stacks from low to high priority: `replace` clears earlier entries,
+nested tags preserve first occurrence, and missing optional references are skipped. Missing
+required members invalidate their tag; a direct list retains duplicate timelines. Malformed or
+cyclic selections, unreadable/unknown resources, unsupported relevant tracks and missing named
+clocks omit the affected dimension. Invalid optional selections remain unavailable rather than
+being treated as absent. This deliberately does not reproduce the game's partial recovery from
+invalid tag files or hash-order-dependent cyclic tags. File-read errors and cancellation propagate.
+
+This query returns intermediate dimension/timeline attributes; it does not simulate time, apply
+weather or biome/spatial effects, perform final range clamping or draw pixels. It reads no chunks
+and writes no worlds. Resources and clock snapshots are shared within the call, with no persistent
+mutable cache. Bounds are 64 enabled packs, 64 tag levels, 4,096 entries/members per tag/direct list,
+16 MiB per resource, 64 MiB of selected payloads and 65,536 reference/member steps per query.
+These additive APIs are unreleased on fahlman/ChunkseeKit#181; app lighting remains on
+fahlman/Chunksee#357.
 
 The unreleased spawn-light extension adds `monsterSpawnBlockLightLimit` (0...15) and
 `monsterSpawnLightLevel` (an inclusive range) to each dimension type. The latter reports the

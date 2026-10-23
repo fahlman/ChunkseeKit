@@ -1,34 +1,57 @@
 import Foundation
 
-/// One enabled data-pack order and safe-path policy for dimension and biome definitions.
+/// One enabled data-pack order and safe-path policy for dimension, biome and lighting resources.
 enum WorldResourcePack {
     case vanilla
     case folder(URL, listed: Set<String>? = nil)
     case zip(ZipResources)
     case unavailable
 
+    enum Resource {
+        case absent, unavailable, vanilla
+        case data(Data)
+    }
+
+    private struct Location {
+        let identifier: String
+        let path: String
+        init?(_ reference: String, directory: String) {
+            guard let id = Identifier(reference), !id.path.isEmpty else { return nil }
+            let path = "data/\(id.namespace)/\(directory)/\(id.path).json"
+            guard WorldResourcePack.validPath(path) else { return nil }
+            identifier = id.description
+            self.path = path
+        }
+    }
+
+    // First-wins definitions and composed tag stacks share the same containment, listing and
+    // read-error rules. A present but unreadable resource is distinct from an absent resource.
+    private func resource(at location: Location) throws -> Resource {
+        switch self {
+        case .vanilla: return .vanilla
+        case .unavailable: return .unavailable
+        case .folder(let root, let listed):
+            if let listed, !listed.contains(location.identifier) { return .absent }
+            guard let file = Self.file(location.path, under: root) else { return .unavailable }
+            guard FileManager.default.fileExists(atPath: file.path) else { return .absent }
+            return .data(try Data(contentsOf: file))
+        case .zip(let resources):
+            guard resources.contains(location.path) else { return .absent }
+            guard let data = resources.read(location.path) else { return .unavailable }
+            return .data(data)
+        }
+    }
+
     private static func read<Value>(_ reference: String, directory: String, in packs: [Self],
                                     vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
-        guard let id = Identifier(reference), !id.path.isEmpty else { return nil }
-        let path = "data/\(id.namespace)/\(directory)/\(id.path).json"
-        guard validPath(path) else { return nil }
+        guard let location = Location(reference, directory: directory) else { return nil }
         for pack in packs {
-            switch pack {
+            switch try pack.resource(at: location) {
+            case .absent: continue
             case .vanilla:
-                if let value = vanilla(id.description) { return value }
+                if let value = vanilla(location.identifier) { return value }
             case .unavailable: return nil
-            case .folder(let root, let listed):
-                if let listed, !listed.contains(id.description) { continue }
-                guard let file = Self.file(path, under: root) else { return nil }
-                if FileManager.default.fileExists(atPath: file.path) {
-                    // An invalid override is still an override, never a reason to try a lower pack.
-                    return json(try Data(contentsOf: file))
-                }
-            case .zip(let resources):
-                if resources.contains(path) {
-                    guard let data = resources.read(path) else { return nil }
-                    return json(data)
-                }
+            case .data(let data): return json(data)
             }
         }
         return nil
@@ -75,6 +98,37 @@ enum WorldResourcePack {
         func read<Value>(_ reference: String, vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
             try Task.checkCancellation()
             return try WorldResourcePack.read(reference, directory: directory, in: sources, vanilla: vanilla, json: json)
+        }
+
+        /// First present resource in normal pack priority, retaining absence versus unreadability.
+        func resource(_ reference: String) throws -> Resource {
+            guard let location = Location(reference, directory: directory) else { return .unavailable }
+            for source in sources {
+                try Task.checkCancellation()
+                let resource = try source.resource(at: location)
+                if case .absent = resource { continue }
+                return resource
+            }
+            return .absent
+        }
+
+        /// Low-to-high tag layers. Unknown sources or unreadable entries invalidate the stack;
+        /// callers must not mistake an incomplete stack for a missing optional tag.
+        func stack(_ reference: String, maximumBytes: Int) throws -> [Data]? {
+            guard let location = Location(reference, directory: directory) else { return nil }
+            var result: [Data] = [], remaining = maximumBytes
+            for source in sources {
+                try Task.checkCancellation()
+                switch try source.resource(at: location) {
+                case .absent: continue
+                case .unavailable, .vanilla: return nil
+                case .data(let data):
+                    guard data.count <= ZipResources.maximumResourceSize, data.count <= remaining else { return nil }
+                    remaining -= data.count
+                    result.append(data)
+                }
+            }
+            return Array(result.reversed())
         }
 
         func readAll<Value>(json: (Data) -> Value?) throws -> [String: Value] {

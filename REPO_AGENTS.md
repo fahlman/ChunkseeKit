@@ -290,8 +290,8 @@ Other versions have no time value. The dimensionTypes/dimensionSettings overload
 GameAssets use a matching 26.3 jar for vanilla definitions through the same WorldResourcePack
 registry as enabled folder/ZIP packs. A supplied matching jar never falls back behind a missing
 or malformed definition. No matching jar preserves the original build/spawn-light fallback,
-without adding a clock/timeline table. No tag expansion, registry validation, timeline evaluation,
-cache or presentation owner is added. App lighting remains on fahlman/Chunksee#357.
+without adding a clock/timeline table. This metadata query adds no tag expansion, registry
+validation, timeline evaluation, cache or presentation owner. App lighting remains on fahlman/Chunksee#357.
 
 `LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
 fahlman/Chunksee#357. GameAssets reads verified 26.3 definitions; the same immutable sampler
@@ -302,8 +302,8 @@ Timeline/AttributeTrack/KeyframeTrackSampler, EasingType, AttributeTypes and ARG
 codec and sampling behavior. The read is bounded and only projects those five attributes, not
 unrelated tracks or time markers. Base attributes come explicitly from the caller; results are
 intermediate, with no final range clamping, weather or spatial effects. This additive API is
-unreleased on #177. World pack/tag resolution and app drawing remain separate work; static
-dimension attributes are supplied by the extension below. No chunks, serialized facts, cache
+unreleased on #177. The extensions below supply world pack/tag resolution and static dimension
+attributes; app drawing remains separate. No chunks, serialized facts, cache
 version or image decoder changes.
 
 The unreleased #179 extension adds independently optional `DimensionType.baseSkyLighting` for
@@ -318,6 +318,18 @@ bounds. Unsupported relevant entries make the base unavailable while build/time 
 independently readable. Folder/ZIP/jar priority and version gating are unchanged; no-jar build
 fallbacks add no guessed lighting. Unrelated attributes, complete registry validation, final
 clamping, weather/spatial layers, cache ownership and app rendering remain outside this reader.
+
+The unreleased #181 extension adds `World.savedSkyLighting(assets:)`: base and timeline layers at
+named saved ticks, through existing dimension/clock readers. WorldResourcePack owns both
+first-present definitions and low-to-high resource stacks, including listing/containment and
+absent-versus-unreadable semantics. WorldTimelineReader owns bounded tag composition, ordered
+membership, replace, optional references and query-local memoization. Direct lists preserve
+duplicates. TagLoader, TagFile, TagEntry, DependencySorter and the shared official sampler establish
+behavior. Malformed/cyclic selections conservatively remain unavailable rather than reproduce
+partial-registry recovery or depend on hash ordering. Empty lighting tracks impose no clock;
+fixed-time/default-clock metadata never overrides a timeline's own clock. There is no elapsed-time
+simulation, final clamping, weather/spatial layer, app state, persistent cache or serialized-fact
+change. Publication and native drawing adoption remain on fahlman/Chunksee#357.
 
 The unreleased spawn-light extension for fahlman/Chunksee#86 adds independently optional
 `monsterSpawnBlockLightLimit` and `monsterSpawnLightLevel` facts to that type. Constant scalar,
