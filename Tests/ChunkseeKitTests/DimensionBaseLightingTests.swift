@@ -206,7 +206,7 @@ import Testing
         return .init(path: "data/\(parts[0])/dimension_type/\(parts[1]).json", text: json)
     }
     private func assets(_ entries: [TestZIP.Entry], version: Int32 = 5023) throws -> GameAssets {
-        let archive = TestZIP.zip([.init(path: "version.json", text: #"{"id":"fixture","world_version":\#(version)}"#)] + entries)
+        let archive = try TestZIP.zip([.init(path: "version.json", text: #"{"id":"fixture","world_version":\#(version)}"#)] + entries)
         return try #require(GameAssets(data: Data(archive)))
     }
     private func world(_ root: URL, types: [String: NBT], packs: [String] = ["vanilla"], version: Int32 = 5023) throws -> World {
