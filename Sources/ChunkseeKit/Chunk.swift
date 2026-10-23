@@ -237,6 +237,9 @@ public struct Chunk: Sendable {
     public let status: String?
     public let lastUpdate: Int?
     public let inhabitedTime: Int?
+    /// Whether the save marks its light data as valid. Missing or skipped flags are false;
+    /// this says nothing about light in an omitted or malformed section array.
+    public var isLightOn: Bool { nbt["isLightOn"]?.bool ?? false }
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
     /// Saved order is preserved, including entries with unavailable identity or position.
@@ -253,6 +256,19 @@ public struct Chunk: Sendable {
     ]
 
     public var isFullyGenerated: Bool { status == "minecraft:full" || status == "full" }
+
+    /// Saved block light at chunk-local X/Z and absolute Y, only when marked valid. Missing
+    /// sections/arrays stay unknown; no light propagation or inference from neighboring data.
+    public func blockLight(x: Int, y: Int, z: Int) -> Int? {
+        guard isLightOn else { return nil }
+        return section(atBlockY: y)?.blockLight(x: x, y: y, z: z)
+    }
+
+    /// Saved sky light with the same validity and missing-data rules as blockLight(x:y:z:).
+    public func skyLight(x: Int, y: Int, z: Int) -> Int? {
+        guard isLightOn else { return nil }
+        return section(atBlockY: y)?.skyLight(x: x, y: y, z: z)
+    }
 
     public init(nbt: NBT) throws {
         let dataVersion = nbt["DataVersion"]?.int

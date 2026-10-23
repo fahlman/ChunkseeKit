@@ -262,6 +262,22 @@ checked against the official 26.3 DimensionType/LevelStem codecs and resource ma
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
+The unreleased spawn-light extension for fahlman/Chunksee#86 adds independently optional
+`monsterSpawnBlockLightLimit` and `monsterSpawnLightLevel` facts to that type. Constant scalar,
+constant-object and uniform IntProvider thresholds expose only their inclusive 0...15 bounds;
+unsupported distributions stay unknown, without sampling or inferring a spawn probability.
+Missing/malformed light fields do not discard valid build bounds and do not fall back to vanilla.
+Vanilla values follow the existing exact 26.3/5023 gate; inline and enabled folder/ZIP overrides
+share the existing resource path. DimensionType.MonsterSettings, IntProviders, ConstantInt,
+UniformInt and the four official dimension definitions establish their fields and bounds.
+`Chunk.isLightOn` exposes the saved validity flag, defaulting false when absent/skipped.
+Chunk-level blockLight/skyLight accessors require that flag and a complete section nibble array;
+missing arrays remain nil, even in a valid chunk. Raw ChunkSection access remains unchanged.
+SerializableChunkData and DataLayer establish the flag/array meanings. Terrain skipping is
+unchanged, so requesting this metadata adds no work to the ordinary map scan. This is not a
+spawnability solver: surfaces, space, biome membership, time/weather and mob-specific rules
+remain outside these facts. App adoption, optional light reads and rendering/timing follow separately.
+
 Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
 central directory and matching local headers before a missing resource can permit fallback.
 It reads ordinary stored/deflated entries with exact UTF-8 names, using the existing public
