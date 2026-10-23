@@ -34,8 +34,8 @@ enum SpecialItemModel: String {
         let turnX = transform.scale.y < 0
         var result = [AssetModel.Element]()
         for box in boxes {
-            let a = box.from * transform.scale + transform.translation * 16
-            let b = box.to * transform.scale + transform.translation * 16
+            let a = transform.applying(to: box.from)
+            let b = transform.applying(to: box.to)
             let from = SIMD3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z))
             let to = SIMD3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z))
             guard (0..<3).allSatisfy({ (-16...32).contains(from[$0]) && (-16...32).contains(to[$0]) }) else { return nil }

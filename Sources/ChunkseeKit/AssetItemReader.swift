@@ -22,15 +22,13 @@ struct AssetItemReader {
         let transform = try inheritedTransform.appending(node["transformation"])
         switch type.description {
         case "minecraft:model":
-            // Ordinary layers and rotated elements need a different transform representation.
-            // Until supported, preserve fallback rather than draw them with a discarded transform.
-            guard parts.count < 32, transform == .identity else { throw Invalid.asset }
+            guard parts.count < 32 else { throw Invalid.asset }
             let modelID = try AssetJSON.identifier(node["model"])
             let rawTints = try node["tints"].map(AssetJSON.array) ?? []
             guard rawTints.count <= 32 else { throw Invalid.asset }
             let tints = try rawTints.map(tint)
             let model = try AssetModelReader(assets: assets).read(modelID.description, budget: &budget)
-            parts.append(.init(model: model, tints: tints))
+            parts.append(.init(model: try transform.translating(model), tints: tints))
         case "minecraft:special":
             guard parts.count < 32 else { throw Invalid.asset }
             parts.append(.init(model: try special(node, transform: transform, budget: &budget), tints: []))

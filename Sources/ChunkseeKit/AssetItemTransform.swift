@@ -1,10 +1,35 @@
-/// The axis-aligned subset of item-node transformations that can be baked into the verified
-/// special cuboids. Unsupported transforms reject the item instead of disappearing silently.
+/// Composes the supported item-node transforms. Special cuboids accept the axis-aligned subset;
+/// ordinary element models also support translations. Other transforms remain unavailable.
 struct AssetItemTransform: Equatable {
     let scale: SIMD3<Float>
     let translation: SIMD3<Float>
 
     static let identity = Self(scale: .one, translation: .zero)
+
+    /// Item-node translation is in blocks; resolved model points are in sixteenths of a block.
+    func applying(to point: SIMD3<Float>) -> SIMD3<Float> {
+        point * scale + translation * 16
+    }
+
+    func translating(_ model: AssetModel) throws -> AssetModel {
+        if self == .identity { return model }
+        guard scale == .one, case .elements(let source) = model.geometry else { throw Invalid.asset }
+        let elements = try source.map { element in
+            let from = applying(to: element.from), to = applying(to: element.to)
+            let rotation = element.rotation.map {
+                AssetModel.Rotation(origin: applying(to: $0.origin), angles: $0.angles, rescale: $0.rescale)
+            }
+            guard [from, to, rotation?.origin ?? .zero].allSatisfy({ point in
+                (0..<3).allSatisfy { point[$0].isFinite }
+            }) else { throw Invalid.asset }
+            // Moving the rotation's origin with its vertices preserves rotation/rescaling before
+            // translation. UVs are already resolved against the original model coordinates.
+            return AssetModel.Element(from: from, to: to, faces: element.faces, rotation: rotation,
+                                      shadeDirectionOverride: element.shadeDirectionOverride, lightEmission: element.lightEmission)
+        }
+        return .init(geometry: .elements(elements), guiTransform: model.guiTransform,
+                     guiLight: model.guiLight, ambientOcclusion: model.ambientOcclusion)
+    }
 
     func appending(_ raw: Any?) throws -> Self {
         guard let raw else { return self }
