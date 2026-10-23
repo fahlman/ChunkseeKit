@@ -93,9 +93,9 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         _ = try folder("low", at: root, entries: [resource(plain)])
         let jar = root.appendingPathComponent("fixture.jar")
-        let bytes = TestZIP.zip([.init(path: "version.json", text: #"{"id":"26.3","world_version":5023}"#), resource(plain)])
+        let bytes = try TestZIP.zip([.init(path: "version.json", text: #"{"id":"26.3","world_version":5023}"#), resource(plain)])
         try Fixtures.write(bytes, to: jar)
-        let reader = try #require(GameAssets(contentsOf: jar))
+        let reader = try #require(try GameAssets(contentsOf: jar))
         let world = try world(root, packs: ["file/low", "vanilla"])
         #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["minecraft:plains"])
         try Fixtures.write(Array("truncated".utf8), to: jar)
