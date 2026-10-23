@@ -123,10 +123,7 @@ struct AssetItemReader {
             let temperature = try AssetJSON.number(value["temperature"]), downfall = try AssetJSON.number(value["downfall"])
             guard (0...1).contains(temperature), (0...1).contains(downfall),
                   let texture = GameAssets.resourceID("minecraft:colormap/grass") else { throw Invalid.asset }
-            // GrassColorSource widens its Float fields before ColorMapColorUtil's Double math.
-            let x = Int((1 - Double(temperature)) * 255)
-            let y = Int((1 - Double(downfall) * Double(temperature)) * 255)
-            return .colorMap(texture: texture, pixel: SIMD2(x, y))
+            return .colorMap(texture: texture, pixel: ClimateColorMap.pixel(temperature: temperature, downfall: downfall))
         default: throw Invalid.asset
         }
     }
