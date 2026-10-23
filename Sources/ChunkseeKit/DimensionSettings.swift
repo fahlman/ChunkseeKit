@@ -16,6 +16,8 @@ extension World {
     /// 26.3 vanilla definitions. Built-in experimental packs, overlays and resource filters
     /// are unsupported: an unresolved higher-priority pack prevents falling back to lower ones.
     /// Missing/malformed/unresolved types are omitted. Read errors propagate. No files are written.
+    /// Folder references use registered resources: linked category folders and descendants are
+    /// skipped, while contained namespace aliases are allowed. Inline values need no registry read.
     /// This type-only query does not load generator resources.
     public func dimensionTypes() throws -> [String: DimensionType] {
         try readDimensionSettings(includeGeneration: false).compactMapValues(\.type)
@@ -39,11 +41,12 @@ extension World {
             version = level.dataVersion
         }
         guard let dimensions = settings?["dimensions"]?.compound else { return [:] }
-        let hasReferences = dimensions.values.contains {
-            $0["type"]?.string != nil || (includeGeneration && Self.noiseSettings(in: $0)?.string != nil)
-        }
-        let packs = try hasReferences ? WorldResourcePack.load(enabled: level.enabledDataPacks, in: url,
+        let hasTypes = dimensions.values.contains { $0["type"]?.string != nil }
+        let hasNoise = includeGeneration && dimensions.values.contains { Self.noiseSettings(in: $0)?.string != nil }
+        let packs = try hasTypes || hasNoise ? WorldResourcePack.load(enabled: level.enabledDataPacks, in: url,
             vanilla: version == SaveVersion.java26_3 ? .vanilla : .unavailable) : []
+        let types = try WorldResourcePack.Registry(directory: "dimension_type", in: hasTypes ? packs : [])
+        let generators = try WorldResourcePack.Registry(directory: "worldgen/noise_settings", in: hasNoise ? packs : [])
         var result: [String: DimensionSettings] = [:]
         var seen = Set<String>()
         var duplicates = Set<String>()
@@ -51,12 +54,12 @@ extension World {
             guard let id = Identifier(key), !id.path.isEmpty else { continue }
             if !seen.insert(id.description).inserted { duplicates.insert(id.description); continue }
             guard dimension.compound != nil else { continue }
-            let type: DimensionType? = try WorldResourcePack.read(dimension["type"], directory: "dimension_type",
-                in: packs, vanilla: { DimensionType.vanilla($0, version: version) }, inline: DimensionType.init, json: DimensionType.init(json:))
+            let type: DimensionType? = try types.read(dimension["type"],
+                vanilla: { DimensionType.vanilla($0, version: version) }, inline: DimensionType.init, json: DimensionType.init(json:))
             let noise: NoiseGenerationSettings?
             if includeGeneration {
-                noise = try WorldResourcePack.read(Self.noiseSettings(in: dimension), directory: "worldgen/noise_settings",
-                    in: packs, vanilla: { NoiseGenerationSettings.vanilla($0, version: version) },
+                noise = try generators.read(Self.noiseSettings(in: dimension),
+                    vanilla: { NoiseGenerationSettings.vanilla($0, version: version) },
                     inline: NoiseGenerationSettings.init, json: NoiseGenerationSettings.init(json:))
             } else {
                 noise = nil

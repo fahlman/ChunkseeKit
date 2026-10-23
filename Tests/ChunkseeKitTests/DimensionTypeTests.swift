@@ -167,7 +167,13 @@ import Testing
         try FileManager.default.copyItem(at: definitions.appendingPathComponent("valid.json"), to: outside)
         try FileManager.default.createSymbolicLink(at: definitions.appendingPathComponent("escape.json"), withDestinationURL: outside)
         #expect(try world.dimensionTypes().isEmpty)
-        try FileManager.default.createDirectory(at: definitions.appendingPathComponent("directory.json"), withIntermediateDirectories: false)
+        let unreadable = definitions.appendingPathComponent("directory.json")
+        try FileManager.default.createDirectory(at: unreadable, withIntermediateDirectories: false)
+        #expect(try world.dimensionTypes().isEmpty)
+        try FileManager.default.removeItem(at: unreadable)
+        try FileManager.default.copyItem(at: definitions.appendingPathComponent("valid.json"), to: unreadable)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: unreadable.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: unreadable.path) }
         #expect(throws: (any Error).self) { try world.dimensionTypes() }
     }
 }

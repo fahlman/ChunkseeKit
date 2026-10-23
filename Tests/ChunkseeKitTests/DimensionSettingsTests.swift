@@ -251,7 +251,64 @@ import Testing
         #expect(try world.dimensionSettings().values.allSatisfy { $0.noiseGeneration == nil })
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         #expect(try world.dimensionTypes().count == 3)
+        #expect(try world.dimensionSettings().values.allSatisfy { $0.noiseGeneration == nil })
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.copyItem(at: file, to: directory)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: directory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: directory.path) }
+        #expect(try world.dimensionTypes().count == 3)
         #expect(throws: (any Error).self) { try world.dimensionSettings() }
+    }
+
+    @Test func savedDimensionRegistriesSkipLinkedOverridesAndKeepMalformedRegularShadowing() throws {
+        let root = try Fixtures.tempDirectory(), fm = FileManager.default
+        defer { try? fm.removeItem(at: root) }
+        _ = try pack("Low", at: root)
+        _ = try pack("High", at: root)
+        let low = root.appendingPathComponent("datapacks/Low"), high = root.appendingPathComponent("datapacks/High")
+        let categories = [
+            ("dimension_type", #"{"min_y":0,"height":128,"logical_height":128,"has_ceiling":false}"#,
+             #"{"min_y":0,"height":256,"logical_height":256,"has_ceiling":false}"#),
+            ("worldgen/noise_settings", #"{"noise":{"min_y":0,"height":128}}"#,
+             #"{"noise":{"min_y":0,"height":256}}"#)
+        ]
+        for (category, lower, higher) in categories {
+            let lowCategory = low.appendingPathComponent("data/example/" + category)
+            let highCategory = high.appendingPathComponent("data/example/" + category)
+            for name in ["linked", "invalid", "alias/entry"] {
+                try Fixtures.write(Array(lower.utf8), to: lowCategory.appendingPathComponent(name + ".json"))
+            }
+            try Fixtures.write(Array(lower.utf8), to: low.appendingPathComponent("data/category_alias/" + category + "/target.json"))
+            for name in ["target", "nested/entry"] {
+                try Fixtures.write(Array(higher.utf8), to: highCategory.appendingPathComponent(name + ".json"))
+            }
+            try Fixtures.write(Array("invalid JSON".utf8), to: highCategory.appendingPathComponent("invalid.json"))
+            try fm.createSymbolicLink(at: highCategory.appendingPathComponent("linked.json"),
+                                      withDestinationURL: highCategory.appendingPathComponent("target.json"))
+            try fm.createSymbolicLink(at: highCategory.appendingPathComponent("alias"),
+                                      withDestinationURL: highCategory.appendingPathComponent("nested"))
+            try fm.createSymbolicLink(at: highCategory.appendingPathComponent("nested/cycle"), withDestinationURL: highCategory)
+            let alias = high.appendingPathComponent("data/category_alias/" + category)
+            try fm.createDirectory(at: alias.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.createSymbolicLink(at: alias, withDestinationURL: highCategory)
+        }
+        try fm.createSymbolicLink(at: high.appendingPathComponent("data/namespace_alias"),
+                                  withDestinationURL: high.appendingPathComponent("data/example"))
+        let references = ["test:linked": "example:linked", "test:descendant": "example:alias/entry",
+                          "test:category": "category_alias:target", "test:namespace": "namespace_alias:target",
+                          "test:invalid": "example:invalid"]
+        let world = try world(at: root, definitions: references.mapValues {
+            definition(type: .string($0), noise: .string($0))
+        }, packs: ["file/Low", "file/High"])
+        let settings = try world.dimensionSettings()
+        for id in ["test:linked", "test:descendant", "test:category"] {
+            #expect(settings[id]?.type?.height == 128)
+            #expect(settings[id]?.noiseGeneration?.height == 128)
+        }
+        #expect(settings["test:namespace"]?.type?.height == 256)
+        #expect(settings["test:namespace"]?.noiseGeneration?.height == 256)
+        #expect(settings["test:invalid"]?.type == nil && settings["test:invalid"]?.noiseGeneration == nil)
+        #expect(try world.dimensionTypes() == settings.compactMapValues(\.type))
     }
 
     @Test func anExistingModernRecordDoesNotResurrectLegacyGenerationSettings() throws {

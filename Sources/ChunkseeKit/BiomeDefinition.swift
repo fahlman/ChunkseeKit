@@ -60,12 +60,15 @@ extension World {
     /// while higher-priority pack definitions can still resolve. No default pack list is invented.
     /// Uses dimensionSettings()'s priority, safe paths and unsupported-pack rules: a malformed
     /// present override or an unresolved higher pack blocks lower fallbacks. File errors propagate.
+    /// Only resources registered by folder/ZIP listing participate, even for a subset of IDs.
+    /// Linked category folders and descendants are skipped; contained namespace aliases are allowed.
     /// No world files are written, chunks scanned, images decoded or mutable caches introduced.
     public func biomeDefinitions(for identifiers: Set<String>, assets: GameAssets?) throws -> [String: BiomeDefinition] {
         guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
         let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
         guard !ids.isEmpty else { return [:] }
-        return try Self.biomeDefinitions(for: ids, in: biomePacks(assets: assets))
+        let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: biomePacks(assets: assets))
+        return try Self.biomeDefinitions(for: ids, in: registry)
     }
 
     /// Discovers and resolves all biome definitions in the matching game jar and enabled packs.
@@ -75,7 +78,8 @@ extension World {
     /// Registry discovery ignores symbolic links at or below the biome category folder.
     public func biomeDefinitions(assets: GameAssets?) throws -> [String: BiomeDefinition] {
         guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
-        return try WorldResourcePack.readAll(directory: "worldgen/biome", in: biomePacks(assets: assets), json: BiomeDefinition.init(json:))
+        return try WorldResourcePack.Registry(directory: "worldgen/biome", in: biomePacks(assets: assets))
+            .readAll(json: BiomeDefinition.init(json:))
     }
 
     private func biomePacks(assets: GameAssets?) throws -> [WorldResourcePack] {
@@ -89,12 +93,11 @@ extension World {
         return try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
     }
 
-    private static func biomeDefinitions(for ids: Set<String>, in packs: [WorldResourcePack]) throws -> [String: BiomeDefinition] {
+    private static func biomeDefinitions(for ids: Set<String>, in registry: WorldResourcePack.Registry) throws -> [String: BiomeDefinition] {
         var result: [String: BiomeDefinition] = [:]
         for id in ids.sorted() {
             try Task.checkCancellation()
-            result[id] = try WorldResourcePack.read(id, directory: "worldgen/biome", in: packs,
-                vanilla: { _ in nil }, json: BiomeDefinition.init(json:))
+            result[id] = try registry.read(id, vanilla: { _ in nil }, json: BiomeDefinition.init(json:))
         }
         return result
     }

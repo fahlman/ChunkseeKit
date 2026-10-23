@@ -314,12 +314,19 @@ payloads. Folder discovery preserves containment and matches 26.3 `PathPackResou
 `Files.find` receives no `FOLLOW_LINKS`, so linked category folders, descendant directories and
 files are not registered. Contained namespace aliases are allowed. Only listed entries participate
 in catalog priority, so a higher link cannot override a lower real entry. The shared resource
-reader still owns payload/invalid-present handling. Requested-ID queries retain direct-resource
-lookup semantics (26.3 `getResource` can resolve contained aliases). Unknown or changed archives cannot expose lower
+reader still owns payload/invalid-present handling. A prepared `WorldResourcePack.Registry` now
+applies the same listing eligibility to requested biome IDs and dimension-type/noise-settings
+references, correcting their earlier direct-resource lookup. This matches saved-world
+`ResourceManagerRegistryLoadTask`; the direct `getResource` path belongs to network registry
+loading. Each needed category is prepared once per query; inline definitions do not list resources,
+and type-only queries do not open generator files. Unknown or changed archives cannot expose lower
 definitions. Nested IDs remain canonical; unrelated resources and invalid names are excluded.
 The app can retain the resolved snapshot and derive tile identity from its values, rereading it
 when resources change. No chunk scan, mutable cache, image decoder or second pack reader is added.
-This additive API is unreleased for fahlman/Chunksee#361.
+The all-biome API is available in v0.56.0 for fahlman/Chunksee#361. The subset/dimension eligibility
+correction is unreleased, tracked on #163. Public-path regressions cover category/descendant/file
+links, namespace aliases, lower real-resource fallback, malformed overrides and unreadable regular
+files. Directories named with a .json suffix are not registered files.
 
 `BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
 sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
