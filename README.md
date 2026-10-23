@@ -391,6 +391,21 @@ for a saved `minecraft:noise` generator. The seven vanilla noise definitions are
 26.3, and inline/custom bounds are validated without assuming a complete game registry.
 `dimensionTypes()` remains a type-only read and never opens generator resources.
 
+The unreleased spawn-light extension adds `monsterSpawnBlockLightLimit` (0...15) and
+`monsterSpawnLightLevel` (an inclusive range) to each dimension type. The latter reports the
+bounds of constant or uniform random light thresholds; unsupported distributions remain nil.
+These are independent optional facts: missing or invalid light fields leave valid build limits
+intact and never acquire vanilla guesses. The saved type reference and enabled data-pack priority
+apply, even when the dimension folder has a familiar vanilla name. They do not establish whether
+a monster can spawn: the game also checks surfaces, available space, biome, time and other rules.
+
+`Chunk.isLightOn` reports whether the chunk marks its saved lighting as valid. The new
+`chunk.blockLight(x:y:z:)` and `chunk.skyLight(x:y:z:)` accessors take chunk-local X/Z and absolute Y,
+returning a saved 0...15 value only when the flag is true and the section has a complete light
+array. Missing, malformed or skipped arrays return nil, not zero. Existing section-level accessors
+still expose raw stored values. `Chunk.keysNotNeededForTerrain` continues to skip both the flag
+and light arrays, so ordinary terrain reads do no extra lighting work. No propagation is simulated.
+
 `NoiseGenerationSettings.seaLevel` is the saved `sea_level`, independently optional when missing
 or not a readable signed 32-bit integer. It uses the same inline definitions and enabled folder/ZIP
 packs as the bounds. An absent or malformed value does not discard readable bounds or fall back to
