@@ -53,7 +53,7 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
     /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 6
+    public static let interpretationVersion = 7
 
     public let dimension: String
     public let region: RegionPosition
@@ -65,6 +65,9 @@ public struct RegionFacts: Sendable, Codable {
     public internal(set) var creatures: [Creature] = []
     public internal(set) var pointsOfInterest: [PointOfInterest] = []
     public internal(set) var chunks: [TerrainChunkFacts] = []
+    /// Declared block IDs in fully generated chunks' saved palettes, including unused entries.
+    /// Independent of the block-count filter; this catalog does not prove a block occupies a position.
+    public internal(set) var paletteBlockIDs: Set<String> = []
     /// 1,024 local entries, z * 32 + x. Includes legacy Level metadata; unavailable entries are 0.
     public internal(set) var inhabitedTimes = [Int](repeating: 0, count: 1024)
     public internal(set) var formats = RegionFormatCounts()
@@ -89,6 +92,7 @@ public struct RegionFacts: Sendable, Codable {
         containers = archive.containers; signs = archive.signs; spawners = archive.spawners
         structures = archive.structures.map(\.value); creatures = archive.creatures
         pointsOfInterest = archive.pointsOfInterest; chunks = archive.chunks.map(\.value)
+        paletteBlockIDs = archive.paletteBlockIDs
         inhabitedTimes = archive.inhabitedTimes; formats = archive.formats.value
     }
 
@@ -109,6 +113,7 @@ private struct Archive: Codable {
     var creatures: [Creature]
     var pointsOfInterest: [PointOfInterest]
     var chunks: [ChunkRecord]
+    var paletteBlockIDs: Set<String>
     var inhabitedTimes: [Int]
     var formats: FormatRecord
 
@@ -118,6 +123,7 @@ private struct Archive: Codable {
         containers = value.containers; signs = value.signs; spawners = value.spawners
         structures = value.structures.map(StructureRecord.init); creatures = value.creatures
         pointsOfInterest = value.pointsOfInterest; chunks = value.chunks.map(ChunkRecord.init)
+        paletteBlockIDs = value.paletteBlockIDs
         inhabitedTimes = value.inhabitedTimes; formats = FormatRecord(value.formats)
     }
 }

@@ -436,6 +436,17 @@ unused palette entries. Partial-generation chunks keep metadata/heightmaps but c
 structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
 time and format counts without enabling legacy terrain decoding.
 
+The additive `RegionFacts.paletteBlockIDs` catalog retains declared block IDs from fully generated
+chunks' saved palettes, including unused entries and modded names. It is collected during the same
+section walk, independent of `RegionScanOptions.blockIDs`, without another chunk decode or block
+traversal. It names available palette choices; it does not assert that every name occupies a block.
+`RegionIndex.paletteBlockIDs` retains the compact regional set and `DimensionIndex.paletteBlockIDs`
+unions the retained regions. Refresh, failed-read retention, replacement and deletion use the same
+rules as the other dimension aggregates. Partial/legacy/unreadable chunks contribute no names.
+RegionFacts interpretation version **7** rejects older archives, which lack this catalog. Consumers
+must rebuild their scan caches when adopting it. This prerequisite for Chunksee #365 is unreleased;
+block hiding, highlighting, labels and native controls remain app responsibilities.
+
 Starting in v0.39.0, `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
 one column. `Chunk.surfaceHeights(height:)` returns the same values for all 256 columns, indexed
 by `z * 16 + x`, with each reached nonuniform section decoded once. Both use a decodable

@@ -96,6 +96,16 @@ marker projections for unchanged regions. Background-work scheduling and cancele
 guards remain app-owned. Tests use real synthetic scans, including cross-region joins and incremental
 versus complete reads. No renderer, scan-ID, cave-membership or RegionFacts version change.
 
+The palette-catalog extension adds `paletteBlockIDs` to RegionFacts, RegionIndex and DimensionIndex
+for fahlman/Chunksee#365. Core collects the declared IDs from fully generated chunks' typed palettes
+inside the existing section walk, regardless of the deposit-count filter. Unused palette entries
+are included; this is a catalog, not evidence of occupancy. No second chunk decode or block traversal
+is added. The regional set is retained compactly and dimension aggregation unions the retained
+contributions, so successful replacement/deletion removes stale names while failed reads preserve
+them. RegionFacts interpretation version 7 rejects older catalog-less archives. This additive API
+is unreleased; app adoption follows its dependency release and keeps presentation/filter policy
+outside the library.
+
 `WorldIndex<Dimension>` owns the dimension-keyed world snapshot and its typed Placed/all enumeration.
 The generic payload lets clients keep native projections with their shared facts, without a second
 world catalog or UI imports here. Matching values in different dimensions remain separate records;

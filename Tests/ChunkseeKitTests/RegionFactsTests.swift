@@ -58,7 +58,7 @@ import Testing
                            to: dimension.regionURL(folder, at: region))
     }
 
-    @Test func oneResultMatchesTheExistingReadersAndKeepsOnlyUsedPaletteEntries() throws {
+    @Test func oneResultMatchesTheExistingReadersAndCountsOnlyUsedBiomesAndBlocks() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
@@ -91,6 +91,7 @@ import Testing
         #expect(decoded.structures == facts.structures && decoded.creatures == facts.creatures)
         #expect(decoded.pointsOfInterest == facts.pointsOfInterest && decoded.inhabitedTimes == facts.inhabitedTimes)
         #expect(decoded.formats == facts.formats)
+        #expect(decoded.paletteBlockIDs == facts.paletteBlockIDs)
     }
 
     @Test func partialAndLegacyChunksDoNotBecomeBuiltTerrainFacts() throws {
@@ -111,6 +112,7 @@ import Testing
         #expect(facts.chunks.first?.isFullyGenerated == false)
         #expect(facts.chunks.first?.sampledBiome == nil && facts.chunks.first?.biomes.isEmpty == true)
         #expect(facts.chunks.first?.blockDeposits.isEmpty == true && facts.structures.isEmpty)
+        #expect(facts.paletteBlockIDs.isEmpty)
         #expect(facts.containers.count == 1) // metadata still reads without claiming structures were built
     }
 
@@ -124,6 +126,7 @@ import Testing
         try write(poiChunk, in: .pointsOfInterest, dimension: dimension)
         let facts = try dimension.scan(region: region)
         #expect(facts.chunks.isEmpty && !facts.creatures.isEmpty && !facts.pointsOfInterest.isEmpty)
+        #expect(facts.paletteBlockIDs.isEmpty)
         var broken = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: terrain())])
         broken[8192 + 4] = 99 // an unreadable chunk, beside independently readable entity/POI files
         try Fixtures.write(broken, to: dimension.regionURL(at: region))
@@ -156,6 +159,11 @@ import Testing
         object["version"] = RegionFacts.interpretationVersion - 1
         let stale = try JSONSerialization.data(withJSONObject: object)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: stale) }
+        var beforeCatalog = object
+        beforeCatalog["version"] = 6
+        beforeCatalog.removeValue(forKey: "paletteBlockIDs")
+        let oldShape = try JSONSerialization.data(withJSONObject: beforeCatalog)
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: oldShape) }
         object["version"] = RegionFacts.interpretationVersion
         object["inhabitedTimes"] = [0]
         let malformed = try JSONSerialization.data(withJSONObject: object)
@@ -179,7 +187,38 @@ import Testing
         let valid = Fixtures.section(y: 4, palette: [.string("minecraft:stone")])
         let chunk = try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, sections: [malformed, valid]))
         #expect(chunk.biome(x: 8, y: 64, z: 8) == "minecraft:plains")
-        let facts = try TerrainChunkFacts(chunk, at: .init(x: 0, z: 0), options: .init(biomeSampleY: 64))
+        var paletteBlockIDs = Set<String>()
+        let facts = try TerrainChunkFacts(chunk, at: .init(x: 0, z: 0), options: .init(biomeSampleY: 64),
+                                          paletteBlockIDs: &paletteBlockIDs)
         #expect(facts.sampledBiome == "minecraft:plains")
+    }
+
+    @Test func paletteCatalogKeepsUnusedAndModdedNamesRegardlessOfCountingChoices() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        let section = Fixtures.section(y: 0, palette: [
+            .string("minecraft:stone"),
+            .compound(["Name": .string("minecraft:oak_leaves"), "Properties": .compound(["persistent": .string("true")])]),
+            .compound(["Name": .string("minecraft:oak_leaves"), "Properties": .compound(["persistent": .string("false")])]),
+            .string("example:glowing_brick")
+        ], indices: [Int](repeating: 0, count: 4096))
+        let duplicate = Fixtures.section(y: 1, palette: [.string("minecraft:stone")])
+        let partial = Fixtures.chunk(x: -31, z: 0, dataVersion: 5023,
+            sections: [Fixtures.section(y: 0, palette: [.string("example:unfinished")])],
+            extra: ["status": .string("minecraft:biomes")])
+        try Fixtures.write(Fixtures.region([
+            .init(localX: 0, localZ: 0, nbt: Fixtures.chunk(x: -32, z: 0, dataVersion: 5023, sections: [section, duplicate])),
+            .init(localX: 1, localZ: 0, nbt: partial)
+        ]), to: dimension.regionURL(at: region))
+        let choices: [Set<String>?] = [nil, [], ["minecraft:diamond_ore"]]
+        for selected in choices {
+            let facts = try dimension.scan(region: region, options: .init(blockIDs: selected))
+            #expect(facts.paletteBlockIDs == ["minecraft:stone", "minecraft:oak_leaves", "example:glowing_brick"])
+            let deposits = try #require(facts.chunks.first).blockDeposits
+            #expect(deposits.map(\.id) == (selected == nil ? ["minecraft:stone"] : []))
+            let restored = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
+            #expect(restored.paletteBlockIDs == facts.paletteBlockIDs)
+        }
     }
 }
