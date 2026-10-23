@@ -556,7 +556,19 @@ Identifier's codec; removal or malformed input stays unavailable. Without an ove
 item ID, matching the standard 26.3 Item.Properties prototype default. Registry/data-pack prototype
 changes and trim/custom-model-data evaluation remain outside this API. GameAssets still owns
 resource-path validation and model resolution, while app caches must key on the selected model.
-This additive API is unreleased for fahlman/Chunksee#390, with no stored-field or cache-version change.
+No stored-field or cache-version change is needed for this computed reference.
+`ItemStack.itemModelSelection` adds the saved trim-material identity through the same model-reference
+owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint,
+count, name and pattern data. Current/removed trim suppresses legacy tag.Trim; an inline material
+holder has no registry key and therefore selects the fallback. Malformed model/material values
+remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
+`GameAssets.itemModel(for:)` shares AssetItemReader and its bounds, with one case selector for GUI
+and normalized trim keys. TrimMaterialProperty/ArmorTrim and the item componentization fixer
+establish the 26.3/5023 behavior. Non-nil trim keys require that verified version; missing keys
+keep the generic fallback in older jars, preserving their untrimmed armor. Other live properties
+keep their static choices, and defaultItemModel retains its existing behavior. These additive APIs
+are unreleased for fahlman/Chunksee#390; client adoption and generated-palette images follow a
+reviewed release. No serialized field, cache version, artwork or app presentation is added.
 Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
 legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
 fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other
