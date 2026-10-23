@@ -287,9 +287,22 @@ numeric validation intentionally rejects Gson coercions, as the other asset read
 Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
 fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
 biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported packs, missing
-versions/jars, paths and unchanged inputs. These additive APIs are unreleased for
-fahlman/Chunksee#361. Client colormap sampling, block tint sources, modifier calculations,
-rendering/cache identity and measurements remain app work.
+versions/jars, paths and unchanged inputs. These definition APIs are available in v0.52.0 for
+fahlman/Chunksee#361.
+
+`BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
+sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
+stem age and redstone power. Only the verified half/power/age defaults are supplied for compact
+26.3 states; malformed values, unknown blocks/indexes and other versions remain unavailable.
+Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
+uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
+kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
+swamp grass. The caller supplies a decoded colormap pixel; no image decoding or artwork is added.
+ClimateColorMap is shared with item grass tints. The narrow fixed-seed 2D swamp noise and slime
+chunks share LegacyRandom's existing 48-bit generator rule; the slime predicate is unchanged.
+All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,864 biome colors
+and 40,401 swamp positions match an independent official-26.3 probe. These tint APIs are unreleased
+for #361; app adoption, biome selection/blending, rendering/cache identity and timing remain there.
 
 `GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
 that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,

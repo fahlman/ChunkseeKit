@@ -11,14 +11,7 @@ extension World {
         mixed &+= Int64(z &* z) &* 4_392_871
         mixed &+= Int64(z &* 389_711)
 
-        let multiplier: UInt64 = 25_214_903_917, mask: UInt64 = (1 << 48) - 1
-        var state = (UInt64(bitPattern: mixed ^ 987_234_911) ^ multiplier) & mask
-        while true {
-            state = (state &* multiplier &+ 11) & mask
-            let bits = Int32(state >> 17), value = bits % 10
-            // BitRandomSource rejects the incomplete tail; a simple modulo gives wrong chunks
-            // for those seeds. Preserve Java's signed-overflow check.
-            if bits &- value &+ 9 >= 0 { return value == 0 }
-        }
+        var random = LegacyRandom(seed: mixed ^ 987_234_911)
+        return random.nextInt(bound: 10) == 0
     }
 }
