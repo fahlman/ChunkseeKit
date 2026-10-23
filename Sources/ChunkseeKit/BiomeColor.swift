@@ -6,6 +6,12 @@ public enum BiomeColor: Sendable, Hashable, CaseIterable {
 }
 
 extension BiomeDefinition {
+    /// Whether changing X/Z can change this source's color. When false, callers can reuse
+    /// the resolved color for this definition while their colormap pixels remain unchanged.
+    public func colorDependsOnPosition(_ source: BiomeColor) -> Bool {
+        source == .grass && grassColorModifier == .swamp
+    }
+
     /// Resolves an unblended 24-bit RGB tint at a block's X/Z, using this definition's overrides
     /// and climate. The caller supplies decoded 256×256 colormap pixels, with a top-left origin.
     /// A missing needed pixel returns nil; no game artwork or image decoder is included.
@@ -14,7 +20,7 @@ extension BiomeDefinition {
     public func color(_ source: BiomeColor, x: Int32, z: Int32,
                       sample: (Identifier, SIMD2<Int>) -> UInt32?) -> UInt32? {
         // Swamp's modifier replaces the base color completely, including an explicit override.
-        if source == .grass, grassColorModifier == .swamp {
+        if colorDependsOnPosition(source) {
             return BiomeGrassNoise.color(x: x, z: z)
         }
         let override: UInt32?

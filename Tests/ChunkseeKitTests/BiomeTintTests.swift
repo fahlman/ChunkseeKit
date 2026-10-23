@@ -70,6 +70,28 @@ import Testing
         #expect(value.color(.foliage, x: 45, z: 56) { _, _ in 0xabcdef } == 0xabcdef)
     }
 
+    @Test func positionDependencyMatchesResolvedColorsForEverySourceAndModifier() throws {
+        let cases: [(String, Set<BiomeColor>)] = [
+            ("", []),
+            (#", "grass_color_modifier":"none""#, []),
+            (#", "grass_color_modifier":"dark_forest""#, []),
+            (#", "grass_color_modifier":"swamp""#, [.grass]),
+            (#", "grass_color":16777215"#, []),
+            (#", "grass_color_modifier":"dark_forest","grass_color":16777215"#, []),
+            (#", "grass_color_modifier":"swamp","grass_color":16777215"#, [.grass])
+        ]
+        for (effects, varyingSources) in cases {
+            let value = try biome(effects: effects)
+            for source in BiomeColor.allCases {
+                #expect(value.colorDependsOnPosition(source) == varyingSources.contains(source))
+                // These positions have different swamp colors in the official 26.3 probe.
+                let first = try #require(value.color(source, x: 0, z: 0) { _, _ in 0xabcdef })
+                let second = try #require(value.color(source, x: 45, z: 56) { _, _ in 0xabcdef })
+                #expect((first != second) == varyingSources.contains(source))
+            }
+        }
+    }
+
     @Test func registeredPlantSourcesKeepFixedAndBiomeColorsDistinct() {
         func tint(_ id: String, _ index: Int = 0) -> BlockTint? {
             BlockState(id).tintSource(at: index, gameDataVersion: 5023)
