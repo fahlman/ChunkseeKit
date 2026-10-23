@@ -998,10 +998,31 @@ Parents and texture references have cycle detection and a 64-step limit. Each re
 combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or
 unresolvable required resources return nil, as do nonfinite/invalid numeric fields; valid empty
 geometry stays empty. These reader bounds intentionally reject unusually large custom models.
-No resource-pack layering, sprite-atlas remapping or animation interpretation is included.
+No resource-pack layering, general sprite-atlas remapping or animation interpretation is included.
 Those follow separately for fahlman/Chunksee#390 and #363 using this shared reader.
 The model format and defaults were checked against the official 26.3 client JSON and its
 cuboid/model resolver bytecode.
+
+`assets.palettedTexture("minecraft:trims/items/helmet_trim_quartz", in: "minecraft:items")`
+resolves a palette-generated sprite from one atlas definition in **26.3 / 5023**. Its
+`AssetPalettedTexture` names the base image, key palette and replacement palette as texture IDs;
+read their original PNG bytes with `assets.texture(_:)`. Palette paths include the game's
+`palettes/` directory. No trim/material-name table or image decoder is included.
+
+Source order is preserved for `paletted_permutations`, `directory` and `single`: later existing
+sprites replace earlier ones, while missing base images add nothing. A later plain sprite,
+unsupported source kind, malformed resource or unverified version returns nil. Missing palette
+PNGs or invalid images remain unavailable when the client reads/decodes the returned resources.
+The atlas is limited to 16 MiB of JSON, 256 sources and 4,096 generated sprite entries in total.
+
+After decoding both palettes to row-major **unpremultiplied `0xAARRGGBB`** pixels, use
+`AssetPaletteMapping(key:palette:)` and its `color(_:)` method on base-image pixels. The palettes
+must have equal lengths, at most 4,096 entries. Matching ignores alpha, skips fully transparent
+key entries and uses the last repeated RGB key. Replacement alpha multiplies the source alpha
+with integer division by 255; unmatched or fully transparent source pixels stay unchanged.
+These rules come from the official `PaletteMapping`, `Palette` and atlas loaders. The APIs are
+an unreleased foundation for fahlman/Chunksee#390; saved trim selection and app image/cache
+adoption follow separately. Clients own PNG decoding, pixel conversion and caching.
 
 `assets.defaultItemModel("minecraft:leather_helmet")` resolves the static default variant from
 an item definition. Its ordered `AssetItem.parts` reuse `AssetModel` and carry
