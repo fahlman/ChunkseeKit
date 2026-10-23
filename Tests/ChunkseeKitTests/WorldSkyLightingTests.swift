@@ -122,14 +122,14 @@ import Testing
         let world = try world(root, types: ["test:missing": definition(.string("test:missing")),
                                           "test:ambiguous": definition(.string("test:ambiguous")),
                                           "test:good": definition(.string("test:good"))],
-                              clocks: ["day": 10, "minecraft:day": 20, "test:clock": 30, "minecraft:overworld": 90])
+                              clocks: ["day": 10, "minecraft:day": 20, "test:clock": 25, "minecraft:overworld": 90])
         let jar = try assets([
             timeline("test:missing", clock: "test:absent", tracks: ["visual/sun_angle": track([(0, 1)])]),
             timeline("test:ambiguous", clock: "day", tracks: ["visual/sun_angle": track([(0, 1)])]),
             timeline("test:good", tracks: ["visual/sun_angle": track([(0, 0), (100, 100)])])
         ])
         let result = try world.savedSkyLighting(assets: jar)
-        #expect(result.count == 1 && result["test:good"]?.sunAngle == 30)
+        #expect(result.count == 1 && result["test:good"]?.sunAngle == 25)
         try Data([255, 1, 2]).write(to: root.appendingPathComponent("data/minecraft/world_clocks.dat"))
         #expect(throws: (any Error).self) { try world.savedSkyLighting(assets: jar) }
     }
