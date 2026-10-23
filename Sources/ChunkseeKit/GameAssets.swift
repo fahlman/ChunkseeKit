@@ -12,13 +12,22 @@ public struct GameAssets: Sendable {
         private enum CodingKeys: String, CodingKey { case id, dataVersion = "world_version" }
     }
 
-    /// Read errors propagate. Unsupported archives or missing/malformed version.json return nil.
+    /// Opens a local file and retains its read-only handle, not its complete contents. Opening
+    /// and directory-read errors propagate; unsupported archives or unavailable version.json
+    /// return nil. Later resource reads return nil after an in-place edit or truncation.
+    /// Sandboxed callers keep any required security-scoped access while using these resources.
     public init?(contentsOf url: URL) throws {
-        self.init(data: try Data(contentsOf: url))
+        guard let resources = try ZipResources(contentsOf: url) else { return nil }
+        self.init(resources: resources)
     }
 
     public init?(data: Data) {
-        guard let resources = ZipResources(data: data), let metadata = resources.read("version.json"),
+        guard let resources = ZipResources(data: data) else { return nil }
+        self.init(resources: resources)
+    }
+
+    private init?(resources: ZipResources) {
+        guard let metadata = resources.read("version.json"),
               let version = try? JSONDecoder().decode(Version.self, from: metadata), !version.id.isEmpty else { return nil }
         self.resources = resources
         self.version = version

@@ -59,7 +59,7 @@ enum WorldResourcePack {
             data = try Data(contentsOf: metadata)
             result = .folder(folder)
         } else {
-            guard name.hasSuffix(".zip"), let resources = ZipResources(data: try Data(contentsOf: folder)),
+            guard name.hasSuffix(".zip"), let resources = try ZipResources(contentsOf: folder),
                   let metadata = resources.read("pack.mcmeta") else { return .unavailable }
             data = metadata
             result = .zip(resources)

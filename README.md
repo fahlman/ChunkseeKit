@@ -369,6 +369,7 @@ extracting files. It supports ordinary stored/deflated entries with UTF-8 names,
 system zlib for raw deflate and CRC checks. Encrypted, ZIP64, multipart or unsupported compression,
 duplicate names, overlapping entries and malformed records remain unavailable. Only requested
 JSON resources are decompressed, with exact-size checks and a 16 MiB limit per resource.
+The unreleased file-reader update (#156) also bounds compressed entry reads to 32 MiB.
 A malformed present override never permits a lower definition to take over.
 ZIP support is available starting in v0.40.0. Built-in experimental packs, pack overlays and
 resource filters are not resolved yet: an unsupported higher-priority pack
@@ -906,6 +907,18 @@ for map in world.mapItems() where !map.isBlank {
 packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
 world data version. The client chooses an installed jar matching its world and caches results
 for that jar; no Minecraft artwork is bundled in this package.
+
+The unreleased file-reader update (#156) keeps a read-only handle and the validated entry index,
+rather than retaining the complete jar. Small temporary header buffers are released after
+validation, and resource bytes are read only when requested. The same path serves ZIP data packs;
+the in-memory constructor continues to retain its supplied Data. File reads use independent offsets
+and retain their handle through each read, so copied readers can be used concurrently.
+In-place modification or truncation makes subsequent resources unavailable. Replacing a path never
+switches an existing reader to the new archive: it either keeps the original inode's resources or
+becomes unavailable. A changed data pack blocks lower-priority fallback until it is reopened.
+The last reader releases its file handle. No file is mapped into memory, extracted or written.
+Sandboxed callers retain their required security-scoped access while using file-backed resources.
+Memory and latency comparisons are still pending; this describes ownership, not measured savings.
 
 ```swift
 if let assets = try GameAssets(contentsOf: gameJarURL),
