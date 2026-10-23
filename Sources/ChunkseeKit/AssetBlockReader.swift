@@ -17,8 +17,8 @@ struct AssetBlockReader {
             for (selector, model) in variants {
                 guard let matches = try variantMatches(selector, state: state) else { throw Invalid.asset }
                 if matches {
-                    // The game rejects overlapping selectors. Dictionary iteration must never
-                    // choose a different model merely because a malformed file changed order.
+                    // The game reports overlapping selectors. Our unordered dictionary cannot
+                    // reproduce its partial replacement order, so leave the result unavailable.
                     guard selected == nil else { throw Invalid.asset }
                     selected = model
                 }
