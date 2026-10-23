@@ -198,10 +198,10 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
         let section = Fixtures.section(y: 0, palette: [
-            .string("minecraft:stone"),
+            .compound(["Name": .string("minecraft:stone")]),
             .compound(["Name": .string("minecraft:oak_leaves"), "Properties": .compound(["persistent": .string("true")])]),
             .compound(["Name": .string("minecraft:oak_leaves"), "Properties": .compound(["persistent": .string("false")])]),
-            .string("example:glowing_brick")
+            .compound(["Name": .string("example:glowing_brick")])
         ], indices: [Int](repeating: 0, count: 4096))
         let duplicate = Fixtures.section(y: 1, palette: [.string("minecraft:stone")])
         let partial = Fixtures.chunk(x: -31, z: 0, dataVersion: 5023,
