@@ -317,6 +317,20 @@ share the existing independent TestZIP writer; no game artwork is checked in. Th
 are unreleased, tracked on #143. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
 projection, compositing and display policy for fahlman/Chunksee#390 and #363.
 
+The unreleased #156 change uses ZipBytes for both in-memory archives and file-backed game jars
+or data packs. The existing directory/header parser is shared. Two temporary bounded byte windows
+serve metadata validation and are discarded before the immutable reader is published; only copied
+entry names/ranges and the source remain. Requested payloads are bounded to 32 MiB compressed and
+16 MiB decoded, with the existing exact-size and CRC checks. File sources own one read-only
+descriptor, use pread without a shared seek position, and keep that owner alive through each call.
+The private file owner's stored Swift state is immutable and compiler-checked Sendable; no
+unchecked annotation or shared mutable cache is used. Size and nanosecond modification/change
+timestamps are checked around validation and resource reads. Changed archives do not permit
+lower-priority fallback; replacing the path never mixes the old index/version with a new file.
+The final reader closes the descriptor, including rejected initialization paths. Tests cover large
+metadata boundaries, replacement, in-place edits/truncation, concurrent copies, malformed resources
+and handle lifetime. Separate memory/latency measurement remains pending; no measured saving is claimed.
+
 `GameAssets.defaultItemModel` resolves a caller-requested static fallback variant from item
 definitions using that same model owner. `AssetItem` retains ordered model parts and typed tint
 sources. Display-context selects use their explicit GUI case (string or list), otherwise the
