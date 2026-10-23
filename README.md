@@ -324,6 +324,15 @@ let entities = try overworld.entities(chunkX: 0, chunkZ: -1)
 print(entities.compactMap { $0["id"]?.string })
 ```
 
+`Chunk.biomeSnapshot` is an additive, unreleased immutable view of only the decoded biome
+palettes and section heights. Retain it when neighboring terrain needs these values after the
+full chunk is released. Its `biome(x:y:z:)` has the same coordinate and missing-data rules as
+`Chunk.biome`; `hasPerBlockBiomes(atBlockY:)` reports the decoded section's layout, or nil when
+its biome palette is absent. Uniform palettes preserve the existing reader's cell layout because
+no packed data distinguishes their resolution. Full chunks and snapshots share their lookup
+and palette-addressing code. The snapshot performs no I/O or cell selection, retains no blocks,
+light or raw NBT, and adds no serialized format.
+
 Heightmaps store the absolute Y of the first free block above the matching surface. The automatic
 reader returns `nil` if stored length cannot uniquely determine width: for example, 11-bit and
 12-bit maps both use 52 longs. Vanilla 128/256/384-block heights remain unambiguous. When the

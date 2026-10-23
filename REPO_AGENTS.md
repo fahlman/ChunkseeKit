@@ -131,6 +131,15 @@ canonical richest-first array and preserves the existing equal-count ordering fr
 retains its display limit, localized search labels and marker/title/detail construction. These
 additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
 
+`Chunk.biomeSnapshot` projects an immutable ChunkBiomeSnapshot retaining only section Y values
+and biome palettes. It does not keep the raw chunk, blocks or light arrays. Full Chunk/ChunkSection
+and this view share one section lookup and cell/per-block addressing rule, preserving missing,
+sparse, duplicate-height and invalid palette-reference behavior. Layout availability follows
+the existing decoder, including uniform palettes' indistinguishable resolution. It performs
+no I/O, nearest-cell selection, height clamping or color blending. This additive API is unreleased
+for fahlman/Chunksee#361 so the app can reuse decoded neighbor biomes without retaining whole
+chunks or decoding them twice. No stored facts or RegionFacts interpretation change.
+
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
 entity-container reads and CLI creature/player output share that rule. Negative fractions round
