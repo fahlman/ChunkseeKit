@@ -607,6 +607,15 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+`ItemStack.itemModelID` identifies the item definition used for its picture. It reads the saved
+`minecraft:item_model` reference with the shared Identifier codec; absent overrides use the item's
+ID, the standard prototype default verified in 26.3. Removed or malformed components return nil,
+so callers do not silently restore the ordinary picture. Pass the identifier to
+`GameAssets.defaultItemModel(_:)`; missing or unsafe resources still return nil there. This does
+not resolve registry/data-pack changes to the prototype, trim/custom-model-data variants or live
+item properties. The additive API is unreleased for fahlman/Chunksee#390. It computes from retained
+components, so existing cached items need no new field or rescan.
+
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
 the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed
