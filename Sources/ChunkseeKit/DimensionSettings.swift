@@ -20,7 +20,15 @@ extension World {
     /// skipped, while contained namespace aliases are allowed. Inline values need no registry read.
     /// This type-only query does not load generator resources.
     public func dimensionTypes() throws -> [String: DimensionType] {
-        try readDimensionSettings(includeGeneration: false).compactMapValues(\.type)
+        try dimensionTypes(assets: nil)
+    }
+
+    /// Uses a matching supplied jar for vanilla definitions, including time/sky metadata.
+    /// Without one, the original verified build/spawn-light fallback remains available, but has
+    /// no time metadata. Enabled folder/ZIP overrides retain priority; a bad override never
+    /// falls back to the jar or built-in values. No jar artwork is read or retained here.
+    public func dimensionTypes(assets: GameAssets?) throws -> [String: DimensionType] {
+        try readDimensionSettings(includeGeneration: false, assets: assets).compactMapValues(\.type)
     }
 
     /// Reads each saved dimension's type and noise-generation facts together. The two values
@@ -28,10 +36,15 @@ extension World {
     /// Uses the same version, pack priority and unsupported-resource rules as dimensionTypes().
     /// Only minecraft:noise generators have noiseGeneration. No roof or biome is inferred.
     public func dimensionSettings() throws -> [String: DimensionSettings] {
-        try readDimensionSettings(includeGeneration: true)
+        try dimensionSettings(assets: nil)
     }
 
-    private func readDimensionSettings(includeGeneration: Bool) throws -> [String: DimensionSettings] {
+    /// Reads type and generator definitions using dimensionTypes(assets:)'s matching-jar policy.
+    public func dimensionSettings(assets: GameAssets?) throws -> [String: DimensionSettings] {
+        try readDimensionSettings(includeGeneration: true, assets: assets)
+    }
+
+    private func readDimensionSettings(includeGeneration: Bool, assets: GameAssets?) throws -> [String: DimensionSettings] {
         let settings: NBT?, version: Int?
         if let saved = try savedData("world_gen_settings") {
             settings = saved["data"]
@@ -43,8 +56,14 @@ extension World {
         guard let dimensions = settings?["dimensions"]?.compound else { return [:] }
         let hasTypes = dimensions.values.contains { $0["type"]?.string != nil }
         let hasNoise = includeGeneration && dimensions.values.contains { Self.noiseSettings(in: $0)?.string != nil }
+        let vanilla: WorldResourcePack
+        if let assets, version == SaveVersion.java26_3, Int(assets.version.dataVersion) == version {
+            vanilla = .zip(assets.resources)
+        } else {
+            vanilla = version == SaveVersion.java26_3 ? .vanilla : .unavailable
+        }
         let packs = try hasTypes || hasNoise ? WorldResourcePack.load(enabled: level.enabledDataPacks, in: url,
-            vanilla: version == SaveVersion.java26_3 ? .vanilla : .unavailable) : []
+            vanilla: vanilla) : []
         let types = try WorldResourcePack.Registry(directory: "dimension_type", in: hasTypes ? packs : [])
         let generators = try WorldResourcePack.Registry(directory: "worldgen/noise_settings", in: hasNoise ? packs : [])
         var result: [String: DimensionSettings] = [:]
@@ -55,7 +74,8 @@ extension World {
             if !seen.insert(id.description).inserted { duplicates.insert(id.description); continue }
             guard dimension.compound != nil else { continue }
             let type: DimensionType? = try types.read(dimension["type"],
-                vanilla: { DimensionType.vanilla($0, version: version) }, inline: DimensionType.init, json: DimensionType.init(json:))
+                vanilla: { DimensionType.vanilla($0, version: version) },
+                inline: { DimensionType($0, version: version) }, json: { DimensionType(json: $0, version: version) })
             let noise: NoiseGenerationSettings?
             if includeGeneration {
                 noise = try generators.read(Self.noiseSettings(in: dimension),

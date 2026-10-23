@@ -282,6 +282,17 @@ checked against the official 26.3 DimensionType/LevelStem codecs and resource ma
 mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This additive API is
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
+The unreleased #175 extension adds optional `DimensionType.time` (DimensionTime), with the
+verified 26.3 fixed-time/skylight flags, optional default clock and unresolved timeline tag/list.
+Identifier owns normalization. Missing optional fields use only the codec's verified defaults;
+malformed time metadata remains unavailable without discarding independent build limits.
+Other versions have no time value. The dimensionTypes/dimensionSettings overloads accepting
+GameAssets use a matching 26.3 jar for vanilla definitions through the same WorldResourcePack
+registry as enabled folder/ZIP packs. A supplied matching jar never falls back behind a missing
+or malformed definition. No matching jar preserves the original build/spawn-light fallback,
+without adding a clock/timeline table. No tag expansion, registry validation, timeline evaluation,
+cache or presentation owner is added. App lighting remains on fahlman/Chunksee#357.
+
 The unreleased spawn-light extension for fahlman/Chunksee#86 adds independently optional
 `monsterSpawnBlockLightLimit` and `monsterSpawnLightLevel` facts to that type. Constant scalar,
 constant-object and uniform IntProvider thresholds expose only their inclusive 0...15 bounds;

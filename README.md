@@ -425,6 +425,22 @@ for a saved `minecraft:noise` generator. The seven vanilla noise definitions are
 26.3, and inline/custom bounds are validated without assuming a complete game registry.
 `dimensionTypes()` remains a type-only read and never opens generator resources.
 
+The additive `dimensionTypes(assets:)` and `dimensionSettings(assets:)` overloads can read vanilla
+definitions from a matching supplied `GameAssets` jar. Enabled data-pack priority is unchanged.
+A matching jar is authoritative: a missing or malformed definition does not use the built-in
+fallback. Without a matching jar, the original verified build/spawn-light fallback remains, with
+no new time metadata or clock/timeline table.
+
+For readable 26.3 definitions, `DimensionType.time` exposes `hasFixedTime`, `hasSkylight`,
+`defaultClock` and `timelines`. References are normalized through `Identifier`; timelines preserve
+either a tag or an ordered list (including a single-reference shorthand). As the verified codec
+specifies, an absent fixed-time field means false, an absent clock means no default clock, and
+absent timelines mean an empty list. A missing skylight flag, malformed time field or unverified
+version leaves the entire time value nil while independently valid build limits remain readable.
+The library does not expand timeline tags, validate clock/timeline registry membership, evaluate
+lighting or simulate elapsed time here. These unreleased APIs are the metadata prerequisite for
+fahlman/Chunksee#357, tracked in fahlman/ChunkseeKit#175.
+
 The unreleased spawn-light extension adds `monsterSpawnBlockLightLimit` (0...15) and
 `monsterSpawnLightLevel` (an inclusive range) to each dimension type. The latter reports the
 bounds of constant or uniform random light thresholds; unsupported distributions remain nil.
