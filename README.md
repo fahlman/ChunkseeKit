@@ -1006,11 +1006,17 @@ No artwork is included. Clients still handle absent or undecodable PNGs as for o
 Texture identifiers retain their namespace and path: for example, a chest's `example:painted`
 reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
 Special geometry stays unavailable for other game versions, open lids or double chests.
-The definition's local transform is baked into the geometry only when it consists
-of positive scale, translation and identity or a half-turn around X, with an identity right
-rotation. This includes the shulker's transform; unsupported transforms are rejected instead
-of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
-element/JSON/part budgets. No public type or cache interpretation changes.
+
+The unreleased shield change adds the plain shield's plate and handle from the official
+`ShieldModel`, using `entity/shield/shield_base_nopattern` and the definition's base GUI settings.
+Saved banner patterns and base colors remain outside this static default-variant API.
+Selected ancestor and local transforms compose in parent-to-child order. They are baked into
+special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or
+a half-turn around X, with an identity right rotation. This covers both the shulker's quaternion
+turn and the shield's parent Y/Z sign flip. Other transforms, and nonidentity transforms on
+ordinary model parts, return nil instead of being ignored. Final coordinates obey the existing
+-16...32 model bounds and the same shared element/JSON/part budgets. No public type or cache
+interpretation changes.
 
 ### Biome color definitions (v0.52.0)
 
