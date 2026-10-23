@@ -42,6 +42,18 @@ public struct GameAssets: Sendable {
         try? AssetItemReader(assets: self).read(identifier)
     }
 
+    /// Matches supplied block properties and resolves the selected variant or multipart models.
+    /// Weighted alternatives and block rotations are retained, not randomly chosen or baked.
+    /// Missing properties that prevent a unique decision return nil: the jar's artwork does not
+    /// define omitted registry defaults. Property domains are not validated against a game registry.
+    /// Missing/unsupported/malformed selected resources and overlapping variants also return nil.
+    /// Reads share a 16 MiB JSON / 4096-element budget across at most 256 selected models, with
+    /// at most 4096 selectors/condition terms and 64 nested conditions. Images and caching stay
+    /// client-owned. Multipart per-term negation is verified only for 26.3 (data version 5023).
+    public func blockModel(for state: BlockState) -> AssetBlock? {
+        try? AssetBlockReader(assets: self).read(state)
+    }
+
     /// Original PNG bytes, CRC-checked and bounded to 16 MiB. Decoding and animation are client work.
     public func texture(_ identifier: String) -> Data? {
         resource(identifier, directory: "textures", extension: "png")
