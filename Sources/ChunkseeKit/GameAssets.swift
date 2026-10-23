@@ -78,9 +78,30 @@ public struct GameAssets: Sendable {
         resource(identifier, directory: "textures", extension: "png")
     }
 
+    /// Resolves a generated palette sprite in one 26.3 atlas, without reading its PNG payloads.
+    /// Paletted, directory and single sources preserve their order; a later existing plain
+    /// sprite hides a previous palette sprite. Missing base images add nothing. Missing palette
+    /// images or invalid PNGs remain unavailable when the client reads/decodes the returned IDs.
+    /// Other source kinds, malformed resources and unverified game versions return nil.
+    /// Work is bounded to 16 MiB JSON, 256 sources and 4,096 generated sprite entries.
+    /// Resource-pack layering, animation, image decoding and caching are not performed here.
+    public func palettedTexture(_ identifier: String, in atlas: String) -> AssetPalettedTexture? {
+        try? AssetPalettedTextureReader(assets: self).read(identifier, atlas: atlas)
+    }
+
     func resource(_ identifier: String, directory: String, extension suffix: String) -> Data? {
-        guard let id = Self.resourceID(identifier) else { return nil }
-        return resources.read("assets/\(id.namespace)/\(directory)/\(id.path).\(suffix)")
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return nil }
+        return resources.read(path)
+    }
+
+    func containsResource(_ identifier: String, directory: String, extension suffix: String) -> Bool {
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return false }
+        return resources.contains(path)
+    }
+
+    private static func resourcePath(_ identifier: String, directory: String, extension suffix: String) -> String? {
+        guard let id = resourceID(identifier) else { return nil }
+        return "assets/\(id.namespace)/\(directory)/\(id.path).\(suffix)"
     }
 
     static func resourceID(_ value: String) -> Identifier? {

@@ -461,6 +461,21 @@ is additionally bounded to 256 selected models, 4,096 selectors/condition nodes 
 coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
 No world, serialized model or RegionFacts version change.
 
+`GameAssets.palettedTexture(_:in:)` interprets one 26.3/5023 atlas's generated palette sprites
+through the existing bounded archive reader. `AssetPalettedTexture` carries the original base,
+key-palette and replacement-palette texture IDs; palette resources use the `palettes/` prefix.
+Paletted, directory and single sources retain their declared precedence, including missing base
+images and later plain overrides. Unsupported source kinds or unverified versions stay unavailable.
+Work is bounded to 16 MiB JSON, 256 sources and 4,096 generated sprite entries. No trim/material
+catalog, resource-pack layering, image decoding or mutable cache is added.
+`AssetPaletteMapping` owns the verified 26.3 replacement rule over unpremultiplied ARGB pixels:
+RGB matching, transparent-key skipping, last duplicate winning and integer-multiplied alpha.
+Palette arrays must have equal lengths and at most 4,096 entries. The official PalettedPermutations,
+Palette/PaletteMapping, DirectoryLister, SingleFile and SpriteSourceList establish paths, ordering
+and pixel semantics. Synthetic tests use the shared TestZIP writer without artwork. These APIs
+are an unreleased foundation for fahlman/Chunksee#390; the app owns decoding/compositing/caching,
+and saved trim selection remains separate.
+
 `AssetModel.Face.textureCoordinates` owns the face's four normalized UV corners and quarter-turn
 ordering. `AssetBlock.Alternative.textureCoordinates(for:facing:)` additionally applies UV lock
 using the original face direction. BlockMath's face frames and FaceBakery's inverse transform
