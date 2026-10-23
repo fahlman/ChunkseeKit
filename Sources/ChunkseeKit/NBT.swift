@@ -94,6 +94,13 @@ extension NBT {
         return nil
     }
 
+    /// ListTag's 26.3 on-disk mixed-list wrapper is exactly one empty-name entry.
+    /// Use only for list elements, and unwrap once. Raw NBT stays intact for round-tripping.
+    var unwrappedListElement: NBT {
+        guard let fields = compound, fields.count == 1, let value = fields[""] else { return self }
+        return value
+    }
+
     public var byteArray: [Int8]? {
         if case .byteArray(let v) = self { return v }
         return nil

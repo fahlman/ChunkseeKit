@@ -302,8 +302,22 @@ Timeline/AttributeTrack/KeyframeTrackSampler, EasingType, AttributeTypes and ARG
 codec and sampling behavior. The read is bounded and only projects those five attributes, not
 unrelated tracks or time markers. Base attributes come explicitly from the caller; results are
 intermediate, with no final range clamping, weather or spatial effects. This additive API is
-unreleased on #177. World pack/tag resolution, static dimension attributes and app drawing
-remain separate work. No chunks, serialized facts, cache version or image decoder changes.
+unreleased on #177. World pack/tag resolution and app drawing remain separate work; static
+dimension attributes are supplied by the extension below. No chunks, serialized facts, cache
+version or image decoder changes.
+
+The unreleased #179 extension adds independently optional `DimensionType.baseSkyLighting` for
+26.3 definitions. It applies supported dimension environment-attribute entries to the registered
+sun/moon/sky-light defaults before timeline layers. JSON and NBT adapt only supported primitive
+forms into the shared LightingValue codecs and modifier arithmetic. NBT owns the exact single
+empty-key mixed-list wrapper interpretation, without changing raw NBT or serialization. Both static and timeline
+attributes use one normalized identity/alias/entry-bound owner. The existing type decoder reads
+JSON once. EnvironmentAttributeMap, its Entry codec, EnvironmentAttributes and the four installed
+dimension definitions establish defaults, shorthand/expanded entries and per-attribute override
+bounds. Unsupported relevant entries make the base unavailable while build/time facts remain
+independently readable. Folder/ZIP/jar priority and version gating are unchanged; no-jar build
+fallbacks add no guessed lighting. Unrelated attributes, complete registry validation, final
+clamping, weather/spatial layers, cache ownership and app rendering remain outside this reader.
 
 The unreleased spawn-light extension for fahlman/Chunksee#86 adds independently optional
 `monsterSpawnBlockLightLimit` and `monsterSpawnLightLevel` facts to that type. Constant scalar,

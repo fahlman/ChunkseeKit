@@ -56,32 +56,20 @@ public struct LightingTimeline: Sendable, Equatable {
             } else {
                 rawTracks = [:]
             }
-            guard rawTracks.count <= 256 else { return nil }
-            var tracks: [String: Any] = [:]
-            for (rawID, value) in rawTracks {
-                guard let id = Identifier(rawID) else { continue }
-                let name = id.description
-                guard Self.attributes.contains(name) else { continue }
-                // Aliases must not make a dictionary's iteration order choose a different track.
-                guard tracks.updateValue(value, forKey: name) == nil else { return nil }
-            }
+            let tracks = try SkyLighting.attributes(rawTracks)
             var remainingFrames = 4096
-            sun = try Self.read(tracks[Self.attributes[0]], period: periodTicks, budget: &remainingFrames)
-            moon = try Self.read(tracks[Self.attributes[1]], period: periodTicks, budget: &remainingFrames)
-            factor = try Self.read(tracks[Self.attributes[2]], period: periodTicks, budget: &remainingFrames,
+            sun = try Self.read(tracks[.sunAngle], period: periodTicks, budget: &remainingFrames)
+            moon = try Self.read(tracks[.moonAngle], period: periodTicks, budget: &remainingFrames)
+            factor = try Self.read(tracks[.skyLightFactor], period: periodTicks, budget: &remainingFrames,
                                    overrideRange: 0...1)
-            color = try Self.read(tracks[Self.attributes[3]], period: periodTicks, budget: &remainingFrames)
-            phase = try Self.read(tracks[Self.attributes[4]], period: periodTicks, budget: &remainingFrames)
+            color = try Self.read(tracks[.skyLightColor], period: periodTicks, budget: &remainingFrames)
+            phase = try Self.read(tracks[.moonPhase], period: periodTicks, budget: &remainingFrames)
         } catch {
             return nil
         }
     }
 
-    private static let attributes = ["minecraft:visual/sun_angle", "minecraft:visual/moon_angle",
-                                     "minecraft:visual/sky_light_factor", "minecraft:visual/sky_light_color",
-                                     "minecraft:visual/moon_phase"]
-
-    private static func read<Value: TimelineValue>(_ raw: Any?, period: Int?, budget: inout Int,
+    private static func read<Value: LightingValue>(_ raw: Any?, period: Int?, budget: inout Int,
                                     overrideRange: ClosedRange<Float>? = nil) throws -> TimelineTrack<Value>? {
         guard let raw else { return nil }
         return try TimelineTrack(json: AssetJSON.object(raw), period: period,

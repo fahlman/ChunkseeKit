@@ -11,7 +11,7 @@ enum TimelineEasing: Sendable, Equatable {
             a = 3 * first - 3 * second + 1
             b = -6 * first + 3 * second
             c = 3 * first
-            guard a.isFinite, b.isFinite, c.isFinite else { throw InvalidTimeline.data }
+            guard a.isFinite, b.isFinite, c.isFinite else { throw InvalidLighting.data }
         }
         func sample(_ t: Float) -> Float { ((a * t + b) * t + c) * t }
         func gradient(_ t: Float) -> Float { (3 * a * t + 2 * b) * t + c }
@@ -23,11 +23,11 @@ enum TimelineEasing: Sendable, Equatable {
             switch name {
             case "linear": self = .linear
             case "constant": self = .constant
-            default: throw InvalidTimeline.data
+            default: throw InvalidLighting.data
             }
         } else {
             let controls = try AssetJSON.numbers(AssetJSON.object(json)["cubic_bezier"], count: 4)
-            guard (0...1).contains(controls[0]), (0...1).contains(controls[2]) else { throw InvalidTimeline.data }
+            guard (0...1).contains(controls[0]), (0...1).contains(controls[2]) else { throw InvalidLighting.data }
             self = try .cubicBezier(x: Curve(controls[0], controls[2]), y: Curve(controls[1], controls[3]))
         }
     }
@@ -52,10 +52,10 @@ enum TimelineEasing: Sendable, Equatable {
                 if abs(error) < 0.00001 { return y.sample(t) }
                 if error < 0 { low = t } else { high = t }
                 let next = (low + high) / 2
-                guard next != t else { throw InvalidTimeline.data }
+                guard next != t else { throw InvalidLighting.data }
                 t = next
             }
-            throw InvalidTimeline.data
+            throw InvalidLighting.data
         }
     }
 }
