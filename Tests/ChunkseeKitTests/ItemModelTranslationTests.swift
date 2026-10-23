@@ -95,7 +95,7 @@ import Testing
     @Test func unsupportedTransformsAndNonfiniteResultsKeepTheWholeItemUnavailable() throws {
         #expect(try assets(node(model: "item/flat")).defaultItemModel("test") != nil)
         #expect(try assets(node([0, 0, 1], model: "item/flat")).defaultItemModel("test") == nil)
-        let scales: [[Double]] = [[2, 1, 1], [1, -1, -1]]
+        let scales: [[Double]] = [[2, 1, 1], [1, -2, -1]]
         for scale in scales {
             var ordinary = node(); ordinary["transformation"] = transform([0, 0, 0], scale: scale)
             #expect(try assets(ordinary).defaultItemModel("test") == nil)

@@ -31,7 +31,6 @@ enum SpecialItemModel: String {
             boxes = [(SIMD3(-6, -11, -2), SIMD3(6, 11, -1), .zero),
                      (SIMD3(-1, -3, -1), SIMD3(1, 3, 5), SIMD2(26, 0))]
         }
-        let turnX = transform.scale.y < 0
         var result = [AssetModel.Element]()
         for box in boxes {
             let a = transform.applying(to: box.from)
@@ -52,18 +51,9 @@ enum SpecialItemModel: String {
             var faces = [AssetModel.Direction: AssetModel.Face]()
             for (direction, region) in regions {
                 let vertical = direction == .down || direction == .up
-                // Baking a half-turn swaps top/bottom and front/back. Its
-                // vertical face corners also turn halfway relative to cuboid face coordinates.
-                let target: AssetModel.Direction
-                switch (turnX, direction) {
-                case (true, .down): target = .up
-                case (true, .up): target = .down
-                case (true, .north): target = .south
-                case (true, .south): target = .north
-                default: target = direction
-                }
-                faces[target] = .init(material: .init(texture: texture, forceTranslucent: false), uv: region,
-                                      rotation: vertical || turnX ? 0 : 180, tintIndex: nil, cullFace: nil)
+                let face = AssetModel.Face(material: .init(texture: texture, forceTranslucent: false), uv: region,
+                                           rotation: vertical ? 0 : 180, tintIndex: nil, cullFace: nil)
+                faces[transform.applying(to: direction)] = transform.applying(to: face, facing: direction)
             }
             result.append(.init(from: from, to: to, faces: faces, rotation: nil,
                                 shadeDirectionOverride: nil, lightEmission: 0))

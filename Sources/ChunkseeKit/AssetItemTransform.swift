@@ -1,5 +1,5 @@
 /// Composes the supported item-node transforms. Special cuboids accept the axis-aligned subset;
-/// ordinary element models also support translations. Other transforms remain unavailable.
+/// ordinary element models support translations and half-turns. Other transforms remain unavailable.
 struct AssetItemTransform: Equatable {
     let scale: SIMD3<Float>
     let translation: SIMD3<Float>
@@ -11,24 +11,59 @@ struct AssetItemTransform: Equatable {
         point * scale + translation * 16
     }
 
-    func translating(_ model: AssetModel) throws -> AssetModel {
+    func applying(to model: AssetModel) throws -> AssetModel {
         if self == .identity { return model }
-        guard scale == .one, case .elements(let source) = model.geometry else { throw Invalid.asset }
+        guard (0..<3).allSatisfy({ abs(scale[$0]) == 1 }),
+              case .elements(let source) = model.geometry else { throw Invalid.asset }
         let elements = try source.map { element in
-            let from = applying(to: element.from), to = applying(to: element.to)
+            let a = applying(to: element.from), b = applying(to: element.to)
+            var from = a, to = b
+            for axis in 0..<3 where scale[axis] < 0 { swap(&from[axis], &to[axis]) }
             let rotation = element.rotation.map {
-                AssetModel.Rotation(origin: applying(to: $0.origin), angles: $0.angles, rescale: $0.rescale)
+                AssetModel.Rotation(origin: applying(to: $0.origin), angles: applying(to: $0.angles), rescale: $0.rescale)
             }
             guard [from, to, rotation?.origin ?? .zero].allSatisfy({ point in
                 (0..<3).allSatisfy { point[$0].isFinite }
             }) else { throw Invalid.asset }
-            // Moving the rotation's origin with its vertices preserves rotation/rescaling before
-            // translation. UVs are already resolved against the original model coordinates.
-            return AssetModel.Element(from: from, to: to, faces: element.faces, rotation: rotation,
-                                      shadeDirectionOverride: element.shadeDirectionOverride, lightEmission: element.lightEmission)
+            // Conjugating an element's rotation preserves its original order before the node
+            // transform. Remap faces without resampling UVs from the moved corner coordinates.
+            let faces = Dictionary(uniqueKeysWithValues: element.faces.map { direction, face in
+                (applying(to: direction), applying(to: face, facing: direction))
+            })
+            return AssetModel.Element(from: from, to: to, faces: faces, rotation: rotation,
+                                      shadeDirectionOverride: element.shadeDirectionOverride.map { applying(to: $0) },
+                                      lightEmission: element.lightEmission)
         }
         return .init(geometry: .elements(elements), guiTransform: model.guiTransform,
                      guiLight: model.guiLight, ambientOcclusion: model.ambientOcclusion)
+    }
+
+    func applying(to direction: AssetModel.Direction) -> AssetModel.Direction {
+        switch direction {
+        case .down: scale.y < 0 ? .up : .down
+        case .up: scale.y < 0 ? .down : .up
+        case .north: scale.z < 0 ? .south : .north
+        case .south: scale.z < 0 ? .north : .south
+        case .west: scale.x < 0 ? .east : .west
+        case .east: scale.x < 0 ? .west : .east
+        }
+    }
+
+    func applying(to face: AssetModel.Face, facing direction: AssetModel.Direction) -> AssetModel.Face {
+        // A proper axis-aligned half-turn preserves face winding. Top/bottom UV orientation
+        // follows the X axis; all four side faces follow the vertical axis.
+        let turned = direction == .up || direction == .down ? scale.x < 0 : scale.y < 0
+        return .init(material: face.material, uv: face.uv, rotation: (face.rotation + (turned ? 180 : 0)) % 360,
+                     tintIndex: face.tintIndex, cullFace: face.cullFace.map { applying(to: $0) })
+    }
+
+    private func applying(to angles: AssetModel.Rotation.Angles) -> AssetModel.Rotation.Angles {
+        switch angles {
+        case .axis(let axis, let angle):
+            let sign = switch axis { case .x: scale.x; case .y: scale.y; case .z: scale.z }
+            return .axis(axis, angle * sign)
+        case .eulerXYZ(let value): return .eulerXYZ(value * scale)
+        }
     }
 
     func appending(_ raw: Any?) throws -> Self {
@@ -39,10 +74,13 @@ struct AssetItemTransform: Equatable {
         let s = try AssetJSON.numbers(value["scale"], count: 3)
         let t = try AssetJSON.numbers(value["translation"], count: 3)
         guard right[0...2].allSatisfy({ $0 == 0 }), abs(right[3]) == 1,
-              left[1] == 0, left[2] == 0,
-              (left[0] == 0 && abs(left[3]) == 1) || (abs(left[0]) == 1 && left[3] == 0),
               s[0] > 0, s[1] != 0, s[2] != 0, (s[1] < 0) == (s[2] < 0) else { throw Invalid.asset }
-        let turn = left[0] == 0 ? SIMD3<Float>.one : SIMD3(1, -1, -1)
+        let turn: SIMD3<Float>
+        if left[0...2].allSatisfy({ $0 == 0 }), abs(left[3]) == 1 { turn = .one }
+        else if abs(left[0]) == 1, left[1] == 0, left[2] == 0, left[3] == 0 { turn = SIMD3(1, -1, -1) }
+        else if left[0] == 0, abs(left[1]) == 1, left[2] == 0, left[3] == 0 { turn = SIMD3(-1, 1, -1) }
+        else if left[0] == 0, left[1] == 0, abs(left[2]) == 1, left[3] == 0 { turn = SIMD3(-1, -1, 1) }
+        else { throw Invalid.asset }
         // Transformation.compose multiplies parent by child: the parent's scale also acts
         // on the child's translation. Y/Z sign pairs are the shield's half-turn representation.
         let result = Self(scale: scale * SIMD3(s[0], s[1], s[2]) * turn,
