@@ -331,9 +331,21 @@ sampler once per world. Its result is a block position: use its `chunk` to choos
 then pass its local X/Z and absolute Y to `Chunk.biome`. The source may be in a neighboring chunk
 or section. If that data is missing, the caller chooses how to handle the unavailable biome.
 Coordinates outside signed 32-bit input are unavailable; results retain the full cell origin
-without narrowing. The sampler performs no file reads, height clamping or color blending and
+without narrowing. The `cellOrigin(at:in:)` overload takes a validated `DimensionType` and clamps
+the selected cell to its build-height limits, following the game's source-chunk lookup. The
+unclamped overload remains available; neither fills a missing interior section or neighbor.
+The sampler performs no file reads or color blending and
 does not apply to per-block biome palettes. Seed hashing uses Apple's CryptoKit; no external
 package dependency or stored-format change is introduced.
+
+`Chunk.biomeSnapshot` is an additive, unreleased immutable view of only the decoded biome
+palettes and section heights. Retain it when neighboring terrain needs these values after the
+full chunk is released. Its `biome(x:y:z:)` has the same coordinate and missing-data rules as
+`Chunk.biome`; `hasPerBlockBiomes(atBlockY:)` reports the decoded section's layout, or nil when
+its biome palette is absent. Uniform palettes preserve the existing reader's cell layout because
+no packed data distinguishes their resolution. Full chunks and snapshots share their lookup
+and palette-addressing code. The snapshot performs no I/O or cell selection, retains no blocks,
+light or raw NBT, and adds no serialized format.
 
 Heightmaps store the absolute Y of the first free block above the matching surface. The automatic
 reader returns `nil` if stored length cannot uniquely determine width: for example, 11-bit and

@@ -151,7 +151,7 @@ public struct ChunkSection: Sendable {
     public let skyLight: [UInt8]?
 
     /// True when biomes are stored per block (26.4+) rather than per 4×4×4 cell.
-    public var hasPerBlockBiomes: Bool { biomes?.entryCount == 4096 }
+    public var hasPerBlockBiomes: Bool { biomes?.hasPerBlockBiomes == true }
 
     init(_ nbt: NBT) throws {
         guard let y = nbt["Y"]?.int else { throw ChunkError.missingField("sections[].Y") }
@@ -198,9 +198,7 @@ public struct ChunkSection: Sendable {
 
     /// Biome at section-local block coordinates (each 0..<16).
     public func biome(x: Int, y: Int, z: Int) -> String? {
-        guard let biomes else { return nil }
-        if biomes.entryCount == 4096 { return biomes[Self.blockIndex(x: x, y: y, z: z)] }
-        return biomes[((y & 15) >> 2) << 4 | ((z & 15) >> 2) << 2 | ((x & 15) >> 2)]
+        biomes?.biome(x: x, y: y, z: z)
     }
 
     public func blockLight(x: Int, y: Int, z: Int) -> Int? { Self.nibble(blockLight, Self.blockIndex(x: x, y: y, z: z)) }
@@ -242,6 +240,9 @@ public struct Chunk: Sendable {
     public var isLightOn: Bool { nbt["isLightOn"]?.bool ?? false }
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
+    /// An immutable view retaining only biome palettes and section heights, without blocks,
+    /// light arrays or the chunk's NBT. Reuse it when neighboring terrain needs these biomes.
+    public var biomeSnapshot: ChunkBiomeSnapshot { ChunkBiomeSnapshot(sections: sections) }
     /// Saved order is preserved, including entries with unavailable identity or position.
     public var blockEntities: [BlockEntity] { Self.blockEntities(in: nbt).map(BlockEntity.init(nbt:)) }
     /// Saved input retained for typed readers within the library.
@@ -290,13 +291,7 @@ public struct Chunk: Sendable {
     }
 
     public func section(atBlockY y: Int) -> ChunkSection? {
-        let sy = y >> 4
-        // Sections are normally contiguous from minSectionY, so try direct indexing first.
-        let guess = sy.subtractingReportingOverflow(sections.first?.y ?? 0)
-        if !guess.overflow, sections.indices.contains(guess.partialValue), sections[guess.partialValue].y == sy {
-            return sections[guess.partialValue]
-        }
-        return sections.first { $0.y == sy }
+        sectionAtBlockY(y, in: sections, sectionY: { $0.y })
     }
 
     /// Block at chunk-local x/z (0..<16) and absolute y. Missing sections read as `nil`.

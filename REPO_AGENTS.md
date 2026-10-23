@@ -136,10 +136,20 @@ It hashes the raw world seed once with Apple's CryptoKit SHA-256 and uses the ga
 integer mixing, signed coordinate conversion and corner tie order. `cellOrigin(at:)` returns
 the chosen cell's block origin, which can lie in a neighboring chunk/section. Out-of-Int32 input
 is unavailable; the output is not narrowed, so extreme valid source coordinates cannot alias
-another cell. It does not read files, choose a missing-data policy, clamp build height, blend
-colors or change per-block palette semantics. Ordinary Chunk.biome remains a direct saved-cell
+another cell. `cellOrigin(at:in:)` applies the verified 26.3 source-chunk Y clamp using the
+existing validated DimensionType's build limits, independently of logical height. It does not
+read files, fill missing data, blend colors or change per-block palette semantics. Ordinary Chunk.biome remains a direct saved-cell
 lookup. The additive API is unreleased for fahlman/Chunksee#361; app neighbor-data integration
 follows a reviewed release. No serialized facts or RegionFacts interpretation change.
+
+`Chunk.biomeSnapshot` projects an immutable ChunkBiomeSnapshot retaining only section Y values
+and biome palettes. It does not keep the raw chunk, blocks or light arrays. Full Chunk/ChunkSection
+and this view share one section lookup and cell/per-block addressing rule, preserving missing,
+sparse, duplicate-height and invalid palette-reference behavior. Layout availability follows
+the existing decoder, including uniform palettes' indistinguishable resolution. It performs
+no I/O, nearest-cell selection, height clamping or color blending. This additive API is unreleased
+for fahlman/Chunksee#361 so the app can reuse decoded neighbor biomes without retaining whole
+chunks or decoding them twice. No stored facts or RegionFacts interpretation change.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,

@@ -42,6 +42,15 @@ public struct BiomeSampler: Sendable {
                              blockZ: (Int(baseZ) + (nearest & 1)) * 4)
     }
 
+    /// Applies the source chunk's 26.3 build-height clamp after selecting the cell. DimensionType
+    /// supplies validated, section-aligned limits; its logical height is not the build height.
+    /// Missing data inside those limits still remains the caller's unavailable source.
+    public func cellOrigin(at block: BlockPosition, in dimension: DimensionType) -> BlockPosition? {
+        guard let cell = cellOrigin(at: block) else { return nil }
+        // A cell spans four blocks, so the last cell begins three below the inclusive top.
+        return BlockPosition(blockX: cell.x, blockY: min(max(cell.y, dimension.minY), dimension.maxY - 3), blockZ: cell.z)
+    }
+
     private func fiddledDistance(x: Int32, y: Int32, z: Int32, dx: Double, dy: Double, dz: Double) -> Double {
         var state = zoomSeed
         for _ in 0..<2 {
