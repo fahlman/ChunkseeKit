@@ -1026,7 +1026,7 @@ turn and the shield's parent Y/Z sign flip. Unsupported special-model transforms
 instead of being ignored; their final coordinates stay within the existing -16...32 model bounds.
 
 Ordinary element models support translations (since v0.55.1) and unit axis-aligned half-turns
-(unreleased), including the colored beds and straw bed. The shared transform moves corners and
+(since v0.57.1), including the colored beds and straw bed. The shared transform moves corners and
 rotation origins, remaps faces with their UV orientation and adjusts existing element rotations.
 Tints, rescaling and GUI settings remain intact. Transformed coordinates may extend beyond the
 source model's bounds, but must remain finite. Other scales/rotations and transforms on generated
@@ -1120,6 +1120,14 @@ multipart pieces are retained, in definition order. Each part contains one or mo
 alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and UV-lock flag.
 The rotations remain separate from the model's inventory transform. This API preserves the
 choices; it does not choose a random alternative or project a top face.
+
+`AssetModel.Face.textureCoordinates` returns the four normalized UV coordinates in original
+face-vertex order after the face's own rotation. The additive, unreleased
+`AssetBlock.Alternative.textureCoordinates(for:facing:)` also applies the block's UV lock,
+verified against 26.3 `ModelState` and `FaceBakery`. Pass the original face direction before
+element/block rotation; rotate geometry separately. Partial and inverted rectangles retain
+their meaning, and coordinates outside the texture are not clamped. Model data is unchanged.
+The shared reader owns the face-frame transform, so image clients need no second UV-lock rule.
 
 ```swift
 let horizontalLog = BlockState("minecraft:oak_log", properties: ["axis": "x"])

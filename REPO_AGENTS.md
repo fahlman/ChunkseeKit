@@ -423,7 +423,7 @@ their heads and supports the straw bed's Y half-turn, without an item-ID excepti
 place a model outside its source JSON's corner bounds, but nonfinite results are rejected. Other
 ordinary scales/rotations and transforms on generated layers remain unsupported. Selected-node
 composition and whole-item budgets are unchanged. Translation shipped in v0.55.1; the half-turn
-extension is an unreleased reader fix for fahlman/Chunksee#390 with no public API or app drawing-path change.
+extension shipped in v0.57.1 for fahlman/Chunksee#390 with no public API or app drawing-path change.
 
 `GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
 variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
@@ -440,6 +440,14 @@ is additionally bounded to 256 selected models, 4,096 selectors/condition nodes 
 64 condition levels. This additive API is unreleased for fahlman/Chunksee#363; default-state
 coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
 No world, serialized model or RegionFacts version change.
+
+`AssetModel.Face.textureCoordinates` owns the face's four normalized UV corners and quarter-turn
+ordering. `AssetBlock.Alternative.textureCoordinates(for:facing:)` additionally applies UV lock
+using the original face direction. BlockMath's face frames and FaceBakery's inverse transform
+around the texture center are verified in 26.3. Exact quarter-turn arithmetic avoids trigonometric
+roundoff; inverted/outside rectangles stay intact. Neither method changes model geometry, state
+selection, weights, caches or sampling. These additive APIs are unreleased for fahlman/Chunksee#363;
+the app's drawing-path adoption follows a reviewed release.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
