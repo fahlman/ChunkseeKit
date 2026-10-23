@@ -45,6 +45,64 @@ enum WorldResourcePack {
         try ids.reversed().map { try load($0, in: world, vanilla: vanilla) }
     }
 
+    /// Candidate IDs only. The ordinary reader still decides priority and whether a present
+    /// resource is usable; listing an invalid override must never expose a lower definition.
+    /// Nil means this source has unknown contents, so lower sources cannot add candidates.
+    func identifiers(in directory: String) throws -> Set<String>? {
+        switch self {
+        case .vanilla, .unavailable: return nil
+        case .zip(let resources):
+            guard let paths = resources.paths(under: "data/") else { return nil }
+            return Set(paths.compactMap {
+                Self.identifier(for: $0, in: directory)
+            })
+        case .folder(let root):
+            let fm = FileManager.default
+            guard let data = Self.file("data", under: root) else { return nil }
+            guard Self.isDirectory(data) else { return [] }
+            var result = Set<String>()
+            for namespace in try fm.contentsOfDirectory(atPath: data.path).sorted() {
+                try Task.checkCancellation()
+                let base = "data/\(namespace)/\(directory)"
+                guard GameAssets.resourceID("\(namespace):probe") != nil,
+                      let folder = Self.file(base, under: root), Self.isDirectory(folder) else { continue }
+                var pending: [(path: String, url: URL, ancestors: Set<URL>)] = [(base, folder, [folder])]
+                while let current = pending.popLast() {
+                    try Task.checkCancellation()
+                    for name in try fm.contentsOfDirectory(atPath: current.url.path).sorted() {
+                        try Task.checkCancellation()
+                        let path = current.path + "/" + name
+                        guard let url = Self.file(path, under: root) else { continue }
+                        if Self.isDirectory(url) {
+                            // Internal directory links can name resources too; do not follow a
+                            // cycle back into an ancestor or walk outside the existing pack root.
+                            if !current.ancestors.contains(url) {
+                                pending.append((path, url, current.ancestors.union([url])))
+                            }
+                        } else if let id = Self.identifier(for: path, in: directory) {
+                            result.insert(id)
+                        }
+                    }
+                }
+            }
+            return result
+        }
+    }
+
+    private static func identifier(for path: String, in directory: String) -> String? {
+        guard validPath(path), path.hasSuffix(".json") else { return nil }
+        let parts = path.split(separator: "/"), category = directory.split(separator: "/")
+        guard parts.count > category.count + 2, parts[0] == "data",
+              parts[2..<(2 + category.count)].elementsEqual(category) else { return nil }
+        let name = parts[(2 + category.count)...].joined(separator: "/").dropLast(5)
+        return GameAssets.resourceID("\(parts[1]):\(name)")?.description
+    }
+
+    private static func isDirectory(_ url: URL) -> Bool {
+        var directory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &directory) && directory.boolValue
+    }
+
     private static func load(_ id: String, in world: URL, vanilla: Self) throws -> Self {
         if id == "vanilla" { return vanilla }
         guard id.hasPrefix("file/") else { return .unavailable }

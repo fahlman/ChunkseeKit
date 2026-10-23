@@ -65,15 +65,41 @@ extension World {
         guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
         let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
         guard !ids.isEmpty else { return [:] }
+        return try Self.biomeDefinitions(for: ids, in: biomePacks(assets: assets))
+    }
+
+    /// Discovers and resolves all biome definitions in the matching game jar and enabled packs.
+    /// Uses the same version, priority, path and invalid-override rules as the requested-ID query.
+    /// No chunks are read. Clients can retain this color snapshot and derive their cache identity
+    /// from its values, then reread it when the enabled packs or resources change.
+    /// Internal folder links are bounded by directory ancestry; escaping links are not followed.
+    public func biomeDefinitions(assets: GameAssets?) throws -> [String: BiomeDefinition] {
+        guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
+        let packs = try biomePacks(assets: assets)
+        var ids = Set<String>()
+        for pack in packs {
+            try Task.checkCancellation()
+            guard let found = try pack.identifiers(in: "worldgen/biome") else { break }
+            ids.formUnion(found)
+        }
+        return try Self.biomeDefinitions(for: ids, in: packs)
+    }
+
+    private func biomePacks(assets: GameAssets?) throws -> [WorldResourcePack] {
+        try Task.checkCancellation()
         let vanilla: WorldResourcePack
         if let assets, Int(assets.version.dataVersion) == level.dataVersion {
             vanilla = .zip(assets.resources)
         } else {
             vanilla = .unavailable
         }
-        let packs = try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
+        return try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
+    }
+
+    private static func biomeDefinitions(for ids: Set<String>, in packs: [WorldResourcePack]) throws -> [String: BiomeDefinition] {
         var result: [String: BiomeDefinition] = [:]
         for id in ids.sorted() {
+            try Task.checkCancellation()
             result[id] = try WorldResourcePack.read(id, directory: "worldgen/biome", in: packs,
                 vanilla: { _ in nil }, json: BiomeDefinition.init(json:))
         }

@@ -36,6 +36,17 @@ struct ZipResources: Sendable {
     // A changed archive has unknown contents, so it must not permit lower-priority fallback.
     func contains(_ path: String) -> Bool { !source.isUnchanged || entries[Data(path.utf8)] != nil }
 
+    /// Names come from the already validated directory; listing does not read entry payloads.
+    /// A changed file has unknown contents, just as it does for contains/read.
+    func paths(under prefix: String) -> [String]? {
+        guard source.isUnchanged else { return nil }
+        let paths = entries.keys.compactMap { name -> String? in
+            guard let path = String(data: name, encoding: .utf8), path.hasPrefix(prefix) else { return nil }
+            return path
+        }
+        return source.isUnchanged ? paths : nil
+    }
+
     /// Contains distinguishes an absent resource from a present one whose payload is invalid.
     /// The latter must still shadow every lower-priority pack.
     func read(_ path: String) -> Data? {

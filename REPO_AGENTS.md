@@ -306,6 +306,17 @@ biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported p
 versions/jars, paths and unchanged inputs. These definition APIs are available in v0.52.0 for
 fahlman/Chunksee#361.
 
+The new `World.biomeDefinitions(assets:)` overload discovers the complete biome-definition
+catalog without reading chunks. `WorldResourcePack` lists candidate IDs from its enabled folder
+or ZIP sources, then the same requested-ID reader applies priority, version checks and invalid
+override shadowing. ZIP names come from the existing validated directory without reading entry
+payloads. Folder discovery resolves paths through the existing containment rule, follows internal
+directory aliases and stops at an ancestor cycle. Unknown or changed archives cannot expose lower
+definitions. Nested IDs remain canonical; unrelated resources and invalid names are excluded.
+The app can retain the resolved snapshot and derive tile identity from its values, rereading it
+when resources change. No chunk scan, mutable cache, image decoder or second pack reader is added.
+This additive API is unreleased for fahlman/Chunksee#361.
+
 `BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
 sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
 stem age and redstone power. Only the verified half/power/age defaults are supplied for compact
