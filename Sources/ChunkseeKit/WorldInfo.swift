@@ -104,10 +104,31 @@ extension World {
                        clearTime: data["clearWeatherTime"]?.int ?? 0)
     }
 
-    /// The Overworld's day clock in ticks (24,000 per day; 0 is sunrise): `world_clocks.dat` in
-    /// 26.1+, `DayTime` in `level.dat` before.
+    /// Whole saved ticks by normalized clock identifier, including custom clocks.
+    /// Reads namespaced/flat `world_clocks.dat` through savedData. Legacy `DayTime` fills a
+    /// missing valid Overworld entry only. Missing/malformed values and ambiguous normalized
+    /// IDs are omitted; unrelated clocks remain available. Read errors propagate.
+    /// No period, fractional tick, rate, running time or dimension-to-clock link is inferred.
+    public func clockTimes() throws -> [String: Int] {
+        let saved = try savedData("world_clocks")?["data"]?.compound ?? [:]
+        var result: [String: Int] = [:]
+        var seen = Set<String>(), duplicates = Set<String>()
+        for (name, clock) in saved {
+            guard let id = Identifier(name) else { continue }
+            if !seen.insert(id.description).inserted { duplicates.insert(id.description); continue }
+            result[id.description] = clock["total_ticks"]?.int
+        }
+        if result["minecraft:overworld"] == nil {
+            result["minecraft:overworld"] = level.nbt["DayTime"]?.int
+        }
+        for id in duplicates { result[id] = nil }
+        return result
+    }
+
+    /// The saved Overworld clock's whole ticks, including the legacy `DayTime` fallback.
+    /// Its period and meaning belong to the world's timeline definitions.
     public func dayTime() throws -> Int? {
-        try savedData("world_clocks")?["data"]?["minecraft:overworld"]?["total_ticks"]?.int ?? level.nbt["DayTime"]?.int
+        try clockTimes()["minecraft:overworld"]
     }
 
     /// A dimension's world border: its own `data/minecraft/world_border.dat` in 26.1+, or the
