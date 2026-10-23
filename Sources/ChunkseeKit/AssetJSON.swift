@@ -1,7 +1,7 @@
 import Foundation
 import CoreFoundation
 
-/// Strict JSON primitives shared by the item and blockstate asset readers.
+/// Strict JSON primitives shared by the game-resource readers.
 enum AssetJSON {
     private enum Invalid: Error { case asset }
 
@@ -43,6 +43,16 @@ enum AssetJSON {
             return color
         }
         return RGBColor.integer(Int32(try integer(value)))
+    }
+
+    /// ExtraCodecs.STRING_RGB_COLOR adds exactly six hex digits to RGB_COLOR_CODEC.
+    static func stringColor(_ value: Any?) throws -> UInt32 {
+        guard let text = value as? String else { return try color(value) }
+        let bytes = Array(text.utf8)
+        guard bytes.count == 7, bytes.first == 35,
+              bytes.dropFirst().allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
+              let color = UInt32(text.dropFirst(), radix: 16) else { throw Invalid.asset }
+        return color
     }
 
     static func integer(_ value: Any?) throws -> Int {

@@ -262,6 +262,25 @@ present override still blocks fallback. No file is extracted, no private SDK dec
 new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
 is available in v0.40.0, with separate app adoption on #51.
 
+`WorldResourcePack` owns enabled data-pack priority and safe paths for both dimension settings
+and biome definitions. Dimension defaults retain their existing verified-version rule; biome
+vanilla resources use the caller's matching game archive through the same ZIP path, so a
+malformed vanilla entry also shadows a lower-priority pack.
+`BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
+26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
+and the saved grass modifier. World queries canonicalize only requested IDs and require a
+known saved version and saved enabled-pack list. A missing or mismatched jar makes vanilla
+unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
+cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the
+hex/integer/channel forms; unknown modifiers and malformed fields remain unavailable. Strict
+numeric validation intentionally rejects Gson coercions, as the other asset readers do.
+Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
+fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
+biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported packs, missing
+versions/jars, paths and unchanged inputs. These additive APIs are unreleased for
+fahlman/Chunksee#361. Client colormap sampling, block tint sources, modifier calculations,
+rendering/cache identity and measurements remain app work.
+
 `GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
 that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
 resolved materials, tint indices, default/explicit UVs, rotations and GUI settings. It retains the

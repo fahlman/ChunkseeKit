@@ -973,6 +973,41 @@ rotation. This includes the shulker's transform; unsupported transforms are reje
 of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
 element/JSON/part budgets. No public type or cache interpretation changes.
 
+### Biome color definitions (unreleased)
+
+Biome colors come from the supplied game jar and the world's enabled data packs:
+
+```swift
+let assets = try GameAssets(contentsOf: gameJarURL)
+let definitions = try world.biomeDefinitions(
+    for: ["minecraft:plains", "example:custom_biome"], assets: assets)
+if let plains = definitions["minecraft:plains"] {
+    print(plains.waterColor, plains.temperature, plains.downfall)
+}
+// A jar can also be read without a world or data-pack overrides.
+let jarPlains = assets?.biomeDefinition("plains")
+```
+
+These additive APIs read the verified 26.3 format (data version 5023). Results contain
+unclamped base temperature/downfall, a 24-bit RGB water color, optional grass, foliage and
+dry-foliage overrides, and the grass modifier (`none`, `dark_forest`, or `swamp`). Colors accept
+six-digit `#RRGGBB` strings, signed Int32 values, or three Float channels in 0...1, using the
+existing shared conversion. Numeric values are strict: unlike Gson's coercions, fractional
+integer colors, out-of-range integers/channels, Boolean and nonfinite numbers are unavailable.
+Other biome fields are neither interpreted nor validated.
+
+World lookup canonicalizes requested IDs and reads only those resources. Enabled folder and
+ZIP packs use the same priority and safe paths as dimension settings. A present malformed
+override or unsupported higher-priority pack prevents lower fallback. Missing or
+data-version-mismatched jars make vanilla unavailable; higher-priority pack definitions can
+still resolve. Missing/other saved data versions return an empty result, and an absent enabled
+pack list is not replaced with an assumed vanilla pack. File errors propagate.
+
+No Minecraft color table or artwork is bundled. The caller supplies the game file and performs
+these synchronous reads off its UI actor. Color-map PNG access uses `GameAssets.texture`;
+sampling, fixed block-specific tint sources, modifier math, image decoding, caching and map
+drawing remain client work. No chunks are scanned or world files written.
+
 ### Blockstate model selection (unreleased)
 
 `GameAssets.blockModel(for:)` matches a `BlockState` against its jar definition and returns
