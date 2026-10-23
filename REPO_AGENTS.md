@@ -508,6 +508,12 @@ but must be reread for the values. See README for format coverage and availabili
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
 ItemStack likewise keeps its components internal, preserving typed accessors, raw-input initializers
 and the existing Codable representation.
+`ItemStack.itemModelID` owns saved item-model reference selection. The explicit component uses
+Identifier's codec; removal or malformed input stays unavailable. Without an override it uses the
+item ID, matching the standard 26.3 Item.Properties prototype default. Registry/data-pack prototype
+changes and trim/custom-model-data evaluation remain outside this API. GameAssets still owns
+resource-path validation and model resolution, while app caches must key on the selected model.
+This additive API is unreleased for fahlman/Chunksee#390, with no stored-field or cache-version change.
 Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
 legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
 fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other

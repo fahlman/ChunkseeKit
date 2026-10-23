@@ -55,6 +55,20 @@ public struct ItemStack: Sendable, Equatable, Codable {
         }
     }
 
+    /// The saved item-model reference, or the item's ID when no override is recorded.
+    /// A removed or malformed component returns nil instead of restoring the ordinary picture.
+    /// The absent-component default follows the standard item prototype, verified in 26.3;
+    /// registry/data-pack changes to that prototype are not resolved here. This identifies an
+    /// item definition, not a model JSON file or an evaluated trim/custom-model-data variant.
+    public var itemModelID: Identifier? {
+        guard components == nil || components?.compound != nil,
+              components?["!minecraft:item_model"] == nil else { return nil }
+        if let saved = components?["minecraft:item_model"] {
+            return saved.string.flatMap(Identifier.init)
+        }
+        return Identifier(id)
+    }
+
     /// Enchantments on the item, or stored in an enchanted book, by id with their level, e.g.
     /// `["minecraft:mending": 1]`. Empty when the item has none.
     public var enchantments: [String: Int] {
