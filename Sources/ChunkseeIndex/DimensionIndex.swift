@@ -39,6 +39,8 @@ public struct DimensionIndex: Sendable {
     public private(set) var biomeAreas: [BiomeArea] = []
     /// Richest chunks first. Equal counts have no specified order.
     public private(set) var blocks: [ChunkDeposit] = []
+    /// The saved palette catalog of all retained regions; not a count of blocks present.
+    public private(set) var paletteBlockIDs: Set<String> = []
     public private(set) var formats = Formats()
 
     public init(dimension: String, caveBiomeIDs: Set<String>) {
@@ -88,6 +90,7 @@ public struct DimensionIndex: Sendable {
             next.biomes.merge(region.biomes) { $1 }
             next.caveBiomes.merge(region.caveBiomes) { $1 }
             next.blocks += region.blocks.flatMap { chunk, deposits in deposits.map { ChunkDeposit(chunk: chunk, deposit: $0) } }
+            next.paletteBlockIDs.formUnion(region.paletteBlockIDs)
             next.formats = Formats(readable: next.formats.readable + region.formats.readable,
                                    legacy: next.formats.legacy + region.formats.legacy)
         }

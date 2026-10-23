@@ -43,7 +43,9 @@ extension Dimension {
             catch { facts.formats.unreadableTerrain += 1; return }
             facts.formats.readable += 1
             if chunk.isFullyGenerated { facts.structures += chunk.structureStarts }
-            facts.chunks.append(try TerrainChunkFacts(chunk, at: .init(x: origin.x + x, z: origin.z + z), options: options))
+            let terrain = try TerrainChunkFacts(chunk, at: .init(x: origin.x + x, z: origin.z + z),
+                                               options: options, paletteBlockIDs: &facts.paletteBlockIDs)
+            facts.chunks.append(terrain)
         }
         facts.formats.unreadableTerrain += unreadable
         let unreadableEntities = try visit(.entities) { _, _, nbt in
@@ -61,7 +63,8 @@ extension Dimension {
 }
 
 extension TerrainChunkFacts {
-    init(_ chunk: Chunk, at position: ChunkPosition, options: RegionScanOptions) throws {
+    init(_ chunk: Chunk, at position: ChunkPosition, options: RegionScanOptions,
+         paletteBlockIDs: inout Set<String>) throws {
         var heights: [String: [Int]] = [:]
         for name in chunk.heightmapNames {
             if let height = options.height { heights[name] = chunk.heightmap(name, height: height) }
@@ -78,6 +81,7 @@ extension TerrainChunkFacts {
                     }
                 }
                 guard let blocks = section.blockStates else { continue }
+                for state in blocks.palette { paletteBlockIDs.insert(state.id) }
                 let wanted = blocks.palette.indices.filter { options.blockIDs?.contains(blocks.palette[$0].id) ?? true }
                 guard !wanted.isEmpty else { continue }
                 let bottom = section.y.multipliedReportingOverflow(by: 16)

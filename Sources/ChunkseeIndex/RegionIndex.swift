@@ -14,6 +14,8 @@ public struct RegionIndex: Sendable {
     public let biomes: [ChunkPosition: String]
     public let caveBiomes: [ChunkPosition: [String]]
     public let blocks: [ChunkPosition: [NotableBlock.Deposit]]
+    /// Saved palette names, including unused entries and IDs outside notable-block search groups.
+    public let paletteBlockIDs: Set<String>
     public let formats: DimensionIndex.Formats
     let caveBiomeIDs: Set<String>
 
@@ -24,6 +26,7 @@ public struct RegionIndex: Sendable {
         structures = facts.structures; creatures = facts.creatures.compactMap(CreatureEntry.init)
         pointsOfInterest = facts.pointsOfInterest
         self.caveBiomeIDs = caveBiomeIDs
+        paletteBlockIDs = facts.paletteBlockIDs
         biomes = Dictionary(uniqueKeysWithValues: facts.chunks.compactMap { chunk in
             chunk.sampledBiome.map { (chunk.position, $0) }
         })
