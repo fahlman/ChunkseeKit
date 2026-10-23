@@ -1047,7 +1047,7 @@ existing shared conversion. Numeric values are strict: unlike Gson's coercions, 
 integer colors, out-of-range integers/channels, Boolean and nonfinite numbers are unavailable.
 Other biome fields are neither interpreted nor validated.
 
-World lookup canonicalizes requested IDs and reads only those resources. Enabled folder and
+World lookup canonicalizes requested IDs and reads only those resource payloads. Enabled folder and
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. Missing or
 data-version-mismatched jars make vanilla unavailable; higher-priority pack definitions can
@@ -1058,14 +1058,17 @@ No Minecraft biome-color table or artwork is bundled. The caller supplies the ga
 performs these synchronous reads off its UI actor. Color-map PNG access uses `GameAssets.texture`.
 No chunks are scanned or world files written.
 
-The unreleased `world.biomeDefinitions(assets:)` overload discovers all available biome
+The `world.biomeDefinitions(assets:)` overload, available in v0.56.0, discovers all available biome
 definitions in those same sources, including nested data-pack IDs, without first scanning
 the world's chunks. It loads the enabled packs once and shares the requested-ID query's
 priority and invalid-override handling. ZIP discovery uses the validated central directory.
 Folder registry discovery follows the game's rule: symbolic links at or below the biome category
 folder are not entries, while contained namespace aliases are supported. A higher linked resource
-therefore cannot override a lower listed definition. The existing requested-ID API remains a direct
-resource lookup and can resolve contained aliases, as the game's direct `getResource` does.
+therefore cannot override a lower listed definition. The same registry eligibility now applies
+to requested-ID biome queries and dimension-type/noise-settings references (an unreleased
+correction to the earlier direct-resource lookup). Each queried category is listed once; payloads
+are read only for requested IDs. Inline dimension settings do not require listing, and type-only
+queries do not open noise-setting resources.
 Malformed definitions remain absent, and an unknown or changed higher pack cannot expose a
 lower definition. Cancellation and file-read errors propagate. Retain the returned value as
 a snapshot; reread after changing enabled packs or their contents. Image decoding, color

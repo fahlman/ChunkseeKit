@@ -7,16 +7,8 @@ enum WorldResourcePack {
     case zip(ZipResources)
     case unavailable
 
-    static func read<Value>(_ saved: NBT?, directory: String, in packs: [Self],
-                            vanilla: (String) -> Value?, inline: (NBT) -> Value?,
-                            json: (Data) -> Value?) throws -> Value? {
-        guard let saved else { return nil }
-        guard let reference = saved.string else { return inline(saved) }
-        return try read(reference, directory: directory, in: packs, vanilla: vanilla, json: json)
-    }
-
-    static func read<Value>(_ reference: String, directory: String, in packs: [Self],
-                            vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
+    private static func read<Value>(_ reference: String, directory: String, in packs: [Self],
+                                    vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
         guard let id = Identifier(reference), !id.path.isEmpty else { return nil }
         let path = "data/\(id.namespace)/\(directory)/\(id.path).json"
         guard validPath(path) else { return nil }
@@ -46,26 +38,52 @@ enum WorldResourcePack {
         try ids.reversed().map { try load($0, in: world, vanilla: vanilla) }
     }
 
-    /// Registry discovery considers only resources a pack lists. A higher linked file is not
-    /// a registry entry and cannot override a lower real file; a listed malformed file can.
-    static func readAll<Value>(directory: String, in packs: [Self], json: (Data) -> Value?) throws -> [String: Value] {
-        var ids = Set<String>(), sources: [Self] = []
-        for pack in packs {
-            try Task.checkCancellation()
-            guard let found = try pack.identifiers(in: directory) else {
-                sources.append(.unavailable)
-                break
+    /// Saved-world registries use listed resources even when the caller requests only a few
+    /// IDs. Prepare each category once; payload reads keep the shared priority/error rules.
+    struct Registry {
+        private let directory: String
+        private let sources: [WorldResourcePack]
+        private let identifiers: Set<String>
+
+        init(directory: String, in packs: [WorldResourcePack]) throws {
+            self.directory = directory
+            var ids = Set<String>(), sources: [WorldResourcePack] = []
+            for pack in packs {
+                try Task.checkCancellation()
+                // Dimension readers supply verified vanilla facts by ID instead of a jar.
+                // They are still available, but do not contribute IDs to a complete catalog.
+                if case .vanilla = pack { sources.append(pack); continue }
+                guard let found = try pack.identifiers(in: directory) else {
+                    sources.append(.unavailable)
+                    break
+                }
+                ids.formUnion(found)
+                if case .folder(let root, _) = pack { sources.append(.folder(root, listed: found)) }
+                else { sources.append(pack) }
             }
-            ids.formUnion(found)
-            if case .folder(let root, _) = pack { sources.append(.folder(root, listed: found)) }
-            else { sources.append(pack) }
+            self.sources = sources
+            identifiers = ids
         }
-        var result: [String: Value] = [:]
-        for id in ids.sorted() {
+
+        func read<Value>(_ saved: NBT?, vanilla: (String) -> Value?, inline: (NBT) -> Value?,
+                         json: (Data) -> Value?) throws -> Value? {
+            guard let saved else { return nil }
+            guard let reference = saved.string else { return inline(saved) }
+            return try read(reference, vanilla: vanilla, json: json)
+        }
+
+        func read<Value>(_ reference: String, vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
             try Task.checkCancellation()
-            result[id] = try read(id, directory: directory, in: sources, vanilla: { _ in nil }, json: json)
+            return try WorldResourcePack.read(reference, directory: directory, in: sources, vanilla: vanilla, json: json)
         }
-        return result
+
+        func readAll<Value>(json: (Data) -> Value?) throws -> [String: Value] {
+            var result: [String: Value] = [:]
+            for id in identifiers.sorted() {
+                result[id] = try read(id, vanilla: { _ in nil }, json: json)
+            }
+            return result
+        }
     }
 
     /// Candidate IDs only. The ordinary reader still decides priority and whether a present

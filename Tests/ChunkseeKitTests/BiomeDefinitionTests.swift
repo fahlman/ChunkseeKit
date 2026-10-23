@@ -90,10 +90,9 @@ import Testing
         #expect(Set(result.keys) == ["example:nested/meadow", "namespace_alias:nested/meadow", "example:blocked"])
         #expect(result["example:nested/meadow"] == result["namespace_alias:nested/meadow"])
         #expect(result["example:blocked"]?.waterColor == 0x3f76e4)
-        // Minecraft's direct getResource follows contained aliases; registry listing does not.
-        let direct = try world.biomeDefinitions(for: ["example:alias/meadow", "example:link"], assets: reader)
-        #expect(direct["example:alias/meadow"] == result["example:nested/meadow"])
-        #expect(direct["example:link"] == result["example:nested/meadow"])
+        let subset = try world.biomeDefinitions(for: ["example:alias/meadow", "example:link",
+            "category_alias:nested/meadow", "example:nested/meadow", "namespace_alias:nested/meadow", "example:blocked"], assets: reader)
+        #expect(subset == result)
         #expect(try Data(contentsOf: external) == Data(plain.utf8))
     }
 
@@ -111,7 +110,7 @@ import Testing
         #expect(Set(catalog.keys) == ["example:linked", "example:target"])
         #expect(catalog["example:linked"]?.waterColor == 0x102030)
         #expect(catalog["example:target"]?.waterColor == 0xabcdef)
-        #expect(try world.biomeDefinitions(for: ["example:linked"], assets: nil)["example:linked"]?.waterColor == 0xabcdef)
+        #expect(try world.biomeDefinitions(for: ["example:linked", "example:target", "example:invalid"], assets: nil) == catalog)
     }
 
     @Test func changedGameArchiveDoesNotExposeLowerPackDefinitions() throws {
@@ -126,17 +125,21 @@ import Testing
         #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["minecraft:plains"])
         try Fixtures.write(Array("truncated".utf8), to: jar)
         #expect(try world.biomeDefinitions(assets: reader).isEmpty)
+        #expect(try world.biomeDefinitions(for: ["plains"], assets: reader).isEmpty)
     }
 
-    @Test func cancelledCatalogReadStopsWithoutPublishingPartialDefinitions() async throws {
+    @Test func cancelledRegistryReadsStopWithoutPublishingPartialDefinitions() async throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, packs: ["vanilla"]), reader = try assets([resource(plain)])
-        let task = Task {
-            withUnsafeCurrentTask { $0?.cancel() }
-            return try world.biomeDefinitions(assets: reader)
+        for all in [true, false] {
+            let task = Task {
+                withUnsafeCurrentTask { $0?.cancel() }
+                return try all ? world.biomeDefinitions(assets: reader)
+                    : world.biomeDefinitions(for: ["plains"], assets: reader)
+            }
+            await #expect(throws: CancellationError.self) { try await task.value }
         }
-        await #expect(throws: CancellationError.self) { try await task.value }
     }
 
     private func resource(_ id: String, _ json: String) -> TestZIP.Entry {
@@ -340,9 +343,14 @@ import Testing
         try FileManager.default.createSymbolicLink(at: leaf, withDestinationURL: target)
         let world = try world(root, packs: ["vanilla", "file/safe"])
         let reader = try assets([resource(plain)])
-        #expect(try world.biomeDefinitions(for: ["plains", "minecraft:../../outside"], assets: reader).isEmpty)
+        #expect(try world.biomeDefinitions(for: ["plains", "minecraft:../../outside"], assets: reader)["minecraft:plains"]?.waterColor == 0x3f76e4)
         try FileManager.default.removeItem(at: leaf)
         try FileManager.default.createDirectory(at: leaf, withIntermediateDirectories: false)
+        #expect(try world.biomeDefinitions(for: ["plains"], assets: reader)["minecraft:plains"]?.waterColor == 0x3f76e4)
+        try FileManager.default.removeItem(at: leaf)
+        try Fixtures.write(Array(plain.utf8), to: leaf)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: leaf.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: leaf.path) }
         #expect(throws: (any Error).self) { try world.biomeDefinitions(for: ["plains"], assets: reader) }
         #expect(try world.biomeDefinitions(for: [], assets: reader).isEmpty)
         #expect(try Data(contentsOf: target) == Data(plain.utf8))
