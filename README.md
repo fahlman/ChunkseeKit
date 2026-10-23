@@ -434,8 +434,8 @@ no new time metadata or clock/timeline table.
 For readable 26.3 definitions, `DimensionType.time` exposes `hasFixedTime`, `hasSkylight`,
 `defaultClock` and `timelines`. References are normalized through `Identifier`; timelines preserve
 either a tag or an ordered list (including a single-reference shorthand). As the verified codec
-specifies, an absent fixed-time field means false, an absent clock means no default clock, and
-absent timelines mean an empty list. A missing skylight flag, malformed time field or unverified
+specifies, an absent or JSON-null fixed-time field means false, an absent or null clock means no
+default clock, and absent or null timelines mean an empty list. A missing skylight flag, malformed time field or unverified
 version leaves the entire time value nil while independently valid build limits remain readable.
 The library does not expand timeline tags, validate clock/timeline registry membership, evaluate
 lighting or simulate elapsed time here. These unreleased APIs are the metadata prerequisite for

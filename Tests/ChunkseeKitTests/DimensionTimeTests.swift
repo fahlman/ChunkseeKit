@@ -103,8 +103,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let bad: [[String: Any]] = [
             ["has_skylight": "true"], ["has_skylight": NSNull()], ["has_fixed_time": 1],
-            ["has_fixed_time": NSNull()], ["default_clock": NSNull()], ["default_clock": "Bad ID"],
-            ["timelines": ["#tag"]], ["timelines": NSNull()], ["timelines": [1]], ["timelines": [:]]
+            ["default_clock": "Bad ID"], ["timelines": ["#tag"]], ["timelines": [1]], ["timelines": [:]]
         ]
         let entries = try bad.enumerated().map { entry("test:bad\($0.offset)", try json($0.element)) }
         let types = Dictionary(uniqueKeysWithValues: bad.indices.map { ("test:bad\($0)", NBT.string("test:bad\($0)")) })
@@ -112,6 +111,42 @@ import Testing
         let read = try world.dimensionTypes(assets: assets(entries))
         #expect(read.count == bad.count)
         #expect(read.values.allSatisfy { $0.time == nil && $0.buildRange == -64...319 })
+    }
+
+    @Test func optionalJSONNullsUseTheOfficialCodecDefaults() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(root, types: ["test:sky": .string("test:sky")])
+        let jar = try assets([entry("test:sky", json(["has_fixed_time": NSNull(),
+                                                    "default_clock": NSNull(), "timelines": NSNull()]))])
+        let time = try #require(try world.dimensionTypes(assets: jar)["test:sky"]?.time)
+        #expect(time.hasFixedTime == false && time.hasSkylight == true)
+        #expect(time.defaultClock == nil && time.timelines == .list([]))
+    }
+
+    @Test func companionQueryUsesTheSameJarWithoutCouplingTypeAndGenerationAvailability() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(root, types: [:])
+        let definition = NBT.compound(["type": .string("test:sky"), "generator": .compound([
+            "type": .string("noise"), "settings": .string("test:terrain")
+        ])])
+        try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([
+            "dimensions": .compound(["test:map": definition])
+        ])]), to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
+        let noise = TestZIP.Entry(path: "data/test/worldgen/noise_settings/terrain.json",
+                                  text: #"{"noise":{"min_y":16,"height":64},"sea_level":37}"#)
+        let jar = try assets([entry("test:sky", json()), noise])
+        let settings = try world.dimensionSettings(assets: jar)["test:map"]
+        #expect(settings?.type?.time?.hasSkylight == true)
+        #expect(settings?.noiseGeneration?.range == 16..<80 && settings?.noiseGeneration?.seaLevel == 37)
+        let badType = try assets([entry("test:sky", "{}"), noise])
+        #expect(try world.dimensionSettings(assets: badType)["test:map"]?.type == nil)
+        #expect(try world.dimensionSettings(assets: badType)["test:map"]?.noiseGeneration?.seaLevel == 37)
+        let badNoise = try assets([entry("test:sky", json()),
+                                  .init(path: noise.path, text: "{}")])
+        #expect(try world.dimensionTypes(assets: badNoise)["test:map"]?.time?.hasSkylight == true)
+        #expect(try world.dimensionSettings(assets: badNoise)["test:map"]?.noiseGeneration == nil)
     }
 
     @Test func missingPackListAndUnavailableHigherPacksNeverExposeJarMetadata() throws {

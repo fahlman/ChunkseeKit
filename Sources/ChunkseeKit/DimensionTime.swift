@@ -60,9 +60,9 @@ extension DimensionTime: Decodable {
     public init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: Keys.self)
         hasSkylight = try fields.decode(Bool.self, forKey: .hasSkylight)
-        hasFixedTime = fields.contains(.hasFixedTime) ? try fields.decode(Bool.self, forKey: .hasFixedTime) : false
-        defaultClock = fields.contains(.defaultClock) ? try fields.decode(Identifier.self, forKey: .defaultClock).description : nil
-        timelines = fields.contains(.timelines) ? try fields.decode(Timelines.self, forKey: .timelines) : .list([])
+        hasFixedTime = try fields.decodeIfPresent(Bool.self, forKey: .hasFixedTime) ?? false
+        defaultClock = try fields.decodeIfPresent(Identifier.self, forKey: .defaultClock)?.description
+        timelines = try fields.decodeIfPresent(Timelines.self, forKey: .timelines) ?? .list([])
     }
 }
 
