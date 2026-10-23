@@ -17,6 +17,7 @@ struct TimelineTrack<Value: TimelineValue>: Sendable, Equatable {
     private let modifier: TimelineModifier
 
     init(json: [String: Any], period: Int?, budget: inout Int, overrideRange: ClosedRange<Float>?) throws {
+        let modifier: TimelineModifier
         let rawModifier = json["modifier"]
         if rawModifier == nil || rawModifier is NSNull {
             modifier = .override
@@ -27,6 +28,7 @@ struct TimelineTrack<Value: TimelineValue>: Sendable, Equatable {
             modifier = value
         }
         guard Value.modifiers.contains(modifier) else { throw InvalidTimeline.data }
+        self.modifier = modifier
         easing = try TimelineEasing(json: json["ease"])
         let values = try AssetJSON.array(json["keyframes"])
         guard !values.isEmpty, values.count <= budget else { throw InvalidTimeline.data }
