@@ -18,7 +18,7 @@ import Testing
     private func assets(_ node: [String: Any], rotation: [String: Any]? = nil,
                         inverted: Bool = false) throws -> GameAssets {
         let faces = Dictionary(uniqueKeysWithValues: AssetModel.Direction.allCases.map { direction in
-            (direction.rawValue, ["texture": "block/" + direction.rawValue, "uv": [1, 2, 13, 11],
+            (direction.rawValue, ["texture": "#" + direction.rawValue, "uv": [1, 2, 13, 11],
                                  "rotation": 90, "cullface": direction.rawValue, "tintindex": 0] as [String: Any])
         })
         var element: [String: Any] = ["from": inverted ? [5, 7, 11] : [1, 2, 3],
@@ -32,7 +32,10 @@ import Testing
             .init(path: "version.json", text: #"{"id":"26.3","world_version":5023}"#),
             .init(path: "assets/minecraft/items/test.json", text: try json(["model": node])),
             .init(path: "assets/minecraft/models/block/piece.json", text: try json([
-                "elements": [element], "gui_light": "front", "ambientocclusion": false])),
+                "elements": [element], "gui_light": "front", "ambientocclusion": false,
+                "textures": Dictionary(uniqueKeysWithValues: AssetModel.Direction.allCases.map {
+                    ($0.rawValue, "block/" + $0.rawValue)
+                })])),
             .init(path: "assets/minecraft/models/item/flat.json", text:
                 #"{"parent":"builtin/generated","textures":{"layer0":"item/test"}}"#)
         ]))))
@@ -105,6 +108,7 @@ import Testing
     }
 
     @Test func unsupportedRotationsScalesAndGeneratedLayersRemainUnavailable() throws {
+        #expect(try assets(node()).defaultItemModel("test") != nil)
         for turn in [[0, 1, 0, 1], [1, 1, 0, 0], [0, 2, 0, 0]] {
             #expect(try assets(node(transform(turn))).defaultItemModel("test") == nil)
         }
