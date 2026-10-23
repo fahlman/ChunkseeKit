@@ -350,20 +350,26 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`ContainerItemModel` supplies closed single-chest and shulker cuboids for selected special item
+`SpecialItemModel` supplies closed single-chest, shulker and plain-shield cuboids for selected special item
 definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
-ChestModel, ShulkerModel and ModelPart.Cube, including an independent export of their baked
+ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
 shares SpriteMapper's namespace-preserving `entity/chest/` or `entity/shulker/` path prefix;
 there is no list of accepted texture names. Waxed variants share their definition's texture.
 Static selection uses the normal chest fallback, without evaluating Christmas dates. Missing
-images remain a client fallback, as for ordinary models. Nonzero openness, double chests and
-unverified versions return nil. The item-local transform is baked into cuboids only for positive
-scale, translation and identity/X-half-turn rotations; other transforms remain unavailable.
-The shulker's local transform comes from its definition, not its GUI base. Final coordinates stay
+images remain a client fallback, as for ordinary models. The plain shield uses ShieldSpecialRenderer's
+`entity/shield/shield_base_nopattern` skin; saved patterns/base colors remain separate from this
+static default-variant API. Nonzero container openness, double chests and unverified versions
+return nil. `AssetItemTransform` composes selected ancestor and local transforms in parent-to-child
+order, matching Transformation.compose. The supported subset has positive X scale, same-sign
+nonzero Y/Z scales, translation, identity/X-half-turn left rotation and identity right rotation.
+Other transforms and nonidentity transforms on ordinary model parts remain unavailable rather
+than being dropped. This includes the shulker's local quaternion turn and the shield's parent
+Y/Z sign flip. Both come from their item definitions, not their GUI bases. Final coordinates stay
 within the existing -16...32 model range, and special parts share the item/model budgets.
 No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
-This is unreleased work for fahlman/Chunksee#395; app adoption follows its own release and tests.
+Containers shipped for fahlman/Chunksee#395; the unreleased shield extension is part of
+fahlman/Chunksee#390. App adoption follows its own release and tests.
 
 `GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
 variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
