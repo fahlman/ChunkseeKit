@@ -15,42 +15,28 @@ public struct StatusEffect: Sendable, Equatable {
     }
 
     init?(_ nbt: NBT) {
-        let id: String
-        if let saved = nbt["id"]?.string, !saved.isEmpty {
-            guard let identifier = Identifier(saved) else { return nil }
-            id = identifier.description
-        } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
-            id = "minecraft:" + Self.legacyIDs[number]
-        } else { return nil }
-        guard let amplifier = Self.savedAmplifier(nbt["amplifier"] ?? nbt["Amplifier"]),
+        guard let id = Self.savedID(nbt),
+              let amplifier = Self.savedAmplifier(nbt["amplifier"] ?? nbt["Amplifier"]),
               let duration = nbt["duration"]?.int ?? nbt["Duration"]?.int,
               duration == -1 || duration > 0 else { return nil }
         self.init(id: id, amplifier: amplifier, durationTicks: duration)
     }
 
-    /// 26.3's UNSIGNED_BYTE codec narrows Number.byteValue before unsigned interpretation.
-    /// Edited numeric tags therefore wrap, while a missing amplifier still defaults to zero.
-    private static func savedAmplifier(_ tag: NBT?) -> Int? {
-        switch tag {
-        case nil: return 0
-        case .byte(let value)?: return Int(UInt8(bitPattern: value))
-        case .short(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .int(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .long(let value)?: return Int(UInt8(truncatingIfNeeded: value))
-        case .float(let value)?: return floatingAmplifier(Double(value))
-        case .double(let value)?: return floatingAmplifier(value)
-        default: return nil
+    /// Shared by active effects and potion contents; only active effects require a live duration.
+    static func savedID(_ nbt: NBT) -> String? {
+        if let saved = nbt["id"]?.string, !saved.isEmpty {
+            return Identifier(saved)?.description
+        } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
+            return "minecraft:" + Self.legacyIDs[number]
         }
+        return nil
     }
 
-    private static func floatingAmplifier(_ value: Double) -> Int {
-        // Java first truncates to a signed int (NaN -> 0, overflow -> endpoint), then a byte.
-        let narrowed: Int32
-        if value.isNaN { narrowed = 0 }
-        else if value >= Double(Int32.max) { narrowed = .max }
-        else if value <= Double(Int32.min) { narrowed = .min }
-        else { narrowed = Int32(value) }
-        return Int(UInt8(truncatingIfNeeded: narrowed))
+    /// 26.3's UNSIGNED_BYTE codec narrows Number.byteValue before unsigned interpretation.
+    /// Edited numeric tags therefore wrap, while a missing amplifier still defaults to zero.
+    static func savedAmplifier(_ tag: NBT?) -> Int? {
+        guard let tag else { return 0 }
+        return tag.javaInt.map { Int(UInt8(truncatingIfNeeded: $0)) }
     }
 
     // Before 1.20.2 effects used numeric IDs; player files can remain in the older format.

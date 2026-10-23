@@ -35,11 +35,101 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
-| `ChunkseeIndex` | Aggregation of typed facts; storage totals by saved ID. No display names, localization, UI state or file decoding | `ChunkseeKit` |
-| `chunksee` | Command-line presentation only | `ChunkseeKit` |
+| `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; matching-item and storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
+| `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
-| `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs | `ChunkseeIndex`, `ChunkseeKit` |
+| `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs and shared save fixtures | Foundation, `ChunkseeIndex`, `ChunkseeKit`, `ChunkseeKitTestSupport` |
+
+`ChunkseeIndex.BiomeArea.connected(in:)` owns edge-connected biome grouping, representative-member
+selection and exposed chunk sides. It preserves every area and ignores unmappable chunk origins.
+This pure aggregation takes chosen biome membership; file reads, surface/cave policy, display
+names, colors and drawing paths stay outside it. Membership and boundary discovery share one walk.
+This additive API is available in v0.42.0; app adoption is tracked on fahlman/Chunksee#383 and #214.
+It changes no save reader, cache interpretation or held cave-biome rule.
+
+`ChunkseeIndex.PointIndex` owns immutable region buckets and broad point-candidate lookup, using
+the core checked coordinate conversion and region size. Results preserve input order and retain
+unbucketable entries for the client's final checks; unusable bounds return the full snapshot.
+Sparse queries inspect occupied buckets instead of enumerating huge empty ranges. This is the
+app's existing PointMarkers lookup, with viewport conversion, precise geometry, visibility and
+presentation kept outside the library. The additive API is available in v0.43.0; app adoption is
+tracked on fahlman/Chunksee#384 and #214. It adds no reader, cache or task owner.
+
+`ChunkseeIndex.SearchQuery` owns the app's existing category-prefix parsing and all-word matching.
+Recognized prefixes ignore case and trim horizontal whitespace; unknown prefixes stay literal.
+Its explicit phrase initializer preserves the CLI's contiguous, case-insensitive `find`/`text`
+queries, including spaces and colons. Both forms share one substring matcher. The CLI consumes
+that owner; app names, prompts, symbols, category membership and result formatting remain outside
+the library. This additive API is available in v0.44.0 and adopted by fahlman/Chunksee#385.
+Retained world-index state and typed result aggregation remain separate work on fahlman/Chunksee#214.
+
+`ChunkseeIndex.NotableBlock` owns the app's existing nine block-search groups and exact ID catalog.
+Its nested Deposit groups the core reader's per-ID counts and enclosing section-height bounds,
+combining ore variants and ordering by the group's raw value. Unknown IDs and common blocks outside
+the catalog remain excluded. These are indexed section ranges, not exact block locations. Core
+scan options and file interpretation are unchanged; client names and search-result wording stay
+outside the module. This additive API is available in v0.45.0; app adoption is fahlman/Chunksee#386.
+It prepares compact typed region contributions without retaining unused heightmaps or repeating
+group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
+
+`ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
+failed-read retention, selected deletion and complete cross-region aggregates. Its public
+regionsToRead method supplies the read set for both the client scheduler and updating. The first
+pass always covers all available regions; a completed empty/failed pass is distinct from never-read.
+A broad pass removes
+all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
+the dimension, selected/available coordinates and explicit cave-membership set. Empty successful
+reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
+native marker sort/presentation remains a client concern. Portal and biome joins happen after all
+retained contributions are combined. Heightmaps, inhabited-time grids and ordinary unnamed mobs
+are not retained. These are in-memory values, with no persistence or file/task owner.
+
+`CreatureEntry` owns the app's existing villager > owned pet > named category precedence, stable
+UUID/fallback identity and checked location eligibility through core BlockPosition.mapCoordinates
+(floored X/Z fit Int32, supplied Y fits Int, unknown Y stays nil). Native map navigation and creature
+eligibility share this public helper; it does not enforce the game world border.
+Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
+player-carried projections remain in the app. The additive region/dimension APIs are available in v0.46.0;
+separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native
+marker projections for unchanged regions. Background-work scheduling and canceled-publication
+guards remain app-owned. Tests use real synthetic scans, including cross-region joins and incremental
+versus complete reads. No renderer, scan-ID, cave-membership or RegionFacts version change.
+
+The palette-catalog extension adds `paletteBlockIDs` to RegionFacts, RegionIndex and DimensionIndex
+for fahlman/Chunksee#365. Core collects the declared IDs from fully generated chunks' typed palettes
+inside the existing section walk, regardless of the deposit-count filter. Unused palette entries
+are included; this is a catalog, not evidence of occupancy. No second chunk decode or block traversal
+is added. The regional set is retained compactly and dimension aggregation unions the retained
+contributions, so successful replacement/deletion removes stale names while failed reads preserve
+them. RegionFacts interpretation version 7 rejects older catalog-less archives. This additive API
+is unreleased; app adoption follows its dependency release and keeps presentation/filter policy
+outside the library.
+
+`WorldIndex<Dimension>` owns the dimension-keyed world snapshot and its typed Placed/all enumeration.
+The generic payload lets clients keep native projections with their shared facts, without a second
+world catalog or UI imports here. Matching values in different dimensions remain separate records;
+member order is preserved and dimension order is unspecified. Dictionary value semantics retain
+earlier snapshots when a later one replaces a dimension. The app's reader catalog, background tasks,
+cancellation and publication stay app-owned. This additive API is available in v0.47.0; app adoption and
+remaining typed search-result work are tracked on fahlman/Chunksee#214.
+
+`ItemTotals<Key>` owns matching-stack quantities, using the core ItemStack.allItems traversal for
+nested contents. The caller supplies its predicate and grouping identity; searchable fields,
+localized labels, ordering and output remain client-owned. CLI find uses its existing custom-name
+or saved-ID key; StoredItemTotal uses saved IDs and keeps outer-container counts. A matching
+zero-count stack remains a result. This additive API is available in v0.47.0; app adoption follows the
+release on fahlman/Chunksee#214. No reader, inventory selection or cache meaning changes.
+
+SearchSelection owns the inventory-plus-saved-equipment input, saved book/sign search fields,
+creature-filter membership and strongest-deposit selection across dimensions. The CLI consumes
+PlayerInfo.searchableInventory, BookContent.searchText and Sign.searchLines from this module.
+Saved sign whitespace and book line boundaries remain significant to phrase queries; the app can
+trim captions separately. Filter.includes shares creature/pet/villager/trade membership, with
+offer matching still required for trades. WorldIndex.richestDeposits expects each dimension's
+canonical richest-first array and preserves the existing equal-count ordering freedom. The app
+retains its display limit, localized search labels and marker/title/detail construction. These
+additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
 
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
@@ -58,7 +148,10 @@ readers use it; malformed saved identifiers become unavailable. The empty-path c
 retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
 Identifier syntax is not file-path validation. `SaveVersion` owns verified release numbers and
 format boundaries; `DataVersion` remains a source-compatible alias. Unknown newer versions do not
-gain verified health defaults. POI, map banners and paired block locations share the int-array
+gain verified health defaults. PlayerInfo and MapItem share the unknown-dimension description
+next to the NBT dimension-tag reader: raw strings and integers remain readable, unsupported tag
+shapes use `?`, and missing values remain absent. This replaces the player's debug-NBT fallback;
+it changes no public signature or RegionFacts value. POI, map banners and paired block locations share the int-array
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
 legacy terrain support. These public APIs are available starting in v0.30.0.
@@ -179,9 +272,128 @@ present override still blocks fallback. No file is extracted, no private SDK dec
 new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.4. This support
 is available in v0.40.0, with separate app adoption on #51.
 
+`WorldResourcePack` owns enabled data-pack priority and safe paths for both dimension settings
+and biome definitions. Dimension defaults retain their existing verified-version rule; biome
+vanilla resources use the caller's matching game archive through the same ZIP path, so a
+malformed vanilla entry also shadows a lower-priority pack.
+`BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
+26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
+and the saved grass modifier. World queries canonicalize only requested IDs and require a
+known saved version and saved enabled-pack list. A missing or mismatched jar makes vanilla
+unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
+cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the
+hex/integer/channel forms; unknown modifiers and malformed fields remain unavailable. Strict
+numeric validation intentionally rejects Gson coercions, as the other asset readers do.
+Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
+fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
+biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported packs, missing
+versions/jars, paths and unchanged inputs. These definition APIs are available in v0.52.0 for
+fahlman/Chunksee#361.
+
+`BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
+sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
+stem age and redstone power. Only the verified half/power/age defaults are supplied for compact
+26.3 states; malformed values, unknown blocks/indexes and other versions remain unavailable.
+Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
+uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
+kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
+swamp grass. The caller supplies a decoded colormap pixel; no image decoding or artwork is added.
+ClimateColorMap is shared with item grass tints. The narrow fixed-seed 2D swamp noise and slime
+chunks share LegacyRandom's existing 48-bit generator rule; the slime predicate is unchanged.
+All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,864 biome colors
+and 40,401 swamp positions match an independent official-26.3 probe. These tint APIs are unreleased
+for #361; app adoption, biome selection/blending, rendering/cache identity and timing remain there.
+
+`GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
+that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
+resolved materials, tint indices, default/explicit UVs, rotations and GUI settings. It retains the
+26.3 translucent-material and element-shading facts. The reader is immutable and Sendable; it has
+no UI imports, image decoder, background-task owner or mutable cache. Parent/reference traversal,
+JSON bytes and element counts are bounded; invalid/cyclic resources stay unavailable. Numeric
+fields reject Boolean, nonfinite and nonintegral integer values rather than apply Gson coercions.
+The official 26.3 JSON, CuboidModel/Element/Face deserializers, TextureSlots, ResolvedModel,
+ItemModelGenerator, FaceBakery and ItemTransform establish the format/defaults. Synthetic tests
+share the existing independent TestZIP writer; no game artwork is checked in. These additive APIs
+are unreleased, tracked on #143. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
+projection, compositing and display policy for fahlman/Chunksee#390 and #363.
+
+The unreleased #156 change uses ZipBytes for both in-memory archives and file-backed game jars
+or data packs. The existing directory/header parser is shared. Two temporary bounded byte windows
+serve metadata validation and are discarded before the immutable reader is published; only copied
+entry names/ranges and the source remain. Requested payloads are bounded to 32 MiB compressed and
+16 MiB decoded, with the existing exact-size and CRC checks. File sources own one read-only
+descriptor, use pread without a shared seek position, and keep that owner alive through each call.
+The private file owner's stored Swift state is immutable and compiler-checked Sendable; no
+unchecked annotation or shared mutable cache is used. Size and nanosecond modification/change
+timestamps are checked around validation and resource reads. Changed archives do not permit
+lower-priority fallback; replacing the path never mixes the old index/version with a new file.
+The final reader closes the descriptor, including rejected initialization paths. Tests cover large
+metadata boundaries, replacement, in-place edits/truncation, concurrent copies, malformed resources
+and handle lifetime. Separate memory/latency measurement remains pending; no measured saving is claimed.
+
+`GameAssets.defaultItemModel` resolves a caller-requested static fallback variant from item
+definitions using that same model owner. `AssetItem` retains ordered model parts and typed tint
+sources. Display-context selects use their explicit GUI case (string or list), otherwise the
+fallback. Other select/range fallbacks, false condition branches and a range's lowest-threshold
+entry when no fallback exists implement app #390's recorded default-variant choice; this API does not
+evaluate live properties or saved model/trim overrides. Unsupported selected renderers/tints
+return nil for the whole item; unselected model branches are ignored. GUI case tables reject
+empty or duplicate match values, following the official 26.3 DisplayContext, SelectItemModel.SwitchCase
+and SelectItemModelProperty.Type codecs. The reader also bounds these tables to 4,096 cases/values.
+This corrects in-hand spear/spyglass choices and makes the flat trident illustration available
+(Claude-F148-1). JSON, element, node and part
+budgets span all selected models. RGB conversion is shared with ItemStack's saved-color reader;
+grass tint sources expose the official 256×256 colormap sample without decoding an image.
+JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are
+unreleased, tracked on #147. The app selects this static representation, applies saved colors,
+and owns images and caching. Potion color calculation uses ItemStack.potionColor. Saved firework
+colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
+is added here.
+
+`ContainerItemModel` supplies closed single-chest and shulker cuboids for selected special item
+definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
+ChestModel, ShulkerModel and ModelPart.Cube, including an independent export of their baked
+face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
+shares SpriteMapper's namespace-preserving `entity/chest/` or `entity/shulker/` path prefix;
+there is no list of accepted texture names. Waxed variants share their definition's texture.
+Static selection uses the normal chest fallback, without evaluating Christmas dates. Missing
+images remain a client fallback, as for ordinary models. Nonzero openness, double chests and
+unverified versions return nil. The item-local transform is baked into cuboids only for positive
+scale, translation and identity/X-half-turn rotations; other transforms remain unavailable.
+The shulker's local transform comes from its definition, not its GUI base. Final coordinates stay
+within the existing -16...32 model range, and special parts share the item/model budgets.
+No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
+This is unreleased work for fahlman/Chunksee#395; app adoption follows its own release and tests.
+
+`GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
+variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
+retains weighted alternatives, model IDs, X/Y/Z quarter turns and UV locking; it does not pick a
+random model or project faces. Missing properties remain unknown unless another predicate term
+settles the result. The jar's artwork does not supply the registry defaults omitted by compact
+26.3 saved states, so clients retain their fallback when selection is unresolved. No default-state
+table or registry inference is introduced. Per-term multipart negation is verified for 5023 only;
+unknown versions with negation stay unavailable. Property domains are not registry-validated.
+The Variant/Quadrant, BlockStateModelDispatcher and multipart codecs establish the format.
+Strict JSON primitives share `AssetJSON` with item definitions; archive reads, parent resolution,
+textures and the cumulative JSON/element budget retain their existing owners. Block selection
+is additionally bounded to 256 selected models, 4,096 selectors/condition nodes or terms and
+64 condition levels. This additive API is unreleased for fahlman/Chunksee#363; default-state
+coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
+No world, serialized model or RegionFacts version change.
+
 The companion `World.dimensionSettings()` reads that same mapping once for independently
-available dimension types and noise-generation bounds. `NoiseGenerationSettings` reads inline
-or referenced `minecraft:noise` settings; its seven vanilla bounds are verified for 26.3.
+available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
+or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.
+Its optional `seaLevel` reads the root `sea_level` signed 32-bit integer independently of the bounds.
+Absent or malformed sea levels stay nil without discarding readable bounds or taking another
+pack's value. Values outside the generation/build range remain unchanged, matching the game's
+Codec.INT's lack of a range constraint and the floating-islands preset. Numeric decoding follows
+the existing bounds reader: integral NBT tags and integer-valued JSON numbers (including `63.0`)
+within Int32 are accepted; floating-point NBT tags, fractional JSON values and overflow stay nil.
+This is deliberately stricter than the game's `Number.intValue` conversion, which can truncate or
+narrow such numbers. The app owns how to use these facts in a height scale; no actual water surface
+is inferred. This additive field supports fahlman/Chunksee#388 and #356, with publication and app
+adoption handled separately.
 The existing type-only API shares the resolver but never opens generator resources. Empty noise
 heights remain valid; unknown generator kinds and unresolved settings remain unavailable.
 DimensionType owns the common packed-Y validation, with its extra nonempty-height requirement.
@@ -236,6 +448,26 @@ but must be reread for the values. See README for format coverage and availabili
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
 ItemStack likewise keeps its components internal, preserving typed accessors, raw-input initializers
 and the existing Codable representation.
+Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
+legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
+fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other
+vectors stay unavailable. The current codecs, legacy data fixers and item tint sources were checked
+in the official 26.3 jar. Core NBTNumber owns Java numeric-to-int narrowing, shared by these color
+readers and the existing effect-amplifier reader without changing the latter's behavior. No serialized
+field or RegionFacts version changes: retained components already contain these facts. These APIs
+are unreleased on #145 for fahlman/Chunksee#390; normal potion-effect colors and app tinting remain
+separate work. Missing explicit colors never become invented defaults.
+
+`ItemStack.potionColor(gameDataVersion:defaultColor:)` owns the effect-based potion tint, using
+that same explicit override reader and shared StatusEffect ID/amplifier interpretation. Visible
+effects are weighted by level; zero duration does not remove a potion color. Removed/missing
+contents or no visible effects uses the caller's definition default. Unknown needed registry
+facts and unreadable color-driving fields remain unavailable. Sums are bounded to 4,096 saved
+effects. Vanilla recipes/colors are verified for 26.3/5023 only, against official bytecode and
+the game's built-in registries (46 potions, 40 effects); these facts have no asset JSON. There
+is no global inference for other versions. This additive computed API is unreleased on #149,
+with no serialized/cache interpretation change or player-active-effect behavior change. Image
+tinting remains app-owned on fahlman/Chunksee#390.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
 shared saved-position reader. The values are projected only when requested; a lookup stops at
@@ -271,6 +503,14 @@ using Identifier's namespace and validation rules. Missing/empty/malformed value
 nitwits and custom professions remain distinct. This is not a work/trade capability check. Raw
 profession, Codable data and cache interpretation are unchanged. This additive API is available in v0.39.0;
 the app's job-label adoption is tracked on #51.
+
+`Villager.supportsTrading` owns the vanilla 26.3 trading-profession rule beside `isUnemployed`.
+Saved readable offers establish trading first; otherwise the 13 vanilla trading professions
+return true, `none`/`nitwit` false, and unknown/custom/malformed professions nil. Offers are
+created lazily in the game, so their absence alone cannot rule out trading. The fact does not
+claim current interaction readiness or resolve custom registries. It is an additive computed
+API over existing fields, with no Codable or RegionFacts interpretation change. App adoption
+and the Profession label follow a published release, tracked on fahlman/Chunksee#295 and #131.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.

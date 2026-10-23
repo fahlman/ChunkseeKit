@@ -50,4 +50,80 @@ import ChunkseeKit
         villager.profession = nil
         #expect(villager.isUnemployed == nil)
     }
+
+    @Test func tradingProfessionsDoNotNeedOffersToHaveBeenSaved() throws {
+        let trading = ["armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
+                       "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
+                       "weaponsmith"]
+        for profession in trading + ["none", "nitwit"] {
+            for prefix in ["minecraft:", "", ":"] {
+                let saved = prefix + profession
+                var nbt: [String: NBT] = ["VillagerData": .compound(["profession": .string(saved)])]
+                for offersSaved in [false, true] {
+                    if offersSaved { nbt["Offers"] = .compound(["Recipes": .list([])]) }
+                    let villager = try #require(Villager(.compound(nbt)))
+                    #expect(villager.supportsTrading == trading.contains(profession), "Saved profession: \(saved)")
+                    #expect(villager.level == 1 && villager.trades.isEmpty)
+                }
+            }
+        }
+    }
+
+    @Test func absentOrUnverifiedProfessionsDoNotInventTrading() throws {
+        let professions: [NBT?] = [nil, .int(0), .string(""), .string("minecraft:"),
+                                  .string("Minecraft:farmer"), .string("not a profession"),
+                                  .string("example:farmer"), .string("example:none"),
+                                  .string("minecraft:beekeeper")]
+        for profession in professions {
+            var data: [String: NBT] = [:]
+            data["profession"] = profession
+            let villager = try #require(Villager(.compound([
+                "VillagerData": .compound(data),
+                "Offers": .compound(["Recipes": .list([.compound(["buy": .int(0)])])]),
+            ])))
+            #expect(villager.supportsTrading == nil)
+            #expect(villager.trades.isEmpty)
+        }
+    }
+
+    @Test func savedOffersEstablishTradingIncludingCustomAndEditedVillagers() throws {
+        for profession in [nil, "example:beekeeper", "minecraft:none", "minecraft:nitwit", "invalid value"] {
+            var nbt: [String: NBT] = ["Offers": .compound(["Recipes": .list([
+                .compound([
+                    "buy": .compound(["id": .string("minecraft:emerald"), "count": .int(1)]),
+                    "sell": .compound(["id": .string("minecraft:cactus"), "count": .int(1)]),
+                    "uses": .int(12), "maxUses": .int(12),
+                ]),
+            ])])]
+            if let profession { nbt["VillagerData"] = .compound(["profession": .string(profession)]) }
+            let villager = try #require(Villager(.compound(nbt)))
+            #expect(villager.supportsTrading == true)
+            #expect(villager.trades.first?.isSoldOut == true)
+            #expect(villager.profession == profession)
+            #expect(villager.level == (profession == nil ? nil : 1))
+        }
+    }
+
+    @Test func cachedTradingFactsFollowTheExistingMutableFields() throws {
+        let old = Data(#"{"profession":"minecraft:nitwit","level":1,"trades":[]}"#.utf8)
+        var villager = try JSONDecoder().decode(Villager.self, from: old)
+        #expect(villager.supportsTrading == false && villager.level == 1)
+        villager.profession = "minecraft:farmer"
+        #expect(villager.supportsTrading == true)
+        villager.profession = "example:farmer"
+        #expect(villager.supportsTrading == nil)
+        let trade = try #require(Trade(.compound([
+            "buy": .compound(["id": .string("minecraft:emerald"), "count": .int(1)]),
+            "sell": .compound(["id": .string("minecraft:cactus"), "count": .int(1)]),
+        ])))
+        villager.trades = [trade]
+        let encoded = try JSONEncoder().encode(villager)
+        let decoded = try JSONDecoder().decode(Villager.self, from: encoded)
+        #expect(villager.supportsTrading == true && decoded.supportsTrading == true)
+        #expect(decoded == villager)
+        let fields = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        #expect(Set(fields.keys) == ["profession", "level", "trades"])
+        villager.trades = []
+        #expect(villager.supportsTrading == nil)
+    }
 }

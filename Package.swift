@@ -15,9 +15,9 @@ let package = Package(
         .target(name: "ChunkseeKit", dependencies: ["CZlib"]),
         .target(name: "ChunkseeIndex", dependencies: ["ChunkseeKit"]),
         .target(name: "ChunkseeKitTestSupport", dependencies: ["ChunkseeKit"]),
-        .executableTarget(name: "chunksee", dependencies: ["ChunkseeKit"]),
+        .executableTarget(name: "chunksee", dependencies: ["ChunkseeKit", "ChunkseeIndex"]),
         .testTarget(name: "ChunkseeKitTests", dependencies: ["ChunkseeKit", "ChunkseeKitTestSupport", "CZlib"]),
-        .testTarget(name: "ChunkseeIndexTests", dependencies: ["ChunkseeIndex", "ChunkseeKit"]),
+        .testTarget(name: "ChunkseeIndexTests", dependencies: ["ChunkseeIndex", "ChunkseeKit", "ChunkseeKitTestSupport"]),
     ],
     swiftLanguageModes: [.v6]
 )

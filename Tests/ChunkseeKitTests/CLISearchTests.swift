@@ -4,6 +4,42 @@ import Testing
 import ChunkseeKit
 
 @Suite struct CLISearchTests {
+    @Test func textSearchPreservesSignPhraseSpacingAcrossSides() throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sign = NBT.compound([
+            "id": .string("minecraft:sign"), "x": .int(1), "y": .int(64), "z": .int(1),
+            "front_text": .compound(["messages": .list([.string("Red"), .string(""), .string("Blue")])]),
+            "back_text": .compound(["messages": .list([.string("  Green  "), .string("")])]),
+        ])
+        try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: Fixtures.chunk(x: 0, z: 0, sections: [], extra: [
+            "block_entities": .list([sign]),
+        ]))]), to: root.appendingPathComponent("dimensions/minecraft/overworld/region/r.0.0.mca"))
+        let found = try Fixtures.runCLI(root, command: "text", arguments: ["red blue"])
+        #expect(found.status == 0 && found.output.contains("Red / Blue /   Green  \n1 matches"))
+        let spaced = try Fixtures.runCLI(root, command: "text", arguments: ["blue green"])
+        #expect(spaced.status == 0 && spaced.output == "0 matches\n")
+    }
+
+    @Test func findKeepsSameNamedKindsTogetherIncludingNestedItems() throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        func item(_ id: String, _ count: Int32) -> NBT {
+            .compound(["id": .string(id), "count": .int(count),
+                       "components": .compound(["minecraft:custom_name": .string("Shared")])])
+        }
+        let bundle = NBT.compound(["id": .string("minecraft:bundle"), "count": .int(1),
+                                   "components": .compound(["minecraft:bundle_contents": .list([item("minecraft:stone", 4)])])])
+        try Fixtures.writeGzippedNBT(.compound(["Inventory": .list([
+            item("minecraft:diamond", 2), item("minecraft:stone", 3), bundle,
+        ])]), to: root.appendingPathComponent("players/data/01234567-89ab-cdef-0123-456789abcdef.dat"))
+        let result = try Fixtures.runCLI(root, command: "find", arguments: ["shared"])
+        #expect(result.status == 0)
+        #expect(result.output.split(separator: "\n").map(String.init) == [
+            "player 01234567 inventory: 9 \"Shared\"", "0 containers",
+        ])
+    }
+
     @Test(arguments: [false, true])
     func textIncludesOffhandBooksAndFindKeepsEveryPlayerStore(_ legacy: Bool) throws {
         let root = try world()
@@ -53,6 +89,26 @@ import ChunkseeKit
             #expect(!result.output.contains("Other Dimension"))
             #expect(result.output.contains(command == "find" ? "3 containers" : "3 matches"))
         }
+    }
+
+    @Test(arguments: ["find", "text"])
+    func searchesRetainLiteralPhraseAndColonBehavior(_ command: String) throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let uuid = "01234567-89ab-cdef-0123-456789abcdef"
+        try Fixtures.writeGzippedNBT(.compound(["Inventory": .list([book("red and blue"), book("pet: River")])]),
+                                    to: root.appendingPathComponent("players/data/\(uuid).dat"))
+        let separateWords = try Fixtures.runCLI(root, command: command, arguments: ["red blue"])
+        #expect(separateWords.status == 0)
+        #expect(!separateWords.output.contains("player "))
+        let phrase = try Fixtures.runCLI(root, command: command, arguments: ["RED AND BLUE"])
+        #expect(phrase.status == 0)
+        #expect(phrase.output.contains("Needle red and blue"))
+        #expect(!phrase.output.contains("pet: River"))
+        let colon = try Fixtures.runCLI(root, command: command, arguments: ["pet:"])
+        #expect(colon.status == 0)
+        #expect(colon.output.contains("Needle pet: River"))
+        #expect(!colon.output.contains("red and blue"))
     }
 
     private func world() throws -> URL {

@@ -104,9 +104,111 @@ let totals = StoredItemTotal.totals(in: containers)  // [ItemContainer] from the
 for item in totals { print(item.id, item.count, item.containers) }
 ```
 
-This product is introduced in v0.37.0. App adoption follows this release. The remaining world index,
-search, biome areas, spatial lookup and CLI adoption are tracked in fahlman/Chunksee#214; they
-have not moved into this module yet. Core decoding and low-level file APIs stay in ChunkseeKit.
+This product was introduced in v0.37.0 and Chunksee uses its storage totals.
+
+**v0.42.0:** `BiomeArea.connected(in:)` groups a dictionary of chunk positions and biome IDs
+into edge-connected areas. Every area is kept, including single chunks; corners do not connect.
+Each area supplies its members, exposed chunk sides and a representative member nearest its
+mean position, with ties ordered by X then Z. Chunks whose block origins cannot be represented
+are omitted. Clients select surface/cave membership and supply paths, colors and names. Chunksee's
+adoption is tracked on fahlman/Chunksee#383; its existing grouping rule is the source of this API.
+
+**v0.43.0:** `PointIndex<Element>` stores an immutable snapshot and indexes its exact X/Z
+positions by region. `candidates(minX:maxX:minZ:maxZ:)` returns broad candidates in input order,
+including entries without a usable bucket; clients apply their precise geometry and visibility.
+Unusable query bounds return the full snapshot. Large sparse queries visit occupied buckets
+instead of enumerating empty space. The app's existing marker lookup is the source of this API;
+its adoption is tracked on fahlman/Chunksee#384. No file access, scheduling or cache is introduced.
+
+**v0.44.0:** `SearchQuery` interprets the existing app query grammar and matches searchable
+text. Recognized `structure:`, `place:`, `creature:`, `pet:`, `villager:`, `trade:`, `biome:` and
+`block:` prefixes select a filter. Other colons remain literal search text. Every whitespace-separated
+word must occur, ignoring case, in any order; an empty filter can list all of its category.
+Clients choose the category's records and provide names, searchable text and result presentation.
+The `phrase:` initializer preserves the CLI's existing `find`/`text` grammar: one literal phrase,
+including its spaces and colons, without parsing filters. Both use the same substring matcher.
+The CLI consumes this API; the app adopted it in fahlman/Chunksee#385.
+
+```swift
+let query = SearchQuery("pet: summer wolf")
+if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching pet */ }
+let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
+```
+
+**v0.45.0:** `NotableBlock` owns the existing block-search catalog and its exact saved IDs.
+`NotableBlock.Deposit.grouped(_:)` combines the core reader's per-ID deposits into those groups,
+including ordinary/deepslate ore variants, and returns counts and enclosing section-height ranges.
+Results are ordered by the group's raw value; unknown IDs and blocks outside this catalog are
+omitted. The range is not an exact ore position. The core scan still accepts any chosen block IDs;
+this catalog does not expand the app's existing scan or search scope. Names and display wording
+remain in the app; adoption is tracked on fahlman/Chunksee#386.
+
+**v0.46.0:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
+terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
+notable deposits. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
+available replacements retain the last good data, selected missing regions are removed, and a nil
+selection reconciles the whole dimension. A partial selection leaves other regions untouched after
+the first completed pass. Call `regionsToRead(available:selected:)` to schedule the reads: the first
+pass always reads all available regions, even after a partial notification. `updating` uses that same
+read-set rule. A completed empty or failed pass is distinct from a never-read index.
+Only replacements with matching dimension/cave policy and selected available coordinates are accepted.
+
+Callers explicitly supply the cave-biome IDs; the library does not define a new cave-membership rule.
+`CreatureEntry` keeps villagers, owned pets and named creatures with supported locations, using that
+category precedence and the existing stable UUID (or exact saved-position fallback) identity.
+The core `BlockPosition.mapCoordinates(x:y:z:)` supplies the shared map bounds: floored X/Z must fit
+Int32 and a supplied Y must fit Int; unknown Y stays nil. It does not impose the game world border.
+Client wording, native geometry, scheduling, cancellation
+and publication remain outside the index. These values introduce no persisted cache format.
+
+```swift
+let caves: Set<String> = ["minecraft:lush_caves"] // example client policy
+let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves)
+let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves)
+let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
+```
+
+**v0.47.0:** `WorldIndex<Dimension>` holds the world's dimension catalog and supplies typed
+`Placed<Value>` records through `all(_:)`. Each record keeps its dimension ID, including when
+different dimensions contain identical values. Member order is preserved; dimension order is
+unspecified, as in the app's original SearchIndex. Replacing one dictionary entry leaves the other
+dimensions and earlier value snapshots intact. The payload can be `DimensionIndex` or a client's
+native projection of it, without adding UI dependencies to the shared module. There is no second
+catalog, file access, task, or persistence owner.
+
+```swift
+let worldIndex = WorldIndex(dimensions: [current.dimension: current])
+for entry in worldIndex.all(\.containers) {
+    print(entry.dimension, entry.value.kind)
+}
+```
+
+**v0.47.0:** `ItemTotals` adds up matching stacks, including nested box and bundle contents.
+Clients supply the match predicate and grouping key, so the app can match localized item labels
+while the CLI keeps its saved-ID/custom-name search and alphabetical output. `quantities` holds
+each group's count; `count` is their total. A matching zero-count stack still makes `isEmpty` false.
+The CLI's `find` command and storage totals use this owner; app adoption follows its release.
+Storage still counts each outer container once for each saved item ID it contains.
+
+```swift
+let matches = ItemTotals(in: items, matching: { query.matches($0.id) }, groupingBy: \.id)
+for (id, quantity) in matches.quantities { print(id, quantity) }
+```
+
+**Unreleased:** Search input selection also lives in this module. `PlayerInfo.searchableInventory`
+combines inventory and saved equipment, leaving the ender chest separate and avoiding an extra
+inferred main-hand copy. `BookContent.searchText` joins saved title, author and pages with newlines;
+`Sign.searchLines` keeps both sides without empty lines, preserving whitespace for phrase queries.
+The CLI uses these inputs; clients still supply localized names and display formatting.
+
+`SearchQuery.Filter.includes(_:)` supplies creature-category membership, including villagers for
+trade searches. `WorldIndex.richestDeposits(matching:limit:in:)` selects the strongest matching
+deposits across dimensions from richest-first arrays such as `DimensionIndex.blocks`. It keeps
+each result's dimension and height bounds; equal-count order remains unspecified. Clients choose
+the result limit, match localized block names to kinds, and convert selected chunks to map pins.
+
+Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
+Core decoding and low-level file APIs stay in ChunkseeKit.
 
 ## Synthetic test data (v0.35.0)
 
@@ -267,6 +369,7 @@ extracting files. It supports ordinary stored/deflated entries with UTF-8 names,
 system zlib for raw deflate and CRC checks. Encrypted, ZIP64, multipart or unsupported compression,
 duplicate names, overlapping entries and malformed records remain unavailable. Only requested
 JSON resources are decompressed, with exact-size checks and a 16 MiB limit per resource.
+The unreleased file-reader update (#156) also bounds compressed entry reads to 32 MiB.
 A malformed present override never permits a lower definition to take over.
 ZIP support is available starting in v0.40.0. Built-in experimental packs, pack overlays and
 resource filters are not resolved yet: an unsupported higher-priority pack
@@ -287,6 +390,14 @@ settings resolve through the same saved mapping and enabled-pack rules; they are
 for a saved `minecraft:noise` generator. The seven vanilla noise definitions are verified for
 26.3, and inline/custom bounds are validated without assuming a complete game registry.
 `dimensionTypes()` remains a type-only read and never opens generator resources.
+
+`NoiseGenerationSettings.seaLevel` is the saved `sea_level`, independently optional when missing
+or not a readable signed 32-bit integer. It uses the same inline definitions and enabled folder/ZIP
+packs as the bounds. An absent or malformed value does not discard readable bounds or fall back to
+another pack's sea level. Numeric decoding follows the bounds reader's strict checks rather than
+the game's permissive `Number.intValue` conversion. It is not clamped to the generation/build range:
+the verified 26.3 floating-islands preset has sea level −64 with a `0..<256` generation range. This is a generation
+setting, not a measurement of water in saved chunks; display scales and colours belong to the app.
 
 `NoiseGenerationSettings.range` is the saved noise range, including a valid empty range.
 `surfaceRuleRange(in:)` reproduces 26.3's `WorldGenerationContext` range for vertical anchors:
@@ -325,6 +436,17 @@ ambiguous heightmaps; it is never inferred from occupied sections. The used-biom
 unused palette entries. Partial-generation chunks keep metadata/heightmaps but contribute no
 structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
 time and format counts without enabling legacy terrain decoding.
+
+The additive `RegionFacts.paletteBlockIDs` catalog retains declared block IDs from fully generated
+chunks' saved palettes, including unused entries and modded names. It is collected during the same
+section walk, independent of `RegionScanOptions.blockIDs`, without another chunk decode or block
+traversal. It names available palette choices; it does not assert that every name occupies a block.
+`RegionIndex.paletteBlockIDs` retains the compact regional set and `DimensionIndex.paletteBlockIDs`
+unions the retained regions. Refresh, failed-read retention, replacement and deletion use the same
+rules as the other dimension aggregates. Partial/legacy/unreadable chunks contribute no names.
+RegionFacts interpretation version **7** rejects older archives, which lack this catalog. Consumers
+must rebuild their scan caches when adopting it. This prerequisite for Chunksee #365 is unreleased;
+block hiding, highlighting, labels and native controls remain app responsibilities.
 
 Starting in v0.39.0, `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
 one column. `Chunk.surfaceHeights(height:)` returns the same values for all 256 columns, indexed
@@ -470,6 +592,35 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+`ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
+`UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
+the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed
+or malformed-present components do not fall back to old tags. Numeric tags follow Java's integer
+narrowing, including signed colors; vector channels use Float precision and floor(channel × 255).
+Nonfinite/out-of-range channel vectors remain unavailable. These are computed from the retained
+components, so existing cached ItemStacks gain them without a rescan or Codable change.
+
+Absent colors remain nil. `customPotionColor` does not calculate the normal color of a potion's
+effects; it is the explicit override only. Clients apply these values to the appropriate model
+tint layers, leaving default colors and normal potion-effect resolution to their respective owners.
+
+`ItemStack.potionColor(gameDataVersion:defaultColor:)` resolves the full potion tint (unreleased,
+#149). Pass the matching game's data version and the default from the item's tint definition.
+An explicit custom color wins. Otherwise visible base and custom effects contribute their RGB
+channels weighted by amplifier + 1, with integer division as in the game. Zero/missing duration
+does not remove an effect from this color calculation; hidden particles do. Current components,
+the potion-ID shorthand and legacy `Potion`/`CustomPotionEffects` tags share the same path.
+Removal suppresses older tags and uses the supplied default. Missing contents or no visible
+effects also uses that default. Unknown needed recipes/effect colors, unreadable color-driving
+fields and more than 4,096 effects return nil, so clients can keep their unavailable-image fallback.
+
+The vanilla registry facts are verified for **26.3 / 5023 only**, through the official game code
+and a read-only registry probe (46 potions, 40 effects). They are defined in Minecraft's code,
+not asset JSON. Other versions cannot borrow these inferred colors; an explicit saved override
+or an empty effect set needs no registry lookup. This computed API changes no saved ItemStack
+fields or cache version. It reuses active-effect ID/amplifier reading without changing which
+effects count as active on a player.
+
 ### Block coordinates
 
 `BlockPosition` converts exact coordinates to the containing block, rounding negative fractions
@@ -565,6 +716,16 @@ Starting in v0.39.0, the computed `Villager.isUnemployed` interprets the saved p
 Missing, empty or malformed identifiers return nil. Nitwits and custom professions remain
 distinct; false does not mean that the villager can work or trade. The raw `profession` and
 serialized data are retained, so older cached values use this interpretation without a rescan.
+
+The additive `Villager.supportsTrading` fact uses the vanilla 26.3 profession registrations
+when there are no readable saved offers: the 13 trading professions return true, `none` and
+`nitwit` return false, and unknown/custom/malformed professions return nil. A farmer that has
+never been traded with still returns true because Minecraft creates offers lazily. Readable
+saved trades take precedence, including custom or command-edited villagers. This does not
+describe current interaction readiness (age, sleeping or sold-out offers). Custom registry
+definitions are not loaded, and vanilla profession definitions are assumed unchanged.
+The property is computed from existing fields: saved levels, Codable data and RegionFacts
+interpretation are unchanged, and older cached records need no rescan for it.
 
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
 matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
@@ -695,9 +856,12 @@ Modern world spawn, player death and player respawn share the `{dimension, pos: 
 reader. A partial/unsupported world-spawn record leaves **both** `spawnDimension` and
 `spawnPosition` unavailable; arbitrary coordinates never acquire an assumed Overworld dimension.
 Bare dimension strings use the `minecraft:` namespace, as player/map dimensions already do;
-custom qualified IDs stay intact. The reader does not validate world membership or identifier
-syntax. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
-fallback remains.
+custom qualified IDs stay intact. The shared identifier reader validates syntax, not world
+membership. Legacy world-spawn XYZ still means Overworld, and the existing legacy player respawn
+fallback remains. Player and map `unrecognizedDimension` values share one description: unknown
+strings and integers retain their raw text, unsupported tag shapes use `?`, and missing tags remain
+`nil`. Malformed player tags no longer expose a debug NBT dump. Public signatures and region-cache
+interpretation are unchanged.
 
 `PlayerInfo.equippedItems` combines the saved equipment slots and the selected main-hand item.
 An explicit saved main hand takes precedence over the selected hotbar slot; unselected inventory
@@ -747,6 +911,190 @@ for map in world.mapItems() where !map.isBlank {
     print(map.id, map.dimension ?? "?", map.centerX, map.centerZ, pixels.count)
 }
 ```
+
+### Game asset models (v0.50.0 and later)
+
+`GameAssets` reads a supplied Minecraft game jar through the same validated ZIP reader as data
+packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
+world data version. The client chooses an installed jar matching its world and caches results
+for that jar; no Minecraft artwork is bundled in this package.
+
+The unreleased file-reader update (#156) keeps a read-only handle and the validated entry index,
+rather than retaining the complete jar. Small temporary header buffers are released after
+validation, and resource bytes are read only when requested. The same path serves ZIP data packs;
+the in-memory constructor continues to retain its supplied Data. File reads use independent offsets
+and retain their handle through each read, so copied readers can be used concurrently.
+In-place modification or truncation makes subsequent resources unavailable. Replacing a path never
+switches an existing reader to the new archive: it either keeps the original inode's resources or
+becomes unavailable. A changed data pack blocks lower-priority fallback until it is reopened.
+The last reader releases its file handle. No file is mapped into memory, extracted or written.
+Sandboxed callers retain their required security-scoped access while using file-backed resources.
+Memory and latency comparisons are still pending; this describes ownership, not measured savings.
+
+```swift
+if let assets = try GameAssets(contentsOf: gameJarURL),
+   let model = assets.model("minecraft:block/stone") {
+    // model.geometry has resolved cuboid faces or generated item layers.
+    // Each material's texture identifier can be passed to assets.texture(_:).
+    print(assets.version.id, model.guiTransform)
+}
+```
+
+`AssetModel` contains inherited model geometry, resolved material references, tint indices,
+face UVs/rotation, element rotation, light-emission/shade metadata and the game's GUI transform.
+Cuboid positions and UVs retain the 16-unit model coordinate system; GUI translation is converted
+to block units and clamped as in the game. Generated items expose ordered layer0...layer4, stopping
+at the first absent layer. Texture reads return the original PNG bytes; image decoding, compositing,
+projection, tint application and color averaging belong to the client.
+
+Parents and texture references have cycle detection and a 64-step limit. Each resource and the
+combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or
+unresolvable required resources return nil, as do nonfinite/invalid numeric fields; valid empty
+geometry stays empty. These reader bounds intentionally reject unusually large custom models.
+No resource-pack layering, sprite-atlas remapping or animation interpretation is included.
+Those follow separately for fahlman/Chunksee#390 and #363 using this shared reader.
+The model format and defaults were checked against the official 26.3 client JSON and its
+cuboid/model resolver bytecode.
+
+`assets.defaultItemModel("minecraft:leather_helmet")` resolves the static default variant from
+an item definition. Its ordered `AssetItem.parts` reuse `AssetModel` and carry
+indexed tint sources: constant RGB, saved dye/potion/firework with definition defaults, or a
+pixel in the supplied grass colormap. The client decodes that 256×256 PNG and applies colors to
+the corresponding layer/face tint index; an absent index is untinted. Saved dye and custom-potion
+overrides are available on ItemStack; normal potion-effect and saved firework colors are not
+calculated by this asset reader.
+
+Calling this API explicitly requests a static inventory illustration. A `minecraft:display_context`
+select uses its `gui` case (a string or a member of a string list), or its fallback if none matches.
+Other selects and ranges use fallbacks, conditions use their false branch, and a range without a
+fallback uses its lowest-threshold entry (first on a tie).
+It does not evaluate live compass angles, time, trim, custom model data or saved item-model
+overrides. Only the selected branches are interpreted; unsupported unselected branches do not
+prevent a usable default. An unsupported selected special/entity renderer, unknown tint or malformed value
+makes the entire item unavailable, rather than returning part of a composite. Valid empty
+definitions stay empty. Limits across the definition and its resolved models are 16 MiB of JSON,
+4,096 elements, 64 selected nodes and 32 parts. Tint lists are limited to 32; range tables without
+a fallback and inventory-context tables are limited to 4,096 entries. Inventory-context tables
+require nonempty cases and unique, nonempty match values, with at most 4,096 values in total. Numeric JSON colors require signed 32-bit integers or three
+finite Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
+Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
+tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
+
+Since v0.50.2, closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
+resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.
+The chest body, lid and latch and the two shulker boxes use verified game-code geometry and UVs;
+their texture IDs and inherited GUI presentation come from the supplied jar. Normal, trapped,
+ender and copper chests (including oxidation/waxed variants), and undyed/all 16 colored shulker
+boxes are covered. The normal chest fallback is used instead of evaluating Christmas dates.
+No artwork is included. Clients still handle absent or undecodable PNGs as for ordinary models.
+
+Texture identifiers retain their namespace and path: for example, a chest's `example:painted`
+reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
+Special geometry stays unavailable for other game versions, open lids or double chests.
+The definition's local transform is baked into the geometry only when it consists
+of positive scale, translation and identity or a half-turn around X, with an identity right
+rotation. This includes the shulker's transform; unsupported transforms are rejected instead
+of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
+element/JSON/part budgets. No public type or cache interpretation changes.
+
+### Biome color definitions (v0.52.0)
+
+Biome colors come from the supplied game jar and the world's enabled data packs:
+
+```swift
+let assets = try GameAssets(contentsOf: gameJarURL)
+let definitions = try world.biomeDefinitions(
+    for: ["minecraft:plains", "example:custom_biome"], assets: assets)
+if let plains = definitions["minecraft:plains"] {
+    print(plains.waterColor, plains.temperature, plains.downfall)
+}
+// A jar can also be read without a world or data-pack overrides.
+let jarPlains = assets?.biomeDefinition("plains")
+```
+
+These additive APIs read the verified 26.3 format (data version 5023). Results contain
+unclamped base temperature/downfall, a 24-bit RGB water color, optional grass, foliage and
+dry-foliage overrides, and the grass modifier (`none`, `dark_forest`, or `swamp`). Colors accept
+six-digit `#RRGGBB` strings, signed Int32 values, or three Float channels in 0...1, using the
+existing shared conversion. Numeric values are strict: unlike Gson's coercions, fractional
+integer colors, out-of-range integers/channels, Boolean and nonfinite numbers are unavailable.
+Other biome fields are neither interpreted nor validated.
+
+World lookup canonicalizes requested IDs and reads only those resources. Enabled folder and
+ZIP packs use the same priority and safe paths as dimension settings. A present malformed
+override or unsupported higher-priority pack prevents lower fallback. Missing or
+data-version-mismatched jars make vanilla unavailable; higher-priority pack definitions can
+still resolve. Missing/other saved data versions return an empty result, and an absent enabled
+pack list is not replaced with an assumed vanilla pack. File errors propagate.
+
+No Minecraft biome-color table or artwork is bundled. The caller supplies the game file and
+performs these synchronous reads off its UI actor. Color-map PNG access uses `GameAssets.texture`.
+No chunks are scanned or world files written.
+
+### Terrain tint sources (unreleased)
+
+`BlockState.tintSource(at:gameDataVersion:)` interprets a block model face's tint index for the
+verified 26.3/5023 registry. Its `BlockTint` is either a fixed 24-bit RGB color or a `BiomeColor`
+(`grass`, `foliage`, `dryFoliage`, `water`) with a vertical biome-sampling offset. For example,
+spruce and birch leaves have fixed colors; oak and mangrove leaves use foliage; upper tall grass
+uses the grass biome one block below. Flower definitions keep their separate untinted and
+grass-tinted indexes. Stem age and redstone power retain their saved colors. The omitted
+half/power/age defaults are verified against that game's registry; invalid properties, unknown
+blocks/indexes and unverified versions return nil. No other registry defaults are inferred.
+
+This API describes in-world **block models**, not item or particle colors. Fluid water obtains
+its color directly from the biome; the water/bubble block-model sources are white because the
+game applies their biome color only to terrain particles. A water cauldron's model uses water.
+
+Call `BiomeDefinition.color(_:x:z:sample:)` for the chosen biome. It applies explicit overrides,
+clamps the saved climate for the shared 256×256 colormap lookup, and applies the game's
+dark-forest or fixed-seed swamp-grass modifier. X/Z are signed block coordinates. The `sample`
+closure receives a texture identifier and a top-left-origin pixel and returns that decoded
+pixel's RGB value, or nil when unavailable. Overrides and water do not need a decoded image;
+swamp grass replaces the base color entirely. Missing needed pixels remain unavailable.
+Image decoding, choosing the correct biome, optional blending across neighboring biomes,
+map shading, caches and drawing stay with the client. Item grass tints share the same climate
+pixel arithmetic; no second PNG/archive reader or mutable color cache is added.
+
+### Blockstate model selection (unreleased)
+
+`GameAssets.blockModel(for:)` matches a `BlockState` against its jar definition and returns
+an `AssetBlock`. Explicit variants take precedence over multipart selectors. All matching
+multipart pieces are retained, in definition order. Each part contains one or more weighted
+alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and UV-lock flag.
+The rotations remain separate from the model's inventory transform. This API preserves the
+choices; it does not choose a random alternative or project a top face.
+
+```swift
+let horizontalLog = BlockState("minecraft:oak_log", properties: ["axis": "x"])
+if let models = assets.blockModel(for: horizontalLog) {
+    for part in models.parts {
+        for choice in part.alternatives {
+            print(choice.modelID, choice.weight, choice.rotation, choice.uvLock)
+        }
+    }
+}
+```
+
+The supplied properties must settle every relevant predicate. **Missing properties are not
+guessed.** In 26.3, a saved default state can omit its properties, and the artwork files do not
+contain the registry defaults. Such a state returns nil when it prevents a unique decision;
+clients can retain their existing fallback. Property domains are not validated against the
+game registry. Multipart AND/OR and pipe-separated alternatives are supported, including the
+26.3 per-term `!` negation only for data version 5023; negation in other versions stays unavailable.
+Integer and Boolean condition values retain the codec's legacy representations. Numeric fields
+use strict JSON types and signed 32-bit bounds rather than coercing strings or fractions.
+
+Missing or unsupported selected models, overlapping variants, malformed selectors and exhausted
+bounds return nil for the whole result. Unselected model resources are not loaded. An empty
+multipart result remains empty. Reads share a 16 MiB JSON / 4,096-element budget across at most
+256 selected models. Definitions allow at most 4,096 selectors; condition traversal allows
+4,096 nodes/terms and 64 nested levels. Weighted alternatives have positive weights with a
+signed 32-bit total; a standalone model ignores the weight field, as in the game.
+
+This additive API reuses the existing archive/model/texture owners. Image decoding, position-based
+randomization, caching, tinting, color averaging and map drawing remain client/adoption work on
+fahlman/Chunksee#363. No world data, persisted shape or RegionFacts interpretation changes.
 
 ### Raw NBT
 
