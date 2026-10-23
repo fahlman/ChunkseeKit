@@ -331,7 +331,10 @@ sampler once per world. Its result is a block position: use its `chunk` to choos
 then pass its local X/Z and absolute Y to `Chunk.biome`. The source may be in a neighboring chunk
 or section. If that data is missing, the caller chooses how to handle the unavailable biome.
 Coordinates outside signed 32-bit input are unavailable; results retain the full cell origin
-without narrowing. The sampler performs no file reads, height clamping or color blending and
+without narrowing. The `cellOrigin(at:in:)` overload takes a validated `DimensionType` and clamps
+the selected cell to its build-height limits, following the game's source-chunk lookup. The
+unclamped overload remains available; neither fills a missing interior section or neighbor.
+The sampler performs no file reads or color blending and
 does not apply to per-block biome palettes. Seed hashing uses Apple's CryptoKit; no external
 package dependency or stored-format change is introduced.
 

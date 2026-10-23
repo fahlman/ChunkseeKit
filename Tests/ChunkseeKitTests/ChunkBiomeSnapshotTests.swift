@@ -1,8 +1,31 @@
 import ChunkseeKit
 import ChunkseeKitTestSupport
+import Foundation
 import Testing
 
 @Suite struct ChunkBiomeSnapshotTests {
+    @Test(arguments: [(-64, 384, -64, 316), (0, 256, 0, 252), (-2032, 4064, -2032, 2028), (2016, 16, 2016, 2028)])
+    func sourceCellHeightUsesTheSavedBuildRange(minY: Int, height: Int, firstCell: Int, lastCell: Int) throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let type: NBT = .compound(["min_y": .int(Int32(minY)), "height": .int(Int32(height)),
+                                   "logical_height": .int(0), "has_ceiling": .byte(1)])
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
+            "LevelName": .string("Biome Source"), "DataVersion": .int(5023),
+            "WorldGenSettings": .compound(["dimensions": .compound([
+                "example:source": .compound(["type": type])
+            ])])
+        ])]), to: root.appendingPathComponent("level.dat"))
+        let dimension = try #require(World(contentsOf: root).dimensionTypes()["example:source"])
+        let sampler = BiomeSampler(seed: 0)
+        let lower = try #require(sampler.cellOrigin(at: BlockPosition(blockX: -1, blockY: -10000, blockZ: 0), in: dimension))
+        let upper = try #require(sampler.cellOrigin(at: BlockPosition(blockX: -1, blockY: 10000, blockZ: 0), in: dimension))
+        #expect(lower.y == firstCell && upper.y == lastCell)
+        let inside = BlockPosition(blockX: -1, blockY: minY + height / 2, blockZ: 0)
+        #expect(sampler.cellOrigin(at: inside, in: dimension) == sampler.cellOrigin(at: inside))
+        #expect(sampler.cellOrigin(at: BlockPosition(blockX: Int.max, blockY: 0, blockZ: 0), in: dimension) == nil)
+    }
+
     @Test func retainedCellsKeepNegativeHeightsAndMissingData() throws {
         func read() throws -> ChunkBiomeSnapshot {
             var indices = [Int](repeating: 0, count: 64)
