@@ -441,6 +441,30 @@ The library does not expand timeline tags, validate clock/timeline registry memb
 lighting or simulate elapsed time here. These unreleased APIs are the metadata prerequisite for
 fahlman/Chunksee#357, tracked in fahlman/ChunkseeKit#175.
 
+`GameAssets.lightingTimeline(_:)` reads a supplied 26.3/5023 jar's five lighting tracks:
+sun/moon angle, sky-light factor/color and moon phase. The immutable `LightingTimeline` retains
+its own `clockID` and optional `periodTicks`. Pass that clock's saved whole ticks and an explicit
+`SkyLighting` base to `applying(at:to:)`; absent tracks preserve the base. Angles use degrees and
+RGB channels retain float precision. The result is an intermediate attribute layer, without
+final range clamping, weather, spatial effects or rendered brightness. Nonfinite input/results
+remain unavailable. Dimension defaults, enabled-pack/tag resolution and app drawing are separate.
+
+The shared keyframe sampler preserves ordered duplicate-tick jumps, negative-time wrapping,
+constant endpoints and the game's Float arithmetic. Supported easing is linear, constant or
+cubic-Bezier; other curves stay unavailable. Scalar modifiers are override/add/subtract/multiply/
+minimum/maximum, RGB modifiers are override/add/subtract/multiply, and moon phase uses override.
+Other relevant modifiers are unavailable, not silently approximated. Color add/subtract apply
+the game's one-sided channel limits; override/multiply do not quantize or clamp channels.
+Sky-light-factor override keyframes require 0...1, while other modifiers may produce intermediate
+values outside that range. Moon phases step according to the eased segment's progress.
+
+The reader bounds JSON to 16 MiB, track entries to 256, relevant keyframes to 4,096, and baked
+segment endpoints/lengths to Int32. Unsupported/malformed relevant data makes the whole timeline
+unavailable. Unrelated tracks and time markers are not interpreted or validated, so this is not
+a complete timeline-registry validator. Numeric JSON remains strict as in the other asset readers.
+These additive APIs are unreleased on fahlman/ChunkseeKit#177 for fahlman/Chunksee#357. They read
+no chunks, write no worlds, simulate no clocks and introduce no mutable cache or dependency.
+
 The unreleased spawn-light extension adds `monsterSpawnBlockLightLimit` (0...15) and
 `monsterSpawnLightLevel` (an inclusive range) to each dimension type. The latter reports the
 bounds of constant or uniform random light thresholds; unsupported distributions remain nil.

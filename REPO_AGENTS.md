@@ -293,6 +293,18 @@ or malformed definition. No matching jar preserves the original build/spawn-ligh
 without adding a clock/timeline table. No tag expansion, registry validation, timeline evaluation,
 cache or presentation owner is added. App lighting remains on fahlman/Chunksee#357.
 
+`LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
+fahlman/Chunksee#357. GameAssets reads verified 26.3 definitions; the same immutable sampler
+handles scalar, RGB and discrete tracks, preserving clock identity, periodic wrap and ordered
+duplicate-tick jumps. Linear/constant/cubic-Bezier easing and the documented simple modifiers
+are supported; other relevant forms stay unavailable. Float colors retain full precision.
+Timeline/AttributeTrack/KeyframeTrackSampler, EasingType, AttributeTypes and ARGB establish the
+codec and sampling behavior. The read is bounded and only projects those five attributes, not
+unrelated tracks or time markers. Base attributes come explicitly from the caller; results are
+intermediate, with no final range clamping, weather or spatial effects. This additive API is
+unreleased on #177. World pack/tag resolution, static dimension attributes and app drawing
+remain separate work. No chunks, serialized facts, cache version or image decoder changes.
+
 The unreleased spawn-light extension for fahlman/Chunksee#86 adds independently optional
 `monsterSpawnBlockLightLimit` and `monsterSpawnLightLevel` facts to that type. Constant scalar,
 constant-object and uniform IntProvider thresholds expose only their inclusive 0...15 bounds;
