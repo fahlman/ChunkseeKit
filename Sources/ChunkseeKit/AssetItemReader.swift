@@ -28,7 +28,7 @@ struct AssetItemReader {
             guard rawTints.count <= 32 else { throw Invalid.asset }
             let tints = try rawTints.map(tint)
             let model = try AssetModelReader(assets: assets).read(modelID.description, budget: &budget)
-            parts.append(.init(model: try transform.translating(model), tints: tints))
+            parts.append(.init(model: try transform.applying(to: model), tints: tints))
         case "minecraft:special":
             guard parts.count < 32 else { throw Invalid.asset }
             parts.append(.init(model: try special(node, transform: transform, budget: &budget), tints: []))

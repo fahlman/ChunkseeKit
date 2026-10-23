@@ -1012,15 +1012,15 @@ Since v0.55.0, the plain shield's plate and handle come from the official
 Saved banner patterns and base colors remain outside this static default-variant API.
 Selected ancestor and local transforms compose in parent-to-child order. They are baked into
 special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or
-a half-turn around X, with an identity right rotation. This covers both the shulker's quaternion
+an axis-aligned half-turn, with an identity right rotation. This covers both the shulker's quaternion
 turn and the shield's parent Y/Z sign flip. Unsupported special-model transforms return nil
 instead of being ignored; their final coordinates stay within the existing -16...32 model bounds.
 
-The unreleased translation fix also supports translation-only transforms on ordinary element
-models, including the two-part colored beds. Translation moves the element corners and any
-rotation origin while preserving UVs, rotation/rescaling, tints and GUI settings. Transformed
-coordinates may extend beyond the source model's bounds, but must remain finite. Scale and
-rotation on ordinary parts, including the straw bed's Y half-turn, and transforms on generated
+Ordinary element models support translations (since v0.55.1) and unit axis-aligned half-turns
+(unreleased), including the colored beds and straw bed. The shared transform moves corners and
+rotation origins, remaps faces with their UV orientation and adjusts existing element rotations.
+Tints, rescaling and GUI settings remain intact. Transformed coordinates may extend beyond the
+source model's bounds, but must remain finite. Other scales/rotations and transforms on generated
 layers remain unsupported. All selected parts keep the shared element/JSON/part budgets.
 No public type or cache interpretation changes.
 

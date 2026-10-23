@@ -90,15 +90,15 @@ import Testing
         #expect(parts[0].model.geometry != parts[1].model.geometry)
         let ordinary: [String: Any] = ["type": "model", "model": "item/shield"]
         #expect(try assets(ordinary).defaultItemModel("shield") != nil)
-        #expect(try assets(selected(ordinary)).defaultItemModel("shield") == nil)
-        #expect(try assets(selected(["type": "composite", "models": [special, ordinary]])).defaultItemModel("shield") == nil)
+        #expect(try assets(selected(ordinary)).defaultItemModel("shield")?.parts.first?.model.geometry == .elements([]))
+        #expect(try assets(selected(["type": "composite", "models": [special, ordinary]])).defaultItemModel("shield")?.parts.count == 2)
     }
 
     @Test func malformedOrUnrepresentableAncestorTransformsStayUnavailable() throws {
         var invalid: [Any] = [NSNull(), [], [:]]
         for (key, value) in [("scale", [1, -1, 1]), ("scale", [0, 1, 1]), ("scale", [-1, 1, 1]),
                               ("scale", [100, 1, 1]), ("translation", [100, 0, 0]),
-                              ("left_rotation", [0, 1, 0, 0]), ("right_rotation", [1, 0, 0, 0])] {
+                              ("left_rotation", [0, 1, 0, 1]), ("right_rotation", [1, 0, 0, 0])] {
             var transform = halfTurn
             transform[key] = value
             invalid.append(transform)
