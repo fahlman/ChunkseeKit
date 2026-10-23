@@ -119,8 +119,8 @@ extension SIMD3: TimelineValue where Scalar == Float {
         switch modifier {
         case .override: argument
         case .multiply: base * argument
-        case .add: Self(min(base.x + argument.x, 1), min(base.y + argument.y, 1), min(base.z + argument.z, 1))
-        case .subtract: Self(max(base.x - argument.x, 0), max(base.y - argument.y, 0), max(base.z - argument.z, 0))
+        case .add: Self(Swift.min(base.x + argument.x, 1), Swift.min(base.y + argument.y, 1), Swift.min(base.z + argument.z, 1))
+        case .subtract: Self(Swift.max(base.x - argument.x, 0), Swift.max(base.y - argument.y, 0), Swift.max(base.z - argument.z, 0))
         case .minimum, .maximum: throw InvalidTimeline.data
         }
     }
