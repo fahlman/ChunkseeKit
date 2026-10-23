@@ -429,7 +429,7 @@ The additive `dimensionTypes(assets:)` and `dimensionSettings(assets:)` overload
 definitions from a matching supplied `GameAssets` jar. Enabled data-pack priority is unchanged.
 A matching jar is authoritative: a missing or malformed definition does not use the built-in
 fallback. Without a matching jar, the original verified build/spawn-light fallback remains, with
-no new time metadata or clock/timeline table.
+no time/base-lighting metadata or clock/timeline table.
 
 For readable 26.3 definitions, `DimensionType.time` exposes `hasFixedTime`, `hasSkylight`,
 `defaultClock` and `timelines`. References are normalized through `Identifier`; timelines preserve
@@ -447,7 +447,8 @@ its own `clockID` and optional `periodTicks`. Pass that clock's saved whole tick
 `SkyLighting` base to `applying(at:to:)`; absent tracks preserve the base. Angles use degrees and
 RGB channels retain float precision. The result is an intermediate attribute layer, without
 final range clamping, weather, spatial effects or rendered brightness. Nonfinite input/results
-remain unavailable. Dimension defaults, enabled-pack/tag resolution and app drawing are separate.
+remain unavailable. The dimension base comes from `DimensionType.baseSkyLighting` below;
+enabled-pack/tag resolution for timelines and app drawing are separate.
 
 The shared keyframe sampler preserves ordered duplicate-tick jumps, negative-time wrapping,
 constant endpoints and the game's Float arithmetic. Supported easing is linear, constant or
@@ -464,6 +465,22 @@ unavailable. Unrelated tracks and time markers are not interpreted or validated,
 a complete timeline-registry validator. Numeric JSON remains strict as in the other asset readers.
 These additive APIs are unreleased on fahlman/ChunkseeKit#177 for fahlman/Chunksee#357. They read
 no chunks, write no worlds, simulate no clocks and introduce no mutable cache or dependency.
+
+`DimensionType.baseSkyLighting` supplies the static layer for readable 26.3 definitions. It applies
+that definition's `attributes` entries to the registered defaults: sun/moon angle 0 degrees,
+sky-light factor 1, white sky-light color and full moon. Absent or JSON-null `attributes` uses
+those defaults. Both shorthand values and expanded `modifier`/`argument` entries use the same
+value codecs and simple modifier arithmetic as timelines. The sky-light-factor override must
+be 0...1; other modifiers can produce values outside that range until later layer composition.
+No dimension name, fixed-time flag or skylight flag substitutes a lighting value.
+
+Inline NBT, enabled folder/ZIP overrides and matching-jar definitions share the existing type
+reader and resource priority. Unsupported/malformed relevant entries, ambiguous aliases or more
+than 256 attribute entries leave the whole base nil without discarding independently valid build
+or time metadata. Other attributes are ignored, so this is not full registry validation. Other
+save versions and the no-jar build-limit fallback provide no base. No weather, biome/spatial
+layers, timeline application, final range clamping or rendering happens in this query. This
+additive API is unreleased on fahlman/ChunkseeKit#179 for fahlman/Chunksee#357.
 
 The unreleased spawn-light extension adds `monsterSpawnBlockLightLimit` (0...15) and
 `monsterSpawnLightLevel` (an inclusive range) to each dimension type. The latter reports the

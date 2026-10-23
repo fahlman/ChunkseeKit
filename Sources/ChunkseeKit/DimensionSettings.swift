@@ -25,8 +25,8 @@ extension World {
 
     /// Uses a matching supplied jar for vanilla definitions, including time/sky metadata.
     /// Without one, the original verified build/spawn-light fallback remains available, but has
-    /// no time metadata. Enabled folder/ZIP overrides retain priority; a bad override never
-    /// falls back to the jar or built-in values. No jar artwork is read or retained here.
+    /// no time or base-lighting metadata. Enabled folder/ZIP overrides retain priority; a bad
+    /// override never falls back to the jar or built-in values. No jar artwork is read or retained here.
     public func dimensionTypes(assets: GameAssets?) throws -> [String: DimensionType] {
         try readDimensionSettings(includeGeneration: false, assets: assets).compactMapValues(\.type)
     }

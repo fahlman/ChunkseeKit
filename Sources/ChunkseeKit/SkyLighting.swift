@@ -20,7 +20,8 @@ public struct SkyLighting: Sendable, Equatable {
 
     /// Angles use degrees; RGB channels retain floating precision. No defaults, angle wrapping
     /// or final attribute-range clamping are imposed here, so successive timeline modifiers can
-    /// compose. Nonfinite values are unavailable. Static dimension attributes belong to the caller.
+    /// compose. Nonfinite values are unavailable. DimensionType.baseSkyLighting supplies
+    /// the static dimension layer.
     public init?(sunAngle: Float, moonAngle: Float, skyLightFactor: Float,
                  skyLightColor: SIMD3<Float>, moonPhase: MoonPhase) {
         guard sunAngle.isFinite, moonAngle.isFinite, skyLightFactor.isFinite,
@@ -30,5 +31,25 @@ public struct SkyLighting: Sendable, Equatable {
         self.skyLightFactor = skyLightFactor
         self.skyLightColor = skyLightColor
         self.moonPhase = moonPhase
+    }
+}
+
+// Static dimension entries and timeline tracks use the same normalized identity and bounds.
+extension SkyLighting {
+    enum Attribute: String {
+        case sunAngle = "minecraft:visual/sun_angle", moonAngle = "minecraft:visual/moon_angle"
+        case skyLightFactor = "minecraft:visual/sky_light_factor", skyLightColor = "minecraft:visual/sky_light_color"
+        case moonPhase = "minecraft:visual/moon_phase"
+    }
+
+    static func attributes<Value>(_ raw: [String: Value]) throws -> [Attribute: Value] {
+        guard raw.count <= 256 else { throw InvalidLighting.data }
+        var result: [Attribute: Value] = [:]
+        for (rawID, value) in raw {
+            guard let id = Identifier(rawID), let attribute = Attribute(rawValue: id.description) else { continue }
+            // Conflicting aliases must not make dictionary iteration order select a value.
+            guard result.updateValue(value, forKey: attribute) == nil else { throw InvalidLighting.data }
+        }
+        return result
     }
 }
