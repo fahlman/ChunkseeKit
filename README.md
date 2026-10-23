@@ -986,7 +986,7 @@ rotation. This includes the shulker's transform; unsupported transforms are reje
 of ignored. Final coordinates obey the existing -16...32 model bounds and the same shared
 element/JSON/part budgets. No public type or cache interpretation changes.
 
-### Biome color definitions (unreleased)
+### Biome color definitions (v0.52.0)
 
 Biome colors come from the supplied game jar and the world's enabled data packs:
 
@@ -1016,10 +1016,34 @@ data-version-mismatched jars make vanilla unavailable; higher-priority pack defi
 still resolve. Missing/other saved data versions return an empty result, and an absent enabled
 pack list is not replaced with an assumed vanilla pack. File errors propagate.
 
-No Minecraft color table or artwork is bundled. The caller supplies the game file and performs
-these synchronous reads off its UI actor. Color-map PNG access uses `GameAssets.texture`;
-sampling, fixed block-specific tint sources, modifier math, image decoding, caching and map
-drawing remain client work. No chunks are scanned or world files written.
+No Minecraft biome-color table or artwork is bundled. The caller supplies the game file and
+performs these synchronous reads off its UI actor. Color-map PNG access uses `GameAssets.texture`.
+No chunks are scanned or world files written.
+
+### Terrain tint sources (unreleased)
+
+`BlockState.tintSource(at:gameDataVersion:)` interprets a block model face's tint index for the
+verified 26.3/5023 registry. Its `BlockTint` is either a fixed 24-bit RGB color or a `BiomeColor`
+(`grass`, `foliage`, `dryFoliage`, `water`) with a vertical biome-sampling offset. For example,
+spruce and birch leaves have fixed colors; oak and mangrove leaves use foliage; upper tall grass
+uses the grass biome one block below. Flower definitions keep their separate untinted and
+grass-tinted indexes. Stem age and redstone power retain their saved colors. The omitted
+half/power/age defaults are verified against that game's registry; invalid properties, unknown
+blocks/indexes and unverified versions return nil. No other registry defaults are inferred.
+
+This API describes in-world **block models**, not item or particle colors. Fluid water obtains
+its color directly from the biome; the water/bubble block-model sources are white because the
+game applies their biome color only to terrain particles. A water cauldron's model uses water.
+
+Call `BiomeDefinition.color(_:x:z:sample:)` for the chosen biome. It applies explicit overrides,
+clamps the saved climate for the shared 256×256 colormap lookup, and applies the game's
+dark-forest or fixed-seed swamp-grass modifier. X/Z are signed block coordinates. The `sample`
+closure receives a texture identifier and a top-left-origin pixel and returns that decoded
+pixel's RGB value, or nil when unavailable. Overrides and water do not need a decoded image;
+swamp grass replaces the base color entirely. Missing needed pixels remain unavailable.
+Image decoding, choosing the correct biome, optional blending across neighboring biomes,
+map shading, caches and drawing stay with the client. Item grass tints share the same climate
+pixel arithmetic; no second PNG/archive reader or mutable color cache is added.
 
 ### Blockstate model selection (unreleased)
 
