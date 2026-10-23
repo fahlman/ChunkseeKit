@@ -13,17 +13,21 @@ public struct DimensionType: Sendable, Equatable {
     /// Inclusive bounds of the randomly sampled light threshold, for constant/uniform providers.
     /// Other providers stay nil. This is neither a spawn probability nor complete spawn eligibility.
     public let monsterSpawnLightLevel: ClosedRange<Int>?
+    /// Time/sky metadata from a readable 26.3 definition. Nil for unverified versions,
+    /// malformed metadata or the built-in build-limit fallback without a supplied game jar.
+    public let time: DimensionTime?
 
     public var maxY: Int { minY + height - 1 }
     public var buildRange: ClosedRange<Int> { minY...maxY }
 
     private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool,
-                  monsterSpawnBlockLightLimit: Int?, monsterSpawnLightLevel: ClosedRange<Int>?) {
+                  monsterSpawnBlockLightLimit: Int?, monsterSpawnLightLevel: ClosedRange<Int>?, time: DimensionTime?) {
         guard height > 0, Self.validYBounds(minY: minY, height: height),
               (0...height).contains(logicalHeight) else { return nil }
         self.minY = minY; self.height = height; self.logicalHeight = logicalHeight; self.hasCeiling = hasCeiling
         self.monsterSpawnBlockLightLimit = monsterSpawnBlockLightLimit.flatMap { (0...15).contains($0) ? $0 : nil }
         self.monsterSpawnLightLevel = monsterSpawnLightLevel
+        self.time = time
     }
 
     // DimensionType and NoiseSettings share the 26.3 packed-Y bounds. Noise alone permits
@@ -33,19 +37,22 @@ public struct DimensionType: Sendable, Equatable {
             && minY.isMultiple(of: 16) && height.isMultiple(of: 16) && minY + height <= 2032
     }
 
-    init?(_ nbt: NBT) {
+    init?(_ nbt: NBT, version: Int?) {
         guard let minY = nbt["min_y"]?.int, let height = nbt["height"]?.int,
               let logical = nbt["logical_height"]?.int, let ceiling = nbt["has_ceiling"]?.bool else { return nil }
         self.init(minY: minY, height: height, logicalHeight: logical, hasCeiling: ceiling,
                   monsterSpawnBlockLightLimit: nbt["monster_spawn_block_light_limit"]?.int,
-                  monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value)
+                  monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
+                  time: version == SaveVersion.java26_3 ? DimensionTime(nbt: nbt) : nil)
     }
 
-    init?(json: Data) {
-        guard let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
+    init?(json: Data, version: Int?) {
+        guard json.count <= ZipResources.maximumResourceSize,
+              let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
         self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
-                  monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value)
+                  monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
+                  time: version == SaveVersion.java26_3 ? value.time : nil)
     }
 
     private struct Definition: Decodable {
@@ -53,6 +60,7 @@ public struct DimensionType: Sendable, Equatable {
         let hasCeiling: Bool
         let monsterSpawnBlockLightLimit: Int?
         let monsterSpawnLightLevel: SpawnLightRange?
+        let time: DimensionTime?
         enum CodingKeys: String, CodingKey {
             case minY = "min_y", height, logicalHeight = "logical_height", hasCeiling = "has_ceiling"
             case monsterSpawnBlockLightLimit = "monster_spawn_block_light_limit", monsterSpawnLightLevel = "monster_spawn_light_level"
@@ -67,6 +75,7 @@ public struct DimensionType: Sendable, Equatable {
             // These independently available facts must not discard valid build limits.
             monsterSpawnBlockLightLimit = try? fields.decode(Int.self, forKey: .monsterSpawnBlockLightLimit)
             monsterSpawnLightLevel = try? fields.decode(SpawnLightRange.self, forKey: .monsterSpawnLightLevel)
+            time = try? DimensionTime(from: decoder)
         }
     }
 
@@ -75,13 +84,13 @@ public struct DimensionType: Sendable, Equatable {
         switch id {
         case "minecraft:overworld", "minecraft:overworld_caves":
             return Self(minY: -64, height: 384, logicalHeight: 384, hasCeiling: id == "minecraft:overworld_caves",
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 0...7)
+                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 0...7, time: nil)
         case "minecraft:the_nether":
             return Self(minY: 0, height: 256, logicalHeight: 128, hasCeiling: true,
-                        monsterSpawnBlockLightLimit: 15, monsterSpawnLightLevel: 7...7)
+                        monsterSpawnBlockLightLimit: 15, monsterSpawnLightLevel: 7...7, time: nil)
         case "minecraft:the_end":
             return Self(minY: 0, height: 256, logicalHeight: 256, hasCeiling: false,
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 15...15)
+                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 15...15, time: nil)
         default: return nil
         }
     }
