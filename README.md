@@ -1095,6 +1095,10 @@ dark-forest or fixed-seed swamp-grass modifier. X/Z are signed block coordinates
 closure receives a texture identifier and a top-left-origin pixel and returns that decoded
 pixel's RGB value, or nil when unavailable. Overrides and water do not need a decoded image;
 swamp grass replaces the base color entirely. Missing needed pixels remain unavailable.
+`BiomeDefinition.colorDependsOnPosition(_:)` (unreleased) reports whether X/Z can change a
+source's color. If false, a client can resolve that source once for this definition and its
+unchanged colormap pixels. The color resolver uses the same rule; clients need not repeat
+modifier checks to decide which colors can be reused.
 Image decoding, choosing the correct biome, optional blending across neighboring biomes,
 map shading, caches and drawing stay with the client. Item grass tints share the same climate
 pixel arithmetic; no second PNG/archive reader or mutable color cache is added.

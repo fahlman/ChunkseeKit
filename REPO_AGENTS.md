@@ -336,6 +336,11 @@ Particle and item colors are distinct. Water/bubble block-model tints are white;
 uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
 kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
 swamp grass. The caller supplies a decoded colormap pixel; no image decoding or artwork is added.
+The additive, unreleased `BiomeDefinition.colorDependsOnPosition(_:)` exposes the color resolver's
+own spatial-dependency rule for fahlman/Chunksee#405 (Claude-F405-3). Clients can precompute static
+colors without duplicating modifier rules. The resolver calls the same helper; color arithmetic
+and cache interpretation are unchanged. Public-path tests cover every source and modifier,
+including explicit grass overrides.
 ClimateColorMap is shared with item grass tints. The narrow fixed-seed 2D swamp noise and slime
 chunks share LegacyRandom's existing 48-bit generator rule; the slime predicate is unchanged.
 All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,864 biome colors
