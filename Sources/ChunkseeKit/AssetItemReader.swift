@@ -49,7 +49,8 @@ struct AssetItemReader {
                     return value
                 }
             } else if property.description == "minecraft:trim_material", let selection {
-                guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else {
+                guard selection.trimMaterialID == nil ||
+                        (assets.version.id == "26.3" && Int(assets.version.dataVersion) == SaveVersion.java26_3) else {
                     throw Invalid.asset
                 }
                 child = try selectedCase(node, value: selection.trimMaterialID?.description) { value in

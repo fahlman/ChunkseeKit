@@ -564,7 +564,8 @@ holder has no registry key and therefore selects the fallback. Malformed model/m
 remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
 `GameAssets.itemModel(for:)` shares AssetItemReader and its bounds, with one case selector for GUI
 and normalized trim keys. TrimMaterialProperty/ArmorTrim and the item componentization fixer
-establish the 26.3/5023 behavior. Unverified trim versions remain unavailable; other live properties
+establish the 26.3/5023 behavior. Non-nil trim keys require that verified version; missing keys
+keep the generic fallback in older jars, preserving their untrimmed armor. Other live properties
 keep their static choices, and defaultItemModel retains its existing behavior. These additive APIs
 are unreleased for fahlman/Chunksee#390; client adoption and generated-palette images follow a
 reviewed release. No serialized field, cache version, artwork or app presentation is added.

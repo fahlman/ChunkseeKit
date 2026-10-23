@@ -135,6 +135,17 @@ import Testing
         #expect(try picture(stack(.string("quartz")), in: reader) == reader.defaultItemModel("sample"))
     }
 
+    @Test func untrimmedOlderArmorKeepsItsDefaultPicture() throws {
+        let reader = try assets(selector("[{\"when\":\"quartz\",\"model\":\(trimmed)}]"),
+                                version: "1.21.5", dataVersion: 4325)
+        let fallback = try #require(reader.defaultItemModel("sample"))
+        let inline = NBT.compound(["palette_id": .string("quartz"), "description": .string("Quartz")])
+        for item in [stack(), stack(.string("quartz"), extra: ["!minecraft:trim": .compound([:])]), stack(inline)] {
+            #expect(try picture(item, in: reader) == fallback)
+        }
+        #expect(try picture(stack(.string("quartz")), in: reader) == nil)
+    }
+
     @Test func cachedStacksRetainTheirSelectionWithoutAddingSerializedFields() throws {
         let item = stack(.string("quartz"), extra: ["minecraft:item_model": .string("pack:override")])
         let data = try JSONEncoder().encode(item)

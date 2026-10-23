@@ -1063,7 +1063,8 @@ tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colo
 matches `minecraft:trim_material` against the saved key, using normalized Identifier values for
 single/list cases and rejecting duplicate normalized cases. Unmatched/absent keys use the fallback;
 an unsupported selected branch never silently recovers the untrimmed picture. Other live properties
-keep the default reader's choices. Trim selection stays unavailable with unverified game versions.
+keep the default reader's choices. A non-nil trim key stays unavailable with unverified game
+versions; a missing key still selects the generic fallback, preserving ordinary older armor.
 GUI and trim case tables use one bounded selector. This changes neither defaultItemModel's
 explicit fallback behavior nor texture loading. Generated trim textures still require palette-source
 interpretation and native image decoding in the client. The official 26.3 TrimMaterialProperty,

@@ -53,8 +53,9 @@ public struct GameAssets: Sendable {
     }
 
     /// Resolves an inventory illustration with the stack's saved item-model reference and trim
-    /// material, obtained from ItemStack.itemModelSelection. Trim cases are verified for 26.3/5023;
-    /// other versions with that selector stay unavailable. Pattern does not affect inventory icons.
+    /// material, obtained from ItemStack.itemModelSelection. Non-nil trim keys require verified
+    /// 26.3/5023 semantics; absent keys keep the generic fallback in other versions too.
+    /// Pattern does not affect inventory icons.
     /// Unknown live properties retain defaultItemModel's static choices and resource/work limits.
     /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
     public func itemModel(for selection: ItemModelSelection) -> AssetItem? {
