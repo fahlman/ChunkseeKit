@@ -547,6 +547,14 @@ use the game's Float precision. Pet appearance/order/collar/equipment interpreta
 also belongs here. All new stored fields are optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
+`World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
+and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime
+fills only a missing valid Overworld record; ambiguous aliases are omitted after that fallback,
+while other malformed records do not discard unrelated clocks. File errors propagate. The 26.3
+ClockState/PackedClockStates codecs establish the saved field and named-map shape. This API does
+not simulate time, evaluate timelines, validate registry membership or infer a dimension's clock.
+The additive reader is unreleased for #173 and fahlman/Chunksee#357; no serialized cache changes.
+
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
 ItemStack likewise keeps its components internal, preserving typed accessors, raw-input initializers

@@ -290,6 +290,17 @@ if let spawn = world.level.spawnPosition {
 }
 ```
 
+### Saved world clocks
+
+`try world.clockTimes()` returns whole saved ticks by normalized clock ID, including custom
+clocks. It reads the existing namespaced/flat saved-data layouts and preserves signed 64-bit
+values on supported Macs. `dayTime()` uses this same owner for the Overworld. Legacy `DayTime`
+fills a missing valid Overworld entry; ambiguous normalized IDs are omitted even when a legacy
+value exists. Other missing/malformed entries are omitted, and file read errors propagate.
+This snapshot does not evaluate timeline periods, fractional ticks, rates or dimension links,
+and does not validate clock registry membership. This additive API is unreleased; the app's
+time-of-day lighting is tracked separately on fahlman/Chunksee#357.
+
 ### Dimensions, chunks and blocks
 
 ```swift
