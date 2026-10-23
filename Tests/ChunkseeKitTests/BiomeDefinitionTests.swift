@@ -119,6 +119,24 @@ import Testing
         #expect(try reversed.biomeDefinitions(for: ["plains"], assets: reader)["minecraft:plains"]?.waterColor == 0x102030)
     }
 
+    @Test func dataPackOverridesDriveTheSameTintResolverWithoutVanillaDefaults() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let definition = #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1193046,"grass_color":11259375,"foliage_color":1122867,"dry_foliage_color":4478310,"grass_color_modifier":"dark_forest"}}"#
+        _ = try folder("colors", at: root, entries: [resource(definition), resource("example:custom", definition)])
+        let world = try world(root, packs: ["vanilla", "file/colors"])
+        let values = try world.biomeDefinitions(for: ["plains", "example:custom"], assets: assets([resource(plain)]))
+        for id in ["minecraft:plains", "example:custom"] {
+            let value = try #require(values[id])
+            #expect(value.color(.grass, x: -5, z: 10) { _, _ in nil } == 0x69807c)
+            #expect(value.color(.foliage, x: -5, z: 10) { _, _ in nil } == 0x112233)
+            #expect(value.color(.dryFoliage, x: -5, z: 10) { _, _ in nil } == 0x445566)
+            #expect(value.color(.water, x: -5, z: 10) { _, _ in nil } == 0x123456)
+        }
+        let withoutJar = try world.biomeDefinitions(for: ["example:custom"], assets: nil)
+        #expect(withoutJar["example:custom"]?.color(.grass, x: 0, z: 0) { _, _ in nil } == 0x69807c)
+    }
+
     @Test func malformedPresentOverridesNeverFallThrough() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -1,8 +1,8 @@
 import Foundation
 
-/// Data-defined climate and color facts, without game registries or client tint calculations.
+/// Data-defined climate and color facts. Image decoding and neighboring-biome blending are client-owned.
 public struct BiomeDefinition: Sendable, Equatable {
-    /// Base climate values remain unclamped; a client clamps them when sampling its color maps.
+    /// Base climate values remain unclamped; color resolution clamps them when sampling its maps.
     public let temperature: Float
     public let downfall: Float
     /// Colors are 24-bit RGB. Missing overrides use the client's corresponding color map.
