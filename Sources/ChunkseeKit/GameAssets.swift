@@ -49,7 +49,16 @@ public struct GameAssets: Sendable {
     /// ordinary elements. Supported ancestor transforms compose before the base GUI transform;
     /// other transforms and unverified versions remain unsupported. Textures come from the jar.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
-        try? AssetItemReader(assets: self).read(identifier)
+        try? AssetItemReader(assets: self, selection: nil).read(identifier)
+    }
+
+    /// Resolves an inventory illustration with the stack's saved item-model reference and trim
+    /// material, obtained from ItemStack.itemModelSelection. Trim cases are verified for 26.3/5023;
+    /// other versions with that selector stay unavailable. Pattern does not affect inventory icons.
+    /// Unknown live properties retain defaultItemModel's static choices and resource/work limits.
+    /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
+    public func itemModel(for selection: ItemModelSelection) -> AssetItem? {
+        try? AssetItemReader(assets: self, selection: selection).read(selection.modelID.description)
     }
 
     /// Matches supplied block properties and resolves the selected variant or multipart models.

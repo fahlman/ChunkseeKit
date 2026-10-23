@@ -2,6 +2,7 @@ import Foundation
 
 struct AssetItemReader {
     let assets: GameAssets
+    let selection: ItemModelSelection?
 
     func read(_ identifier: String) throws -> AssetItem {
         guard let data = assets.resource(identifier, directory: "items", extension: "json") else { throw Invalid.asset }
@@ -41,7 +42,21 @@ struct AssetItemReader {
             try visit(node["on_false"], inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
         case "minecraft:select":
             let property = try AssetJSON.identifier(node["property"])
-            let child = property.description == "minecraft:display_context" ? try inventoryCase(node) : node["fallback"]
+            let child: Any?
+            if property.description == "minecraft:display_context" {
+                child = try selectedCase(node, value: "gui") { value in
+                    guard !value.isEmpty else { throw Invalid.asset }
+                    return value
+                }
+            } else if property.description == "minecraft:trim_material", let selection {
+                guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else {
+                    throw Invalid.asset
+                }
+                child = try selectedCase(node, value: selection.trimMaterialID?.description) { value in
+                    guard let identifier = Identifier(value) else { throw Invalid.asset }
+                    return identifier.description
+                }
+            } else { child = node["fallback"] }
             try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
         case "minecraft:range_dispatch":
             _ = try AssetJSON.identifier(node["property"])
@@ -78,9 +93,10 @@ struct AssetItemReader {
                      guiLight: base.guiLight, ambientOcclusion: base.ambientOcclusion)
     }
 
-    /// Inventory is a known context, unlike live properties such as use state or compass angle.
+    /// Inventory context and saved trim keys are known, unlike live use state or compass angle.
     /// Validate the case table but resolve only its selected model, as for other static branches.
-    private func inventoryCase(_ node: [String: Any]) throws -> Any? {
+    private func selectedCase(_ node: [String: Any], value selectedValue: String?,
+                              normalize: (String) throws -> String) throws -> Any? {
         let cases = try AssetJSON.array(node["cases"])
         guard !cases.isEmpty, cases.count <= 4096 else { throw Invalid.asset }
         var selected = node["fallback"], seen = Set<String>()
@@ -91,9 +107,10 @@ struct AssetItemReader {
             else if let list = entry["when"] as? [String] { values = list }
             else { throw Invalid.asset }
             guard !values.isEmpty, values.count <= 4096 - seen.count else { throw Invalid.asset }
-            for value in values {
-                guard !value.isEmpty, seen.insert(value).inserted else { throw Invalid.asset }
-                if value == "gui" { selected = entry["model"] }
+            for rawValue in values {
+                let value = try normalize(rawValue)
+                guard seen.insert(value).inserted else { throw Invalid.asset }
+                if value == selectedValue { selected = entry["model"] }
             }
         }
         return selected

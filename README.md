@@ -634,10 +634,21 @@ let pockets = player.inventory + player.enderChest   // PlayerInfo
 `minecraft:item_model` reference with the shared Identifier codec; absent overrides use the item's
 ID, the standard prototype default verified in 26.3. Removed or malformed components return nil,
 so callers do not silently restore the ordinary picture. Pass the identifier to
-`GameAssets.defaultItemModel(_:)`; missing or unsafe resources still return nil there. This does
-not resolve registry/data-pack changes to the prototype, trim/custom-model-data variants or live
-item properties. The additive API is unreleased for fahlman/Chunksee#390. It computes from retained
-components, so existing cached items need no new field or rescan.
+`GameAssets.defaultItemModel(_:)` for a default illustration; missing or unsafe resources still
+return nil there. This reference does not resolve registry/data-pack prototype changes or select
+variants. It computes from retained components, so existing cached items need no new field or rescan.
+
+For a saved stack, `ItemStack.itemModelSelection` adds its trim-material key to that reference.
+Pass this hashable value to `GameAssets.itemModel(for:)` and use it as the model-cache key; stacks
+with different trim materials can select different models. The **26.3 / 5023** trim selector reads
+the saved `minecraft:trim.material` reference, or legacy `tag.Trim.material`. Missing/removed trim
+uses the definition's fallback; removal/current values suppress legacy data. An inline material
+holder has no registry key and also uses the fallback, matching the game's `Holder.unwrapKey`.
+Malformed material/model values leave the selection unavailable. Only the material identity is
+read: pattern and tooltip fields do not choose an inventory picture, and this does not validate
+the full trim codec or resolve its registry. Names, counts, patterns and tints do not change this
+model key; apply tints separately to the resulting model using the original stack. These additive
+selection APIs are unreleased for fahlman/Chunksee#390; no serialized field or rescan is added.
 
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
@@ -1026,6 +1037,16 @@ require nonempty cases and unique, nonempty match values, with at most 4,096 val
 finite Float channels in 0...1; Boolean, fractional scalar, overflow and invalid vectors stay unavailable.
 Color conversion shares the saved-color owner. The official 26.3 definitions, item-model codecs,
 tint codecs and GrassColorSource/ColorMapColorUtil establish the format and colormap coordinates.
+
+`assets.itemModel(for: selection)` shares that reader and every model/resource limit. It also
+matches `minecraft:trim_material` against the saved key, using normalized Identifier values for
+single/list cases and rejecting duplicate normalized cases. Unmatched/absent keys use the fallback;
+an unsupported selected branch never silently recovers the untrimmed picture. Other live properties
+keep the default reader's choices. Trim selection stays unavailable with unverified game versions.
+GUI and trim case tables use one bounded selector. This changes neither defaultItemModel's
+explicit fallback behavior nor texture loading. Generated trim textures still require palette-source
+interpretation and native image decoding in the client. The official 26.3 TrimMaterialProperty,
+ArmorTrim and select codecs establish selection; the item data fixer establishes the legacy field.
 
 Since v0.50.2, closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
 resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.

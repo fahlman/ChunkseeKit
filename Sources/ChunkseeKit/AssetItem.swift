@@ -1,5 +1,5 @@
-/// A static default variant selected from an installed game's item definition.
-/// It does not evaluate live properties, animation or saved-stack variants.
+/// A static inventory illustration selected from an installed game's item definition.
+/// Live properties and animation remain outside this representation.
 public struct AssetItem: Sendable, Equatable {
     /// Composite order is significant. An empty definition has no parts.
     public let parts: [Part]
