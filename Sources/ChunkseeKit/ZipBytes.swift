@@ -141,7 +141,12 @@ final class ZipDirectoryBytes {
 
     private func window(for range: Range<Int>) throws -> Window {
         guard range.lowerBound >= 0, range.upperBound <= count else { throw POSIXError(.EIO) }
-        if let window = windows.first(where: { $0.contains(range) }) { return window }
+        if let index = windows.firstIndex(where: { $0.contains(range) }) {
+            // Keep the repeatedly visited central directory while local headers advance.
+            let newest = windows.count - 1
+            if index != newest { windows.swapAt(index, newest) }
+            return windows[newest]
+        }
         let pageSize = 64 * 1024
         let start = range.lowerBound / pageSize * pageSize
         let length = min(count - start, max(pageSize, range.upperBound - start))
