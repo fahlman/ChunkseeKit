@@ -26,7 +26,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
   - `chunksee`, a command-line tool that inspects a world and decodes every chunk (`scan`). It
     uses only the library's public API and serves as a working example for GUI authors.
 - **License:** MIT (`LICENSE`).
-- **Dependencies:** Foundation and system zlib through `CZlib`. There are no package
+- **Dependencies:** Foundation, Apple's CryptoKit and system zlib through `CZlib`. There are no package
   dependencies, so there is no `Package.resolved` to track (it is git-ignored).
 
 ## Modules
@@ -34,7 +34,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | Module | Owns | May depend on |
 |---|---|---|
 | `CZlib` | Module map for the system `libz` | — |
-| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo` | Foundation, `CZlib` |
+| `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo`, `BiomeSampler` | Foundation, CryptoKit, `CZlib` |
 | `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; matching-item and storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
 | `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
@@ -130,6 +130,16 @@ offer matching still required for trades. WorldIndex.richestDeposits expects eac
 canonical richest-first array and preserves the existing equal-count ordering freedom. The app
 retains its display limit, localized search labels and marker/title/detail construction. These
 additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
+
+`BiomeSampler` owns 26.3's seed-derived nearest biome-cell selection for four-block palettes.
+It hashes the raw world seed once with Apple's CryptoKit SHA-256 and uses the game's wrapped
+integer mixing, signed coordinate conversion and corner tie order. `cellOrigin(at:)` returns
+the chosen cell's block origin, which can lie in a neighboring chunk/section. Out-of-Int32 input
+is unavailable; the output is not narrowed, so extreme valid source coordinates cannot alias
+another cell. It does not read files, choose a missing-data policy, clamp build height, blend
+colors or change per-block palette semantics. Ordinary Chunk.biome remains a direct saved-cell
+lookup. The additive API is unreleased for fahlman/Chunksee#361; app neighbor-data integration
+follows a reviewed release. No serialized facts or RegionFacts interpretation change.
 
 `Chunk.biomeSnapshot` projects an immutable ChunkBiomeSnapshot retaining only section Y values
 and biome palettes. It does not keep the raw chunk, blocks or light arrays. Full Chunk/ChunkSection

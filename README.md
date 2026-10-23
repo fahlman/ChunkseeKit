@@ -324,6 +324,17 @@ let entities = try overworld.entities(chunkX: 0, chunkZ: -1)
 print(entities.compactMap { $0["id"]?.string })
 ```
 
+`Chunk.biome` reads the saved cell directly. For the game's irregular biome boundaries, the
+additive, unreleased `BiomeSampler(seed:)` takes the raw value from `World.seed()` and
+`cellOrigin(at: BlockPosition)` selects the four-block cell used by Minecraft 26.3. Construct the
+sampler once per world. Its result is a block position: use its `chunk` to choose the source chunk,
+then pass its local X/Z and absolute Y to `Chunk.biome`. The source may be in a neighboring chunk
+or section. If that data is missing, the caller chooses how to handle the unavailable biome.
+Coordinates outside signed 32-bit input are unavailable; results retain the full cell origin
+without narrowing. The sampler performs no file reads, height clamping or color blending and
+does not apply to per-block biome palettes. Seed hashing uses Apple's CryptoKit; no external
+package dependency or stored-format change is introduced.
+
 `Chunk.biomeSnapshot` is an additive, unreleased immutable view of only the decoded biome
 palettes and section heights. Retain it when neighboring terrain needs these values after the
 full chunk is released. Its `biome(x:y:z:)` has the same coordinate and missing-data rules as
