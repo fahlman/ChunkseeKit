@@ -309,7 +309,8 @@ version or image decoder changes.
 The unreleased #179 extension adds independently optional `DimensionType.baseSkyLighting` for
 26.3 definitions. It applies supported dimension environment-attribute entries to the registered
 sun/moon/sky-light defaults before timeline layers. JSON and NBT adapt only supported primitive
-forms into the shared LightingValue codecs and modifier arithmetic; both static and timeline
+forms into the shared LightingValue codecs and modifier arithmetic. NBT owns the exact single
+empty-key mixed-list wrapper interpretation, without changing raw NBT or serialization. Both static and timeline
 attributes use one normalized identity/alias/entry-bound owner. The existing type decoder reads
 JSON once. EnvironmentAttributeMap, its Entry codec, EnvironmentAttributes and the four installed
 dimension definitions establish defaults, shorthand/expanded entries and per-attribute override

@@ -93,7 +93,7 @@ struct DimensionBaseLighting: Decodable {
                 switch nbt {
                 case .list(_, let values):
                     guard values.count == 3 else { throw InvalidLighting.data }
-                    let numbers = values.compactMap(\.double)
+                    let numbers = values.compactMap { $0.unwrappedListElement.double }
                     guard numbers.count == 3 else { throw InvalidLighting.data }
                     raw = numbers
                 case .byteArray(let values):

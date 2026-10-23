@@ -72,6 +72,8 @@ import Testing
             (.string("#123456"), SIMD3<Float>(18, 52, 86) / 255),
             (.int(-15584170), SIMD3<Float>(18, 52, 86) / 255),
             (.list(.float, [.float(0.12345), .float(-0.25), .float(1.5)]), SIMD3(0.12345, -0.25, 1.5)),
+            (.list(.compound, [.compound(["": .double(0.12345)]), .compound(["": .float(-0.25)]),
+                               .compound(["": .float(1.5)])]), SIMD3(0.12345, -0.25, 1.5)),
             (.byteArray([-1, 0, 1]), SIMD3(-1, 0, 1)),
             (.intArray([-1, 0, 2]), SIMD3(-1, 0, 2)),
             (.longArray([-2, 1, 3]), SIMD3(-2, 1, 3))
@@ -98,6 +100,10 @@ import Testing
             .compound(["visual/sun_angle": .compound(["argument": .int(1)])]),
             .compound(["visual/sun_angle": .compound(["modifier": .string("override")])]),
             .compound(["visual/sky_light_color": .list(.float, [.float(1), .float(2)])]),
+            .compound(["visual/sky_light_color": .list(.compound, [.compound(["": .int(1), "extra": .int(2)]),
+                                                                    .compound(["": .int(0)]), .compound(["": .int(0)])])]),
+            .compound(["visual/sky_light_color": .list(.compound, [.compound(["": .compound(["": .int(1)])]),
+                                                                    .compound(["": .int(0)]), .compound(["": .int(0)])])]),
             .compound(["visual/sky_light_color": operation("minimum", .string("#123456"))]),
             .compound(["visual/sun_angle": operation("alpha_blend", .compound(["value": .int(25), "alpha": .float(0.5)]))]),
             .compound(["visual/sun_angle": .float(1), "minecraft:visual/sun_angle": .float(2)])
