@@ -497,7 +497,7 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit and decorated-pot cuboids for selected special item
+`SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot and copper-statue cuboids for selected special item
 definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
@@ -518,7 +518,7 @@ No public enum case, image decoder, cache, artwork or world interpretation chang
 Containers shipped for fahlman/Chunksee#395; the shield extension shipped in v0.55.0 for
 fahlman/Chunksee#390. App adoption follows its own checks.
 
-The unreleased #199 conduit extension shares that geometry/UV owner. ConduitSpecialRenderer
+The v0.66.3 conduit extension shares that geometry/UV owner. ConduitSpecialRenderer
 bakes the closed shell and uses `entity/conduit/base`; ConduitRenderer.createShellLayer defines
 its 6×6×6 cube and 32×16 skin. The shared UV conversion now uses the skin's width and height;
 existing 64×64 skins retain their mapping. The supplied item definition owns transforms and
@@ -527,7 +527,7 @@ outside this item path. Existing version, part and coordinate limits still apply
 image decoder, app renderer, world interpretation or artwork is added. App adoption remains on
 fahlman/Chunksee#390 after release.
 
-The unreleased #201 decorated-pot extension shares that geometry and pattern-resource owner.
+The v0.67.0 decorated-pot extension shares that geometry and pattern-resource owner.
 `ItemStack.potDecorations` retains four named side templates and their default/removed/named/inline
 pattern facts; older lists and BlockEntityTag.sherds use the official back/left/right/front order
 and missing-entry brick migration. Malformed present data stays unavailable, bounded to four
@@ -542,6 +542,18 @@ patterns. Known vanilla non-pattern items and removed overrides stay blank; unkn
 remain unavailable. Geometry, material paths and all defaults are checked against official baked
 models/registrations. No renderer, mutable cache, image decoder, artwork or world write is added.
 App adoption and native pictures remain on fahlman/Chunksee#390 after release.
+
+The unreleased #203 copper-golem-statue extension uses those same cuboids, deformations, face UVs
+and element rotations. The selected definition supplies the required standing/sitting/running/star
+pose and full texture resource. It preserves the namespace while normalizing `textures/*.png` to
+the shared material format; other resource layouts stay unavailable. CopperGolemModel's four
+static layers and CopperGolemStatueModel's root half-turn supply the fixed 26.3/5023 geometry.
+Nested forearm offsets/rotations compose before entering the existing element representation.
+All eight vanilla definitions, four poses, four supplied image hashes and baked corner/UV pairs
+are checked against the official jar. The existing block-state selector policy still chooses its
+static fallback (standing); this does not read saved block-state poses or simulate a live golem.
+There is no new public API, artwork, image decoder, app renderer, cache or world write. Published
+app adoption/native pictures remain separate on fahlman/Chunksee#390.
 
 Ordinary element models preserve translations and unit axis-aligned half-turns through that same
 `AssetItemTransform` owner. Translation is in blocks and moves corners and rotation origins in
