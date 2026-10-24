@@ -13,9 +13,6 @@ public struct CreatureAppearance: Sendable, Equatable, Codable {
 }
 
 enum PetData {
-    static let dyeNames = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
-                           "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"]
-
     static func sittingOrder(_ nbt: NBT, species: String) -> Bool? {
         guard ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"].contains(species) else { return nil }
         guard let tag = nbt["Sitting"] else { return false }
@@ -26,8 +23,7 @@ enum PetData {
     static func collarColor(_ nbt: NBT, species: String) -> String? {
         guard ["minecraft:wolf", "minecraft:cat"].contains(species) else { return nil }
         guard let tag = nbt["CollarColor"] else { return "red" }
-        guard let value = tag.int, dyeNames.indices.contains(value) else { return nil }
-        return dyeNames[value]
+        return tag.int.flatMap(DyeColor.init(legacyID:))?.rawValue
     }
 
     static func appearance(_ nbt: NBT, species: String) -> CreatureAppearance? {

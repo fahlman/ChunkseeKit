@@ -780,6 +780,19 @@ The hashable selection includes these data, including custom colors that become 
 float identity preserves narrowed negative zero and canonicalizes NaNs, and strings keep their
 exact Unicode spelling. This additive API is unreleased on #183 for fahlman/Chunksee#390.
 
+`ItemStack.bannerDesign` exposes the saved base dye and ordered banner patterns used by shield
+and banner pictures (unreleased, #189). Missing or removed fields are known empty; malformed
+fields return nil. A current component or removal suppresses its own legacy counterpart. The
+reader retains named pattern holders and inline asset/translation-key holders without resolving
+the world's registry. Older `BlockEntityTag.Base` and `Patterns` fields share the verified dye
+identities and short-pattern migration; intermediate lowercase `patterns` is also supported.
+Invalid legacy dye IDs stay unknown. Limits are 4,096 layers and 16 MiB of pattern string data;
+the reader keeps every accepted layer rather than applying a renderer's layer limit.
+`DyeColor` is the common saved-name/legacy-ID owner, also used by pet collars. This computed
+reader changes no stored item or cache format. Pattern registry resolution, texture compositing
+and integration into `itemModelSelection` remain separate work; this API alone does not change
+the app's plain-shield pictures.
+
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
 the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed

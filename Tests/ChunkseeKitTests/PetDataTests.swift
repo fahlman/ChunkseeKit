@@ -37,6 +37,14 @@ import Testing
         #expect(emptyWolf.equipment?.isEmpty == true && emptyWolf.sittingOrder == false)
     }
 
+    @Test func everySavedCollarUsesTheSharedDyeIdentity() throws {
+        for (id, color) in DyeColor.allCases.enumerated() {
+            #expect(try pet("wolf", ["CollarColor": .int(Int32(id))]).collarColor == color.rawValue)
+            #expect(try pet("cat", ["CollarColor": .byte(Int8(id))]).collarColor == color.rawValue)
+        }
+        #expect(try pet("wolf", ["CollarColor": .int(16)]).collarColor == nil)
+    }
+
     @Test func horseCoatAndMarkingsStaySeparateFromSaddleAndArmor() throws {
         let horse = try pet("horse", ["Variant": .int(772), "Sitting": .byte(1), "CollarColor": .byte(1),
             "equipment": .compound(["saddle": item("saddle"), "body": item("diamond_horse_armor")])])
