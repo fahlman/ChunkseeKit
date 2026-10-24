@@ -41,15 +41,4 @@ extension SkyLighting {
         case skyLightFactor = "minecraft:visual/sky_light_factor", skyLightColor = "minecraft:visual/sky_light_color"
         case moonPhase = "minecraft:visual/moon_phase"
     }
-
-    static func attributes<Value>(_ raw: [String: Value]) throws -> [Attribute: Value] {
-        guard raw.count <= 256 else { throw InvalidLighting.data }
-        var result: [Attribute: Value] = [:]
-        for (rawID, value) in raw {
-            guard let id = Identifier(rawID), let attribute = Attribute(rawValue: id.description) else { continue }
-            // Conflicting aliases must not make dictionary iteration order select a value.
-            guard result.updateValue(value, forKey: attribute) == nil else { throw InvalidLighting.data }
-        }
-        return result
-    }
 }

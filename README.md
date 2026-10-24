@@ -520,6 +520,24 @@ array. Missing, malformed or skipped arrays return nil, not zero. Existing secti
 still expose raw stored values. `Chunk.keysNotNeededForTerrain` continues to skip both the flag
 and light arrays, so ordinary terrain reads do no extra lighting work. No propagation is simulated.
 
+`World.nightMonsterLighting(assets:)` supplies a clear-night planning snapshot for each supported
+26.3 dimension. It reads the separate gameplay sky-light attribute and applies the dimension's
+selected timelines at their first declared `minecraft:midnight`, then uses the game's final
+clamping and integer sky darkening. All relevant tracks must share that midnight's clock;
+missing or conflicting markers and other relevant clocks remain unavailable. Static sky levels
+need no marker, and dimensions without skylight need no sky projection. Saved clock time,
+weather, later nights and a complete game registry are not simulated. Existing visual lighting
+remains independently readable.
+
+Each `MonsterSpawnLight` answers whether valid saved channels **can pass the ordinary monster
+light check**. This is not a probability or a guarantee that a mob can spawn. The separate block
+ceiling and the raw-brightness threshold both apply; a ceiling of 15 does not disable the latter.
+`canPass(in:x:y:z:)` takes chunk-local X/Z and absolute Y, preserves unknown/stale light, and
+requires a saved sky array only when that dimension has skylight. It includes the game's
+horizontal brightness bounds. To opt in when decoding, use `Chunk.keysNotNeededForTerrainAndLight`;
+the original terrain read profile is unchanged. This additive prerequisite is tracked on
+fahlman/ChunkseeKit#185; the app overlay and its checks remain on fahlman/Chunksee#86.
+
 `NoiseGenerationSettings.seaLevel` is the saved `sea_level`, independently optional when missing
 or not a readable signed 32-bit integer. It uses the same inline definitions and enabled folder/ZIP
 packs as the bounds. An absent or malformed value does not discard readable bounds or fall back to

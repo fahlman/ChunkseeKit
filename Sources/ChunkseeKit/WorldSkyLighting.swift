@@ -19,7 +19,7 @@ extension World {
         try Task.checkCancellation()
         guard level.enabledDataPacks.count <= 64 else { return [:] }
         let types = try dimensionTypes(assets: assets)
-        var reader: WorldTimelineReader?
+        var reader: WorldTimelineReader<LightingTimeline>?
         var clocks: [String: Int]?
         var result: [String: SkyLighting] = [:]
         for id in types.keys.sorted() {
