@@ -1551,12 +1551,14 @@ Other commands:
 | `chunksee <world> text <text> [dimension]` | Signs and books whose text matches |
 | `chunksee <world> portals` | Nether portals and where each one leads, flagging one-way links |
 | `chunksee <world> time [dimension]` | Chunks where players spent the most time (`InhabitedTime`) |
-| `chunksee <world> creatures [dimension]` | Named and tamed creatures with owners, then counts by kind |
+| `chunksee <world> creatures [dimension]` | Villagers, named and owned creatures, and shoulder pets; then counts of every kind |
 | `chunksee <world> maps` | Maps made in the game: dimension, center, scale and whether anything is drawn |
 | `chunksee <world> rules` | Game rules and their values |
 | `chunksee <world> players` | Each player's name (from the game folder's `usercache.json`), last position, last death, respawn point, game mode, health, food, level, items, play time and advancements |
 
 Creature and player coordinates name the containing block (negative fractions round down).
+The creature list uses `CreatureEntry.Group.group(for:)` for the same categories as the map,
+including unnamed villagers, and also includes player-carried shoulder pets.
 Edited or malformed positions that cannot be represented are printed as `unknown position`;
 the creature/player remains in the list. Creature listing scans entity region files even when
 there is no corresponding terrain file.

@@ -41,7 +41,7 @@ let commands: [Command] = [
     Command(name: "block", arguments: "<x> <y> <z> [dimension]", summary: "block and biome at a position", run: blockCommand),
     Command(name: "scan", arguments: "[dimension]", summary: "decode every chunk and report errors", run: scanCommand),
     Command(name: "time", arguments: "[dimension]", summary: "chunks where players spent the most time", run: timeCommand),
-    Command(name: "creatures", arguments: "[dimension]", summary: "named and tamed creatures, then counts by kind", run: creaturesCommand),
+    Command(name: "creatures", arguments: "[dimension]", summary: "villagers, named and owned creatures, and shoulder pets; counts by kind", run: creaturesCommand),
     Command(name: "maps", summary: "maps made in the game, with where they cover", run: mapsCommand),
     Command(name: "rules", summary: "game rules", run: rulesCommand),
     Command(name: "players", summary: "players' positions, deaths, respawn points and status", run: playersCommand),

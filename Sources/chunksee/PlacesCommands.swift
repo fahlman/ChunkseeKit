@@ -1,5 +1,6 @@
 import Foundation
 import ChunkseeKit
+import ChunkseeIndex
 
 /// Commands about points of interest, portals and creatures.
 
@@ -55,7 +56,8 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
         var kinds: [String: Int] = [:]
         func show(_ creature: Creature, at block: BlockPosition?, carrier: UUID?) {
             kinds[creature.id, default: 0] += 1
-            guard carrier != nil || creature.customName != nil || creature.owner != nil else { return }
+            // Text listings retain unknown positions, so use categories without the map's location filter.
+            guard carrier != nil || CreatureEntry.Group.group(for: creature) != nil else { return }
             let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
             let position = block.map { "(\($0.x), \($0.y), \($0.z))" } ?? "unknown position"
             let shoulder = carrier.map { " on shoulder of \($0.uuidString.lowercased())" } ?? ""
