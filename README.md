@@ -1304,9 +1304,23 @@ the base model supplies its GUI presentation. The fixed phase-zero geometry incl
 zombie's inflated outer skin, dragon jaw and mirrored skin regions, and piglin ears. These
 parts share the existing transforms, rotations and skin-size-aware UV mapping. The renderer's
 verified default skin IDs are used unless the definition provides a namespace-preserving
-`entity/` texture override. Nonzero animation, unknown kinds, player heads and unverified versions
+`entity/` texture override. Nonzero animation, unknown kinds and unverified versions
 stay unavailable. Missing images keep the client's usual fallback. No player-skin download,
 new public API, image decoder, app renderer, artwork or world write is introduced.
+
+The unreleased #209 extension adds local **26.3 / 5023** player-head pictures.
+`ItemStack.headSkin` and `ItemModelSelection.headSkin` distinguish the unprofiled default,
+an explicit current profile's `texture` resource, and an unresolved account skin. Missing or
+removed profiles use the game's default slim Steve resource. Current profile data takes precedence
+over legacy `SkullOwner`; malformed relevant fields return nil. Only the body's resource changes
+local picture identity, not a name, cape, elytra or player-model width. The retained identifier is
+bounded to 16 MiB. This is a picture-fact reader, not a complete account/profile validator.
+The separate `minecraft:player_head` renderer shares the zombie head/hat geometry and the existing
+material, UV, transform and budget code, with the game's translucent skin material. Resource paths
+remain checked by the shared asset reader. Named/UUID/texture-property profiles without a local
+body resource stay unavailable instead of being shown as their temporary default skin. No network
+lookup, downloaded-skin cache, image decoder, artwork or world write is added. This additive API
+needs a minor release before app adoption; remaining online skins stay on fahlman/Chunksee#390.
 
 The unreleased #207 API `AssetModel.Material.staticTextureAspectRatio` identifies the verified
 whole-image width/height ratio for these static special skins. It is derived from the same skin
