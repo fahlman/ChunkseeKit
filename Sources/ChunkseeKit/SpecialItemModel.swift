@@ -108,6 +108,9 @@ enum SpecialItemModel: String {
         for box in boxes {
             let transform = try transform.appending(box.pose)
             let skin = box.skinSize ?? skinSize
+            let source = box.material ?? material
+            let surface = AssetModel.Material(texture: source.texture, forceTranslucent: source.forceTranslucent,
+                                              overlays: source.overlays, staticTextureAspectRatio: skin.x / skin.y)
             let uvScale = SIMD4(16 / skin.x, 16 / skin.y, 16 / skin.x, 16 / skin.y)
             let a = transform.applying(to: box.from - SIMD3(repeating: box.deformation))
             let b = transform.applying(to: box.to + SIMD3(repeating: box.deformation))
@@ -132,7 +135,7 @@ enum SpecialItemModel: String {
                     (box.mirror && direction == .west ? .east : direction)
                 let uv = box.mirror ? SIMD4(region.z, region.y, region.x, region.w) : region
                 let vertical = direction == .down || direction == .up
-                let face = AssetModel.Face(material: box.material ?? material, uv: uv * uvScale,
+                let face = AssetModel.Face(material: surface, uv: uv * uvScale,
                                            rotation: vertical ? 0 : box.sideRotation, tintIndex: nil, cullFace: nil)
                 faces[transform.applying(to: facing)] = transform.applying(to: face, facing: facing)
             }

@@ -1308,6 +1308,14 @@ verified default skin IDs are used unless the definition provides a namespace-pr
 stay unavailable. Missing images keep the client's usual fallback. No player-skin download,
 new public API, image decoder, app renderer, artwork or world write is introduced.
 
+The unreleased #207 API `AssetModel.Material.staticTextureAspectRatio` identifies the verified
+whole-image width/height ratio for these static special skins. It is derived from the same skin
+layout used for their UV mapping: conduit and several skulls are 2:1; the other supported skins
+are square. This lets image clients accept rectangular or higher-resolution skins without guessing
+from item IDs or accepting ordinary animation strips. Ordinary materials leave this field nil,
+so their frame layout remains unspecified. Pattern recipes and item transforms preserve the
+metadata; image decoding, dimension checks and missing-image fallback remain client-owned.
+
 Selected ancestor and local transforms compose in parent-to-child order. They are baked into
 special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or
 an axis-aligned half-turn, with an identity right rotation. This covers both the shulker's quaternion
