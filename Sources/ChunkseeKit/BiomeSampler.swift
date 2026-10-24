@@ -24,7 +24,7 @@ public struct BiomeSampler: Sendable {
     /// is preserved at the endpoints; the returned origin uses Int so a cell is not aliased by
     /// narrowing its coordinates back to Int32. This does not impose a world border or height limit.
     public func cellOrigin(at block: BlockPosition) -> BlockPosition? {
-        cellOrigin(at: block, offset: cornerOffset)
+        cellOrigin(at: block) { x, y, z in cornerOffset(x: x, y: y, z: z) }
     }
 
     /// Selects cells in input order, including nil for each unavailable position. Nearby
