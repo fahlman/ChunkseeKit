@@ -614,8 +614,8 @@ item ID, matching the standard 26.3 Item.Properties prototype default. Registry/
 changes and trim/custom-model-data evaluation remain outside this API. GameAssets still owns
 resource-path validation and model resolution, while app caches must key on the selected model.
 No stored-field or cache-version change is needed for this computed reference.
-`ItemStack.itemModelSelection` adds the saved trim-material identity through the same model-reference
-owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint,
+`ItemStack.itemModelSelection` adds the saved trim-material identity and custom-model data through
+the same model-reference owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint,
 count, name and pattern data. Current/removed trim suppresses legacy tag.Trim; an inline material
 holder has no registry key and therefore selects the fallback. Malformed model/material values
 remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
@@ -626,6 +626,23 @@ keep the generic fallback in older jars, preserving their untrimmed armor. Other
 keep their static choices, and defaultItemModel retains its existing behavior. These additive APIs
 are unreleased for fahlman/Chunksee#390; client adoption and generated-palette images follow a
 reviewed release. No serialized field, cache version, artwork or app presentation is added.
+The unreleased #183 extension exposes `ItemStack.customModelData`: typed floats, flags, strings and
+RGB colors. Missing/removed data is known empty; malformed data stays unavailable. Current values
+and removal suppress legacy CustomModelData; older numbers migrate to one Float. The four lists
+share a 4,096-value bound and strings a 16 MiB bound. NBTNumber owns direct Java Float conversion,
+including the NBT tag factories' zero normalization; the existing color reader owns RGB vectors
+and declines nonfinite/out-of-range channels. Mixed-list wrappers are unwrapped by the NBT owner.
+ItemModelSelection includes these facts, using game-compatible Float/Unicode cache identity.
+AssetItemReader resolves 26.3/5023 custom conditions, exact string cases, scaled numeric ranges
+and colors. Custom colors become existing constant tints, avoiding a new public tint enum case.
+Case lookup is shared with GUI/trim; range lookup matches the game's stable Float sort and linear
+versus binary search at 16 entries. Missing/out-of-range values use the game's per-property
+defaults; unsupported selected branches stay unavailable. Default-only illustrations retain their
+existing static policy. Selection runs outside the recursive visitor's stack frame, preserving the
+64-node bound even in Debug. No app decoder, schema/cache change or live-state simulation is added;
+client adoption follows release on fahlman/Chunksee#390. Actual official-class comparisons and
+public-path tests cover numeric precision, missing/removal, malformed/bounded values, mixed and
+array lists, Unicode cases, signed zero/NaN, duplicate thresholds, tint defaults and cached stacks.
 Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
 legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
 fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other

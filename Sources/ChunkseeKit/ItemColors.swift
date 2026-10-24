@@ -24,7 +24,7 @@ enum ItemColor {
         switch value {
         case .list(_, let list):
             guard list.count == 3 else { return nil }
-            values = list.compactMap(\.double)
+            values = list.compactMap { $0.unwrappedListElement.double }
         case .intArray(let list):
             guard list.count == 3 else { return nil }
             values = list.map(Double.init)

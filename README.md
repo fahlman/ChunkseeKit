@@ -729,7 +729,7 @@ so callers do not silently restore the ordinary picture. Pass the identifier to
 return nil there. This reference does not resolve registry/data-pack prototype changes or select
 variants. It computes from retained components, so existing cached items need no new field or rescan.
 
-For a saved stack, `ItemStack.itemModelSelection` adds its trim-material key to that reference.
+For a saved stack, `ItemStack.itemModelSelection` adds its trim-material key and custom-model data.
 Pass this hashable value to `GameAssets.itemModel(for:)` and use it as the model-cache key; stacks
 with different trim materials can select different models. The **26.3 / 5023** trim selector reads
 the saved `minecraft:trim.material` reference, or legacy `tag.Trim.material`. Missing/removed trim
@@ -737,9 +737,20 @@ uses the definition's fallback; removal/current values suppress legacy data. An 
 holder has no registry key and also uses the fallback, matching the game's `Holder.unwrapKey`.
 Malformed material/model values leave the selection unavailable. Only the material identity is
 read: pattern and tooltip fields do not choose an inventory picture, and this does not validate
-the full trim codec or resolve its registry. Names, counts, patterns and tints do not change this
-model key; apply tints separately to the resulting model using the original stack. These additive
+the full trim codec or resolve its registry. Names, counts, patterns and independent dye/potion
+tints do not change this model key; apply those tints separately using the original stack. These additive
 selection APIs are unreleased for fahlman/Chunksee#390; no serialized field or rescan is added.
+
+`ItemStack.customModelData` reads the saved floats, flags, strings and RGB colors used by custom
+item pictures. Missing/removed components return known empty lists; malformed data returns nil
+and leaves `itemModelSelection` unavailable. A present current value or removal suppresses legacy
+`tag.CustomModelData`. Older numeric values become one Float, matching the game's migration.
+The lists share a 4,096-entry bound, with at most 16 MiB of string bytes. RGB vectors use the
+existing conservative color reader: nonfinite or out-of-range channels remain unavailable.
+Java numeric conversion, mixed-list wrappers and array tags are shared with the NBT/color owners.
+The hashable selection includes these data, including custom colors that become constant tints;
+float identity preserves narrowed negative zero and canonicalizes NaNs, and strings keep their
+exact Unicode spelling. This additive API is unreleased on #183 for fahlman/Chunksee#390.
 
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
@@ -1160,6 +1171,20 @@ GUI and trim case tables use one bounded selector. This changes neither defaultI
 explicit fallback behavior nor texture loading. Generated trim textures still require palette-source
 interpretation and native image decoding in the client. The official 26.3 TrimMaterialProperty,
 ArmorTrim and select codecs establish selection; the item data fixer establishes the legacy field.
+
+With the saved selection and verified **26.3 / 5023** assets, `minecraft:custom_model_data`
+conditions read flags, selects match exact strings (including the empty string), numeric ranges
+read Floats, and tint sources resolve to constant RGB. Each property's nonnegative `index`
+defaults to zero; missing entries yield false, no matching string, zero, or the tint's required
+default color. String cases use the same bounded table reader as GUI/trim cases, with exact UTF-8
+keys instead of identifier normalization. Numeric ranges apply Float scaling, stable threshold
+sorting and the game's actual search, including its duplicate/signed-zero behavior at 16 entries.
+NaN products and below-range values use the fallback; an absent required fallback stays unavailable.
+Tables are bounded to 4,096 entries. Unverified versions and malformed selected data stay unavailable.
+The default-only reader keeps its earlier static branch choices and does not resolve custom tints.
+The official 26.3 component/property/tint codecs and range selector establish these semantics;
+synthetic saved NBT and definitions are compared directly with those game classes. No game artwork,
+live property simulation or app parser is added.
 
 Since v0.50.2, closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
 resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.

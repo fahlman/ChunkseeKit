@@ -37,9 +37,25 @@ struct AssetItemReader {
             let children = try AssetJSON.array(node["models"])
             guard children.count <= 64 else { throw Invalid.asset }
             for child in children { try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget) }
+        case "minecraft:condition", "minecraft:select", "minecraft:range_dispatch":
+            let child = try selectedChild(node, type: type.description)
+            try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
+        case "minecraft:empty": break
+        default: throw Invalid.asset
+        }
+    }
+
+    /// Resolve before recursing so selection temporaries do not accumulate on the thread stack.
+    private func selectedChild(_ node: [String: Any], type: String) throws -> Any? {
+        switch type {
         case "minecraft:condition":
-            _ = try AssetJSON.identifier(node["property"])
-            try visit(node["on_false"], inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
+            let property = try AssetJSON.identifier(node["property"])
+            var flag = false
+            if property.description == "minecraft:custom_model_data", selection != nil {
+                let data = try customModelData(), index = try customIndex(node)
+                flag = data.flags.indices.contains(index) && data.flags[index]
+            }
+            return node[flag ? "on_true" : "on_false"]
         case "minecraft:select":
             let property = try AssetJSON.identifier(node["property"])
             let child: Any?
@@ -57,12 +73,20 @@ struct AssetItemReader {
                     guard let identifier = Identifier(value) else { throw Invalid.asset }
                     return identifier.description
                 }
+            } else if property.description == "minecraft:custom_model_data", selection != nil {
+                let data = try customModelData(), index = try customIndex(node)
+                let value = data.strings.indices.contains(index) ? data.strings[index] : nil
+                child = try selectedCase(node, value: value.map { Array($0.utf8) }) { Array($0.utf8) }
             } else { child = node["fallback"] }
-            try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
+            return child
         case "minecraft:range_dispatch":
-            _ = try AssetJSON.identifier(node["property"])
-            if let fallback = node["fallback"] {
-                try visit(fallback, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
+            let property = try AssetJSON.identifier(node["property"])
+            if property.description == "minecraft:custom_model_data", selection != nil {
+                let data = try customModelData(), index = try customIndex(node)
+                let value = data.floats.indices.contains(index) ? data.floats[index] : 0
+                return try customRange(node, value: value)
+            } else if let fallback = node["fallback"] {
+                return fallback
             } else {
                 let entries = try AssetJSON.array(node["entries"])
                 guard !entries.isEmpty, entries.count <= 4096 else { throw Invalid.asset }
@@ -72,9 +96,8 @@ struct AssetItemReader {
                     guard let model = entry["model"] else { throw Invalid.asset }
                     if first == nil || threshold < first!.threshold { first = (threshold, model) }
                 }
-                try visit(first?.model, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
+                return first?.model
             }
-        case "minecraft:empty": break
         default: throw Invalid.asset
         }
     }
@@ -94,13 +117,13 @@ struct AssetItemReader {
                      guiLight: base.guiLight, ambientOcclusion: base.ambientOcclusion)
     }
 
-    /// Inventory context and saved trim keys are known, unlike live use state or compass angle.
+    /// Inventory context, trim keys and saved strings are known, unlike live use or compass angle.
     /// Validate the case table but resolve only its selected model, as for other static branches.
-    private func selectedCase(_ node: [String: Any], value selectedValue: String?,
-                              normalize: (String) throws -> String) throws -> Any? {
+    private func selectedCase<Key: Hashable>(_ node: [String: Any], value selectedValue: Key?,
+                                            normalize: (String) throws -> Key) throws -> Any? {
         let cases = try AssetJSON.array(node["cases"])
         guard !cases.isEmpty, cases.count <= 4096 else { throw Invalid.asset }
-        var selected = node["fallback"], seen = Set<String>()
+        var selected = node["fallback"], seen = Set<Key>()
         for raw in cases {
             let entry = try AssetJSON.object(raw)
             let values: [String]
@@ -117,10 +140,64 @@ struct AssetItemReader {
         return selected
     }
 
+    private func customModelData() throws -> ItemCustomModelData {
+        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3,
+              let selection else { throw Invalid.asset }
+        return selection.customModelData
+    }
+
+    private func customIndex(_ node: [String: Any]) throws -> Int {
+        let index = try node["index"].map(AssetJSON.integer) ?? 0
+        guard index >= 0 else { throw Invalid.asset }
+        return index
+    }
+
+    /// Match RangeSelectItemModel's Float multiplication and stable sorted table. Its 26.3
+    /// search changes at 16 entries; binary search can choose a middle duplicate, not the last.
+    private func customRange(_ node: [String: Any], value: Float) throws -> Any? {
+        let scale = try node["scale"].map(AssetJSON.number) ?? 1
+        let rawEntries = try AssetJSON.array(node["entries"])
+        guard rawEntries.count <= 4096 else { throw Invalid.asset }
+        let entries = try rawEntries.enumerated().map { index, raw in
+            let entry = try AssetJSON.object(raw)
+            guard let model = entry["model"] else { throw Invalid.asset }
+            return (threshold: try AssetJSON.number(entry["threshold"]), model: model, order: index)
+        }.sorted {
+            if Self.floatLess($0.threshold, $1.threshold) { return true }
+            if Self.floatLess($1.threshold, $0.threshold) { return false }
+            return $0.order < $1.order
+        }
+        let value = value * scale
+        guard !value.isNaN else { return node["fallback"] }
+        let index: Int
+        if entries.count < 16 {
+            index = (entries.firstIndex { $0.threshold > value } ?? entries.count) - 1
+        } else {
+            var low = 0, high = entries.count - 1
+            while low <= high {
+                let middle = (low + high) / 2
+                if Self.floatLess(entries[middle].threshold, value) { low = middle + 1 }
+                else if Self.floatLess(value, entries[middle].threshold) { high = middle - 1 }
+                else { return entries[middle].model }
+            }
+            index = high
+        }
+        return index >= 0 ? entries[index].model : node["fallback"]
+    }
+
+    /// Java's total numeric ordering distinguishes signed zero. NaN is handled before lookup.
+    private static func floatLess(_ lhs: Float, _ rhs: Float) -> Bool {
+        lhs < rhs || (lhs == 0 && rhs == 0 && lhs.sign == .minus && rhs.sign == .plus)
+    }
+
     private func tint(_ raw: Any) throws -> AssetItem.Tint {
         let value = try AssetJSON.object(raw), type = try AssetJSON.identifier(value["type"])
         switch type.description {
         case "minecraft:constant": return .constant(try AssetJSON.color(value["value"]))
+        case "minecraft:custom_model_data":
+            let data = try customModelData(), index = try customIndex(value)
+            let fallback = try AssetJSON.color(value["default"])
+            return .constant(data.colors.indices.contains(index) ? data.colors[index] : fallback)
         case "minecraft:dye": return .dye(defaultColor: try AssetJSON.color(value["default"]))
         case "minecraft:potion": return .potion(defaultColor: try AssetJSON.color(value["default"]))
         case "minecraft:firework": return .firework(defaultColor: try AssetJSON.color(value["default"]))
