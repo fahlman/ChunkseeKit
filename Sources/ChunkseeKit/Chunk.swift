@@ -132,10 +132,14 @@ public struct PalettedContainer<Element: Sendable>: Sendable {
     /// All palette indices, decoded in one pass.
     public func allPaletteIndices() -> [Int] {
         guard bitsPerEntry > 0 else { return Array(repeating: 0, count: entryCount) }
-        var out = [Int]()
-        out.reserveCapacity(entryCount)
-        PackedLongs.forEachValue(in: data, entries: entryCount, bits: bitsPerEntry) { out.append($0) }
-        return out
+        // Initialization validated the word count; the decoder emits exactly entryCount
+        // values. Fill that storage once without append bookkeeping for every block.
+        return Array(unsafeUninitializedCapacity: entryCount) { buffer, initializedCount in
+            PackedLongs.forEachValue(in: data, entries: entryCount, bits: bitsPerEntry) { value in
+                buffer.initializeElement(at: initializedCount, to: value)
+                initializedCount += 1
+            }
+        }
     }
 }
 

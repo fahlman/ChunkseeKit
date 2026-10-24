@@ -57,18 +57,24 @@ import Testing
         }
     }
 
-    @Test(arguments: 1...32)
-    func sharedPalettePackingRetainsIndicesCountsAndPadding(_ bits: Int) throws {
+    @Test(arguments: 1...32, [1, 64, 257, 4096])
+    func sharedPalettePackingRetainsIndicesCountsAndPadding(_ bits: Int, _ entryCount: Int) throws {
         let limit = Int((UInt64(1) << UInt64(bits)) - 1)
-        let values = (0..<257).map { $0 % 7 == 0 ? limit : $0 % 2 }
+        let values = (0..<entryCount).map { $0 % 7 == 0 ? limit : $0 % 2 }
         let palette = ["air", "stone"]
-        let container = try PalettedContainer(palette: palette, data: Fixtures.pack(values, bits: bits), entryCount: 257, minimumBits: bits)
+        let container = try PalettedContainer(palette: palette, data: Fixtures.pack(values, bits: bits), entryCount: entryCount, minimumBits: bits)
         #expect(container.allPaletteIndices() == values)
         #expect(container.paletteCounts() == [values.filter { $0 == 0 }.count, values.filter { $0 == 1 }.count])
-        for index in [0, 1, 5, 64, 256] {
+        for index in Set([0, 1, 5, 64, 256, entryCount - 1]) where index < entryCount {
             #expect(container.paletteIndex(at: index) == values[index])
             #expect(container[index] == (values[index] < palette.count ? palette[values[index]] : nil))
         }
+    }
+
+    @Test(arguments: [0, 1, 64, 4096])
+    func uniformPaletteIndicesKeepTheirExactCount(_ count: Int) throws {
+        let container = try PalettedContainer(palette: ["stone"], data: nil, entryCount: count, minimumBits: 4)
+        #expect(container.allPaletteIndices() == Array(repeating: 0, count: count))
     }
 
     private func map(_ packed: [Int64], minSectionY: Int64) throws -> Chunk {
