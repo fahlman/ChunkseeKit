@@ -358,6 +358,14 @@ no packed data distinguishes their resolution. Full chunks and snapshots share t
 and palette-addressing code. The snapshot performs no I/O or cell selection, retains no blocks,
 light or raw NBT, and adds no serialized format.
 
+When only biomes are needed, pass `Chunk.keysNotNeededForBiomes` to
+`RegionFile.chunkNBT(localX:localZ:skipping:)`, then construct a `Chunk` and keep its
+`biomeSnapshot`. This opt-in profile also skips block palettes and heightmaps, avoiding their
+decode and allocation. It uses the same biome reader, including missing data and per-block
+layouts. Skipped block data is not validated; malformed biome palettes and missing required
+chunk/section fields still fail. The existing terrain and light read profiles are unchanged.
+This additive profile is unreleased, tracked on #128; app adoption and measured benefit follow.
+
 Heightmaps store the absolute Y of the first free block above the matching surface. The automatic
 reader returns `nil` if stored length cannot uniquely determine width: for example, 11-bit and
 12-bit maps both use 52 longs. Vanilla 128/256/384-block heights remain unambiguous. When the

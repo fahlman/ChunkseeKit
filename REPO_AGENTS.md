@@ -151,6 +151,14 @@ no I/O, nearest-cell selection, height clamping or color blending. This additive
 for fahlman/Chunksee#361 so the app can reuse decoded neighbor biomes without retaining whole
 chunks or decoding them twice. No stored facts or RegionFacts interpretation change.
 
+The unreleased #128 `Chunk.keysNotNeededForBiomes` profile extends the terrain skip set with
+`block_states` and `Heightmaps`. Neighbor-only readers pass it to RegionFile, construct the
+existing Chunk and retain its biomeSnapshot; no second decoder or cache is introduced.
+Cell/per-block lookup and missing-data rules stay shared. As an explicit partial read, it does
+not validate skipped block palettes, while malformed biomes and required identity fields still
+fail. Existing terrain/light profiles and stored facts are unchanged. App adoption and a
+bounded real-renderer comparison remain separate prerequisites to a performance claim.
+
 The library's public `BlockPosition` owns conversion from exact positions to whole containing
 blocks. Its `coordinate(containing:)` function handles one axis; its failable XYZ initializer,
 entity-container reads and CLI creature/player output share that rule. Negative fractions round
