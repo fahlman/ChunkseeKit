@@ -88,11 +88,11 @@ import Testing
             #expect(elements[1].from == SIMD3(3.75, -0.25, 3.75) && elements[1].to == SIMD3(12.25, 8.25, 12.25))
             #expect(elements[0].faces[.up]?.uv == SIMD4(2, 0, 4, 2))
             #expect(elements[1].faces[.up]?.uv == SIMD4(10, 0, 12, 2))
-            #expect(elements.flatMap { $0.faces.values }.allSatisfy {
-                $0.material.texture.description == path && $0.material.forceTranslucent
-                    && $0.material.staticTextureAspectRatio == 1 && $0.material.overlays.isEmpty
-                    && $0.tintIndex == nil && $0.cullFace == nil
-            })
+            for face in elements.flatMap({ $0.faces.values }) {
+                #expect(face.material.texture.description == path)
+                #expect(face.material.forceTranslucent && face.material.staticTextureAspectRatio == 1)
+                #expect(face.material.overlays.isEmpty && face.tintIndex == nil && face.cullFace == nil)
+            }
             #expect(reader.texture(path) == Data(data.utf8))
             #expect(model.guiTransform.rotation == SIMD3(30, 45, 0))
             #expect(model.guiTransform.translation == SIMD3(0, 0.1875, 0) && model.guiTransform.scale == .one)
