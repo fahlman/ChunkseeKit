@@ -366,10 +366,20 @@ A valid block-light value can rule out a pass without a sky value; stale chunk l
 unknown regardless of either channel.
 The result means some random draws can pass the ordinary light check, not spawn probability or
 full spawnability. Chunk's opt-in terrain-plus-light profile retains only the light channels and
-validity flag beyond ordinary terrain; missing/stale arrays never become zero. No app parser,
+validity flag beyond ordinary terrain; stale/malformed arrays never become zero. No app parser,
 propagation, persistent cache, serialized fact or ordinary terrain-cost change is introduced.
 Official 26.3 Monster, Level/LevelReader, LevelLightEngine, environment attribute and timeline
 codecs establish these rules. App drawing and layer-on/off measurements remain on app#86.
+
+The #187 extension adds Chunk.resolvedBlockLight, consumed by MonsterSpawnLight. Only verified
+26.3 omissions in valid saved lighting resolve to zero, matching SerializableChunkData's null/
+empty-layer omission and BlockLightSectionStorage's absent-layer read. ChunkSection retains tag
+presence so a malformed present value cannot become zero. Raw light accessors remain unchanged;
+missing sky data and unverified omissions stay unknown. Callers must retain all light fields
+(or use keysNotNeededForTerrainAndLight); selectively skipping only BlockLight loses provenance.
+Ordinary terrain reads skip isLightOn as before, so they remain unavailable to this query.
+The public query checks local X/Z and Int32 Y. It adds no asynchronous work or cancellation owner,
+persistent fields, cache version, light propagation, or app-side rule. App adoption follows release.
 
 Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
 central directory and matching local headers before a missing resource can permit fallback.

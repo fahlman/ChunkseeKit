@@ -37,13 +37,13 @@ import Testing
         #expect(rules.canPass(in: chunk, x: 0, y: 0, z: 0) == true)
     }
 
-    @Test func missingStaleMalformedAndSkippedLightNeverBecomeDarkness() throws {
+    @Test func missingSkyStaleMalformedAndSkippedLightStayUnknown() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let rules = try #require(try world(root, types: ["test:a": definition()]).nightMonsterLighting(assets: nil)["test:a"])
         let zero = [Int8](repeating: 0, count: 2048)
         for invalid: [Int8]? in [nil, [], [0], Array(repeating: 0, count: 2049)] {
-            #expect(try rules.canPass(in: lightChunk(block: invalid, sky: zero), x: 0, y: 0, z: 0) == nil)
+            #expect(try rules.canPass(in: lightChunk(block: invalid, sky: zero), x: 0, y: 0, z: 0) == (invalid == nil ? true : nil))
             #expect(try rules.canPass(in: lightChunk(block: zero, sky: invalid), x: 0, y: 0, z: 0) == nil)
         }
         #expect(try rules.canPass(in: lightChunk(block: zero, sky: zero, valid: false), x: 0, y: 0, z: 0) == nil)
@@ -254,6 +254,6 @@ import Testing
         var section: [String: NBT] = ["Y": .byte(0)]
         section["BlockLight"] = block.map(NBT.byteArray)
         section["SkyLight"] = sky.map(NBT.byteArray)
-        return try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, sections: [.compound(section)], extra: ["isLightOn": .byte(valid ? 1 : 0)]))
+        return try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [.compound(section)], extra: ["isLightOn": .byte(valid ? 1 : 0)]))
     }
 }
