@@ -91,10 +91,14 @@ struct AssetItemTransform: Equatable {
         else if left[0] == 0, abs(left[1]) == 1, left[2] == 0, left[3] == 0 { turn = SIMD3(-1, 1, -1) }
         else if left[0] == 0, left[1] == 0, abs(left[2]) == 1, left[3] == 0 { turn = SIMD3(-1, -1, 1) }
         else { throw Invalid.asset }
-        // Transformation.compose multiplies parent by child: the parent's scale also acts
-        // on the child's translation. Y/Z sign pairs are the shield's half-turn representation.
-        let result = Self(scale: scale * SIMD3(s[0], s[1], s[2]) * turn,
-                          translation: translation + scale * SIMD3(t[0], t[1], t[2]))
+        return try appending(Self(scale: SIMD3(s[0], s[1], s[2]) * turn,
+                                  translation: SIMD3(t[0], t[1], t[2])))
+    }
+
+    /// Transformation.compose multiplies parent by child, including the parent's scale
+    /// on the child's translation. Baked special-model part poses use this same rule.
+    func appending(_ child: Self) throws -> Self {
+        let result = Self(scale: scale * child.scale, translation: translation + scale * child.translation)
         guard (0..<3).allSatisfy({ result.scale[$0].isFinite && result.scale[$0] != 0
             && result.translation[$0].isFinite }) else { throw Invalid.asset }
         return result

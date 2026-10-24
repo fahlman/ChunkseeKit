@@ -497,7 +497,7 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`SpecialItemModel` supplies closed single-chest, shulker, shield, banner and conduit cuboids for selected special item
+`SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit and decorated-pot cuboids for selected special item
 definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
@@ -526,6 +526,22 @@ base GUI presentation. The special renderer is stateless; active world-conduit a
 outside this item path. Existing version, part and coordinate limits still apply. No public API,
 image decoder, app renderer, world interpretation or artwork is added. App adoption remains on
 fahlman/Chunksee#390 after release.
+
+The unreleased #201 decorated-pot extension shares that geometry and pattern-resource owner.
+`ItemStack.potDecorations` retains four named side templates and their default/removed/named/inline
+pattern facts; older lists and BlockEntityTag.sherds use the official back/left/right/front order
+and missing-entry brick migration. Malformed present data stays unavailable, bounded to four
+sides and 16 MiB of identifier strings. Template count and tooltip data do not select pictures.
+ItemModelSelection includes these computed facts without changing ItemStack Codable or scan facts.
+The 26.3/5023 renderer reuses the common part/UV mapping for the two deformed neck/rim cubes,
+top/bottom planes and four outward side planes. A part pose composes through AssetItemTransform;
+deformation moves vertices without stretching the nominal UV layout. The 23 sherd component
+defaults come from the official Items registrations, with pattern assets resolved from the
+supplied jar's decorated_pot_pattern data through the same path/JSON/budget owner as banner
+patterns. Known vanilla non-pattern items and removed overrides stay blank; unknown mod defaults
+remain unavailable. Geometry, material paths and all defaults are checked against official baked
+models/registrations. No renderer, mutable cache, image decoder, artwork or world write is added.
+App adoption and native pictures remain on fahlman/Chunksee#390 after release.
 
 Ordinary element models preserve translations and unit axis-aligned half-turns through that same
 `AssetItemTransform` owner. Translation is in blocks and moves corners and rotation origins in

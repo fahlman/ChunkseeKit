@@ -107,11 +107,11 @@ struct AssetItemReader {
         guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else { throw Invalid.asset }
         let model = try AssetJSON.object(node["model"]), type = try AssetJSON.identifier(model["type"])
         guard let shape = SpecialItemModel(rawValue: type.description) else { throw Invalid.asset }
-        let material = try shape.material(model, design: selection?.bannerDesign, assets: assets, budget: &budget)
         if shape == .chest || shape == .shulker,
            (try model["openness"].map(AssetJSON.number) ?? 0) != 0 { throw Invalid.asset }
         if shape == .chest, let type = model["chest_type"], type as? String != "single" { throw Invalid.asset }
-        let elements = try shape.elements(material: material, transform: transform, definition: model)
+        let elements = try shape.elements(transform: transform, definition: model, selection: selection,
+                                          assets: assets, budget: &budget)
         try budget.consume(elements: elements.count)
         let base = try AssetModelReader(assets: assets).read(try AssetJSON.identifier(node["base"]).description, budget: &budget)
         return .init(geometry: .elements(elements), guiTransform: base.guiTransform,
