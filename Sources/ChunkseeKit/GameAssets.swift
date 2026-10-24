@@ -53,10 +53,13 @@ public struct GameAssets: Sendable {
     }
 
     /// Resolves an inventory illustration with the stack's saved model reference, trim material
-    /// and custom-model data. Custom conditions, strings, numeric ranges and colors require
+    /// custom-model data and saved shield designs. Custom conditions, strings, numeric ranges and colors require
     /// verified 26.3/5023 semantics. Non-nil trim keys require that version too; absent trim keys
     /// keep the generic fallback in other versions. Obtain the key from ItemStack.itemModelSelection.
-    /// Pattern does not affect inventory icons.
+    /// Shield patterns resolve named definitions in this jar or saved inline asset holders. The
+    /// material's ordered overlays carry the base dye and first sixteen pattern layers; clients
+    /// composite them before projecting the existing geometry. Trim-pattern identity stays unused.
+    /// Resource-pack layering and world-specific registry overrides are not resolved here.
     /// Unknown live properties retain defaultItemModel's static choices and resource/work limits.
     /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
     public func itemModel(for selection: ItemModelSelection) -> AssetItem? {

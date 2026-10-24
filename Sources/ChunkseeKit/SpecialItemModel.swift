@@ -5,19 +5,19 @@ enum SpecialItemModel: String {
     case shulker = "minecraft:shulker_box"
     case shield = "minecraft:shield"
 
-    func texture(_ definition: [String: Any]) throws -> Identifier {
+    func material(_ definition: [String: Any], design: ItemBannerDesign?,
+                  assets: GameAssets, budget: inout AssetReadBudget) throws -> AssetModel.Material {
         if self == .shield {
-            // ShieldSpecialRenderer uses this skin when no saved banner pattern or base color
-            // is supplied. This API resolves the definition's static default, not saved variants.
-            return try AssetJSON.identifier("minecraft:entity/shield/shield_base_nopattern")
+            return try AssetShieldMaterial.read(design, assets: assets, budget: &budget)
         }
         // Sheets' SpriteMapper preserves the identifier's namespace and prefixes its path.
         let name = try AssetJSON.identifier(definition["texture"])
         let folder = self == .chest ? "chest" : "shulker"
-        return try AssetJSON.identifier("\(name.namespace):entity/\(folder)/\(name.path)")
+        return .init(texture: try AssetJSON.identifier("\(name.namespace):entity/\(folder)/\(name.path)"),
+                     forceTranslucent: false)
     }
 
-    func elements(texture: Identifier, transform: AssetItemTransform) -> [AssetModel.Element]? {
+    func elements(material: AssetModel.Material, transform: AssetItemTransform) -> [AssetModel.Element]? {
         let boxes: [(from: SIMD3<Float>, to: SIMD3<Float>, uv: SIMD2<Float>)]
         switch self {
         case .chest:
@@ -51,7 +51,7 @@ enum SpecialItemModel: String {
             var faces = [AssetModel.Direction: AssetModel.Face]()
             for (direction, region) in regions {
                 let vertical = direction == .down || direction == .up
-                let face = AssetModel.Face(material: .init(texture: texture, forceTranslucent: false), uv: region,
+                let face = AssetModel.Face(material: material, uv: region,
                                            rotation: vertical ? 0 : 180, tintIndex: nil, cullFace: nil)
                 faces[transform.applying(to: direction)] = transform.applying(to: face, facing: direction)
             }

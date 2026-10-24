@@ -793,6 +793,19 @@ reader changes no stored item or cache format. Pattern registry resolution, text
 and integration into `itemModelSelection` remain separate work; this API alone does not change
 the app's plain-shield pictures.
 
+The unreleased #191 extension includes this design in `ItemModelSelection`. For the verified
+26.3 shield model, `GameAssets.itemModel(for:)` resolves named patterns from the supplied jar's
+`data/<namespace>/banner_pattern` JSON or uses saved inline assets. Its existing plate/handle
+geometry carries one `AssetModel.Material`: the patterned base skin plus ordered `overlays`,
+each with a texture ID and RGB multiplier. Clients composite the overlays over the base before
+projecting that geometry. Plain shields and `defaultItemModel` keep their existing plain skin.
+The first overlay uses the base dye (white when only patterns are saved), followed by at most
+16 saved patterns, matching the game's drawing limit. The full saved list stays in `bannerDesign`.
+Pattern JSON and overlays share the existing whole-item budget; missing, malformed or unsafe
+definitions stay unavailable. This interprets the supplied jar, not resource-pack layering or
+world registry overrides. Image decoding, compositing and cache-cost adoption remain app work
+on fahlman/Chunksee#390. Consumers must handle material overlays before adopting patterned images.
+
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
 the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed
