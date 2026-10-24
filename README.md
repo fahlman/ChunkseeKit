@@ -780,6 +780,24 @@ The hashable selection includes these data, including custom colors that become 
 float identity preserves narrowed negative zero and canonicalizes NaNs, and strings keep their
 exact Unicode spelling. This additive API is unreleased on #183 for fahlman/Chunksee#390.
 
+`ItemStack.potDecorations` exposes decorated-pot sides (unreleased, #201). It reads current
+`pot_decorations` named item templates, earlier back/left/right/front lists and legacy
+`BlockEntityTag.sherds`. Each side retains its item ID and default, removed, named or inline
+`provides_pottery_pattern` selection. Missing/removed decorations are empty; malformed present
+values are unavailable. Earlier lists are limited to four entries, with absent positions filled
+by brick as in the official migration. Work is bounded to four sides and 16 MiB of identifier
+strings. The computed facts use existing saved components; ItemStack's archive format is unchanged.
+
+`ItemModelSelection` includes these sides, so changing a side or its pattern changes the model
+cache key, while stack count/name and template count/tooltips do not. The verified **26.3 / 5023**
+special-model path renders the neck, rim, caps and side faces through the existing shared cuboid,
+UV, part-pose and item-transform code. The game's 23 sherd component defaults come from its code;
+each pattern's asset comes from the supplied jar's `decorated_pot_pattern` registry. Explicit named
+and inline patterns override defaults, and removed patterns stay blank. Unknown mod-item defaults,
+unsafe/missing/malformed selected definitions and unsupported versions remain unavailable. This
+is a static inventory model, without wobble animation or world writes. It adds no image decoder,
+app renderer or bundled artwork. App adoption remains on fahlman/Chunksee#390 after release.
+
 `ItemStack.bannerDesign` exposes the saved base dye and ordered banner patterns used by shield
 and banner pictures (unreleased, #189). Missing or removed fields are known empty; malformed
 fields return nil. A current component or removal suppresses its own legacy counterpart. The
