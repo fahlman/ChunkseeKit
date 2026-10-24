@@ -52,9 +52,10 @@ public struct GameAssets: Sendable {
         try? AssetItemReader(assets: self, selection: nil).read(identifier)
     }
 
-    /// Resolves an inventory illustration with the stack's saved item-model reference and trim
-    /// material, obtained from ItemStack.itemModelSelection. Non-nil trim keys require verified
-    /// 26.3/5023 semantics; absent keys keep the generic fallback in other versions too.
+    /// Resolves an inventory illustration with the stack's saved model reference, trim material
+    /// and custom-model data. Custom conditions, strings, numeric ranges and colors require
+    /// verified 26.3/5023 semantics. Non-nil trim keys require that version too; absent trim keys
+    /// keep the generic fallback in other versions. Obtain the key from ItemStack.itemModelSelection.
     /// Pattern does not affect inventory icons.
     /// Unknown live properties retain defaultItemModel's static choices and resource/work limits.
     /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
