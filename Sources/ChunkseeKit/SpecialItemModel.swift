@@ -1,10 +1,11 @@
-/// Static special-item geometry verified against 26.3's container, shield and banner models
-/// and ModelPart.Cube. Entity UVs use 64-pixel skins; AssetModel uses 16-unit UV coordinates.
+/// Static special-item geometry verified against 26.3's baked models and ModelPart.Cube.
+/// Entity skins have their own dimensions; AssetModel uses 16-unit UV coordinates.
 enum SpecialItemModel: String {
     case chest = "minecraft:chest"
     case shulker = "minecraft:shulker_box"
     case shield = "minecraft:shield"
     case banner = "minecraft:banner"
+    case conduit = "minecraft:conduit"
 
     func material(_ definition: [String: Any], design: ItemBannerDesign?,
                   assets: GameAssets, budget: inout AssetReadBudget) throws -> AssetModel.Material {
@@ -14,6 +15,9 @@ enum SpecialItemModel: String {
         if self == .banner {
             guard let raw = definition["color"] as? String, let color = DyeColor(rawValue: raw) else { throw Invalid.asset }
             return try AssetPatternMaterial.banner(color: color, design: design, assets: assets, budget: &budget)
+        }
+        if self == .conduit {
+            return .init(texture: try AssetJSON.identifier("minecraft:entity/conduit/base"), forceTranslucent: false)
         }
         // Sheets' SpriteMapper preserves the identifier's namespace and prefixes its path.
         let name = try AssetJSON.identifier(definition["texture"])
@@ -36,6 +40,8 @@ enum SpecialItemModel: String {
         case .shield:
             boxes = [.init(SIMD3(-6, -11, -2), SIMD3(6, 11, -1), .zero),
                      .init(SIMD3(-1, -3, -1), SIMD3(1, 3, 5), SIMD2(26, 0))]
+        case .conduit:
+            boxes = [.init(SIMD3(repeating: -3), SIMD3(repeating: 3), .zero)]
         case .banner:
             let attachment = try definition["attachment"].map { raw in
                 guard let value = raw as? String, value == "ground" || value == "wall" else { throw Invalid.asset }
@@ -53,6 +59,9 @@ enum SpecialItemModel: String {
                               rotation: .init(origin: SIMD3(0, y, z), angles: .axis(.x, angle), rescale: false)))
             boxes = body
         }
+        // ConduitRenderer's shell uses a rectangular skin; the other supported models use 64×64.
+        let skinSize: SIMD2<Float> = self == .conduit ? SIMD2(32, 16) : SIMD2(repeating: 64)
+        let uvScale = SIMD4(16 / skinSize.x, 16 / skinSize.y, 16 / skinSize.x, 16 / skinSize.y)
         var result = [AssetModel.Element]()
         for box in boxes {
             let a = transform.applying(to: box.from)
@@ -60,7 +69,7 @@ enum SpecialItemModel: String {
             let from = SIMD3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z))
             let to = SIMD3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z))
             guard (0..<3).allSatisfy({ (-16...32).contains(from[$0]) && (-16...32).contains(to[$0]) }) else { throw Invalid.asset }
-            let size = (box.to - box.from) / 4, uv = box.uv / 4
+            let size = box.to - box.from, uv = box.uv
             let u = uv.x, v = uv.y, x = size.x, y = size.y, z = size.z
             let regions: [(AssetModel.Direction, SIMD4<Float>)] = [
                 (.down, SIMD4(u + z, v, u + z + x, v + z)),
@@ -73,7 +82,7 @@ enum SpecialItemModel: String {
             var faces = [AssetModel.Direction: AssetModel.Face]()
             for (direction, region) in regions {
                 let vertical = direction == .down || direction == .up
-                let face = AssetModel.Face(material: box.material ?? material, uv: region,
+                let face = AssetModel.Face(material: box.material ?? material, uv: region * uvScale,
                                            rotation: vertical ? 0 : 180, tintIndex: nil, cullFace: nil)
                 faces[transform.applying(to: direction)] = transform.applying(to: face, facing: direction)
             }
