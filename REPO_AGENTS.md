@@ -89,6 +89,9 @@ are not retained. These are in-memory values, with no persistence or file/task o
 UUID/fallback identity and checked location eligibility through core BlockPosition.mapCoordinates
 (floored X/Z fit Int32, supplied Y fits Int, unknown Y stays nil). Native map navigation and creature
 eligibility share this public helper; it does not enforce the game world border.
+The CLI uses `CreatureEntry.Group.group(for:)` for the same categories, including unnamed villagers,
+without applying the map's location filter: text listings retain records with unknown positions.
+Player-carried shoulder pets remain a client projection; totals include every decoded creature.
 Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
 player-carried projections remain in the app. The additive region/dimension APIs are available in v0.46.0;
 separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native

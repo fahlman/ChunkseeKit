@@ -24,6 +24,22 @@ import ChunkseeKit
         #expect(result.output.contains("3 minecraft:parrot\n"))
     }
 
+    @Test func unnamedUnownedShoulderPetStillUsesItsCarrierPosition() throws {
+        let root = try world()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try player(in: root, id: carrier, fields: [
+            "Dimension": .string("minecraft:overworld"), "Pos": position([-8.7, 64.9, -513.1]),
+            "ShoulderEntityLeft": .compound(["id": .string("minecraft:parrot"), "Health": .float(6),
+                                              "Pos": position([1, 70, 2])]),
+        ])
+
+        let result = try Fixtures.runCLI(root, command: "creatures")
+        #expect(result.status == 0)
+        #expect(result.output.contains("minecraft:parrot at (-9, 64, -514) on shoulder of \(carrier)\n"))
+        #expect(!result.output.contains("owned by") && !result.output.contains("at (1, 70, 2)"))
+        #expect(result.output.contains("1 minecraft:parrot\n"))
+    }
+
     @Test func carrierDimensionRestrictsTheListing() throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }

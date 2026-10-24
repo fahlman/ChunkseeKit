@@ -78,6 +78,36 @@ import ChunkseeKit
         #expect(!result.output.contains("Not a creature") && !result.output.contains("Other Dimension"))
     }
 
+    @Test func sharedCreatureCategoriesIncludeUnnamedVillagersWithoutHidingUnknownPositions() throws {
+        let root = try fixture(position: [1.25, 64, 2.5])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let villagerData = NBT.compound(["profession": .string("minecraft:farmer")])
+        let entities: [NBT] = [
+            .compound(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
+                       "Pos": .list([.double(-8.7), .double(64.9), .double(-513.1)])]),
+            .compound(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
+                       "Pos": .list([.double(.nan), .double(64), .double(2)])]),
+            .compound(["id": .string("minecraft:cat"), "Health": .float(10), "Owner": Fixtures.uuidInts(playerID),
+                       "Pos": .list([.double(4), .double(65), .double(6)])]),
+            .compound(["id": .string("minecraft:cow"), "Health": .float(10),
+                       "Pos": .list([.double(7), .double(66), .double(8)])]),
+        ]
+        try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
+            "DataVersion": .int(5023), "Entities": .list(entities),
+        ]))]), to: root.appendingPathComponent("dimensions/minecraft/overworld/entities/r.1.0.mca"))
+
+        let result = try Fixtures.runCLI(root, command: "creatures")
+        #expect(result.status == 0)
+        #expect(result.output.contains("minecraft:villager at (-9, 64, -514)\n"))
+        #expect(result.output.contains("minecraft:villager at unknown position\n"))
+        #expect(result.output.contains("minecraft:cat at (4, 65, 6) owned by \(playerID.uuidString.lowercased())\n"))
+        #expect(result.output.contains("minecraft:wolf \"Check Wolf\" at (1, 64, 2)\n"))
+        #expect(!result.output.contains("minecraft:cow at"))
+        for count in ["2 minecraft:villager", "1 minecraft:cat", "1 minecraft:cow", "1 minecraft:wolf"] {
+            #expect(result.output.contains("\(count)\n"))
+        }
+    }
+
     private var playerID: UUID { UUID(uuidString: "01234567-89ab-cdef-0123-456789abcdef")! }
 
     private func fixture(position: [Double]) throws -> URL {
