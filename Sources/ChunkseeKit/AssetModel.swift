@@ -15,6 +15,9 @@ public struct AssetModel: Sendable, Equatable {
     public struct Material: Sendable, Hashable {
         public let texture: Identifier
         public let forceTranslucent: Bool
+        /// Whole-image width divided by height for a verified static skin. Higher-resolution
+        /// skins retain this ratio. Nil leaves ordinary texture/frame layout unspecified.
+        public let staticTextureAspectRatio: Float?
         /// Composite these dyed textures over the base, in order, before projecting the model.
         /// Empty for ordinary materials. Decoding and alpha compositing remain client-owned.
         public let overlays: [Overlay]
@@ -25,10 +28,11 @@ public struct AssetModel: Sendable, Equatable {
             public let color: UInt32
         }
 
-        init(texture: Identifier, forceTranslucent: Bool, overlays: [Overlay] = []) {
+        init(texture: Identifier, forceTranslucent: Bool, overlays: [Overlay] = [], staticTextureAspectRatio: Float? = nil) {
             self.texture = texture
             self.forceTranslucent = forceTranslucent
             self.overlays = overlays
+            self.staticTextureAspectRatio = staticTextureAspectRatio
         }
     }
 

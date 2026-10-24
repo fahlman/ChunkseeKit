@@ -568,6 +568,17 @@ unknown kinds and the separate player-head renderer remain unavailable. No publi
 player-skin download, image decoder, cache, app renderer, artwork or world write is added.
 Published app adoption/native pictures remain on fahlman/Chunksee#390.
 
+The unreleased #207 additive `AssetModel.Material.staticTextureAspectRatio` records verified
+whole-skin width/height ratios. The special cuboid owner derives it from the same per-part skin
+layout as its UV conversion and copies the existing texture, translucency and overlay recipe.
+Conduit and skeleton/wither/creeper skins are 2:1; current other static skins are square. It does
+not prescribe pixel resolution. Ordinary generated/element textures retain nil because this
+reader has not established their frame layout. Clients can distinguish those ordinary textures
+from known rectangular static skins without importing game-type rules. Public tests cover every
+supported special family, ordinary absence and transformed pattern recipes; official PNG headers
+verify the ratios. No image decode, cache, artwork or world write is added. App adoption is in
+fahlman/Chunksee#421; the combined release including #206 needs a minor version bump.
+
 Ordinary element models preserve translations and unit axis-aligned half-turns through that same
 `AssetItemTransform` owner. Translation is in blocks and moves corners and rotation origins in
 resolved 16-unit model space. Half-turns remap face direction, UV orientation, culling and shade
