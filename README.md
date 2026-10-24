@@ -764,8 +764,8 @@ the saved `minecraft:trim.material` reference, or legacy `tag.Trim.material`. Mi
 uses the definition's fallback; removal/current values suppress legacy data. An inline material
 holder has no registry key and also uses the fallback, matching the game's `Holder.unwrapKey`.
 Malformed material/model values leave the selection unavailable. Only the material identity is
-read: pattern and tooltip fields do not choose an inventory picture, and this does not validate
-the full trim codec or resolve its registry. Names, counts, patterns and independent dye/potion
+read: trim-pattern and tooltip fields do not choose an inventory picture, and this does not validate
+the full trim codec or resolve its registry. Names, counts, trim patterns and independent dye/potion
 tints do not change this model key; apply those tints separately using the original stack. These additive
 selection APIs are unreleased for fahlman/Chunksee#390; no serialized field or rescan is added.
 
@@ -789,9 +789,21 @@ identities and short-pattern migration; intermediate lowercase `patterns` is als
 Invalid legacy dye IDs stay unknown. Limits are 4,096 layers and 16 MiB of pattern string data;
 the reader keeps every accepted layer rather than applying a renderer's layer limit.
 `DyeColor` is the common saved-name/legacy-ID owner, also used by pet collars. This computed
-reader changes no stored item or cache format. Pattern registry resolution, texture compositing
-and integration into `itemModelSelection` remain separate work; this API alone does not change
-the app's plain-shield pictures.
+reader changes no stored item or cache format. Picture selection and material resolution use
+the shared model API below; pixel decoding/compositing and the app's adoption remain separate.
+
+The unreleased #191 extension includes this design in `ItemModelSelection`. For the verified
+26.3 shield model, `GameAssets.itemModel(for:)` resolves named patterns from the supplied jar's
+`data/<namespace>/banner_pattern` JSON or uses saved inline assets. Its existing plate/handle
+geometry carries one `AssetModel.Material`: the patterned base skin plus ordered `overlays`,
+each with a texture ID and RGB multiplier. Clients composite the overlays over the base before
+projecting that geometry. Plain shields and `defaultItemModel` keep their existing plain skin.
+The first overlay uses the base dye (white when only patterns are saved), followed by at most
+16 saved patterns, matching the game's drawing limit. The full saved list stays in `bannerDesign`.
+Pattern JSON and overlays share the existing whole-item budget; missing, malformed or unsafe
+definitions stay unavailable. This interprets the supplied jar, not resource-pack layering or
+world registry overrides. Image decoding, compositing and cache-cost adoption remain app work
+on fahlman/Chunksee#390. Consumers must handle material overlays before adopting patterned images.
 
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;

@@ -12,9 +12,24 @@ public struct AssetModel: Sendable, Equatable {
         case elements([Element])
     }
 
-    public struct Material: Sendable, Equatable {
+    public struct Material: Sendable, Hashable {
         public let texture: Identifier
         public let forceTranslucent: Bool
+        /// Composite these dyed textures over the base, in order, before projecting the model.
+        /// Empty for ordinary materials. Decoding and alpha compositing remain client-owned.
+        public let overlays: [Overlay]
+
+        public struct Overlay: Sendable, Hashable {
+            public let texture: Identifier
+            /// Packed 0xRRGGBB multiplier; the texture supplies alpha.
+            public let color: UInt32
+        }
+
+        init(texture: Identifier, forceTranslucent: Bool, overlays: [Overlay] = []) {
+            self.texture = texture
+            self.forceTranslucent = forceTranslucent
+            self.overlays = overlays
+        }
     }
 
     public struct Layer: Sendable, Equatable {
