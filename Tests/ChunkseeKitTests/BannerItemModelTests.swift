@@ -41,7 +41,7 @@ import Testing
         let skin = try #require(flag.faces[.south]?.material)
         #expect(flag.faces.values.allSatisfy { $0.material == skin && $0.tintIndex == nil })
         #expect(elements.dropLast().flatMap { $0.faces.values }.allSatisfy {
-            $0.material.texture.description == "minecraft:entity/banner_base" && $0.material.overlays.isEmpty
+            $0.material.texture.description == "minecraft:entity/banner/banner_base" && $0.material.overlays.isEmpty
         })
         return skin
     }
@@ -64,7 +64,7 @@ import Testing
         for (dye, color) in zip(DyeColor.allCases, colors) {
             let reader = try assets(node(["type": "banner", "color": dye.rawValue]))
             let item = try #require(reader.defaultItemModel("sample")), skin = try material(item)
-            #expect(skin.texture.description == "minecraft:entity/banner_base" && !skin.forceTranslucent)
+            #expect(skin.texture.description == "minecraft:entity/banner/banner_base" && !skin.forceTranslucent)
             #expect(skin.overlays.count == 1 && skin.overlays[0].texture.description == "minecraft:entity/banner/base")
             #expect(skin.overlays[0].color == color)
             #expect(try reader.itemModel(for: selection(base: "magenta")) == item)

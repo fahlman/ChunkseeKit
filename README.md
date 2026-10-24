@@ -808,7 +808,7 @@ on fahlman/Chunksee#390. Consumers must handle material overlays before adopting
 The unreleased #197 extension resolves 26.3 banner special models through those same APIs.
 The definition chooses the base dye and ground (default) or wall attachment; a stack's base-color
 component does not override that dye. Only the cloth receives the dyed base and first sixteen
-saved patterns. Its support/pole keeps the plain `entity/banner_base` skin. The cloth retains the
+saved patterns. Its support/pole keeps the plain `entity/banner/banner_base` skin. The cloth retains the
 game's fixed inventory pose (phase zero), while the definition supplies node and GUI transforms.
 Existing cuboids, rotations and material overlays describe the whole banner; clients need no
 banner-specific renderer. A transform that would shear the tilted cloth stays unavailable.

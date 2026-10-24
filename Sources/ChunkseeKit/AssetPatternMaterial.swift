@@ -16,7 +16,7 @@ enum AssetPatternMaterial {
     static func banner(color: DyeColor, design: ItemBannerDesign?, assets: GameAssets,
                        budget: inout AssetReadBudget) throws -> AssetModel.Material {
         // BannerSpecialRenderer takes its base dye from the definition, not the stack component.
-        try patterned(base: "minecraft:entity/banner_base", folder: "banner", color: color,
+        try patterned(base: "minecraft:entity/banner/banner_base", folder: "banner", color: color,
                       layers: design?.layers ?? [], assets: assets, budget: &budget)
     }
 
