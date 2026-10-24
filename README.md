@@ -1288,7 +1288,7 @@ definition still supplies its transform and base GUI settings. Shared cuboids an
 it without a conduit-specific client renderer. Active world-conduit animation is not an item model.
 Missing images keep the client's normal fallback, and unverified game versions remain unavailable.
 
-The unreleased #203 extension supports **26.3 / 5023** copper-golem statues through these same
+The v0.67.1 extension supports **26.3 / 5023** copper-golem statues through these same
 cuboids and rotations. The selected special definition supplies one of four fixed poses and a
 full texture resource; all eight vanilla items (including waxed and weathered variants) are
 covered. Their supplied item transform and base GUI presentation are preserved. `textures/*.png`
@@ -1296,6 +1296,17 @@ resources keep their namespace and use the same client image-loading path as oth
 unsupported paths, poses and versions stay unavailable. The existing static selection policy
 uses the standing fallback for block-state selectors; it does not resolve a saved statue's pose
 or animate a live golem. No public API, cache format, image decoder or artwork is added.
+
+The unreleased #205 extension supports **26.3 / 5023** skeleton and wither-skeleton skulls,
+and zombie, creeper, dragon and piglin heads through the same cuboid/material APIs. The selected
+`minecraft:head` definition supplies the kind, optional texture override and item transform;
+the base model supplies its GUI presentation. The fixed phase-zero geometry includes the
+zombie's inflated outer skin, dragon jaw and mirrored skin regions, and piglin ears. These
+parts share the existing transforms, rotations and skin-size-aware UV mapping. The renderer's
+verified default skin IDs are used unless the definition provides a namespace-preserving
+`entity/` texture override. Nonzero animation, unknown kinds, player heads and unverified versions
+stay unavailable. Missing images keep the client's usual fallback. No player-skin download,
+new public API, image decoder, app renderer, artwork or world write is introduced.
 
 Selected ancestor and local transforms compose in parent-to-child order. They are baked into
 special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or

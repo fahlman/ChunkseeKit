@@ -497,8 +497,8 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot and copper-statue cuboids for selected special item
-definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
+`SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot,
+copper-statue and mob-head cuboids for selected special item definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
 shares SpriteMapper's namespace-preserving `entity/chest/` or `entity/shulker/` path prefix;
@@ -543,7 +543,7 @@ remain unavailable. Geometry, material paths and all defaults are checked agains
 models/registrations. No renderer, mutable cache, image decoder, artwork or world write is added.
 App adoption and native pictures remain on fahlman/Chunksee#390 after release.
 
-The unreleased #203 copper-golem-statue extension uses those same cuboids, deformations, face UVs
+The v0.67.1 copper-golem-statue extension uses those same cuboids, deformations, face UVs
 and element rotations. The selected definition supplies the required standing/sitting/running/star
 pose and full texture resource. It preserves the namespace while normalizing `textures/*.png` to
 the shared material format; other resource layouts stay unavailable. CopperGolemModel's four
@@ -554,6 +554,19 @@ are checked against the official jar. The existing block-state selector policy s
 static fallback (standing); this does not read saved block-state poses or simulate a live golem.
 There is no new public API, artwork, image decoder, app renderer, cache or world write. Published
 app adoption/native pictures remain separate on fahlman/Chunksee#390.
+
+The unreleased #205 mob-head extension resolves the six static `minecraft:head` kinds through
+that same geometry/material owner. Verified SkullModel, DragonHeadModel and PiglinHeadModel
+layers supply their phase-zero cuboids, inflations, scales and rotations; skin IDs come from
+SkullBlockRenderer's mapping. Explicit overrides preserve their namespace and use the renderer's
+`textures/entity/` path. Mirrored cuboids keep their bounds, swap east/west face materials and
+reverse U before the existing face rotation and item transform. This single shared rule handles
+the dragon's mirrored horns/nostrils, while the common part pose handles its scaled head and jaw.
+The public reader's baked corner/UV pairs, six texture hashes and supplied GUI transforms are
+checked against the official 26.3/5023 jar. Absent/zero animation is supported; nonzero animation,
+unknown kinds and the separate player-head renderer remain unavailable. No public API change,
+player-skin download, image decoder, cache, app renderer, artwork or world write is added.
+Published app adoption/native pictures remain on fahlman/Chunksee#390.
 
 Ordinary element models preserve translations and unit axis-aligned half-turns through that same
 `AssetItemTransform` owner. Translation is in blocks and moves corners and rotation origins in
