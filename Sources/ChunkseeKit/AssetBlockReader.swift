@@ -10,6 +10,7 @@ struct AssetBlockReader {
         try budget.consume(bytes: data.count)
         let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
         guard root["variants"] != nil || root["multipart"] != nil else { throw Invalid.asset }
+        let seedOffset = BlockModelSeed.offset(for: state, gameDataVersion: assets.version.dataVersion)
         if let raw = root["variants"] {
             let variants = try AssetJSON.object(raw)
             guard variants.count <= 4096 else { throw Invalid.asset }
@@ -24,7 +25,8 @@ struct AssetBlockReader {
                 }
             }
             if let selected {
-                return .init(parts: [try part(selected, budget: &budget, models: &models)])
+                return .init(parts: [try part(selected, budget: &budget, models: &models)],
+                             seedOffset: seedOffset, isMultipart: false)
             }
         }
         // Explicit variants take precedence; multipart fills the remaining states.
@@ -42,7 +44,7 @@ struct AssetBlockReader {
             guard let matches else { throw Invalid.asset }
             if matches { parts.append(try part(apply, budget: &budget, models: &models)) }
         }
-        return .init(parts: parts)
+        return .init(parts: parts, seedOffset: seedOffset, isMultipart: true)
     }
 
     private func variantMatches(_ selector: String, state: BlockState) throws -> Bool? {
@@ -113,7 +115,7 @@ struct AssetBlockReader {
             let model = try AssetModelReader(assets: assets).read(id.description, budget: &budget)
             return .init(modelID: id, model: model, weight: weight, rotation: rotation, uvLock: uvLock)
         }
-        return .init(alternatives: alternatives)
+        return .init(alternatives: alternatives, totalWeight: Int32(total))
     }
 
     private func angle(_ raw: Any?) throws -> Int {

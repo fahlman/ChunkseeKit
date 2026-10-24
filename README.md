@@ -1353,8 +1353,15 @@ pixel arithmetic; no second PNG/archive reader or mutable color cache is added.
 an `AssetBlock`. Explicit variants take precedence over multipart selectors. All matching
 multipart pieces are retained, in definition order. Each part contains one or more weighted
 alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and UV-lock flag.
-The rotations remain separate from the model's inventory transform. This API preserves the
-choices; it does not choose a random alternative or project a top face.
+The rotations remain separate from the model's inventory transform. The resolved value preserves
+all choices for overview colors. Its additive, unreleased `selectedAlternatives(at:)` returns one
+alternative per part for a whole `BlockPosition`, without rereading resources or projecting faces.
+Selection is verified for vanilla 26.3/5023 only. It uses the game's position seed, weighted draw,
+and multipart reseeding; beds share their head position, and doors/double plants share the lower
+position. The shared legacy random generator preserves Java's signed overflow and rejection rules.
+All three input coordinates must fit Int32. Unknown IDs/versions and missing seed-driving properties
+return nil while the existing `parts` remain available. Modded block behavior is not resolved.
+The verified block-ID catalog classifies seed behavior only; it supplies no omitted state defaults.
 
 `AssetModel.Face.textureCoordinates` returns the four normalized UV coordinates in original
 face-vertex order after the face's own rotation. The additive, unreleased
@@ -1372,6 +1379,9 @@ if let models = assets.blockModel(for: horizontalLog) {
             print(choice.modelID, choice.weight, choice.rotation, choice.uvLock)
         }
     }
+    let position = BlockPosition(blockX: 10, blockY: 64, blockZ: -4)
+    let selected = models.selectedAlternatives(at: position)
+    print(selected?.map(\.modelID))
 }
 ```
 
@@ -1391,8 +1401,8 @@ multipart result remains empty. Reads share a 16 MiB JSON / 4,096-element budget
 4,096 nodes/terms and 64 nested levels. Weighted alternatives have positive weights with a
 signed 32-bit total; a standalone model ignores the weight field, as in the game.
 
-This additive API reuses the existing archive/model/texture owners. Image decoding, position-based
-randomization, caching, tinting, color averaging and map drawing remain client/adoption work on
+This additive API reuses the existing archive/model/texture owners. Image decoding, caching,
+tinting, color averaging and map drawing remain client/adoption work on
 fahlman/Chunksee#363. No world data, persisted shape or RegionFacts interpretation changes.
 
 ### Raw NBT

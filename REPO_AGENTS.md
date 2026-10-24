@@ -544,6 +544,18 @@ is additionally bounded to 256 selected models, 4,096 selectors/condition nodes 
 coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
 No world, serialized model or RegionFacts version change.
 
+`AssetBlock.selectedAlternatives(at:)` adds verified 26.3 world-position selection to that same
+resolved model. The reader retains the multipart distinction, total weights and a compact seed
+offset; selection rereads no resources and keeps the overview alternatives intact. BlockModelSeed
+owns the 1,286 registered blocks' verified seed behavior: 1,237 ordinary, 17 beds and 32 doors/double
+plants. This catalog supplies no registry/default property values. Unknown IDs/versions and missing
+needed half/facing properties stay unavailable. Coordinates are checked before Java's intentional
+Int32 offsets and Int64 seed mixing. LegacyRandom owns the weighted draw and signed nextLong
+needed for multipart's reset-before-each-part rule. Official BlockState.getSeed and actual
+WeightedVariants/MultiPartModel collectParts calls establish expected selections; synthetic public
+API tests need no jar. This additive API is unreleased on #193 for fahlman/Chunksee#363. Images,
+cache format, close-zoom drawing and timing remain app work after a reviewed release.
+
 `GameAssets.palettedTexture(_:in:)` interprets one 26.3/5023 atlas's generated palette sprites
 through the existing bounded archive reader. `AssetPalettedTexture` carries the original base,
 key-palette and replacement-palette texture IDs; palette resources use the `palettes/` prefix.

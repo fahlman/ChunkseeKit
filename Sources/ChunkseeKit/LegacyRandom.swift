@@ -1,4 +1,4 @@
-/// The game's 48-bit legacy generator, shared by slime chunks and fixed biome noise.
+/// The game's 48-bit legacy generator, shared by slime chunks, biome noise and block models.
 struct LegacyRandom {
     private var state: UInt64
     private static let multiplier: UInt64 = 25_214_903_917
@@ -27,5 +27,12 @@ struct LegacyRandom {
 
     mutating func nextDouble() -> Double {
         Double((next(26) << 27) + next(27)) / 9_007_199_254_740_992
+    }
+
+    mutating func nextLong() -> Int64 {
+        // Java sign-extends both int draws before shifting/adding; the low half is not unsigned.
+        let high = Int64(Int32(bitPattern: UInt32(next(32))))
+        let low = Int64(Int32(bitPattern: UInt32(next(32))))
+        return (high << 32) &+ low
     }
 }
