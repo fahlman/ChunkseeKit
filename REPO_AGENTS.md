@@ -677,6 +677,19 @@ existing static policy. Selection runs outside the recursive visitor's stack fra
 client adoption follows release on fahlman/Chunksee#390. Actual official-class comparisons and
 public-path tests cover numeric precision, missing/removal, malformed/bounded values, mixed and
 array lists, Unicode cases, signed zero/NaN, duplicate thresholds, tint defaults and cached stacks.
+The unreleased #189 prerequisite exposes `ItemStack.bannerDesign`, a typed optional base dye
+and ordered layers with named or inline pattern holders. Current base_color/banner_patterns
+components and explicit removals take per-field precedence over legacy BlockEntityTag values.
+BannerPatternLayers, BannerPattern, DyeColor, BannerPatternFormatFix and the componentization
+fix establish the 26.3 field shapes and 41 short-ID migrations. Missing values stay known empty;
+unreadable fields, ambiguous simultaneous legacy list spellings, invalid numeric dye IDs and
+over-budget input stay unavailable. Bounds are 4,096 layers and 16 MiB of pattern strings; no
+render-layer limit or invented white base is applied. DyeColor owns the saved names and checked
+legacy-ID ordering shared with the unchanged pet collar reader. Existing retained components
+already contain these facts, so neither ItemStack Codable nor RegionFacts interpretation changes.
+Registry resolution, sprite composition and selection/image-cache integration remain separate
+on fahlman/Chunksee#390. No artwork, image decoder, UI, mutable cache or world write is added.
+
 Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
 legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy
 fallback. Dye vectors support finite 0...1 channels with the game's Float/floor conversion; other
