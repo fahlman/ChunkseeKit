@@ -264,6 +264,12 @@ public struct Chunk: Sendable {
     public static let keysNotNeededForTerrainAndLight: Set<String> = keysNotNeededForTerrain
         .subtracting(["BlockLight", "SkyLight", "isLightOn"])
 
+    /// Opt-in biome read omitting block palettes and heightmaps as well as terrain's unused
+    /// entries. Construct a Chunk from the result and retain its biomeSnapshot. Skipped block
+    /// data is not validated; biome palettes, section heights and chunk identity still are.
+    public static let keysNotNeededForBiomes: Set<String> = keysNotNeededForTerrain
+        .union(["block_states", "Heightmaps"])
+
     public var isFullyGenerated: Bool { status == "minecraft:full" || status == "full" }
 
     /// Saved block light at chunk-local X/Z and absolute Y, only when marked valid. Missing
