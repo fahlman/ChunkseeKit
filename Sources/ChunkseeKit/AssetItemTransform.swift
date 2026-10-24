@@ -19,9 +19,7 @@ struct AssetItemTransform: Equatable {
             let a = applying(to: element.from), b = applying(to: element.to)
             var from = a, to = b
             for axis in 0..<3 where scale[axis] < 0 { swap(&from[axis], &to[axis]) }
-            let rotation = element.rotation.map {
-                AssetModel.Rotation(origin: applying(to: $0.origin), angles: applying(to: $0.angles), rescale: $0.rescale)
-            }
+            let rotation = try element.rotation.map { try applying(to: $0) }
             guard [from, to, rotation?.origin ?? .zero].allSatisfy({ point in
                 (0..<3).allSatisfy { point[$0].isFinite }
             }) else { throw Invalid.asset }
@@ -57,13 +55,25 @@ struct AssetItemTransform: Equatable {
                      tintIndex: face.tintIndex, cullFace: face.cullFace.map { applying(to: $0) })
     }
 
-    private func applying(to angles: AssetModel.Rotation.Angles) -> AssetModel.Rotation.Angles {
-        switch angles {
+    func applying(to rotation: AssetModel.Rotation) throws -> AssetModel.Rotation {
+        let angles: AssetModel.Rotation.Angles
+        let signs = SIMD3<Float>(scale.x < 0 ? -1 : 1, scale.y < 0 ? -1 : 1, scale.z < 0 ? -1 : 1)
+        switch rotation.angles {
         case .axis(let axis, let angle):
-            let sign = switch axis { case .x: scale.x; case .y: scale.y; case .z: scale.z }
-            return .axis(axis, angle * sign)
-        case .eulerXYZ(let value): return .eulerXYZ(value * scale)
+            let (first, second, sign) = switch axis {
+            case .x: (scale.y, scale.z, signs.x)
+            case .y: (scale.x, scale.z, signs.y)
+            case .z: (scale.x, scale.y, signs.z)
+            }
+            // Unequal perpendicular scaling would shear the rotated box. The model's rotation
+            // cannot represent that, so leave such selected special transforms unavailable.
+            guard abs(first) == abs(second) else { throw Invalid.asset }
+            angles = .axis(axis, angle * sign)
+        case .eulerXYZ(let value):
+            guard abs(scale.x) == abs(scale.y), abs(scale.y) == abs(scale.z) else { throw Invalid.asset }
+            angles = .eulerXYZ(value * signs)
         }
+        return .init(origin: applying(to: rotation.origin), angles: angles, rescale: rotation.rescale)
     }
 
     func appending(_ raw: Any?) throws -> Self {

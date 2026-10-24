@@ -497,7 +497,7 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`SpecialItemModel` supplies closed single-chest, shulker and plain-shield cuboids for selected special item
+`SpecialItemModel` supplies closed single-chest, shulker, shield and banner cuboids for selected special item
 definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
@@ -711,7 +711,7 @@ and app cache adoption remain on fahlman/Chunksee#390. No artwork, image decoder
 or world write is added.
 
 The unreleased #191 extension includes bannerDesign in the shared ItemModelSelection identity.
-AssetShieldMaterial resolves named definitions from the supplied jar's banner_pattern data
+AssetPatternMaterial resolves named definitions from the supplied jar's banner_pattern data
 resources and saved inline assets through existing identifier/path/JSON owners. The verified
 26.3 special-model path emits one existing plate/handle geometry with a material carrying the
 base skin and ordered dyed texture overlays. DyeColor owns the verified texture multipliers;
@@ -724,6 +724,18 @@ App adoption on fahlman/Chunksee#390 must composite these textures before projec
 and account for retained design/overlay data in its existing caches. Resource-pack layering
 and world registry overrides remain outside this supplied-jar API. Official BannerRenderer,
 ShieldSpecialRenderer, Sheets and DyeColor establish the recipe; no artwork or UI is added.
+
+The unreleased #197 banner extension uses that same pattern recipe and special-model geometry
+owner. BannerSpecialRenderer's definition supplies the base dye and optional ground/wall
+attachment; a saved base-color component does not choose the banner's dye. BannerRenderer's
+dyed base and first sixteen patterns apply only to the cloth; support/pole faces retain the plain
+banner_base skin. BannerModel/BannerFlagModel supply the cuboids and fixed phase-zero inventory
+tilt. The existing transform owner preserves that angle under uniform perpendicular scaling and
+rejects transforms that would shear it. The node's translation/scale and inherited GUI settings
+remain separate. All materials share existing pattern/path/JSON budgets and version gating.
+No new public enum case, item catalog, image decoder, cache, app renderer or saved-fact change is
+introduced. Official baked model and submitted-pattern comparisons accompany synthetic public
+API tests; app pictures and published adoption remain separate on fahlman/Chunksee#390.
 
 Its computed `dyedColor` and `customPotionColor` expose explicit saved RGB overrides, including
 legacy tags and the older dye wrapper. Removed/malformed-present components suppress legacy

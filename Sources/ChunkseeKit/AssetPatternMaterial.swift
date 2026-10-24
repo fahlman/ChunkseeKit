@@ -2,18 +2,32 @@ import Foundation
 
 /// ShieldSpecialRenderer/BannerRenderer's 26.3 material recipe. The existing special reader
 /// checks the version and supplies the common item budget; no pixels or geometry are duplicated.
-enum AssetShieldMaterial {
-    static func read(_ design: ItemBannerDesign?, assets: GameAssets,
-                     budget: inout AssetReadBudget) throws -> AssetModel.Material {
+enum AssetPatternMaterial {
+    static func shield(_ design: ItemBannerDesign?, assets: GameAssets,
+                       budget: inout AssetReadBudget) throws -> AssetModel.Material {
         guard let design, design.baseColor != nil || !design.layers.isEmpty else {
             return .init(texture: try AssetJSON.identifier("minecraft:entity/shield/shield_base_nopattern"),
                          forceTranslucent: false)
         }
+        return try patterned(base: "minecraft:entity/shield/shield_base", folder: "shield",
+                             color: design.baseColor ?? .white, layers: design.layers, assets: assets, budget: &budget)
+    }
+
+    static func banner(color: DyeColor, design: ItemBannerDesign?, assets: GameAssets,
+                       budget: inout AssetReadBudget) throws -> AssetModel.Material {
+        // BannerSpecialRenderer takes its base dye from the definition, not the stack component.
+        try patterned(base: "minecraft:entity/banner/banner_base", folder: "banner", color: color,
+                      layers: design?.layers ?? [], assets: assets, budget: &budget)
+    }
+
+    private static func patterned(base: String, folder: String, color: DyeColor,
+                                  layers: [ItemBannerDesign.Layer], assets: GameAssets,
+                                  budget: inout AssetReadBudget) throws -> AssetModel.Material {
         var overlays: [AssetModel.Material.Overlay] = [
-            .init(texture: try texture("minecraft:base"), color: (design.baseColor ?? .white).textureDiffuseRGB26_3)
+            .init(texture: try texture("minecraft:base", folder: folder), color: color.textureDiffuseRGB26_3)
         ]
         // The save retains every layer, but BannerRenderer draws only the first sixteen.
-        for layer in design.layers.prefix(16) {
+        for layer in layers.prefix(16) {
             let asset: Identifier
             switch layer.pattern {
             case .reference(let reference):
@@ -28,16 +42,16 @@ enum AssetShieldMaterial {
                 guard root["translation_key"] is String else { throw Invalid.pattern }
             case .inline(let assetID, _): asset = assetID
             }
-            overlays.append(.init(texture: try texture(asset.description), color: layer.color.textureDiffuseRGB26_3))
+            overlays.append(.init(texture: try texture(asset.description, folder: folder), color: layer.color.textureDiffuseRGB26_3))
         }
         try budget.consume(elements: overlays.count)
-        return .init(texture: try AssetJSON.identifier("minecraft:entity/shield/shield_base"),
+        return .init(texture: try AssetJSON.identifier(base),
                      forceTranslucent: false, overlays: overlays)
     }
 
-    private static func texture(_ asset: String) throws -> Identifier {
+    private static func texture(_ asset: String, folder: String) throws -> Identifier {
         guard let id = GameAssets.resourceID(asset),
-              let texture = GameAssets.resourceID("\(id.namespace):entity/shield/\(id.path)") else { throw Invalid.pattern }
+              let texture = GameAssets.resourceID("\(id.namespace):entity/\(folder)/\(id.path)") else { throw Invalid.pattern }
         return texture
     }
 

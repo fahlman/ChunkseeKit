@@ -805,6 +805,15 @@ definitions stay unavailable. This interprets the supplied jar, not resource-pac
 world registry overrides. Image decoding, compositing and cache-cost adoption remain app work
 on fahlman/Chunksee#390. Consumers must handle material overlays before adopting patterned images.
 
+The unreleased #197 extension resolves 26.3 banner special models through those same APIs.
+The definition chooses the base dye and ground (default) or wall attachment; a stack's base-color
+component does not override that dye. Only the cloth receives the dyed base and first sixteen
+saved patterns. Its support/pole keeps the plain `entity/banner/banner_base` skin. The cloth retains the
+game's fixed inventory pose (phase zero), while the definition supplies node and GUI transforms.
+Existing cuboids, rotations and material overlays describe the whole banner; clients need no
+banner-specific renderer. A transform that would shear the tilted cloth stays unavailable.
+Unknown versions, malformed definitions and unresolved selected patterns retain the usual fallback.
+
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
 the dye reader also accepts the older `rgb` wrapper and current three-channel vectors. Removed
