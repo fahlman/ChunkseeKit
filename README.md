@@ -533,7 +533,9 @@ Each `MonsterSpawnLight` answers whether valid saved channels **can pass the ord
 light check**. This is not a probability or a guarantee that a mob can spawn. The separate block
 ceiling and the raw-brightness threshold both apply; a ceiling of 15 does not disable the latter.
 `canPass(in:x:y:z:)` takes chunk-local X/Z and absolute Y, preserves unknown/stale light, and
-requires a saved sky array only when that dimension has skylight. It includes the game's
+requires a saved sky array only when that dimension has skylight and block light has not
+already ruled out a pass. Missing sky light never makes a known excessive block value unknown.
+It includes the game's
 horizontal brightness bounds. To opt in when decoding, use `Chunk.keysNotNeededForTerrainAndLight`;
 the original terrain read profile is unchanged. This additive prerequisite is tracked on
 fahlman/ChunkseeKit#185; the app overlay and its checks remain on fahlman/Chunksee#86.

@@ -353,13 +353,17 @@ is an independent gameplay projection; malformed visual and gameplay attributes 
 each other. EnvironmentAttributeMap owns their shared JSON/NBT entry codecs, normalization,
 alias rejection and bounds. TimelineInput owns the common header and periodic sampling, while
 the existing WorldTimelineReader is generic over the projection so tag/pack semantics remain
-single-owned. Existing visual lighting still ignores gameplay tracks and time markers.
+single-owned. Its query guard and world/assets initializer also own the enabled-pack bound
+and verified vanilla-jar selection; both projections keep lazy resource reads. Existing visual
+lighting still ignores gameplay tracks and time markers.
 
 MonsterLightTimeline evaluates selected gameplay tracks at the first declared midnight on one
 clock and period; missing/conflicting markers, unsupported tracks or another relevant clock/period stay unknown.
 Static levels need no marker and no-skylight dimensions need no sky data. This deliberately does
 not infer future alignment across clocks or apply saved time/weather. Final gameplay clamping,
 integer sky darkening, both monster light gates and horizontal brightness bounds stay in Kit.
+A valid block-light value can rule out a pass without a sky value; stale chunk light remains
+unknown regardless of either channel.
 The result means some random draws can pass the ordinary light check, not spawn probability or
 full spawnability. Chunk's opt-in terrain-plus-light profile retains only the light channels and
 validity flag beyond ordinary terrain; missing/stale arrays never become zero. No app parser,

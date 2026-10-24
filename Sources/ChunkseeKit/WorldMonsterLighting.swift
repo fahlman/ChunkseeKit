@@ -13,7 +13,7 @@ extension World {
     /// with savedSkyLighting. Per-query resources only; no chunks, persistent cache or world writes.
     public func nightMonsterLighting(assets: GameAssets?) throws -> [String: MonsterSpawnLight] {
         try Task.checkCancellation()
-        guard level.enabledDataPacks.count <= 64 else { return [:] }
+        guard WorldTimelineReader<MonsterLightTimeline>.allowsQuery(in: self) else { return [:] }
         let types = try dimensionTypes(assets: assets)
         var reader: WorldTimelineReader<MonsterLightTimeline>?
         var result: [String: MonsterSpawnLight] = [:]
@@ -30,10 +30,7 @@ extension World {
                 continue
             }
             if reader == nil {
-                let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
-                    .zip(assets.resources)
-                } else { .unavailable }
-                reader = try WorldTimelineReader(packs: WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla))
+                reader = try WorldTimelineReader(world: self, assets: assets)
             }
             guard let timelines = try reader?.read(time.timelines),
                   let value = MonsterLightTimeline.nightLevel(timelines, base: base) else { continue }

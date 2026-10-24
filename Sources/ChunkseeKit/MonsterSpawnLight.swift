@@ -23,17 +23,18 @@ public struct MonsterSpawnLight: Sendable, Equatable {
         } else { skyDarkening = nil }
     }
 
-    /// Saved channels must be valid 0...15 values. Sky light is required only when this
-    /// dimension has it. The first random sky check can pass for every such sky value (0...31
+    /// Saved block light must be valid 0...15. Sky light is required only when this
+    /// dimension has it and block light has not already ruled out spawning. The first random sky check can pass for every such sky value (0...31
     /// random range); the threshold's upper bound answers whether the later check can pass.
     public func canPass(blockLight: Int?, skyLight: Int?, at position: BlockPosition) -> Bool? {
         guard let blockLight, (0...15).contains(blockLight) else { return nil }
+        if blockLightLimit < 15, blockLight > blockLightLimit { return false }
+        if blockLight > maximumRawLight { return false }
         let sky: Int
         if hasSkylight {
             guard let skyLight, (0...15).contains(skyLight), let skyDarkening else { return nil }
             sky = skyLight - skyDarkening
         } else { sky = 0 }
-        if blockLightLimit < 15, blockLight > blockLightLimit { return false }
         // LevelReader uses brightness 15 outside these horizontal bounds, independently of
         // the saved light and the later full spawn-position checks.
         let inBounds = (-30_000_000..<30_000_000).contains(position.x)

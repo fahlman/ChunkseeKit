@@ -39,7 +39,18 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
     private var remainingBytes = 64 * 1024 * 1024
     private var remainingWork = 65_536
 
-    init(packs: [WorldResourcePack]) throws {
+    /// Both projections reject an over-budget query before decoding dimension definitions.
+    /// Construction remains lazy: static dimensions do not need resource files or registries.
+    static func allowsQuery(in world: World) -> Bool { world.level.enabledDataPacks.count <= 64 }
+
+    init(world: World, assets: GameAssets?) throws {
+        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
+            .zip(assets.resources)
+        } else { .unavailable }
+        try self.init(packs: WorldResourcePack.load(enabled: world.level.enabledDataPacks, in: world.url, vanilla: vanilla))
+    }
+
+    private init(packs: [WorldResourcePack]) throws {
         timelineResources = try WorldResourcePack.Registry(directory: "timeline", in: packs)
         tagResources = try WorldResourcePack.Registry(directory: "tags/timeline", in: packs)
     }

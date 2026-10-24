@@ -57,6 +57,49 @@ import Testing
         #expect(rules.canPass(blockLight: 0, skyLight: 16, at: point) == nil)
     }
 
+    @Test func blockLightCanRuleOutSpawningEvenWhenSkyLightIsUnknown() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let rules = try world(root, types: ["test:ceiling": definition(), "test:raw": definition(limit: 15, threshold: 7)])
+            .nightMonsterLighting(assets: nil)
+        for (id, bright) in [("test:ceiling", 1), ("test:raw", 8)] {
+            let rule = try #require(rules[id])
+            #expect(rule.canPass(blockLight: bright, skyLight: nil, at: point) == false)
+            for sky in 0...15 { #expect(rule.canPass(blockLight: bright, skyLight: sky, at: point) == false) }
+            let bytes = [Int8](repeating: Int8(bitPattern: UInt8(bright | bright << 4)), count: 2048)
+            #expect(try rule.canPass(in: lightChunk(block: bytes, sky: nil), x: 0, y: 0, z: 0) == false)
+            #expect(try rule.canPass(in: lightChunk(block: bytes, sky: nil, valid: false), x: 0, y: 0, z: 0) == nil)
+            #expect(rule.canPass(blockLight: 0, skyLight: nil, at: point) == nil)
+        }
+    }
+
+    @Test func bothProjectionsShareTheEarlyPackBoundAndVanillaVersionGate() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let types = ["test:static": definition(), "test:tracked": definition(extra: ["timelines": .string("test:night")])]
+        let current = try world(root, types: types)
+        let good = try timeline("night", marker: 50, extra: ["tracks": [
+            "gameplay/sky_light_level": ["keyframes": [["ticks": 0, "value": 4]]],
+            "visual/sun_angle": ["keyframes": [["ticks": 0, "value": 25]]]
+        ]])
+        try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([
+            "test:clock": .compound(["total_ticks": .long(0)])
+        ])]), to: root.appendingPathComponent("data/minecraft/world_clocks.dat"))
+        for version in [5022, 5023] {
+            let jar = try #require(GameAssets(data: Data(TestZIP.zip([
+                .init(path: "version.json", text: "{\"id\":\"test\",\"world_version\":\(version)}"), good
+            ]))))
+            let expected = version == 5023 ? ["test:static", "test:tracked"] : ["test:static"]
+            #expect(try current.savedSkyLighting(assets: jar).keys.sorted() == expected)
+            #expect(try current.nightMonsterLighting(assets: jar).keys.sorted() == expected)
+        }
+        let excessive = try world(root, types: types, packs: (0..<65).map { "file/pack\($0)" })
+        // An early rejection must not touch a damaged external dimension-settings file.
+        try Fixtures.write([255, 2, 1], to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
+        #expect(try excessive.savedSkyLighting(assets: nil).isEmpty)
+        #expect(try excessive.nightMonsterLighting(assets: nil).isEmpty)
+    }
+
     @Test func customMidnightAndGameplayTrackNeverUseSavedClockOrVisualBrightness() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
