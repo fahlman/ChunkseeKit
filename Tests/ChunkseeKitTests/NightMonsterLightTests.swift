@@ -98,7 +98,7 @@ import Testing
     @Test func missingAmbiguousAndDifferentClockMidnightsRemainUnknown() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let names = ["absent", "invalid", "aliases", "other_clock", "two_nights", "good"]
+        let names = ["absent", "invalid", "aliases", "other_clock", "other_period", "two_nights", "good"]
         let world = try world(root, types: Dictionary(uniqueKeysWithValues: names.map { name in
             ("test:" + name, definition(extra: ["timelines": .string("#test:" + name)]))
         }))
@@ -107,9 +107,11 @@ import Testing
             timeline("aliases", marker: 50, extra: ["time_markers": ["midnight": 50, "minecraft:midnight": 60]]),
             timeline("first", marker: 50), timeline("second", marker: 60),
             timeline("other", clock: "test:other", marker: nil),
+            timeline("other_period", marker: nil, extra: ["period_ticks": 200]),
             timeline("unrelated", clock: "test:other", marker: nil, extra: ["tracks": ["visual/sun_angle": "bad"]]),
             tag("absent", ["test:absent"]), tag("invalid", ["test:invalid"]), tag("aliases", ["test:aliases"]),
-            tag("other_clock", ["test:first", "test:other"]), tag("two_nights", ["test:first", "test:second"]),
+            tag("other_clock", ["test:first", "test:other"]), tag("other_period", ["test:first", "test:other_period"]),
+            tag("two_nights", ["test:first", "test:second"]),
             tag("good", ["test:first", "test:unrelated"])
         ])
         #expect(try world.nightMonsterLighting(assets: jar).keys.sorted() == ["test:good"])

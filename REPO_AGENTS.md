@@ -356,7 +356,7 @@ the existing WorldTimelineReader is generic over the projection so tag/pack sema
 single-owned. Existing visual lighting still ignores gameplay tracks and time markers.
 
 MonsterLightTimeline evaluates selected gameplay tracks at the first declared midnight on one
-clock; missing/conflicting markers, unsupported tracks or another relevant clock stay unknown.
+clock and period; missing/conflicting markers, unsupported tracks or another relevant clock/period stay unknown.
 Static levels need no marker and no-skylight dimensions need no sky data. This deliberately does
 not infer future alignment across clocks or apply saved time/weather. Final gameplay clamping,
 integer sky darkening, both monster light gates and horizontal brightness bounds stay in Kit.

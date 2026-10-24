@@ -523,7 +523,7 @@ and light arrays, so ordinary terrain reads do no extra lighting work. No propag
 `World.nightMonsterLighting(assets:)` supplies a clear-night planning snapshot for each supported
 26.3 dimension. It reads the separate gameplay sky-light attribute and applies the dimension's
 selected timelines at their first declared `minecraft:midnight`, then uses the game's final
-clamping and integer sky darkening. All relevant tracks must share that midnight's clock;
+clamping and integer sky darkening. All relevant tracks must share that midnight's clock and period;
 missing or conflicting markers and other relevant clocks remain unavailable. Static sky levels
 need no marker, and dimensions without skylight need no sky projection. Saved clock time,
 weather, later nights and a complete game registry are not simulated. Existing visual lighting

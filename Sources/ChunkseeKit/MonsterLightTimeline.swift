@@ -48,7 +48,7 @@ struct MonsterLightTimeline: WorldTimelineProjection {
         for timeline in timelines where timeline.hasLightTrack {
             // This snapshot is the first declared midnight on one clock. Other relevant
             // clocks have no implied matching time and must not quietly become tick zero.
-            guard timeline.clockID == midnight.clock,
+            guard timeline.clockID == midnight.clock, timeline.periodTicks == midnight.period,
                   let next = try? timeline.sky?.applying(
                     at: TimelineInput.sampleTime(Int64(midnight.ticks), period: timeline.periodTicks), to: value) else { return nil }
             value = next
