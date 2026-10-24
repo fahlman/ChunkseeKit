@@ -95,7 +95,6 @@ import Testing
         }
         var missing = node(); missing["model"] = ["type": "head"]
         #expect(try assets(missing).defaultItemModel("pack:sample") == nil)
-        #expect(try assets(node(extra: ["type": "player_head"])).defaultItemModel("pack:sample") == nil)
     }
 
     @Test func versionsTransformsAndWholeItemBudgetsUseTheExistingLimits() throws {

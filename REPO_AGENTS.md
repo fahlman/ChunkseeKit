@@ -564,9 +564,22 @@ reverse U before the existing face rotation and item transform. This single shar
 the dragon's mirrored horns/nostrils, while the common part pose handles its scaled head and jaw.
 The public reader's baked corner/UV pairs, six texture hashes and supplied GUI transforms are
 checked against the official 26.3/5023 jar. Absent/zero animation is supported; nonzero animation,
-unknown kinds and the separate player-head renderer remain unavailable. No public API change,
+unknown kinds remain unavailable. No public API change,
 player-skin download, image decoder, cache, app renderer, artwork or world write is added.
 Published app adoption/native pictures remain on fahlman/Chunksee#390.
+
+The unreleased #209 player-head extension adds `ItemStack.headSkin` and the matching
+`ItemModelSelection.headSkin` identity. Current profile.texture supplies a local resource;
+missing/removed profiles use the verified unprofiled default and other profiles remain unresolved.
+Current components/removal take precedence over legacy SkullOwner. Only relevant picture fields
+are read, not the complete account codec; malformed relevant fields stay unavailable, with a
+16 MiB retained-identifier bound. ResolvableProfile/PlayerSkin.Patch and ClientAsset.ResourceTexture
+establish the flat component shape and texture path; DefaultPlayerSkin supplies slim Steve.
+The separate 26.3/5023 player-head renderer shares SkullModel's humanoid boxes with zombie heads,
+the existing geometry/UV/transform/budget owner, and the verified translucent material. No guessed
+UUID skin, online request, downloaded-skin-cache access, app renderer or world write is added.
+This additive API requires a minor release and separate app adoption on fahlman/Chunksee#390;
+unresolved online skins keep that broader issue open.
 
 The unreleased #207 additive `AssetModel.Material.staticTextureAspectRatio` records verified
 whole-skin width/height ratios. The special cuboid owner derives it from the same per-part skin

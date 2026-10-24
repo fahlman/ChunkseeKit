@@ -5,6 +5,25 @@ extension SpecialItemModel {
         let kind: Kind
         let material: AssetModel.Material
 
+        static func playerMaterial(_ skin: ItemHeadSkin) throws -> AssetModel.Material {
+            let texture: Identifier
+            switch skin {
+            case .defaultSkin:
+                // DefaultPlayerSkin.getDefaultSkin is entry 6, slim Steve, in 26.3.
+                texture = try AssetJSON.identifier("minecraft:entity/player/slim/steve")
+            case .resource(let resource): texture = try AssetJSON.identifier(resource.description)
+            case .unresolved: throw Invalid.asset
+            }
+            // PlayerSkinRenderCache uses SkullBlockRenderer's translucent skin material.
+            return .init(texture: texture, forceTranslucent: true)
+        }
+
+        /// SkullModel.createHumanoidHeadLayer is shared by zombie and player heads.
+        static var humanoidBoxes: [Box] {
+            [.init(SIMD3(-4, -8, -4), SIMD3(4, 0, 4), .zero),
+             .init(SIMD3(-4, -8, -4), SIMD3(4, 0, 4), SIMD2(32, 0), deformation: 0.25)]
+        }
+
         init(_ definition: [String: Any]) throws {
             guard let name = definition["kind"] as? String, let kind = Kind(rawValue: name),
                   (try definition["animation"].map(AssetJSON.number) ?? 0) == 0 else { throw Invalid.asset }
@@ -36,8 +55,7 @@ extension SpecialItemModel {
             case .skeleton, .witherSkeleton, .creeper:
                 return [.init(SIMD3(-4, -8, -4), SIMD3(4, 0, 4), .zero, skinSize: SIMD2(64, 32))]
             case .zombie:
-                return [.init(SIMD3(-4, -8, -4), SIMD3(4, 0, 4), .zero),
-                        .init(SIMD3(-4, -8, -4), SIMD3(4, 0, 4), SIMD2(32, 0), deformation: 0.25)]
+                return Self.humanoidBoxes
             case .dragon:
                 let pose = AssetItemTransform(scale: SIMD3(repeating: 0.75), translation: SIMD3(0, -5.99 / 16, 0))
                 func part(_ from: SIMD3<Float>, _ to: SIMD3<Float>, _ uv: SIMD2<Float>,

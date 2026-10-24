@@ -9,16 +9,18 @@ enum SpecialItemModel: String {
     case decoratedPot = "minecraft:decorated_pot"
     case copperStatue = "minecraft:copper_golem_statue"
     case head = "minecraft:head"
+    case playerHead = "minecraft:player_head"
 
-    private func material(_ definition: [String: Any], design: ItemBannerDesign?,
+    private func material(_ definition: [String: Any], selection: ItemModelSelection?,
                           assets: GameAssets, budget: inout AssetReadBudget) throws -> AssetModel.Material {
         if self == .shield {
-            return try AssetPatternMaterial.shield(design, assets: assets, budget: &budget)
+            return try AssetPatternMaterial.shield(selection?.bannerDesign, assets: assets, budget: &budget)
         }
         if self == .banner {
             guard let raw = definition["color"] as? String, let color = DyeColor(rawValue: raw) else { throw Invalid.asset }
-            return try AssetPatternMaterial.banner(color: color, design: design, assets: assets, budget: &budget)
+            return try AssetPatternMaterial.banner(color: color, design: selection?.bannerDesign, assets: assets, budget: &budget)
         }
+        if self == .playerHead { return try Head.playerMaterial(selection?.headSkin ?? .defaultSkin) }
         if self == .conduit {
             return .init(texture: try AssetJSON.identifier("minecraft:entity/conduit/base"), forceTranslucent: false)
         }
@@ -43,7 +45,7 @@ enum SpecialItemModel: String {
     func elements(transform: AssetItemTransform, definition: [String: Any], selection: ItemModelSelection?,
                   assets: GameAssets, budget: inout AssetReadBudget) throws -> [AssetModel.Element] {
         let head = self == .head ? try Head(definition) : nil
-        let material = try head?.material ?? material(definition, design: selection?.bannerDesign, assets: assets, budget: &budget)
+        let material = try head?.material ?? material(definition, selection: selection, assets: assets, budget: &budget)
         let boxes: [Box]
         switch self {
         case .chest:
@@ -64,6 +66,8 @@ enum SpecialItemModel: String {
         case .head:
             guard let head else { throw Invalid.asset }
             boxes = head.boxes
+        case .playerHead:
+            boxes = Head.humanoidBoxes
         case .decoratedPot:
             let pose = AssetItemTransform(scale: SIMD3(1, -1, -1), translation: SIMD3(0, 37.0 / 16, 1))
             var body: [Box] = [
