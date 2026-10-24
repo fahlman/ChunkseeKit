@@ -764,8 +764,8 @@ the saved `minecraft:trim.material` reference, or legacy `tag.Trim.material`. Mi
 uses the definition's fallback; removal/current values suppress legacy data. An inline material
 holder has no registry key and also uses the fallback, matching the game's `Holder.unwrapKey`.
 Malformed material/model values leave the selection unavailable. Only the material identity is
-read: pattern and tooltip fields do not choose an inventory picture, and this does not validate
-the full trim codec or resolve its registry. Names, counts, patterns and independent dye/potion
+read: trim-pattern and tooltip fields do not choose an inventory picture, and this does not validate
+the full trim codec or resolve its registry. Names, counts, trim patterns and independent dye/potion
 tints do not change this model key; apply those tints separately using the original stack. These additive
 selection APIs are unreleased for fahlman/Chunksee#390; no serialized field or rescan is added.
 
@@ -789,9 +789,8 @@ identities and short-pattern migration; intermediate lowercase `patterns` is als
 Invalid legacy dye IDs stay unknown. Limits are 4,096 layers and 16 MiB of pattern string data;
 the reader keeps every accepted layer rather than applying a renderer's layer limit.
 `DyeColor` is the common saved-name/legacy-ID owner, also used by pet collars. This computed
-reader changes no stored item or cache format. Pattern registry resolution, texture compositing
-and integration into `itemModelSelection` remain separate work; this API alone does not change
-the app's plain-shield pictures.
+reader changes no stored item or cache format. Picture selection and material resolution use
+the shared model API below; pixel decoding/compositing and the app's adoption remain separate.
 
 The unreleased #191 extension includes this design in `ItemModelSelection`. For the verified
 26.3 shield model, `GameAssets.itemModel(for:)` resolves named patterns from the supplied jar's

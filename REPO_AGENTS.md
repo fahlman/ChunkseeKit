@@ -650,7 +650,7 @@ resource-path validation and model resolution, while app caches must key on the 
 No stored-field or cache-version change is needed for this computed reference.
 `ItemStack.itemModelSelection` adds the saved trim-material identity and custom-model data through
 the same model-reference owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint,
-count, name and pattern data. Current/removed trim suppresses legacy tag.Trim; an inline material
+count, name and trim-pattern data. Current/removed trim suppresses legacy tag.Trim; an inline material
 holder has no registry key and therefore selects the fallback. Malformed model/material values
 remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
 `GameAssets.itemModel(for:)` shares AssetItemReader and its bounds, with one case selector for GUI
@@ -687,8 +687,9 @@ over-budget input stay unavailable. Bounds are 4,096 layers and 16 MiB of patter
 render-layer limit or invented white base is applied. DyeColor owns the saved names and checked
 legacy-ID ordering shared with the unchanged pet collar reader. Existing retained components
 already contain these facts, so neither ItemStack Codable nor RegionFacts interpretation changes.
-Registry resolution, sprite composition and selection/image-cache integration remain separate
-on fahlman/Chunksee#390. No artwork, image decoder, UI, mutable cache or world write is added.
+The model extension below owns supplied-jar resolution and picture selection. Sprite composition
+and app cache adoption remain on fahlman/Chunksee#390. No artwork, image decoder, UI, mutable cache
+or world write is added.
 
 The unreleased #191 extension includes bannerDesign in the shared ItemModelSelection identity.
 AssetShieldMaterial resolves named definitions from the supplied jar's banner_pattern data
