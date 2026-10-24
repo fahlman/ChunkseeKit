@@ -8,6 +8,7 @@ enum SpecialItemModel: String {
     case conduit = "minecraft:conduit"
     case decoratedPot = "minecraft:decorated_pot"
     case copperStatue = "minecraft:copper_golem_statue"
+    case head = "minecraft:head"
 
     private func material(_ definition: [String: Any], design: ItemBannerDesign?,
                           assets: GameAssets, budget: inout AssetReadBudget) throws -> AssetModel.Material {
@@ -41,7 +42,8 @@ enum SpecialItemModel: String {
 
     func elements(transform: AssetItemTransform, definition: [String: Any], selection: ItemModelSelection?,
                   assets: GameAssets, budget: inout AssetReadBudget) throws -> [AssetModel.Element] {
-        let material = try material(definition, design: selection?.bannerDesign, assets: assets, budget: &budget)
+        let head = self == .head ? try Head(definition) : nil
+        let material = try head?.material ?? material(definition, design: selection?.bannerDesign, assets: assets, budget: &budget)
         let boxes: [Box]
         switch self {
         case .chest:
@@ -59,6 +61,9 @@ enum SpecialItemModel: String {
         case .copperStatue:
             guard let name = definition["pose"] as? String, let pose = StatuePose(rawValue: name) else { throw Invalid.asset }
             boxes = Self.statueBoxes(pose)
+        case .head:
+            guard let head else { throw Invalid.asset }
+            boxes = head.boxes
         case .decoratedPot:
             let pose = AssetItemTransform(scale: SIMD3(1, -1, -1), translation: SIMD3(0, 37.0 / 16, 1))
             var body: [Box] = [
@@ -121,10 +126,15 @@ enum SpecialItemModel: String {
             ]
             var faces = [AssetModel.Direction: AssetModel.Face]()
             for (direction, region) in regions {
+                // ModelPart.Cube mirrors its X endpoints and polygon winding. The bounds stay
+                // the same; the east/west skins swap sides and every face reverses U.
+                let facing: AssetModel.Direction = box.mirror && direction == .east ? .west :
+                    (box.mirror && direction == .west ? .east : direction)
+                let uv = box.mirror ? SIMD4(region.z, region.y, region.x, region.w) : region
                 let vertical = direction == .down || direction == .up
-                let face = AssetModel.Face(material: box.material ?? material, uv: region * uvScale,
+                let face = AssetModel.Face(material: box.material ?? material, uv: uv * uvScale,
                                            rotation: vertical ? 0 : box.sideRotation, tintIndex: nil, cullFace: nil)
-                faces[transform.applying(to: direction)] = transform.applying(to: face, facing: direction)
+                faces[transform.applying(to: facing)] = transform.applying(to: face, facing: facing)
             }
             let rotation = try box.rotation.map { try transform.applying(to: $0) }
             result.append(.init(from: from, to: to, faces: faces, rotation: rotation,
@@ -142,15 +152,17 @@ enum SpecialItemModel: String {
         let pose: AssetItemTransform
         let faceUVs: [AssetModel.Direction: SIMD4<Float>]?
         let sideRotation: Int
+        let mirror: Bool
 
         init(_ from: SIMD3<Float>, _ to: SIMD3<Float>, _ uv: SIMD2<Float>,
              material: AssetModel.Material? = nil, rotation: AssetModel.Rotation? = nil,
              skinSize: SIMD2<Float>? = nil, deformation: Float = 0, pose: AssetItemTransform = .identity,
-             faceUVs: [AssetModel.Direction: SIMD4<Float>]? = nil, sideRotation: Int = 180) {
+             faceUVs: [AssetModel.Direction: SIMD4<Float>]? = nil, sideRotation: Int = 180, mirror: Bool = false) {
             self.from = from; self.to = to; self.uv = uv
             self.material = material; self.rotation = rotation
             self.skinSize = skinSize; self.deformation = deformation; self.pose = pose
             self.faceUVs = faceUVs; self.sideRotation = sideRotation
+            self.mirror = mirror
         }
     }
 
