@@ -100,12 +100,12 @@ import Testing
         }
     }
 
-    @Test func unknownRulesAndRequiredPropertiesStayUnavailableWithoutLosingOverviewParts() throws {
+    @Test func unknownRulesAndInvalidPropertiesStayUnavailableWithoutLosingOverviewParts() throws {
         let definition = "{\"variants\":{\"\":\(choices)}}"
         for state in [BlockState("example:stone"), .init("minecraft:item_frame"), .init("minecraft:glow_item_frame"),
-                      .init("minecraft:red_bed"), .init("minecraft:red_bed", properties: ["part": "foot"]),
+                      .init("minecraft:red_bed", properties: ["part": "sideways"]),
                       .init("minecraft:red_bed", properties: ["part": "foot", "facing": "up"]),
-                      .init("minecraft:oak_door"), .init("minecraft:sunflower", properties: ["half": "sideways"])] {
+                      .init("minecraft:sunflower", properties: ["half": "sideways"])] {
             let resolved = try model(definition, state: state)
             #expect(resolved.parts.first?.alternatives.count == 3)
             #expect(resolved.selectedAlternatives(at: positions[0]) == nil)

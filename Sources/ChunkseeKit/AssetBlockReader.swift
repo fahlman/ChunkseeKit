@@ -10,13 +10,14 @@ struct AssetBlockReader {
         try budget.consume(bytes: data.count)
         let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
         guard root["variants"] != nil || root["multipart"] != nil else { throw Invalid.asset }
-        let seedOffset = BlockModelSeed.offset(for: state, gameDataVersion: assets.version.dataVersion)
+        let properties = BlockProperties(state, gameDataVersion: assets.version.dataVersion)
+        let seedOffset = BlockModelSeed.offset(for: properties, gameDataVersion: assets.version.dataVersion)
         if let raw = root["variants"] {
             let variants = try AssetJSON.object(raw)
             guard variants.count <= 4096 else { throw Invalid.asset }
             var selected: Any?
             for (selector, model) in variants {
-                guard let matches = try variantMatches(selector, state: state) else { throw Invalid.asset }
+                guard let matches = try variantMatches(selector, properties: properties) else { throw Invalid.asset }
                 if matches {
                     // The game reports overlapping selectors. Our unordered dictionary cannot
                     // reproduce its partial replacement order, so leave the result unavailable.
@@ -39,7 +40,7 @@ struct AssetBlockReader {
             guard let apply = selector["apply"] else { throw Invalid.asset }
             let matches: Bool?
             if let condition = selector["when"] {
-                matches = try conditionMatches(condition, state: state, depth: 0, nodes: &nodes)
+                matches = try conditionMatches(condition, properties: properties, depth: 0, nodes: &nodes)
             } else { matches = true }
             guard let matches else { throw Invalid.asset }
             if matches { parts.append(try part(apply, budget: &budget, models: &models)) }
@@ -47,7 +48,7 @@ struct AssetBlockReader {
         return .init(parts: parts, seedOffset: seedOffset, isMultipart: true)
     }
 
-    private func variantMatches(_ selector: String, state: BlockState) throws -> Bool? {
+    private func variantMatches(_ selector: String, properties: BlockProperties) throws -> Bool? {
         if selector.isEmpty { return true }
         let pairs = selector.split(separator: ",", omittingEmptySubsequences: false)
         guard pairs.count <= 4096 else { throw Invalid.asset }
@@ -57,10 +58,10 @@ struct AssetBlockReader {
             guard fields.count == 2, !fields[0].isEmpty, !fields[1].isEmpty,
                   values.updateValue(String(fields[1]), forKey: String(fields[0])) == nil else { throw Invalid.asset }
         }
-        return all(values.map { key, value in state.properties[key].map { $0 == value } })
+        return all(values.map { key, value in properties[key].map { $0 == value } })
     }
 
-    private func conditionMatches(_ raw: Any, state: BlockState, depth: Int, nodes: inout Int) throws -> Bool? {
+    private func conditionMatches(_ raw: Any, properties: BlockProperties, depth: Int, nodes: inout Int) throws -> Bool? {
         guard depth < 64, nodes < 4096 else { throw Invalid.asset }
         nodes += 1
         let condition = try AssetJSON.object(raw)
@@ -70,7 +71,7 @@ struct AssetBlockReader {
             let isOr = condition["OR"] != nil
             let terms = try AssetJSON.array(condition[isOr ? "OR" : "AND"])
             guard terms.count <= 4096 - nodes else { throw Invalid.asset }
-            let matches = try terms.map { try conditionMatches($0, state: state, depth: depth + 1, nodes: &nodes) }
+            let matches = try terms.map { try conditionMatches($0, properties: properties, depth: depth + 1, nodes: &nodes) }
             return isOr ? any(matches) : all(matches)
         }
         var matches = [Bool?]()
@@ -91,7 +92,7 @@ struct AssetBlockReader {
                 // This per-term negation is verified in 26.3. Older clients used a different
                 // grammar; unknown versions must not silently acquire its interpretation.
                 if negated, assets.version.dataVersion != SaveVersion.java26_3 { throw Invalid.asset }
-                return state.properties[key].map { ($0 == expected) != negated }
+                return properties[key].map { ($0 == expected) != negated }
             }
             matches.append(any(alternatives))
         }

@@ -2,11 +2,11 @@
 /// The reader already resolved this ID's definition from the supplied 26.3 jar. Only the
 /// overriding classes need a catalog; ordinary blocks use the shared position directly.
 enum BlockModelSeed {
-    static func offset(for state: BlockState, gameDataVersion: Int32) -> SIMD3<Int32>? {
+    static func offset(for properties: BlockProperties, gameDataVersion: Int32) -> SIMD3<Int32>? {
         guard gameDataVersion == SaveVersion.java26_3,
-              let id = Identifier(state.id), id.namespace == "minecraft" else { return nil }
+              let id = properties.id, id.namespace == "minecraft" else { return nil }
         if doubleBlocks.contains(id.path) {
-            switch state.properties["half"] {
+            switch properties["half"] {
             case "lower": return .zero
             case "upper": return SIMD3(0, -1, 0)
             default: return nil
@@ -17,10 +17,10 @@ enum BlockModelSeed {
             guard id.path != "item_frame", id.path != "glow_item_frame" else { return nil }
             return .zero
         }
-        switch state.properties["part"] {
+        switch properties["part"] {
         case "head": return .zero
         case "foot":
-            switch state.properties["facing"] {
+            switch properties["facing"] {
             case "north": return SIMD3(0, 0, -1)
             case "south": return SIMD3(0, 0, 1)
             case "east": return SIMD3(1, 0, 0)
