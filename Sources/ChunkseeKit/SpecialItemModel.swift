@@ -7,6 +7,7 @@ enum SpecialItemModel: String {
     case banner = "minecraft:banner"
     case conduit = "minecraft:conduit"
     case decoratedPot = "minecraft:decorated_pot"
+    case copperStatue = "minecraft:copper_golem_statue"
 
     private func material(_ definition: [String: Any], design: ItemBannerDesign?,
                           assets: GameAssets, budget: inout AssetReadBudget) throws -> AssetModel.Material {
@@ -23,6 +24,13 @@ enum SpecialItemModel: String {
         if self == .decoratedPot {
             return .init(texture: try AssetJSON.identifier("minecraft:entity/decorated_pot/decorated_pot_base"),
                          forceTranslucent: false)
+        }
+        if self == .copperStatue {
+            // This renderer takes a full image resource, unlike Sheets' sprite identifiers.
+            let image = try AssetJSON.identifier(definition["texture"])
+            guard image.path.hasPrefix("textures/"), image.path.hasSuffix(".png") else { throw Invalid.asset }
+            let path = image.path.dropFirst("textures/".count).dropLast(".png".count)
+            return .init(texture: try AssetJSON.identifier("\(image.namespace):\(path)"), forceTranslucent: false)
         }
         // Sheets' SpriteMapper preserves the identifier's namespace and prefixes its path.
         let name = try AssetJSON.identifier(definition["texture"])
@@ -48,6 +56,9 @@ enum SpecialItemModel: String {
                      .init(SIMD3(-1, -3, -1), SIMD3(1, 3, 5), SIMD2(26, 0))]
         case .conduit:
             boxes = [.init(SIMD3(repeating: -3), SIMD3(repeating: 3), .zero)]
+        case .copperStatue:
+            guard let name = definition["pose"] as? String, let pose = StatuePose(rawValue: name) else { throw Invalid.asset }
+            boxes = Self.statueBoxes(pose)
         case .decoratedPot:
             let pose = AssetItemTransform(scale: SIMD3(1, -1, -1), translation: SIMD3(0, 37.0 / 16, 1))
             var body: [Box] = [
@@ -122,7 +133,7 @@ enum SpecialItemModel: String {
         return result
     }
 
-    private struct Box {
+    struct Box {
         let from: SIMD3<Float>, to: SIMD3<Float>, uv: SIMD2<Float>
         let material: AssetModel.Material?
         let rotation: AssetModel.Rotation?
