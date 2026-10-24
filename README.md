@@ -1359,9 +1359,12 @@ alternative per part for a whole `BlockPosition`, without rereading resources or
 Selection is verified for vanilla 26.3/5023 only. It uses the game's position seed, weighted draw,
 and multipart reseeding; beds share their head position, and doors/double plants share the lower
 position. The shared legacy random generator preserves Java's signed overflow and rejection rules.
-All three input coordinates must fit Int32. Unknown IDs/versions and missing seed-driving properties
-return nil while the existing `parts` remain available. Modded block behavior is not resolved.
-The verified block-ID catalog classifies seed behavior only; it supplies no omitted state defaults.
+All three input coordinates must fit Int32. Unverified versions/namespaces and missing seed-driving
+properties return nil while the existing `parts` remain available. Ordinary Minecraft-namespace
+blocks come from the supplied jar's definitions, without a second name catalog; the 49 verified
+seed overrides stay in Kit because those rules exist only in game code. Item-frame entity render
+states have no block seed and remain unavailable. Modified block behavior is not resolved.
+The special seed-rule sets supply no omitted state defaults.
 
 `AssetModel.Face.textureCoordinates` returns the four normalized UV coordinates in original
 face-vertex order after the face's own rotation. The additive, unreleased

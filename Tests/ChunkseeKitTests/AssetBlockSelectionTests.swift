@@ -102,8 +102,7 @@ import Testing
 
     @Test func unknownRulesAndRequiredPropertiesStayUnavailableWithoutLosingOverviewParts() throws {
         let definition = "{\"variants\":{\"\":\(choices)}}"
-        for state in [BlockState("example:stone"), .init("minecraft:unknown"),
-                      .init("minecraft:fake_door", properties: ["half": "upper"]),
+        for state in [BlockState("example:stone"), .init("minecraft:item_frame"), .init("minecraft:glow_item_frame"),
                       .init("minecraft:red_bed"), .init("minecraft:red_bed", properties: ["part": "foot"]),
                       .init("minecraft:red_bed", properties: ["part": "foot", "facing": "up"]),
                       .init("minecraft:oak_door"), .init("minecraft:sunflower", properties: ["half": "sideways"])] {
@@ -117,6 +116,15 @@ import Testing
             #expect(resolved.selectedAlternatives(at: positions[0]) == nil)
         }
         #expect(try names(model(definition, state: .init("stone")), at: positions[0]) == ["block/a"])
+    }
+
+    @Test func ordinaryDefinitionsComeFromResourcesWithoutASecondBlockCatalogOrSuffixGuess() throws {
+        let definition = "{\"variants\":{\"\":\(choices)}}"
+        let ordinary = try model(definition)
+        for id in ["minecraft:new_block", "minecraft:fake_door", "minecraft:fake_bed"] {
+            let supplied = try model(definition, state: .init(id, properties: ["half": "upper", "part": "foot", "facing": "north"]))
+            for position in positions { #expect(try names(supplied, at: position) == names(ordinary, at: position)) }
+        }
     }
 
     @Test func unrepresentableCoordinatesDoNotNarrowAndExplicitVariantsKeepPrecedence() throws {

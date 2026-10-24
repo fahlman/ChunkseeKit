@@ -547,8 +547,10 @@ No world, serialized model or RegionFacts version change.
 `AssetBlock.selectedAlternatives(at:)` adds verified 26.3 world-position selection to that same
 resolved model. The reader retains the multipart distinction, total weights and a compact seed
 offset; selection rereads no resources and keeps the overview alternatives intact. BlockModelSeed
-owns the 1,286 registered blocks' verified seed behavior: 1,237 ordinary, 17 beds and 32 doors/double
-plants. This catalog supplies no registry/default property values. Unknown IDs/versions and missing
+owns the 17 bed and 32 door/double-plant overrides verified in the official registry's code.
+Ordinary Minecraft-namespace definitions already resolved by the reader use the unshifted position,
+without a duplicate block-name catalog. The two item-frame entity render states have no block seed.
+These sets supply no registry/default property values. Unverified versions/namespaces and missing
 needed half/facing properties stay unavailable. Coordinates are checked before Java's intentional
 Int32 offsets and Int64 seed mixing. LegacyRandom owns the weighted draw and signed nextLong
 needed for multipart's reset-before-each-part rule. Official BlockState.getSeed and actual
