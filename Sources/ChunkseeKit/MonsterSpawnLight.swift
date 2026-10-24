@@ -24,8 +24,9 @@ public struct MonsterSpawnLight: Sendable, Equatable {
     }
 
     /// Saved block light must be valid 0...15. Sky light is required only when this
-    /// dimension has it and block light has not already ruled out spawning. The first random sky check can pass for every such sky value (0...31
-    /// random range); the threshold's upper bound answers whether the later check can pass.
+    /// dimension has it and block light has not already ruled out spawning. The first random
+    /// sky check can pass for every such sky value (0...31 random range); the threshold's
+    /// upper bound answers whether the later check can pass.
     public func canPass(blockLight: Int?, skyLight: Int?, at position: BlockPosition) -> Bool? {
         guard let blockLight, (0...15).contains(blockLight) else { return nil }
         if blockLightLimit < 15, blockLight > blockLightLimit { return false }
@@ -42,13 +43,14 @@ public struct MonsterSpawnLight: Sendable, Equatable {
         return (inBounds ? max(blockLight, sky) : 15) <= maximumRawLight
     }
 
-    /// Reads valid saved light at local X/Z and absolute Y. Unknown arrays or stale chunks
-    /// stay unknown; this never propagates light or treats a missing sky array as darkness.
+    /// Reads valid light at local X/Z and absolute Y through Chunk.resolvedBlockLight.
+    /// Verified omitted block layers resolve to zero; stale/malformed light remains unknown.
+    /// This never propagates light or treats a missing sky array as darkness.
     public func canPass(in chunk: Chunk, x: Int, y: Int, z: Int) -> Bool? {
         guard chunk.isLightOn, (0..<16).contains(x), (0..<16).contains(z),
               let origin = ChunkPosition(x: chunk.x, z: chunk.z).blockOrigin,
               origin.x <= Int.max - x, origin.z <= Int.max - z else { return nil }
-        return canPass(blockLight: chunk.blockLight(x: x, y: y, z: z),
+        return canPass(blockLight: chunk.resolvedBlockLight(x: x, y: y, z: z),
                        skyLight: hasSkylight ? chunk.skyLight(x: x, y: y, z: z) : nil,
                        at: BlockPosition(blockX: origin.x + x, blockY: y, blockZ: origin.z + z))
     }

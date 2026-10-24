@@ -520,6 +520,15 @@ array. Missing, malformed or skipped arrays return nil, not zero. Existing secti
 still expose raw stored values. `Chunk.keysNotNeededForTerrain` continues to skip both the flag
 and light arrays, so ordinary terrain reads do no extra lighting work. No propagation is simulated.
 
+`Chunk.resolvedBlockLight(x:y:z:)` additionally resolves an omitted block-light layer to zero
+for valid 26.3 saves. The game's serializer omits null or empty default-zero layers, and its
+block-light storage reads an absent layer as zero. A malformed **present** tag is not an omission.
+Stale lighting, unverified-version omissions and invalid query coordinates stay unknown; raw
+stored-array accessors are unchanged. Read all light fields or use the terrain-plus-light profile:
+a caller that selectively skips `BlockLight` but retains `isLightOn` has discarded the distinction.
+No sky-light fallback or light propagation is added. The monster-light convenience query uses
+this shared interpretation. This additive API is tracked on fahlman/ChunkseeKit#187.
+
 `World.nightMonsterLighting(assets:)` supplies a clear-night planning snapshot for each supported
 26.3 dimension. It reads the separate gameplay sky-light attribute and applies the dimension's
 selected timelines at their first declared `minecraft:midnight`, then uses the game's final
@@ -535,9 +544,8 @@ ceiling and the raw-brightness threshold both apply; a ceiling of 15 does not di
 `canPass(in:x:y:z:)` takes chunk-local X/Z and absolute Y, preserves unknown/stale light, and
 requires a saved sky array only when that dimension has skylight and block light has not
 already ruled out a pass. Missing sky light never makes a known excessive block value unknown.
-It includes the game's
-horizontal brightness bounds. To opt in when decoding, use `Chunk.keysNotNeededForTerrainAndLight`;
-the original terrain read profile is unchanged. This additive prerequisite is tracked on
+It includes the game's horizontal brightness bounds. To opt in when decoding, use
+`Chunk.keysNotNeededForTerrainAndLight`; the original terrain read profile is unchanged. This additive prerequisite is tracked on
 fahlman/ChunkseeKit#185; the app overlay and its checks remain on fahlman/Chunksee#86.
 
 `NoiseGenerationSettings.seaLevel` is the saved `sea_level`, independently optional when missing

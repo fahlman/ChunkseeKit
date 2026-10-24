@@ -149,6 +149,8 @@ public struct ChunkSection: Sendable {
     /// 2048-byte nibble arrays, or `nil` when omitted.
     public let blockLight: [UInt8]?
     public let skyLight: [UInt8]?
+    // An unreadable present tag must never acquire the omitted-layer default.
+    let hasBlockLightTag: Bool
 
     /// True when biomes are stored per block (26.4+) rather than per 4×4×4 cell.
     public var hasPerBlockBiomes: Bool { biomes?.hasPerBlockBiomes == true }
@@ -180,6 +182,7 @@ public struct ChunkSection: Sendable {
             biomes = nil
         }
 
+        hasBlockLightTag = nbt["BlockLight"] != nil
         // Byte-for-byte reinterpretation; a per-element map over 4 KB per section was measurable.
         blockLight = nbt["BlockLight"]?.byteArray.map { $0.withUnsafeBytes { [UInt8]($0) } }
         skyLight = nbt["SkyLight"]?.byteArray.map { $0.withUnsafeBytes { [UInt8]($0) } }
@@ -268,6 +271,19 @@ public struct Chunk: Sendable {
     public func blockLight(x: Int, y: Int, z: Int) -> Int? {
         guard isLightOn else { return nil }
         return section(atBlockY: y)?.blockLight(x: x, y: y, z: z)
+    }
+
+    /// Valid block light, including the verified 26.3 omitted-layer value of zero.
+    /// X/Z must be chunk-local (0..<16), and absolute Y must fit the game's Int32.
+    /// Stale light, malformed present arrays, and unverified omissions remain unknown.
+    /// Read all light fields, or use keysNotNeededForTerrainAndLight: selectively skipping
+    /// BlockLight while retaining isLightOn is indistinguishable from an omitted saved layer.
+    /// The raw blockLight accessors keep their stored-array meaning. No propagation is run.
+    public func resolvedBlockLight(x: Int, y: Int, z: Int) -> Int? {
+        guard isLightOn, (0..<16).contains(x), (0..<16).contains(z), Int32(exactly: y) != nil else { return nil }
+        let section = section(atBlockY: y)
+        if section?.hasBlockLightTag == true { return section?.blockLight(x: x, y: y, z: z) }
+        return dataVersion == SaveVersion.java26_3 ? 0 : nil
     }
 
     /// Saved sky light with the same validity and missing-data rules as blockLight(x:y:z:).
