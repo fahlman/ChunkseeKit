@@ -347,6 +347,30 @@ unchanged, so requesting this metadata adds no work to the ordinary map scan. Th
 spawnability solver: surfaces, space, biome membership, time/weather and mob-specific rules
 remain outside these facts. App adoption, optional light reads and rendering/timing follow separately.
 
+The #185 prerequisite adds `World.nightMonsterLighting(assets:)` and `MonsterSpawnLight` for
+the ordinary monster light check under a clear-night scenario. `DimensionType.baseSkyLightLevel`
+is an independent gameplay projection; malformed visual and gameplay attributes do not discard
+each other. EnvironmentAttributeMap owns their shared JSON/NBT entry codecs, normalization,
+alias rejection and bounds. TimelineInput owns the common header and periodic sampling, while
+the existing WorldTimelineReader is generic over the projection so tag/pack semantics remain
+single-owned. Its query guard and world/assets initializer also own the enabled-pack bound
+and verified vanilla-jar selection; both projections keep lazy resource reads. Existing visual
+lighting still ignores gameplay tracks and time markers.
+
+MonsterLightTimeline evaluates selected gameplay tracks at the first declared midnight on one
+clock and period; missing/conflicting markers, unsupported tracks or another relevant clock/period stay unknown.
+Static levels need no marker and no-skylight dimensions need no sky data. This deliberately does
+not infer future alignment across clocks or apply saved time/weather. Final gameplay clamping,
+integer sky darkening, both monster light gates and horizontal brightness bounds stay in Kit.
+A valid block-light value can rule out a pass without a sky value; stale chunk light remains
+unknown regardless of either channel.
+The result means some random draws can pass the ordinary light check, not spawn probability or
+full spawnability. Chunk's opt-in terrain-plus-light profile retains only the light channels and
+validity flag beyond ordinary terrain; missing/stale arrays never become zero. No app parser,
+propagation, persistent cache, serialized fact or ordinary terrain-cost change is introduced.
+Official 26.3 Monster, Level/LevelReader, LevelLightEngine, environment attribute and timeline
+codecs establish these rules. App drawing and layer-on/off measurements remain on app#86.
+
 Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
 central directory and matching local headers before a missing resource can permit fallback.
 It reads ordinary stored/deflated entries with exact UTF-8 names, using the existing public

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Query-local memoization only; no cache or mutable state escapes the world read.
-struct WorldTimelineReader {
+struct WorldTimelineReader<Projection: WorldTimelineProjection> {
     enum Read<Value> { case missing, unavailable, value(Value) }
     private struct Entry {
         let id: String
@@ -33,18 +33,29 @@ struct WorldTimelineReader {
 
     private let timelineResources: WorldResourcePack.Registry
     private let tagResources: WorldResourcePack.Registry
-    private var timelines: [String: Read<LightingTimeline>] = [:]
+    private var timelines: [String: Read<Projection>] = [:]
     private var tags: [String: Read<[String]>] = [:]
     private var visiting: Set<String> = []
     private var remainingBytes = 64 * 1024 * 1024
     private var remainingWork = 65_536
 
-    init(packs: [WorldResourcePack]) throws {
+    /// Both projections reject an over-budget query before decoding dimension definitions.
+    /// Construction remains lazy: static dimensions do not need resource files or registries.
+    static func allowsQuery(in world: World) -> Bool { world.level.enabledDataPacks.count <= 64 }
+
+    init(world: World, assets: GameAssets?) throws {
+        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
+            .zip(assets.resources)
+        } else { .unavailable }
+        try self.init(packs: WorldResourcePack.load(enabled: world.level.enabledDataPacks, in: world.url, vanilla: vanilla))
+    }
+
+    private init(packs: [WorldResourcePack]) throws {
         timelineResources = try WorldResourcePack.Registry(directory: "timeline", in: packs)
         tagResources = try WorldResourcePack.Registry(directory: "tags/timeline", in: packs)
     }
 
-    mutating func read(_ references: DimensionTime.Timelines) throws -> [LightingTimeline]? {
+    mutating func read(_ references: DimensionTime.Timelines) throws -> [Projection]? {
         let identifiers: [String]
         switch references {
         case .list(let list): identifiers = list // Direct HolderSet lists preserve duplicates.
@@ -53,7 +64,7 @@ struct WorldTimelineReader {
             identifiers = list
         }
         guard identifiers.count <= 4096, consume(identifiers.count) else { return nil }
-        var result: [LightingTimeline] = []
+        var result: [Projection] = []
         for id in identifiers {
             try Task.checkCancellation()
             guard case .value(let value) = try timeline(id) else { return nil }
@@ -62,17 +73,17 @@ struct WorldTimelineReader {
         return result
     }
 
-    private mutating func timeline(_ id: String) throws -> Read<LightingTimeline> {
+    private mutating func timeline(_ id: String) throws -> Read<Projection> {
         try Task.checkCancellation()
         if let cached = timelines[id] { return cached }
-        let result: Read<LightingTimeline>
+        let result: Read<Projection>
         switch try timelineResources.resource(id) {
         case .absent: result = .missing
         case .vanilla, .unavailable: result = .unavailable
         case .data(let data):
             if data.count <= remainingBytes, data.count <= ZipResources.maximumResourceSize {
                 remainingBytes -= data.count
-                result = LightingTimeline(json: data).map(Read.value) ?? .unavailable
+                result = Projection(json: data).map(Read.value) ?? .unavailable
             } else { result = .unavailable }
         }
         timelines[id] = result

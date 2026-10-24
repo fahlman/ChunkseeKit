@@ -17,9 +17,9 @@ extension World {
     /// Resources and clocks are shared within this read; no mutable cache or world writes persist.
     public func savedSkyLighting(assets: GameAssets?) throws -> [String: SkyLighting] {
         try Task.checkCancellation()
-        guard level.enabledDataPacks.count <= 64 else { return [:] }
+        guard WorldTimelineReader<LightingTimeline>.allowsQuery(in: self) else { return [:] }
         let types = try dimensionTypes(assets: assets)
-        var reader: WorldTimelineReader?
+        var reader: WorldTimelineReader<LightingTimeline>?
         var clocks: [String: Int]?
         var result: [String: SkyLighting] = [:]
         for id in types.keys.sorted() {
@@ -27,10 +27,7 @@ extension World {
             guard let type = types[id], let time = type.time, let base = type.baseSkyLighting else { continue }
             if time.timelines == .list([]) { result[id] = base; continue }
             if reader == nil {
-                let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
-                    .zip(assets.resources)
-                } else { .unavailable }
-                reader = try WorldTimelineReader(packs: WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla))
+                reader = try WorldTimelineReader(world: self, assets: assets)
             }
             guard let timelines = try reader?.read(time.timelines) else { continue }
             var value: SkyLighting? = base

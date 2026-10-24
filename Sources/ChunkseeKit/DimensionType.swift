@@ -21,13 +21,16 @@ public struct DimensionType: Sendable, Equatable {
     /// other versions or the no-jar build-limit fallback. Independent of build and time metadata.
     /// These intermediate values precede timelines, weather, spatial layers and final clamping.
     public let baseSkyLighting: SkyLighting?
+    /// The separate gameplay sky-light attribute before timelines and final 0...15 clamping.
+    /// Verified 26.3 definitions only; malformed values do not invalidate visual lighting.
+    public let baseSkyLightLevel: Float?
 
     public var maxY: Int { minY + height - 1 }
     public var buildRange: ClosedRange<Int> { minY...maxY }
 
     private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool,
                   monsterSpawnBlockLightLimit: Int?, monsterSpawnLightLevel: ClosedRange<Int>?,
-                  time: DimensionTime?, baseSkyLighting: SkyLighting?) {
+                  time: DimensionTime?, baseSkyLighting: SkyLighting?, baseSkyLightLevel: Float?) {
         guard height > 0, Self.validYBounds(minY: minY, height: height),
               (0...height).contains(logicalHeight) else { return nil }
         self.minY = minY; self.height = height; self.logicalHeight = logicalHeight; self.hasCeiling = hasCeiling
@@ -35,6 +38,7 @@ public struct DimensionType: Sendable, Equatable {
         self.monsterSpawnLightLevel = monsterSpawnLightLevel
         self.time = time
         self.baseSkyLighting = baseSkyLighting
+        self.baseSkyLightLevel = baseSkyLightLevel
     }
 
     // DimensionType and NoiseSettings share the 26.3 packed-Y bounds. Noise alone permits
@@ -51,7 +55,8 @@ public struct DimensionType: Sendable, Equatable {
                   monsterSpawnBlockLightLimit: nbt["monster_spawn_block_light_limit"]?.int,
                   monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
                   time: version == SaveVersion.java26_3 ? DimensionTime(nbt: nbt) : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? (try? DimensionBaseLighting(nbt: nbt))?.value : nil)
+                  baseSkyLighting: version == SaveVersion.java26_3 ? (try? DimensionBaseLighting(nbt: nbt))?.value : nil,
+                  baseSkyLightLevel: version == SaveVersion.java26_3 ? (try? DimensionMonsterLighting(nbt: nbt))?.value : nil)
     }
 
     init?(json: Data, version: Int?) {
@@ -61,7 +66,8 @@ public struct DimensionType: Sendable, Equatable {
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
                   monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
                   time: version == SaveVersion.java26_3 ? value.time : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? value.baseSkyLighting : nil)
+                  baseSkyLighting: version == SaveVersion.java26_3 ? value.baseSkyLighting : nil,
+                  baseSkyLightLevel: version == SaveVersion.java26_3 ? value.baseSkyLightLevel : nil)
     }
 
     private struct Definition: Decodable {
@@ -71,6 +77,7 @@ public struct DimensionType: Sendable, Equatable {
         let monsterSpawnLightLevel: SpawnLightRange?
         let time: DimensionTime?
         let baseSkyLighting: SkyLighting?
+        let baseSkyLightLevel: Float?
         enum CodingKeys: String, CodingKey {
             case minY = "min_y", height, logicalHeight = "logical_height", hasCeiling = "has_ceiling"
             case monsterSpawnBlockLightLimit = "monster_spawn_block_light_limit", monsterSpawnLightLevel = "monster_spawn_light_level"
@@ -87,6 +94,7 @@ public struct DimensionType: Sendable, Equatable {
             monsterSpawnLightLevel = try? fields.decode(SpawnLightRange.self, forKey: .monsterSpawnLightLevel)
             time = try? DimensionTime(from: decoder)
             baseSkyLighting = (try? DimensionBaseLighting(from: decoder))?.value
+            baseSkyLightLevel = (try? DimensionMonsterLighting(from: decoder))?.value
         }
     }
 
@@ -95,13 +103,13 @@ public struct DimensionType: Sendable, Equatable {
         switch id {
         case "minecraft:overworld", "minecraft:overworld_caves":
             return Self(minY: -64, height: 384, logicalHeight: 384, hasCeiling: id == "minecraft:overworld_caves",
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 0...7, time: nil, baseSkyLighting: nil)
+                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 0...7, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
         case "minecraft:the_nether":
             return Self(minY: 0, height: 256, logicalHeight: 128, hasCeiling: true,
-                        monsterSpawnBlockLightLimit: 15, monsterSpawnLightLevel: 7...7, time: nil, baseSkyLighting: nil)
+                        monsterSpawnBlockLightLimit: 15, monsterSpawnLightLevel: 7...7, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
         case "minecraft:the_end":
             return Self(minY: 0, height: 256, logicalHeight: 256, hasCeiling: false,
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 15...15, time: nil, baseSkyLighting: nil)
+                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 15...15, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
         default: return nil
         }
     }

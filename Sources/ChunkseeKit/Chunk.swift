@@ -256,6 +256,11 @@ public struct Chunk: Sendable {
         "BlockLight", "SkyLight", "entities", "CarvingMasks", "Lights", "UpgradeData", "isLightOn",
     ]
 
+    /// Opt-in terrain read retaining the saved light channels and their validity flag.
+    /// Ordinary terrain readers keep using keysNotNeededForTerrain without this extra data.
+    public static let keysNotNeededForTerrainAndLight: Set<String> = keysNotNeededForTerrain
+        .subtracting(["BlockLight", "SkyLight", "isLightOn"])
+
     public var isFullyGenerated: Bool { status == "minecraft:full" || status == "full" }
 
     /// Saved block light at chunk-local X/Z and absolute Y, only when marked valid. Missing

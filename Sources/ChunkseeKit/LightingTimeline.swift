@@ -2,7 +2,7 @@ import Foundation
 
 /// Immutable lighting projection of a 26.3 timeline. Other attributes and time markers are
 /// outside this reader; it does not validate a complete game registry or resolve timeline tags.
-public struct LightingTimeline: Sendable, Equatable {
+public struct LightingTimeline: Sendable, Equatable, WorldTimelineProjection {
     /// This timeline's clock, which need not be the dimension's default clock.
     public let clockID: String
     public let periodTicks: Int?
@@ -22,13 +22,7 @@ public struct LightingTimeline: Sendable, Equatable {
     /// No time simulation, final attribute clamping, weather or spatial layers are applied.
     public func applying(at ticks: Int64, to base: SkyLighting) -> SkyLighting? {
         do {
-            let time: Int64
-            if let periodTicks {
-                let remainder = ticks % Int64(periodTicks)
-                time = remainder < 0 ? remainder + Int64(periodTicks) : remainder
-            } else {
-                time = ticks
-            }
+            let time = TimelineInput.sampleTime(ticks, period: periodTicks)
             return try SkyLighting(
                 sunAngle: sun?.applying(at: time, to: base.sunAngle) ?? base.sunAngle,
                 moonAngle: moon?.applying(at: time, to: base.moonAngle) ?? base.moonAngle,
@@ -41,25 +35,11 @@ public struct LightingTimeline: Sendable, Equatable {
     }
 
     init?(json: Data) {
-        guard json.count <= ZipResources.maximumResourceSize else { return nil }
         do {
-            let root = try AssetJSON.object(JSONSerialization.jsonObject(with: json))
-            guard let clock = root["clock"] as? String, let id = Identifier(clock) else { return nil }
-            clockID = id.description
-            if let raw = root["period_ticks"], !(raw is NSNull) {
-                let period = try AssetJSON.integer(raw)
-                guard period > 0 else { return nil }
-                periodTicks = period
-            } else {
-                periodTicks = nil
-            }
-            let rawTracks: [String: Any]
-            if let raw = root["tracks"], !(raw is NSNull) {
-                rawTracks = try AssetJSON.object(raw)
-            } else {
-                rawTracks = [:]
-            }
-            let tracks = try SkyLighting.attributes(rawTracks)
+            let input = try TimelineInput(json: json)
+            clockID = input.clockID
+            periodTicks = input.periodTicks
+            let tracks = try EnvironmentAttributeMap<SkyLighting.Attribute>.selected(input.tracks)
             var remainingFrames = 4096
             sun = try Self.read(tracks[.sunAngle], period: periodTicks, budget: &remainingFrames)
             moon = try Self.read(tracks[.moonAngle], period: periodTicks, budget: &remainingFrames)
