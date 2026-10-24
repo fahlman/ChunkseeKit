@@ -24,6 +24,13 @@ import Testing
         let inside = BlockPosition(blockX: -1, blockY: minY + height / 2, blockZ: 0)
         #expect(sampler.cellOrigin(at: inside, in: dimension) == sampler.cellOrigin(at: inside))
         #expect(sampler.cellOrigin(at: BlockPosition(blockX: Int.max, blockY: 0, blockZ: 0), in: dimension) == nil)
+        let heights = [-10000, minY - 4, minY, minY + height / 2, minY + height, 10000]
+        let blocks = heights.map { BlockPosition(blockX: -1, blockY: $0, blockZ: 0) }
+        let expected = blocks.map { sampler.cellOrigin(at: $0, in: dimension) }
+        #expect(sampler.cellOrigins(at: blocks, in: dimension) == expected)
+        let nearby = (minY - 4...minY + 4).map { BlockPosition(blockX: -1, blockY: $0, blockZ: 0) }
+        let nearbyExpected = nearby.map { sampler.cellOrigin(at: $0, in: dimension) }
+        #expect(sampler.cellOrigins(at: nearby, in: dimension) == nearbyExpected)
     }
 
     @Test func retainedCellsKeepNegativeHeightsAndMissingData() throws {

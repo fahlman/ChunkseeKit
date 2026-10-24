@@ -24,46 +24,125 @@ public struct BiomeSampler: Sendable {
     /// is preserved at the endpoints; the returned origin uses Int so a cell is not aliased by
     /// narrowing its coordinates back to Int32. This does not impose a world border or height limit.
     public func cellOrigin(at block: BlockPosition) -> BlockPosition? {
-        guard let blockX = Int32(exactly: block.x), let blockY = Int32(exactly: block.y),
-              let blockZ = Int32(exactly: block.z) else { return nil }
-        let x = blockX &- 2, y = blockY &- 2, z = blockZ &- 2
-        let baseX = x >> 2, baseY = y >> 2, baseZ = z >> 2
-        let fractionX = Double(x & 3) / 4, fractionY = Double(y & 3) / 4, fractionZ = Double(z & 3) / 4
+        cellOrigin(at: block, offset: cornerOffset)
+    }
+
+    /// Selects cells in input order, including nil for each unavailable position. Nearby
+    /// samples share corner offsets within this call; sparse inputs use the scalar path.
+    /// Temporary storage is bounded to 16,384 corner slots and is never retained by the sampler.
+    public func cellOrigins(at blocks: [BlockPosition]) -> [BlockPosition?] {
+        guard let grid = CornerGrid(blocks) else { return blocks.map { cellOrigin(at: $0) } }
+        var offsets = [Offset?](repeating: nil, count: grid.count)
+        return blocks.map { block in
+            cellOrigin(at: block) { x, y, z in
+                let index = grid.index(x: x, y: y, z: z)
+                if let value = offsets[index] { return value }
+                let value = cornerOffset(x: x, y: y, z: z)
+                offsets[index] = value
+                return value
+            }
+        }
+    }
+
+    private func cellOrigin(at block: BlockPosition, offset: (Int32, Int32, Int32) -> Offset) -> BlockPosition? {
+        guard let sample = Sample(block) else { return nil }
         var nearest = 0
         var distance = Double.infinity
         for corner in 0..<8 {
             let dx = Int32((corner >> 2) & 1), dy = Int32((corner >> 1) & 1), dz = Int32(corner & 1)
-            let candidate = fiddledDistance(x: baseX + dx, y: baseY + dy, z: baseZ + dz,
-                                           dx: fractionX - Double(dx), dy: fractionY - Double(dy), dz: fractionZ - Double(dz))
+            let shift = offset(sample.x + dx, sample.y + dy, sample.z + dz)
+            let shiftedX = sample.fractionX - Double(dx) + shift.x
+            let shiftedY = sample.fractionY - Double(dy) + shift.y
+            let shiftedZ = sample.fractionZ - Double(dz) + shift.z
+            let candidate = shiftedZ * shiftedZ + shiftedY * shiftedY + shiftedX * shiftedX
             if candidate < distance { nearest = corner; distance = candidate }
         }
-        return BlockPosition(blockX: (Int(baseX) + ((nearest >> 2) & 1)) * 4,
-                             blockY: (Int(baseY) + ((nearest >> 1) & 1)) * 4,
-                             blockZ: (Int(baseZ) + (nearest & 1)) * 4)
+        return BlockPosition(blockX: (Int(sample.x) + ((nearest >> 2) & 1)) * 4,
+                             blockY: (Int(sample.y) + ((nearest >> 1) & 1)) * 4,
+                             blockZ: (Int(sample.z) + (nearest & 1)) * 4)
     }
 
     /// Applies the source chunk's 26.3 build-height clamp after selecting the cell. DimensionType
     /// supplies validated, section-aligned limits; its logical height is not the build height.
     /// Missing data inside those limits still remains the caller's unavailable source.
     public func cellOrigin(at block: BlockPosition, in dimension: DimensionType) -> BlockPosition? {
-        guard let cell = cellOrigin(at: block) else { return nil }
+        cellOrigin(at: block).map { clamped($0, to: dimension) }
+    }
+
+    /// The batch equivalent of cellOrigin(at:in:), with the same source build-height clamp.
+    public func cellOrigins(at blocks: [BlockPosition], in dimension: DimensionType) -> [BlockPosition?] {
+        var cells = cellOrigins(at: blocks)
+        for index in cells.indices {
+            if let cell = cells[index] { cells[index] = clamped(cell, to: dimension) }
+        }
+        return cells
+    }
+
+    private func clamped(_ cell: BlockPosition, to dimension: DimensionType) -> BlockPosition {
         // A cell spans four blocks, so the last cell begins three below the inclusive top.
         return BlockPosition(blockX: cell.x, blockY: min(max(cell.y, dimension.minY), dimension.maxY - 3), blockZ: cell.z)
     }
 
-    private func fiddledDistance(x: Int32, y: Int32, z: Int32, dx: Double, dy: Double, dz: Double) -> Double {
+    private struct Offset {
+        let x, y, z: Double
+    }
+
+    private func cornerOffset(x: Int32, y: Int32, z: Int32) -> Offset {
         var state = zoomSeed
         for _ in 0..<2 {
             state = Self.next(state, salt: Int64(x))
             state = Self.next(state, salt: Int64(y))
             state = Self.next(state, salt: Int64(z))
         }
-        let shiftedX = dx + Self.fiddle(state)
+        let x = Self.fiddle(state)
         state = Self.next(state, salt: zoomSeed)
-        let shiftedY = dy + Self.fiddle(state)
+        let y = Self.fiddle(state)
         state = Self.next(state, salt: zoomSeed)
-        let shiftedZ = dz + Self.fiddle(state)
-        return shiftedZ * shiftedZ + shiftedY * shiftedY + shiftedX * shiftedX
+        return Offset(x: x, y: y, z: Self.fiddle(state))
+    }
+
+    private struct Sample {
+        let x, y, z: Int32
+        let fractionX, fractionY, fractionZ: Double
+
+        init?(_ block: BlockPosition) {
+            guard let blockX = Int32(exactly: block.x), let blockY = Int32(exactly: block.y),
+                  let blockZ = Int32(exactly: block.z) else { return nil }
+            let shiftedX = blockX &- 2, shiftedY = blockY &- 2, shiftedZ = blockZ &- 2
+            x = shiftedX >> 2; y = shiftedY >> 2; z = shiftedZ >> 2
+            fractionX = Double(shiftedX & 3) / 4
+            fractionY = Double(shiftedY & 3) / 4
+            fractionZ = Double(shiftedZ & 3) / 4
+        }
+    }
+
+    private struct CornerGrid {
+        let minX, minY, minZ, height, depth, count: Int
+
+        init?(_ blocks: [BlockPosition]) {
+            guard blocks.count > 1 else { return nil }
+            var lowX = Int.max, lowY = Int.max, lowZ = Int.max
+            var highX = Int.min, highY = Int.min, highZ = Int.min
+            for block in blocks {
+                guard let sample = Sample(block) else { continue }
+                lowX = min(lowX, Int(sample.x)); highX = max(highX, Int(sample.x))
+                lowY = min(lowY, Int(sample.y)); highY = max(highY, Int(sample.y))
+                lowZ = min(lowZ, Int(sample.z)); highZ = max(highZ, Int(sample.z))
+            }
+            guard lowX != Int.max else { return nil }
+            // Each sample needs its base corner and the next on every axis. Reject wide or
+            // sparse bounds before multiplying, including wrapped Int32 endpoint inputs.
+            let width = highX - lowX + 2, height = highY - lowY + 2, depth = highZ - lowZ + 2
+            let limit = min(blocks.count, 2_048) * 8
+            guard width <= limit, height <= limit, depth <= limit,
+                  width * height <= limit, width * height * depth <= limit else { return nil }
+            minX = lowX; minY = lowY; minZ = lowZ
+            self.height = height; self.depth = depth; count = width * height * depth
+        }
+
+        func index(x: Int32, y: Int32, z: Int32) -> Int {
+            ((Int(x) - minX) * height + Int(y) - minY) * depth + Int(z) - minZ
+        }
     }
 
     private static func next(_ state: Int64, salt: Int64) -> Int64 {

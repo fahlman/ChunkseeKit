@@ -139,8 +139,12 @@ is unavailable; the output is not narrowed, so extreme valid source coordinates 
 another cell. `cellOrigin(at:in:)` applies the verified 26.3 source-chunk Y clamp using the
 existing validated DimensionType's build limits, independently of logical height. It does not
 read files, fill missing data, blend colors or change per-block palette semantics. Ordinary Chunk.biome remains a direct saved-cell
-lookup. The additive API is unreleased for fahlman/Chunksee#361; app neighbor-data integration
-follows a reviewed release. No serialized facts or RegionFacts interpretation change.
+lookup. The unreleased `cellOrigins(at:)` and `cellOrigins(at:in:)` overloads share scalar
+selection and clamping, caching nearby corner offsets only within the call. Checked bounds
+limit the temporary grid to 16,384 slots; sparse/extreme input falls back to scalar work.
+This #128 candidate requires measured benefit before adoption; no app speedup is claimed by
+the API alone. Existing scalar sampling is published and adopted on fahlman/Chunksee#361.
+No serialized facts or RegionFacts interpretation change.
 
 `Chunk.biomeSnapshot` projects an immutable ChunkBiomeSnapshot retaining only section Y values
 and biome palettes. It does not keep the raw chunk, blocks or light arrays. Full Chunk/ChunkSection
