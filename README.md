@@ -1263,6 +1263,13 @@ Special geometry stays unavailable for other game versions, open lids or double 
 Since v0.55.0, the plain shield's plate and handle come from the official
 `ShieldModel`, using `entity/shield/shield_base_nopattern` and the definition's base GUI settings.
 Saved banner patterns and base colors remain outside this static default-variant API.
+
+The unreleased #199 extension supports the static **26.3 / 5023** conduit item through the same
+APIs. Its closed shell uses `entity/conduit/base` and the game's 32×16 skin dimensions; the item
+definition still supplies its transform and base GUI settings. Shared cuboids and face UVs describe
+it without a conduit-specific client renderer. Active world-conduit animation is not an item model.
+Missing images keep the client's normal fallback, and unverified game versions remain unavailable.
+
 Selected ancestor and local transforms compose in parent-to-child order. They are baked into
 special geometry for positive X scale, matching nonzero Y/Z signs, translation, and identity or
 an axis-aligned half-turn, with an identity right rotation. This covers both the shulker's quaternion

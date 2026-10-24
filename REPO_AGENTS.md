@@ -497,7 +497,7 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
-`SpecialItemModel` supplies closed single-chest, shulker, shield and banner cuboids for selected special item
+`SpecialItemModel` supplies closed single-chest, shulker, shield, banner and conduit cuboids for selected special item
 definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
 face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
@@ -517,6 +517,15 @@ within the existing -16...32 model range, and special parts share the item/model
 No public enum case, image decoder, cache, artwork or world interpretation change is introduced.
 Containers shipped for fahlman/Chunksee#395; the shield extension shipped in v0.55.0 for
 fahlman/Chunksee#390. App adoption follows its own checks.
+
+The unreleased #199 conduit extension shares that geometry/UV owner. ConduitSpecialRenderer
+bakes the closed shell and uses `entity/conduit/base`; ConduitRenderer.createShellLayer defines
+its 6×6×6 cube and 32×16 skin. The shared UV conversion now uses the skin's width and height;
+existing 64×64 skins retain their mapping. The supplied item definition owns transforms and
+base GUI presentation. The special renderer is stateless; active world-conduit animation stays
+outside this item path. Existing version, part and coordinate limits still apply. No public API,
+image decoder, app renderer, world interpretation or artwork is added. App adoption remains on
+fahlman/Chunksee#390 after release.
 
 Ordinary element models preserve translations and unit axis-aligned half-turns through that same
 `AssetItemTransform` owner. Translation is in blocks and moves corners and rotation origins in
