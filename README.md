@@ -1335,8 +1335,8 @@ verified 26.3/5023 registry. Its `BlockTint` is either a fixed 24-bit RGB color 
 spruce and birch leaves have fixed colors; oak and mangrove leaves use foliage; upper tall grass
 uses the grass biome one block below. Flower definitions keep their separate untinted and
 grass-tinted indexes. Stem age and redstone power retain their saved colors. The omitted
-half/power/age defaults are verified against that game's registry; invalid properties, unknown
-blocks/indexes and unverified versions return nil. No other registry defaults are inferred.
+half/power/age defaults use the same verified registry owner as block-model selection; invalid
+properties, unknown blocks/indexes and unverified versions return nil.
 
 This API describes in-world **block models**, not item or particle colors. Fluid water obtains
 its color directly from the biome; the water/bubble block-model sources are white because the
@@ -1356,24 +1356,24 @@ Image decoding, choosing the correct biome, optional blending across neighboring
 map shading, caches and drawing stay with the client. Item grass tints share the same climate
 pixel arithmetic; no second PNG/archive reader or mutable color cache is added.
 
-### Blockstate model selection (unreleased)
+### Blockstate model selection
 
 `GameAssets.blockModel(for:)` matches a `BlockState` against its jar definition and returns
 an `AssetBlock`. Explicit variants take precedence over multipart selectors. All matching
 multipart pieces are retained, in definition order. Each part contains one or more weighted
 alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and UV-lock flag.
 The rotations remain separate from the model's inventory transform. The resolved value preserves
-all choices for overview colors. Its additive, unreleased `selectedAlternatives(at:)` returns one
+all choices for overview colors. Its `selectedAlternatives(at:)` (v0.66.0) returns one
 alternative per part for a whole `BlockPosition`, without rereading resources or projecting faces.
 Selection is verified for vanilla 26.3/5023 only. It uses the game's position seed, weighted draw,
 and multipart reseeding; beds share their head position, and doors/double plants share the lower
 position. The shared legacy random generator preserves Java's signed overflow and rejection rules.
-All three input coordinates must fit Int32. Unverified versions/namespaces and missing seed-driving
-properties return nil while the existing `parts` remain available. Ordinary Minecraft-namespace
+All three input coordinates must fit Int32. Unverified versions/namespaces and unresolved or invalid
+seed-driving properties return nil while the existing `parts` remain available. Ordinary Minecraft-namespace
 blocks come from the supplied jar's definitions, without a second name catalog; the 49 verified
 seed overrides stay in Kit because those rules exist only in game code. Item-frame entity render
 states have no block seed and remain unavailable. Modified block behavior is not resolved.
-The special seed-rule sets supply no omitted state defaults.
+The special seed-rule sets obtain omitted properties from the same registry owner as model predicates.
 
 `AssetModel.Face.textureCoordinates` returns the four normalized UV coordinates in original
 face-vertex order after the face's own rotation. The additive, unreleased
@@ -1397,11 +1397,15 @@ if let models = assets.blockModel(for: horizontalLog) {
 }
 ```
 
-The supplied properties must settle every relevant predicate. **Missing properties are not
-guessed.** In 26.3, a saved default state can omit its properties, and the artwork files do not
-contain the registry defaults. Such a state returns nil when it prevents a unique decision;
-clients can retain their existing fallback. Property domains are not validated against the
-game registry. Multipart AND/OR and pipe-separated alternatives are supported, including the
+In 26.3, a saved default state can omit its properties. For a 26.3/5023 asset jar, omitted
+properties now use verified registry defaults for known Minecraft blocks (unreleased, #195).
+For example, `BlockState("minecraft:oak_log")` resolves the `axis=y` model; supplying `axis=x`
+still selects the horizontal model. Explicit saved values win, and the saved `BlockState`
+itself stays unchanged. Model predicates, special seed rules and color-driving properties share
+one default-property owner. Other versions, namespaces, names and properties gain no inferred
+defaults. If an unresolved property prevents a decision, the result stays nil so clients can
+retain their fallback. Explicit property domains are not validated against the game registry.
+Multipart AND/OR and pipe-separated alternatives are supported, including the
 26.3 per-term `!` negation only for data version 5023; negation in other versions stays unavailable.
 Integer and Boolean condition values retain the codec's legacy representations. Numeric fields
 use strict JSON types and signed 32-bit bounds rather than coercing strings or fractions.

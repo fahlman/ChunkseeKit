@@ -433,8 +433,9 @@ files. Directories named with a .json suffix are not registered files.
 
 `BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
 sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
-stem age and redstone power. Only the verified half/power/age defaults are supplied for compact
-26.3 states; malformed values, unknown blocks/indexes and other versions remain unavailable.
+stem age and redstone power. Color-driving properties use the same verified 26.3 registry
+defaults as block models; malformed values, unknown blocks/indexes and other versions remain
+unavailable.
 Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
 uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
 kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
@@ -531,18 +532,22 @@ extension shipped in v0.57.1 for fahlman/Chunksee#390 with no public API or app 
 `GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
 variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
 retains weighted alternatives, model IDs, X/Y/Z quarter turns and UV locking; it does not pick a
-random model or project faces. Missing properties remain unknown unless another predicate term
-settles the result. The jar's artwork does not supply the registry defaults omitted by compact
-26.3 saved states, so clients retain their fallback when selection is unresolved. No default-state
-table or registry inference is introduced. Per-term multipart negation is verified for 5023 only;
+random model or project faces. `BlockProperties` supplies omitted values from the verified
+26.3/5023 registry: 884 property-bearing blocks share 114 immutable property dictionaries. Exact
+registered names are used; explicit values win, and other versions, namespaces, names or properties
+have no inferred defaults. Saved BlockState values remain unchanged. Predicates, model seed offsets
+and color-driving properties share this owner. Missing properties remain unknown unless another
+predicate term settles the result. Per-term multipart negation is verified for 5023 only;
 unknown versions with negation stay unavailable. Property domains are not registry-validated.
 The Variant/Quadrant, BlockStateModelDispatcher and multipart codecs establish the format.
 Strict JSON primitives share `AssetJSON` with item definitions; archive reads, parent resolution,
 textures and the cumulative JSON/element budget retain their existing owners. Block selection
 is additionally bounded to 256 selected models, 4,096 selectors/condition nodes or terms and
-64 condition levels. This additive API is unreleased for fahlman/Chunksee#363; default-state
-coverage, app colors/images/caches/tinting/randomization and performance checks remain separate.
-No world, serialized model or RegionFacts version change.
+64 condition levels. The model reader shipped in v0.51.0; the compact-default correction is
+unreleased on #195 for fahlman/Chunksee#363. BlockState.CODEC, StateHolder and StateDefinition
+were verified against all 1,286 registered default states and 2,313 partial-property decodes in
+the official 26.3 client. Public-path tests need no game data. App drawing, caches and performance
+checks remain separate. No world, serialized model or RegionFacts version change.
 
 `AssetBlock.selectedAlternatives(at:)` adds verified 26.3 world-position selection to that same
 resolved model. The reader retains the multipart distinction, total weights and a compact seed
@@ -550,12 +555,12 @@ offset; selection rereads no resources and keeps the overview alternatives intac
 owns the 17 bed and 32 door/double-plant overrides verified in the official registry's code.
 Ordinary Minecraft-namespace definitions already resolved by the reader use the unshifted position,
 without a duplicate block-name catalog. The two item-frame entity render states have no block seed.
-These sets supply no registry/default property values. Unverified versions/namespaces and missing
-needed half/facing properties stay unavailable. Coordinates are checked before Java's intentional
-Int32 offsets and Int64 seed mixing. LegacyRandom owns the weighted draw and signed nextLong
+These sets supply no property values: half, part and facing use BlockProperties. Unverified
+versions/namespaces and unresolved or invalid needed properties stay unavailable. Coordinates are
+checked before Java's intentional Int32 offsets and Int64 seed mixing. LegacyRandom owns the weighted draw and signed nextLong
 needed for multipart's reset-before-each-part rule. Official BlockState.getSeed and actual
 WeightedVariants/MultiPartModel collectParts calls establish expected selections; synthetic public
-API tests need no jar. This additive API is unreleased on #193 for fahlman/Chunksee#363. Images,
+API tests need no jar. This additive API shipped in v0.66.0 on #193 for fahlman/Chunksee#363. Images,
 cache format, close-zoom drawing and timing remain app work after a reviewed release.
 
 `GameAssets.palettedTexture(_:in:)` interprets one 26.3/5023 atlas's generated palette sprites
