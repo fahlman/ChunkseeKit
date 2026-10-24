@@ -87,6 +87,8 @@ public struct BiomeSampler: Sendable {
         let x, y, z: Double
     }
 
+    // Keep seed mixing inside the scalar loop instead of making eight calls per sample.
+    @inline(__always)
     private func cornerOffset(x: Int32, y: Int32, z: Int32) -> Offset {
         var state = zoomSeed
         for _ in 0..<2 {
