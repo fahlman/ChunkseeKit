@@ -41,8 +41,8 @@ import Testing
             let values = try pair(["equipment": .compound(["body": gear])])
             #expect(values.pet.maxHealth == 20 && values.player.maxHealth == 20)
         }
-        let irrelevantLegacyField = try pair(["ArmorItem": item(["minecraft:attribute_modifiers": .list([modifier(100, slot: "body")])])])
-        #expect(irrelevantLegacyField.pet.maxHealth == 20) // ArmorItem is a horse field, not a wolf field.
+        let legacyBody = try pair(["ArmorItem": item(["minecraft:attribute_modifiers": .list([modifier(100, slot: "body")])])])
+        #expect(legacyBody.pet.maxHealth == 120) // Saved equipment applies without a species inventory.
         let invalid = try pair(["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])])])
         #expect(invalid.pet.maxHealth == nil && invalid.player.maxHealth == nil)
     }
@@ -94,10 +94,12 @@ import Testing
         let chest = item(["minecraft:attribute_modifiers": .list([modifier(100, slot: "any", id: "example:old_chest")])], id: "minecraft:iron_chestplate")
         let body = item(["minecraft:attribute_modifiers": .list([modifier(3, slot: "body")])], id: "minecraft:diamond_horse_armor")
         let armor = NBT.list([.compound([:]), .compound([:]), chest, .compound([:])])
-        for oldBody in [body, .compound([:])] {
-            let horse = try pair(["id": .string("minecraft:horse"), "ArmorItems": armor, "ArmorItem": oldBody]).pet
-            #expect(horse.equipment?["chest"] == nil)
-            #expect(horse.maxHealth == (oldBody == body ? 23 : 20))
+        for id in ["minecraft:horse", "example:mount"] {
+            for oldBody in [body, .compound([:])] {
+                let creature = try pair(["id": .string(id), "ArmorItems": armor, "ArmorItem": oldBody]).pet
+                #expect(creature.equipment?["chest"] == nil)
+                #expect(creature.maxHealth == (oldBody == body ? 23 : 20))
+            }
         }
         let llama = try pair(["id": .string("minecraft:llama"), "ArmorItems": armor, "DecorItem": body]).pet
         #expect(llama.equipment?["chest"]?.id == "minecraft:iron_chestplate")

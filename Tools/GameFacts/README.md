@@ -6,7 +6,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
-registered block default properties and spawn-egg relationships.
+registered block default properties, spawn-egg relationships and saved equipment attachment identities.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -21,7 +21,8 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
-`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`
+`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
+`GeneratedEquipmentFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -85,6 +86,12 @@ Sources and interpretation:
   actual result for each entity, checking that a returned item is a SpawnEggItem. No explicit
   no-egg or custom-entity list is generated. Runtime lookup also requires a readable item
   definition in the supplied jar; model support and picture rendering remain separate.
+
+- SaddleEquipmentSlotFix.fixEntityWithSaddleFlag supplies the item/count represented by the
+  old saved `Saddle` boolean. AbstractChestedHorse.mobInteract establishes Items.CHEST as the
+  attached `ChestedHorse` item. These identities are extracted rather than copied into the reader;
+  saved item compounds still supply their own IDs. A changed saddle shape fails generation for
+  inspection. No species capability catalog is generated or needed for these saved fields.
 
 Generated entries name these sources, and `source.json` records the release, client/tool hashes
 and extracted-output hashes. Missing/ambiguous classes or mappings fail generation visibly.
