@@ -60,7 +60,9 @@ public struct GameAssets: Sendable {
     /// material's ordered overlays carry the base dye and first sixteen pattern layers; clients
     /// composite them before projecting the existing geometry. Trim-pattern identity stays unused.
     /// Resource-pack layering and world-specific registry overrides are not resolved here.
-    /// Unknown live properties retain defaultItemModel's static choices and resource/work limits.
+    /// Saved block-state properties, component presence/removal, the next-damage break threshold
+    /// and charged projectile contents also choose branches. Missing prototype facts or relevant
+    /// unreadable saved values remain unavailable. Live properties retain the static choices.
     /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
     public func itemModel(for selection: ItemModelSelection) -> AssetItem? {
         try? AssetItemReader(assets: self, selection: selection).read(selection.modelID.description)

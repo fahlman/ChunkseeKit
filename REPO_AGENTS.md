@@ -861,7 +861,7 @@ changes and trim/custom-model-data evaluation remain outside this API. GameAsset
 resource-path validation and model resolution, while app caches must key on the selected model.
 No stored-field or cache-version change is needed for this computed reference.
 `ItemStack.itemModelSelection` adds the saved trim-material identity and custom-model data through
-the same model-reference owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint,
+the same model-reference owner. Its hashable ItemModelSelection is the client model-cache key, excluding independent tint values,
 count, name and trim-pattern data. Current/removed trim suppresses legacy tag.Trim; an inline material
 holder has no registry key and therefore selects the fallback. Malformed model/material values
 remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
@@ -872,6 +872,21 @@ keep the generic fallback in older jars, preserving their untrimmed armor. Other
 keep their static choices, and defaultItemModel retains its existing behavior. These additive APIs
 are unreleased for fahlman/Chunksee#390; client adoption and generated-palette images follow a
 reviewed release. No serialized field, cache version, artwork or app presentation is added.
+The unreleased #229 follow-up evaluates saved block-state properties, component presence/removal,
+the next-damage break threshold and charged-projectile contents. SavedItemModelProperties owns
+these immutable key projections; AssetItemReader uses its existing condition/case traversal.
+Exact string bytes keep Java's Unicode identity, and unreadable unrelated properties remain
+independent. Current fields/removals suppress legacy aliases. Component/block-property projections
+are bounded to 4,096 entries and 64 KiB each; projectile inspection is bounded to 4,096 entries.
+Item.components' code-only presence and omitted block-state/charge defaults come through the
+single Tools/GameFacts generator, after binding DataComponentInitializers against the vanilla
+registry lookup. Charge's rocket identity and enum strings are generated too. No hand-kept item
+inventory, runtime Java dependency or new version gate is introduced. Relevant unknown prototype
+facts remain unavailable; arbitrary prototype-component value equality for ignore_default is
+not inferred from mere presence. The shared durability owner normalizes item identifiers.
+Clients must include ItemModelSelection.savedPropertyStorageCost in their existing key budget
+when adopting this additive minor-release API, tracked on fahlman/Chunksee#447. No retained-save
+format or RegionFacts interpretation change is needed; ItemStack already preserves these fields.
 The unreleased #183 extension exposes `ItemStack.customModelData`: typed floats, flags, strings and
 RGB colors. Missing/removed data is known empty; malformed data stays unavailable. Current values
 and removal suppress legacy CustomModelData; older numbers migrate to one Float. The four lists

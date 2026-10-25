@@ -57,7 +57,9 @@ import Testing
         ])))
         #expect(legacy.headSkin == .unresolved)
         let removed = stack(.int(3), extra: ["!minecraft:profile": .compound([:]), "SkullOwner": .int(4)])
-        #expect(removed.headSkin == .defaultSkin && removed.itemModelSelection == stack().itemModelSelection)
+        #expect(removed.headSkin == .defaultSkin)
+        #expect(removed.itemModelSelection != stack().itemModelSelection)
+        #expect(try picture(removed, in: assets()) == picture(stack(), in: assets()))
         #expect(stack(.compound(["texture": .string("pack:heads/custom")]),
                       extra: ["SkullOwner": .int(4)]).headSkin == .resource(try #require(Identifier("pack:heads/custom"))))
         #expect(stack(extra: ["SkullOwner": .int(4)]).headSkin == nil)

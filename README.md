@@ -774,8 +774,29 @@ holder has no registry key and also uses the fallback, matching the game's `Hold
 Malformed material/model values leave the selection unavailable. Only the material identity is
 read: trim-pattern and tooltip fields do not choose an inventory picture, and this does not validate
 the full trim codec or resolve its registry. Names, counts, trim patterns and independent dye/potion
-tints do not change this model key; apply those tints separately using the original stack. These additive
+color values do not change this model key; component presence can select a different picture.
+Apply independent tints separately using the original stack. These additive
 selection APIs are unreleased for fahlman/Chunksee#390; no serialized field or rescan is added.
+
+The unreleased #229 extension also evaluates saved `block_state`, `has_component`, `broken`
+and `charge_type` branches. Block-property strings keep exact Unicode identity; a bad unrelated
+property does not discard readable values. Component additions/removals override mechanically
+generated item prototype presence. The same release tool obtains omitted block-state defaults,
+charge names and the firework-item identity from game code; item definitions stay in the jar.
+Broken means the next damage would break the item, using the shared durability owner. Any saved
+nonempty projectile list without a firework selects the arrow charge; no arrow-type list is used.
+Current fields/removals suppress corresponding legacy tags. Live use, time and compass-angle
+branches keep their static choices. These new selectors do not add a version gate.
+
+Unreadable needed facts or unknown item prototypes leave that selected picture unavailable;
+other model branches remain readable. `ignore_default` can establish absent patches, removals
+and additions of non-prototype components. An explicit value of a prototype component stays
+unknown because its arbitrary value cannot be compared with the default from presence alone.
+Component and block-property projections are bounded to 4,096 entries and 64 KiB of retained
+text each; charged-projectile inspection is bounded to 4,096 entries. The immutable model key
+includes these facts. Clients add `savedPropertyStorageCost` to their existing key-memory charge
+when adopting the minor release (fahlman/Chunksee#447). ItemStack's retained components and Codable
+stay unchanged, so existing saved scan data needs no rescan or RegionFacts version change.
 
 `ItemStack.customModelData` reads the saved floats, flags, strings and RGB colors used by custom
 item pictures. Missing/removed components return known empty lists; malformed data returns nil
