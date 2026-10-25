@@ -113,7 +113,7 @@ import Testing
         for id in ["pink_petals", "wildflowers"] {
             #expect(tint(id, 0) == .constant(0xffffff))
             #expect(tint(id, 1) == .biome(.grass, yOffset: 0))
-            #expect(tint(id, 2) == nil)
+            #expect(tint(id, 2) == .constant(0xffffff))
         }
     }
 
@@ -141,15 +141,30 @@ import Testing
         }
     }
 
-    @Test func unavailableBlocksVersionsAndTintIndexesStayUnavailable() {
-        for id in ["stone", "cherry_leaves", "pale_oak_leaves", "example:oak_leaves", "example:grass_block", "invalid ID"] {
+    @Test func missingRegisteredSourcesLeaveTheTextureUntinted() {
+        for id in ["cherry_leaves", "pale_oak_leaves", "bamboo", "bamboo_sapling", "stonecutter",
+                   "lava_cauldron", "powder_snow_cauldron", "stone", "minecraft:no_registered_source"] {
+            for index in [0, 1, Int.max] {
+                #expect(BlockState(id).tintSource(at: index, gameDataVersion: 5023) == .constant(0xffffff))
+            }
+        }
+        for id in ["oak_leaves", "redstone_wire", "tall_grass"] {
+            #expect(BlockState(id).tintSource(at: 1, gameDataVersion: 5023) == .constant(0xffffff))
+        }
+    }
+
+    @Test func unavailableNamespacesVersionsAndInvalidIndexesStayUnavailable() {
+        for id in ["example:oak_leaves", "example:grass_block", "example:cherry_leaves", "invalid ID"] {
             #expect(BlockState(id).tintSource(at: 0, gameDataVersion: 5023) == nil)
         }
         for version: Int32 in [0, 4000, 5022, 5024, .max] {
-            #expect(BlockState("oak_leaves").tintSource(at: 0, gameDataVersion: version) == nil)
+            for id in ["oak_leaves", "cherry_leaves"] {
+                #expect(BlockState(id).tintSource(at: 0, gameDataVersion: version) == nil)
+            }
         }
-        for index in [-1, 1, Int.max] {
+        for index in [-1, Int.min] {
             #expect(BlockState("oak_leaves").tintSource(at: index, gameDataVersion: 5023) == nil)
+            #expect(BlockState("cherry_leaves").tintSource(at: index, gameDataVersion: 5023) == nil)
         }
     }
 }
