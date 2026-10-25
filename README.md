@@ -1090,8 +1090,9 @@ let trader = try world.wanderingTrader()                // spawnDelay (ticks of 
 let minecraft = URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft")
 let names = UserCache.names(under: minecraft)
 
-// Every biome Minecraft 26.3 generates in a vanilla dimension; custom dimensions have none listed.
-let overworldBiomes = world.dimension("overworld")!.vanillaBiomes   // 56, from "minecraft:mushroom_fields" on
+// Read the game's dimension association tag, including enabled data-pack changes.
+let assets = try GameAssets(contentsOf: gameJarURL)
+let overworldBiomes = try world.possibleBiomes(in: "minecraft:overworld", assets: assets)
 
 // Every saved world in every installation's game folder (backups aren't included).
 let worlds = World.saved(under: minecraft).compactMap { try? World(contentsOf: $0) }
@@ -1416,6 +1417,18 @@ member array. The reader does not reproduce Minecraft's partial recovery from ma
 files. File errors and cancellation propagate. Bounds are 64 packs/levels, 4,096 requested tags
 or members per tag, 16 MiB per JSON file, 64 MiB of selected JSON and 65,536 member/reference
 steps. Reads keep no persistent mutable cache and never write to the world.
+
+`World.possibleBiomes(in:assets:)` reads the standard `is_overworld`, `is_nether` or `is_end`
+biome association tag through this owner. New members and enabled data-pack additions need no
+reader change. These declarations do not prove saved usage or generation by a custom generator.
+Missing/unreadable tags and dimensions without a standard association return nil; a readable
+empty tag returns an empty array. A complete replacing data-pack tag can be read even without
+vanilla files. Saved biome usage is always independent of this query.
+
+**Migration:** the static `Dimension.vanillaBiomes` property and its built-in inventories are
+removed. Pass the world and its matching game assets to `possibleBiomes(in:assets:)` instead;
+clients can use `?? []` when displaying an unavailable list. This intentional breaking API
+change requires a minor release before app adoption. No snapshot-specific catalog remains.
 
 ### Biome color definitions (v0.52.0)
 

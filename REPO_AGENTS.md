@@ -454,7 +454,14 @@ guess whether an optional member exists in a live code-defined registry. Typed t
 add their existing definition validation. All consumers share ResourceTagReader and its query
 budget; no mutable cache escapes the read. No version inventory or new dependency is added.
 The world query uses the matching jar and the saved enabled-pack list, including future versions.
-These additive APIs implement #233; biome/structure/ore/POI/item consumers are separate changes.
+These additive APIs implement #233; structure/ore/POI/item consumers are separate changes.
+World.possibleBiomes(in:assets:) implements #223 by reading the three standard dimension
+association tags through this owner. The standard dimension-to-tag association is format
+vocabulary; all biome membership comes from the supplied files and enabled packs at runtime.
+Missing/unreadable tags and custom dimensions without a standard association return nil;
+known empty tags remain empty. This is not proof of saved usage or custom-generator output.
+Dimension.vanillaBiomes and its hand-copied inventories are removed, an intentional breaking
+API change requiring a minor release and app adoption. No per-snapshot biome list is maintained.
 
 `BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
 26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
