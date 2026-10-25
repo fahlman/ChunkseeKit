@@ -34,8 +34,8 @@ enchantment definitions on #224; language files on #225; remaining copied data o
 saved facts currently discarded on #229/#235; and source-generated code-only facts on #222.
 The current mob reader already follows the saved format without a type catalog. Code-only
 defaults still limited to verified versions remain unavailable elsewhere until the regeneration
-work supplies evidence; a missing default must not suppress other readable facts. #227 is an
-investigation of block item models, not approval to replace default-state behavior.
+work supplies evidence; a missing default must not suppress other readable facts. #227 records the reviewed block-item investigation and Ryan's subsequent decision to generate
+actual default properties through the single release tool, without item-model substitution.
 
 ## Project
 
@@ -701,10 +701,12 @@ extension shipped in v0.57.1 for fahlman/Chunksee#390 with no public API or app 
 `GameAssets.blockModel(for:)` matches supplied BlockState properties and resolves explicit
 variants or every selected multipart piece through the existing model reader. Its `AssetBlock`
 retains weighted alternatives, model IDs, X/Y/Z quarter turns and UV locking; it does not pick a
-random model or project faces. `BlockProperties` supplies omitted values from the verified
-26.3/5023 registry: 884 property-bearing blocks share 114 immutable property dictionaries. Exact
-registered names are used; explicit values win, and other versions, namespaces, names or properties
-have no inferred defaults. Saved BlockState values remain unchanged. Predicates, model seed offsets
+random model or project faces. `BlockProperties` supplies omitted values from
+`GeneratedBlockDefaults`, extracted from each registered block's actual defaultBlockState by
+Tools/GameFacts. Identical property dictionaries are shared; empty defaults need no entry.
+Each group names its code source, and raw facts retain the concrete block class. Exact registered
+identities are used for any parseable asset version. Explicit values win; unknown namespaces,
+names or properties have no inferred defaults. Property-independent resource choices need none. Saved BlockState values remain unchanged. Predicates, model seed offsets
 and color-driving properties share this owner. Missing properties remain unknown unless another
 predicate term settles the result. Per-term multipart negation is verified for 5023 only;
 unknown versions with negation stay unavailable. Property domains are not registry-validated.
@@ -1096,8 +1098,8 @@ the app's PetDetailText.appearance must unwrap variant and render other known fa
 adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout is not changed here.
 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
-Its current categories are dye IDs/names/texture RGB, mob appearance and enchantment effect
-format associations. It verifies the installed stable client's download hash, records tool/output hashes and exact commands, and
+Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
+format associations, item model prototype facts and block default properties. It verifies the installed stable client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
 tables or runtime Java dependency are added. See Tools/GameFacts/README.md for commands and

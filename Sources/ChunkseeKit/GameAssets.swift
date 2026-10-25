@@ -70,7 +70,8 @@ public struct GameAssets: Sendable {
 
     /// Matches supplied block properties and resolves the selected variant or multipart models.
     /// Weighted alternatives and block rotations are retained, not randomly chosen or baked.
-    /// Omitted properties use verified Minecraft 26.3/5023 registry defaults for known blocks.
+    /// Omitted properties use code defaults mechanically extracted by the release tool, without
+    /// gating the lookup on the asset version. Explicit saved properties always take precedence.
     /// Otherwise, missing properties that prevent a unique decision return nil. Explicit values
     /// are preserved; property domains are not validated against a game registry.
     /// Missing/unsupported/malformed selected resources and overlapping variants also return nil.
