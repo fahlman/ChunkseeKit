@@ -54,6 +54,16 @@ struct AssetItemReader {
             if property.description == "minecraft:custom_model_data", selection != nil {
                 let data = try customModelData(), index = try customIndex(node)
                 flag = data.flags.indices.contains(index) && data.flags[index]
+            } else if property.description == "minecraft:has_component", let selection {
+                let id = try AssetJSON.identifier(node["component"])
+                let ignoreDefault = try node["ignore_default"].map(AssetJSON.boolean) ?? false
+                guard let value = selection.savedProperties.hasComponent(id.description, ignoringDefault: ignoreDefault) else {
+                    throw Invalid.asset
+                }
+                flag = value
+            } else if property.description == "minecraft:broken", let selection {
+                guard let value = selection.savedProperties.broken else { throw Invalid.asset }
+                flag = value
             }
             return node[flag ? "on_true" : "on_false"]
         case "minecraft:select":
@@ -77,6 +87,14 @@ struct AssetItemReader {
                 let data = try customModelData(), index = try customIndex(node)
                 let value = data.strings.indices.contains(index) ? data.strings[index] : nil
                 child = try selectedCase(node, value: value.map { Array($0.utf8) }) { Array($0.utf8) }
+            } else if property.description == "minecraft:block_state", let selection {
+                guard let propertyName = node["block_state_property"] as? String,
+                      let properties = selection.savedProperties.blockState,
+                      !selection.savedProperties.unreadableBlockProperties.contains(Array(propertyName.utf8)) else { throw Invalid.asset }
+                child = try selectedCase(node, value: properties[Array(propertyName.utf8)]) { Array($0.utf8) }
+            } else if property.description == "minecraft:charge_type", let selection {
+                guard let value = selection.savedProperties.charge else { throw Invalid.asset }
+                child = try selectedCase(node, value: Array(value.utf8)) { Array($0.utf8) }
             } else { child = node["fallback"] }
             return child
         case "minecraft:range_dispatch":

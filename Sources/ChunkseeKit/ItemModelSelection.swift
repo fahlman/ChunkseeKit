@@ -1,5 +1,6 @@
 /// Saved facts that choose a static inventory model, including custom-model colors, shield
-/// designs, decorated-pot sides and head skins. Other stack tints are separate. Use this as the model-cache key.
+/// designs, decorated-pot sides, head skins and saved item-property branches. Other stack tint
+/// values are separate; component presence can itself select a model. Use this as the model-cache key.
 public struct ItemModelSelection: Sendable, Hashable {
     public let modelID: Identifier
     public let trimMaterialID: Identifier?
@@ -7,6 +8,11 @@ public struct ItemModelSelection: Sendable, Hashable {
     public let bannerDesign: ItemBannerDesign
     public let potDecorations: ItemPotDecorations
     public let headSkin: ItemHeadSkin
+    let savedProperties: SavedItemModelProperties
+
+    /// Additional retained cache-key storage for saved block properties/component identities.
+    /// Clients include this in their model/image cache budgets alongside existing selection fields.
+    public var savedPropertyStorageCost: Int { savedProperties.storageCost }
 }
 
 extension ItemStack {
@@ -19,19 +25,23 @@ extension ItemStack {
     public var itemModelSelection: ItemModelSelection? {
         guard let modelID = itemModelID, let customModelData, let bannerDesign, let potDecorations,
               let headSkin else { return nil }
+        let savedProperties = SavedItemModelProperties(self)
         guard components?["!minecraft:trim"] == nil,
               let trim = components?["minecraft:trim"] ?? components?["Trim"] else {
             return .init(modelID: modelID, trimMaterialID: nil, customModelData: customModelData,
-                         bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin)
+                         bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin,
+                         savedProperties: savedProperties)
         }
         guard let material = trim.compound?["material"] else { return nil }
         if material.compound != nil {
             // TrimMaterialProperty uses Holder.unwrapKey: an inline holder never has a key.
             return .init(modelID: modelID, trimMaterialID: nil, customModelData: customModelData,
-                         bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin)
+                         bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin,
+                         savedProperties: savedProperties)
         }
         guard let value = material.string, let materialID = Identifier(value) else { return nil }
         return .init(modelID: modelID, trimMaterialID: materialID, customModelData: customModelData,
-                     bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin)
+                     bannerDesign: bannerDesign, potDecorations: potDecorations, headSkin: headSkin,
+                     savedProperties: savedProperties)
     }
 }

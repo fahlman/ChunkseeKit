@@ -44,7 +44,9 @@ import Testing
         #expect(legacy.itemModelSelection == stack(.string("minecraft:quartz")).itemModelSelection)
         let removed = stack(.string("quartz"), extra: ["!minecraft:trim": .compound([:]),
                             "Trim": .compound(["material": .string("diamond")])])
-        #expect(removed.itemModelSelection == stack().itemModelSelection)
+        #expect(removed.itemModelSelection?.trimMaterialID == nil)
+        // The removal can now affect has_component; a custom item's absent prototype is unknown.
+        #expect(removed.itemModelSelection != stack().itemModelSelection)
         let overridden = stack(.string("gold"), extra: ["Trim": .compound(["material": .string("diamond")])])
         #expect(overridden.itemModelSelection?.trimMaterialID?.description == "minecraft:gold")
         for value in [NBT.string("broken"), .compound([:]), .compound(["material": .int(3)]),
@@ -62,11 +64,11 @@ import Testing
 
     @Test func materialIdentityDoesNotInventAKeyFromAnInlineHolderOrUseThePattern() throws {
         let inline = NBT.compound(["palette_id": .string("quartz"), "description": .string("Quartz")])
-        #expect(stack(inline).itemModelSelection == stack().itemModelSelection)
+        #expect(stack(inline).itemModelSelection?.trimMaterialID == nil)
+        #expect(stack(inline).itemModelSelection != stack().itemModelSelection)
         let first = stack(.string("pack:custom"))
         let second = ItemStack(id: "sample", count: 99, customName: "Different name", components: .compound([
-            "minecraft:trim": .compound(["material": .string("pack:custom"), "pattern": .string("coast")]),
-            "minecraft:dyed_color": .int(0x123456)
+            "minecraft:trim": .compound(["material": .string("pack:custom"), "pattern": .string("coast")])
         ]))
         #expect(first.itemModelSelection == second.itemModelSelection)
         #expect(first.itemModelSelection != stack(.string("quartz")).itemModelSelection)

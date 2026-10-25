@@ -4,8 +4,9 @@ This is the release regeneration entrypoint for facts that Minecraft keeps in co
 than save files, data packs, registries or language files. Do not copy game-content inventories
 into the reader. Saved variant strings are read directly, without consulting this output.
 
-The current categories are mob appearance, shared dye identities/texture RGB and enchantment
-effect format associations. Enchantment IDs and contents are always read at runtime from data.
+The current categories are mob appearance, shared dye identities/texture RGB, enchantment
+effect format associations and code-only item prototype facts needed by model selectors.
+Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
 
@@ -18,7 +19,7 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
-writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`
+writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`, `GeneratedItemModelFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -58,6 +59,15 @@ Sources and interpretation:
   are already retained in the entity save. Generated entries name the exact classes/fields.
   A new unmapped code format fails generation instead of being silently treated as harmless.
   No enchantment definition or ID membership is copied into this output.
+- Item.components supplies prototype component presence and the BLOCK_STATE/CHARGED_PROJECTILES
+  defaults that item-model selectors need when the save omits them. The game's
+  DataComponentInitializers bind these code defaults after VanillaRegistries.createWorldLookup;
+  this builds a registry lookup, not a world. Identical prototypes share one generated value.
+  ItemBlockState, HasComponent, Broken and Charge establish selection semantics. Charge's
+  FIREWORK_ROCKET identity and CrossbowItem.ChargeType strings are extracted, not hand-copied.
+  No item-model definitions or pictures are bundled. Arbitrary component value equality is
+  not claimed from presence: ignore_default remains unknown for an explicit value whose
+  prototype also has that component, since the game sanitizes equal values out of its patch.
 
 Generated entries name these sources, and `source.json` records the release, client/tool hashes
 and extracted-output hashes. Missing/ambiguous classes or mappings fail generation visibly.

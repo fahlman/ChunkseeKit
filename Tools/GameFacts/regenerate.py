@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import textwrap
 import zipfile
 
 
@@ -113,9 +114,36 @@ def generated_sources(facts, entities):
             enchantments += f"        {quoted(identifier)}: .{entry['format']},\n"
         enchantments += "    ]\n"
     enchantments += "}\n"
+    item_facts = facts["itemModels"]
+    if set(item_facts["chargeNames"]) != {"NONE", "ARROW", "ROCKET"}:
+        raise ValueError("New crossbow charge format requires inspection")
+    item_source = notice + "// Sources: BuiltInRegistries.ITEM, Item.components, DataComponents.BLOCK_STATE/CHARGED_PROJECTILES.\n"
+    item_source += "enum GeneratedItemModelFacts {\n"
+    item_source += "    struct Prototype: Sendable {\n        let components: Set<String>\n        let blockState: [String: String]\n        let charge: String\n    }\n\n"
+    item_source += "    // Charge.get uses Items.FIREWORK_ROCKET; names come from CrossbowItem.ChargeType.getSerializedName.\n"
+    item_source += f"    static let rocketItem = {quoted(item_facts['rocketItem'])}\n"
+    for key, value in item_facts["chargeNames"].items():
+        item_source += f"    static let {key.lower()}Charge = {quoted(value)}\n"
+    groups = {}
+    for identifier, prototype in sorted(item_facts["prototypes"].items()):
+        if not re.fullmatch(r"[a-z0-9_.:/-]+", identifier):
+            raise ValueError("Unsupported prototype identifier")
+        groups.setdefault(json.dumps(prototype, sort_keys=True), []).append(identifier)
+    item_source += "\n    static let prototypes: [String: Prototype] = {\n        var result = [String: Prototype]()\n"
+    item_source += "        func add(_ names: String, _ prototype: Prototype) {\n            for name in names.split(whereSeparator: \\.isWhitespace) { result[String(name)] = prototype }\n        }\n"
+    for encoded, names in sorted(groups.items()):
+        prototype = json.loads(encoded)
+        components = "[" + ", ".join(quoted(name) for name in prototype["components"]) + "]"
+        properties = "[" + ", ".join(quoted(k) + ": " + quoted(v) for k, v in sorted(prototype["blockState"].items())) + "]" if prototype["blockState"] else "[:]"
+        item_source += "        // Item.components for these registered items; value details stay in the game/save.\n        add(\"\"\"\n"
+        item_source += textwrap.indent(textwrap.fill(" ".join(names), width=100, break_long_words=False,
+                                                   break_on_hyphens=False), "        ") + "\n"
+        item_source += f"        \"\"\", .init(components: {components}, blockState: {properties}, charge: {quoted(prototype['charge'])}))\n"
+    item_source += "        return result\n    }()\n}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
-            "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments}
+            "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
+            "Sources/ChunkseeKit/GeneratedItemModelFacts.swift": item_source}
 
 
 def main():
@@ -142,11 +170,11 @@ def main():
                  for entry in metadata["libraries"] if "artifact" in entry.get("downloads", {})]
     libraries = [path.resolve() for path in libraries if path.exists()]
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
-    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java",
+    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
