@@ -5,7 +5,7 @@ enum EntityHealth {
 
     static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?, isTamed: Bool?, enchantments: [String: EnchantmentDefinition]) -> Double? {
         guard supportsEffects(nbt),
-              let modifiers = EquipmentHealth.modifiers(in: EntityEquipment.creature(nbt, species: species) ?? [:], enchantments: enchantments) else { return nil }
+              let modifiers = EquipmentHealth.modifiers(in: EntityEquipment.creature(nbt) ?? [:], enchantments: enchantments) else { return nil }
         let base = defaultMaximum(species: species, dataVersion: dataVersion)
         // An unrecognized saved owner can still require the game's old-owner conversion.
         // Do not treat an owner we cannot identify as proof that a wolf is untamed.

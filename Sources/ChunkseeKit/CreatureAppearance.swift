@@ -77,12 +77,12 @@ enum CreatureData {
         return "minecraft:" + (main == hidden ? main : GeneratedMobAppearance.pandaNormalVariant)
     }
 
-    static func equipment(_ nbt: NBT, species: String, isOwned: Bool) -> [String: ItemStack]? {
-        var items = EntityEquipment.creature(nbt, species: species)
+    static func equipment(_ nbt: NBT) -> [String: ItemStack]? {
+        var items = EntityEquipment.creature(nbt)
         if nbt["ChestedHorse"]?.bool == true {
             if items == nil { items = [:] }
-            if items?["storage"] == nil { items?["storage"] = ItemStack(id: "minecraft:chest") }
+            if items?["storage"] == nil { items?["storage"] = ItemStack(id: GeneratedEquipmentFacts.attachedChestItem) }
         }
-        return items ?? (isOwned && EntityEquipment.canWearPetEquipment(species) ? [:] : nil)
+        return items
     }
 }

@@ -5,9 +5,6 @@ enum EntityEquipment {
     // EquipmentSlot's order also decides replacement of modifiers sharing an identity.
     static let slots = ["mainhand", "offhand", "feet", "legs", "chest", "head", "body", "saddle"]
     static let playerInventorySlots = [100: "feet", 101: "legs", 102: "chest", 103: "head", -106: "offhand"]
-    static let saddledSpecies: Set<String> = ["minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:skeleton_horse",
-        "minecraft:zombie_horse", "minecraft:camel", "minecraft:camel_husk", "minecraft:nautilus", "minecraft:zombie_nautilus"]
-    static let llamaSpecies: Set<String> = ["minecraft:llama", "minecraft:trader_llama"]
 
     static func current(_ nbt: NBT) -> [String: ItemStack]? {
         nbt["equipment"]?.compound.map { values in
@@ -23,39 +20,49 @@ enum EntityEquipment {
         return items
     }
 
-    static func creature(_ nbt: NBT, species: String) -> [String: ItemStack]? {
+    static func creature(_ nbt: NBT) -> [String: ItemStack]? {
         // A current compound, including an explicit empty one, supersedes old creature fields.
         if let items = current(nbt) { return items }
         var items: [String: ItemStack] = [:]
         var hasSavedEquipment = false
+        var hasEquipmentField = nbt["equipment"] != nil
         for (key, names) in [("ArmorItems", ["feet", "legs", "chest", "head"]), ("HandItems", ["mainhand", "offhand"])] {
-            guard let contents = nbt[key]?.list else { continue }
+            guard let saved = nbt[key] else { continue }
+            hasEquipmentField = true
+            guard let contents = saved.list else { continue }
             hasSavedEquipment = true
             for (name, item) in zip(names, contents) { items[name] = ItemStack(item) }
         }
-        if let armor = nbt["body_armor_item"], armor.compound != nil {
+        for key in ["body_armor_item", "ArmorItem", "DecorItem"] {
+            guard let armor = nbt[key] else { continue }
+            hasEquipmentField = true
+            guard armor.compound != nil else { continue }
             hasSavedEquipment = true
+            // HorseBodyArmorItemFix clears the old chest entry for ArmorItem, even when
+            // empty; DecorItem conversion keeps it. The saved field identifies the format.
+            if key == "ArmorItem" { items["chest"] = nil }
             items["body"] = ItemStack(armor)
         }
-        if species == "minecraft:horse", let armor = nbt["ArmorItem"] {
-            // HorseBodyArmorItemFix clears the old chest entry, even for an empty ArmorItem.
-            hasSavedEquipment = hasSavedEquipment || armor.compound != nil
-            items["chest"] = nil
-            items["body"] = ItemStack(armor)
+        if let saddle = nbt["saddle"] ?? nbt["SaddleItem"] {
+            hasEquipmentField = true
+            if saddle.compound != nil {
+                hasSavedEquipment = true
+                items["saddle"] = ItemStack(saddle)
+            }
+        } else if let saddle = nbt["Saddle"] {
+            hasEquipmentField = true
+            if let attached = saddle.bool {
+                hasSavedEquipment = true
+                if attached {
+                    items["saddle"] = ItemStack(id: GeneratedEquipmentFacts.legacySaddleItem,
+                                              count: GeneratedEquipmentFacts.legacySaddleCount)
+                }
+            }
         }
-        if llamaSpecies.contains(species), let decor = nbt["DecorItem"] {
-            hasSavedEquipment = hasSavedEquipment || decor.compound != nil
-            items["body"] = ItemStack(decor)
-        }
-        if saddledSpecies.contains(species), let saddle = nbt["saddle"] ?? nbt["SaddleItem"] {
-            hasSavedEquipment = hasSavedEquipment || saddle.compound != nil
-            items["saddle"] = ItemStack(saddle)
-        }
-        return hasSavedEquipment ? items : nil
-    }
-
-    static func canWearPetEquipment(_ species: String) -> Bool {
-        species == "minecraft:wolf" || llamaSpecies.contains(species) || saddledSpecies.contains(species)
+        if hasSavedEquipment { return items }
+        // LivingEntity omits empty equipment and loads an empty EntityEquipment when absent.
+        // An unreadable saved field is not evidence of that omission.
+        return hasEquipmentField ? nil : [:]
     }
 
     static func matches(group: String, slot: String) -> Bool? {

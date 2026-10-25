@@ -168,11 +168,24 @@ def generated_sources(facts, entities):
                                                    break_on_hyphens=False), "        ") + "\n"
         item_source += f"        \"\"\", .init(components: {components}, blockState: {properties}, charge: {quoted(prototype['charge'])}))\n"
     item_source += "        return result\n    }()\n}\n"
+    equipment = facts["equipment"]
+    for key in ["legacySaddleItem", "attachedChestItem"]:
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", equipment[key]):
+            raise ValueError("Unsupported equipment item identifier: " + equipment[key])
+    if not 0 < equipment["legacySaddleCount"] <= 2147483647:
+        raise ValueError("Invalid legacy saddle count")
+    equipment_source = notice + "enum GeneratedEquipmentFacts {\n"
+    equipment_source += "    // SaddleEquipmentSlotFix.fixEntityWithSaddleFlag supplies the entire old flag's item.\n"
+    equipment_source += f"    static let legacySaddleItem = {quoted(equipment['legacySaddleItem'])}\n"
+    equipment_source += f"    static let legacySaddleCount = {equipment['legacySaddleCount']}\n"
+    equipment_source += "    // AbstractChestedHorse.mobInteract tests Items.CHEST before setting ChestedHorse.\n"
+    equipment_source += f"    static let attachedChestItem = {quoted(equipment['attachedChestItem'])}\n}}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
             "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
             "Sources/ChunkseeKit/GeneratedItemModelFacts.swift": item_source,
-            "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice)}
+            "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice),
+            "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source}
 
 
 def main():
@@ -200,11 +213,11 @@ def main():
     libraries = [path.resolve() for path in libraries if path.exists()]
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
-                    "Tools/GameFacts/ExtractBlockDefaults.java",
+                    "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "equipment_attachments"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
