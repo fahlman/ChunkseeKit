@@ -59,6 +59,7 @@ public final class ExtractGameFacts {
         facts.add("enchantmentEffects", ExtractEnchantmentEffects.extract());
         facts.add("itemModels", ExtractItemModelFacts.extract());
         facts.add("blockDefaults", ExtractBlockDefaults.extract());
+        facts.add("spawnEggs", ExtractSpawnEggs.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 

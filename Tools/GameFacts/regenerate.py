@@ -168,11 +168,19 @@ def generated_sources(facts, entities):
                                                    break_on_hyphens=False), "        ") + "\n"
         item_source += f"        \"\"\", .init(components: {components}, blockState: {properties}, charge: {quoted(prototype['charge'])}))\n"
     item_source += "        return result\n    }()\n}\n"
+    egg_source = notice + "enum GeneratedSpawnEggs {\n    static let items: [String: String] = [\n"
+    for entity, item in sorted(facts["spawnEggs"].items()):
+        if any(not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier) for identifier in [entity, item]):
+            raise ValueError("Unsupported spawn-egg identifier")
+        egg_source += "        // SpawnEggItem.byId: item-registry ENTITY_DATA / TypedEntityData.type.\n"
+        egg_source += f"        {quoted(entity)}: {quoted(item)},\n"
+    egg_source += "    ]\n}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
             "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
             "Sources/ChunkseeKit/GeneratedItemModelFacts.swift": item_source,
-            "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice)}
+            "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice),
+            "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source}
 
 
 def main():
@@ -200,11 +208,11 @@ def main():
     libraries = [path.resolve() for path in libraries if path.exists()]
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
-                    "Tools/GameFacts/ExtractBlockDefaults.java",
+                    "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "spawn_egg_relationships"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
