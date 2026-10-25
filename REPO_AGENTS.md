@@ -263,8 +263,9 @@ cached regions to be reread. This additive API is introduced for v0.34.0; app ad
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
-NBT reading and skipped-field traversal use explicit parent stacks with a local active container.
-The skip traversal validates bytes without adding retained-value branches to ordinary decoding. The existing
+NBT reading and skipped-field traversal use recursive descent for depths below 64, then explicit
+parent stacks with a local active container. Both traversals share scalar decoding, list headers,
+compound entries, skip rules and depth checks. Skipping constructs no retained values. The existing
 512-tag nesting bound counts the root at zero; valid depth 511 remains readable on worker
 threads, and depth 512 throws nestingTooDeep. Skipped payloads retain their prior bounds and
 structural validation without constructing NBT values or decoding skipped strings. Bulk array

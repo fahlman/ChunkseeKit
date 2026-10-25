@@ -1593,7 +1593,8 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
-The reader walks nested containers with an explicit stack, including skipped fields. It
+The reader uses bounded recursive descent for the first 64 levels and explicit parent stacks
+for deeper retained or skipped containers. Both paths share the same tag-decoding rules. It
 accepts tag depths through 511, counting the root as zero, and throws `NBTError.nestingTooDeep`
 at depth 512. Skipping a field still checks its structure, lengths and nesting bound.
 
