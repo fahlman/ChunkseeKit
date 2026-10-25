@@ -5,13 +5,13 @@ import java.util.TreeMap;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
 /** Investigation oracle: actual registered default states, without opening a world. */
 public final class ExtractBlockDefaults {
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static String name(Property property, Comparable value) {
-        return property.getName(value);
+    private static <T extends Comparable<T>> String name(BlockState state, Property<T> property) {
+        return property.getName(state.getValue(property));
     }
 
     public static void main(String[] args) throws Exception {
@@ -21,8 +21,9 @@ public final class ExtractBlockDefaults {
         var blocks = new TreeMap<String, TreeMap<String, String>>();
         for (var block : BuiltInRegistries.BLOCK) {
             var properties = new TreeMap<String, String>();
-            for (var entry : block.defaultBlockState().getValues().entrySet()) {
-                properties.put(entry.getKey().getName(), name(entry.getKey(), entry.getValue()));
+            var state = block.defaultBlockState();
+            for (var property : state.getProperties()) {
+                properties.put(property.getName(), name(state, property));
             }
             blocks.put(BuiltInRegistries.BLOCK.getKey(block).toString(), properties);
         }
