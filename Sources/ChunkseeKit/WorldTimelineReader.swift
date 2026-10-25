@@ -7,10 +7,6 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
     private var timelines: [String: ResourceRead<Projection>] = [:]
     private var budget = ResourceReadBudget()
 
-    /// Both projections reject an over-budget query before decoding dimension definitions.
-    /// Construction remains lazy: static dimensions do not need resource files or registries.
-    static func allowsQuery(in world: World) -> Bool { world.level.enabledDataPacks.count <= 64 }
-
     init(world: World, assets: GameAssets?) throws {
         let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
             .zip(assets.resources)

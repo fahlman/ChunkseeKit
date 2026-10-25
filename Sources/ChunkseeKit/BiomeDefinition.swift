@@ -62,12 +62,13 @@ extension World {
     /// present override or an unresolved higher pack blocks lower fallbacks. File errors propagate.
     /// Only resources registered by folder/ZIP listing participate, even for a subset of IDs.
     /// Linked category folders and descendants are skipped; contained namespace aliases are allowed.
-    /// No world files are written, chunks scanned, images decoded or mutable caches introduced.
+    /// Queries with more than 64 enabled packs return no definitions. No world files are written,
+    /// chunks scanned, images decoded or mutable caches introduced.
     public func biomeDefinitions(for identifiers: Set<String>, assets: GameAssets?) throws -> [String: BiomeDefinition] {
         guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
         let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
-        guard !ids.isEmpty else { return [:] }
-        let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: biomePacks(assets: assets))
+        guard !ids.isEmpty, let packs = try resourcePacks(assets: assets) else { return [:] }
+        let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
         return try Self.biomeDefinitions(for: ids, in: registry)
     }
 
@@ -77,20 +78,9 @@ extension World {
     /// from its values, then reread it when the enabled packs or resources change.
     /// Registry discovery ignores symbolic links at or below the biome category folder.
     public func biomeDefinitions(assets: GameAssets?) throws -> [String: BiomeDefinition] {
-        guard level.dataVersion == SaveVersion.java26_3 else { return [:] }
-        return try WorldResourcePack.Registry(directory: "worldgen/biome", in: biomePacks(assets: assets))
+        guard level.dataVersion == SaveVersion.java26_3, let packs = try resourcePacks(assets: assets) else { return [:] }
+        return try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
             .readAll(json: BiomeDefinition.init(json:))
-    }
-
-    private func biomePacks(assets: GameAssets?) throws -> [WorldResourcePack] {
-        try Task.checkCancellation()
-        let vanilla: WorldResourcePack
-        if let assets, Int(assets.version.dataVersion) == level.dataVersion {
-            vanilla = .zip(assets.resources)
-        } else {
-            vanilla = .unavailable
-        }
-        return try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
     }
 
     private static func biomeDefinitions(for ids: Set<String>, in registry: WorldResourcePack.Registry) throws -> [String: BiomeDefinition] {

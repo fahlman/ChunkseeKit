@@ -17,7 +17,7 @@ extension World {
     /// Resources and clocks are shared within this read; no mutable cache or world writes persist.
     public func savedSkyLighting(assets: GameAssets?) throws -> [String: SkyLighting] {
         try Task.checkCancellation()
-        guard WorldTimelineReader<LightingTimeline>.allowsQuery(in: self) else { return [:] }
+        guard allowsResourceQuery else { return [:] }
         let types = try dimensionTypes(assets: assets)
         var reader: WorldTimelineReader<LightingTimeline>?
         var clocks: [String: Int]?
