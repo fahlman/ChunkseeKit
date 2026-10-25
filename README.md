@@ -1424,6 +1424,9 @@ reader change. These declarations do not prove saved usage or generation by a cu
 Missing/unreadable tags and dimensions without a standard association return nil; a readable
 empty tag returns an empty array. A complete replacing data-pack tag can be read even without
 vanilla files. Saved biome usage is always independent of this query.
+Optional member declarations are retained even when their biome definitions are unavailable;
+this list does not validate registry existence. Use `World.tags` when the required/optional
+flag is needed alongside each declared ID.
 
 **Migration:** the static `Dimension.vanillaBiomes` property and its built-in inventories are
 removed. Pass the world and its matching game assets to `possibleBiomes(in:assets:)` instead;
