@@ -467,7 +467,10 @@ and the saved grass modifier. World queries canonicalize only requested IDs and 
 known saved version and saved enabled-pack list. A missing or mismatched jar makes vanilla
 unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
 cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the
-hex/integer/channel forms; unknown modifiers and malformed fields remain unavailable. Strict
+hex/integer/channel forms. Unknown grass modifiers retain their raw strings and leave only
+resolved grass color unavailable; other colors and climate remain readable. The added
+GrassColorModifier.unknown case requires a minor release for exhaustive-switch compatibility.
+Malformed fields remain unavailable. Strict
 numeric validation intentionally rejects Gson coercions, as the other asset readers do.
 Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
 fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
@@ -761,7 +764,8 @@ client, including an explicitly constructed rejection case. Spawn conditions rem
 The app uses World.seed() and this public rule, available starting in v0.29.0.
 
 `PlayerInfo.shoulderPets` owns the two saved shoulder-entity keys and reuses Creature decoding
-with the player's DataVersion. It retains parrots even without a usable player location. Their
+with the player's DataVersion. It retains every readable saved mob type, without a species
+filter, even without a usable player location. Their
 serialized coordinates predate mounting; consumers locate them through the player, including
 its dimension and coordinate availability. 26.3 ServerPlayer saves these compounds and places a
 released bird at the player, while ShoulderRidingEntity saves then discards the world entity. The app
@@ -990,8 +994,20 @@ those fields are interpreted as mob records. Raw entity reads preserve all recor
 are retained without a blanket recognition flag. Missing facts remain nil, and this does not
 broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
 mob records for the shared test-support library.
-RegionFacts interpretation 14 discards earlier classifications and top-level-only entity scans,
-including unpublished 8–13. The separate 26.4 preparation needs a fresh version when integrating.
+RegionFacts interpretation 15 discards earlier classifications, top-level-only entity scans and
+omitted saved fields, including unpublished 8–14. The separate 26.4 preparation needs a fresh version when integrating.
+
+The unreleased #229 structural readers retain sign text and SpawnData regardless of the type's
+name, and preserve known empty spawners whose nullable SpawnData is absent. Entity item queries
+read InventoryCarrier's Inventory, ItemDisplay's item and LivingEntity's equipment in addition
+to existing container fields. The shared equipment reader retains arbitrary saved slots and its
+current-over-legacy precedence. Those source methods were checked in the official game jar;
+no new type list is added. Dropped-item/player container exclusions remain unchanged. Numeric
+legacy statistic keys retain their raw counts without invented IDs or units. Chunk decoding uses
+the saved structure rather than the version label; Level.Sections remains unsupported. Chunk
+and TerrainChunkFacts dataVersion are optional, an intentional breaking API requiring a minor
+release. The CLI prints missing versions as unknown. Saved item-model branches remain on #229,
+and mob appearance/ownership gating remains separately on #235.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a

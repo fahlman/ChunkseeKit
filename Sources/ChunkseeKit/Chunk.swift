@@ -232,7 +232,8 @@ public struct BlockEntity: Sendable, Equatable {
 
 /// A decoded terrain chunk (1.18+ format, including the 26.x changes).
 public struct Chunk: Sendable {
-    public let dataVersion: Int
+    /// Saved metadata, when present; structural decoding does not require a version label.
+    public let dataVersion: Int?
     /// Absolute chunk coordinates.
     public let x: Int
     public let z: Int
@@ -305,8 +306,8 @@ public struct Chunk: Sendable {
     public init(nbt: NBT) throws {
         let dataVersion = nbt["DataVersion"]?.int
         // Chunks upgraded from pre-1.18 worlds can keep a vestigial `Level: {Structures}` compound,
-        // so detect the old format by version and by where `Sections` lives, not by `Level` existing.
-        guard let dataVersion, dataVersion >= DataVersion.flatChunkRoot, nbt["Level"]?["Sections"] == nil else {
+        // so detect the old format by where `Sections` lives, not by `Level` or a version number.
+        guard nbt["Level"]?["Sections"] == nil else {
             throw ChunkError.unsupportedLegacyFormat(dataVersion: dataVersion)
         }
         guard let x = nbt["xPos"]?.int, let z = nbt["zPos"]?.int else { throw ChunkError.missingField("xPos/zPos") }

@@ -6,7 +6,7 @@ import ChunkseeKit
 func chunkCommand(_ world: World, _ arguments: Arguments) throws {
         let (cx, cz) = (arguments.int(1), arguments.int(2))
         guard let chunk = try arguments.dimension(3, in: world).chunk(x: cx, z: cz) else { fail("chunk \(cx), \(cz) not generated") }
-        print("Chunk \(chunk.x), \(chunk.z)  data version \(chunk.dataVersion)  status \(chunk.status ?? "?")")
+        print("Chunk \(chunk.x), \(chunk.z)  data version \(chunk.dataVersion.map(String.init) ?? "?")  status \(chunk.status ?? "?")")
         print("Block entities: \(chunk.blockEntities.count)")
         for s in chunk.sections {
             guard let states = s.blockStates else { continue }

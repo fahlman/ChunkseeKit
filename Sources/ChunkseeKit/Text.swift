@@ -59,7 +59,7 @@ public enum TextComponent {
 
 /// A sign or hanging sign with its text.
 public struct Sign: Sendable, Equatable, Codable {
-    /// Block entity id: `minecraft:sign` or `minecraft:hanging_sign`.
+    /// The saved block entity ID, including custom sign types.
     public var kind: String
     public var x: Int
     public var y: Int
@@ -79,7 +79,9 @@ public struct Sign: Sendable, Equatable, Codable {
 
     /// Reads a sign block entity: `front_text`/`back_text` (1.20+) or `Text1`…`Text4` (older).
     public init?(blockEntity nbt: NBT) {
-        guard let kind = nbt["id"]?.string, kind.hasSuffix("sign"),
+        let hasTextFields = nbt["front_text"]?.compound != nil || nbt["back_text"]?.compound != nil
+            || (1...4).contains { nbt["Text\($0)"] != nil }
+        guard hasTextFields, let kind = nbt["id"]?.string,
               let position = nbt.blockEntityPosition else { return nil }
         func lines(_ side: NBT?) -> [String] {
             (side?["messages"]?.list ?? []).map { TextComponent.plainText($0) ?? "" }

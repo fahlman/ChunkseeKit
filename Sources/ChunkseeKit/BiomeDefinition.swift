@@ -12,10 +12,30 @@ public struct BiomeDefinition: Sendable, Equatable {
     public let dryFoliageColor: UInt32?
     public let grassColorModifier: GrassColorModifier
 
-    public enum GrassColorModifier: String, Sendable {
+    public enum GrassColorModifier: RawRepresentable, Sendable, Equatable {
         case none
-        case darkForest = "dark_forest"
+        case darkForest
         case swamp
+        /// Retains an unfamiliar modifier without discarding the biome's other facts.
+        case unknown(String)
+
+        public init?(rawValue: String) {
+            self = switch rawValue {
+            case "none": .none
+            case "dark_forest": .darkForest
+            case "swamp": .swamp
+            default: .unknown(rawValue)
+            }
+        }
+
+        public var rawValue: String {
+            switch self {
+            case .none: "none"
+            case .darkForest: "dark_forest"
+            case .swamp: "swamp"
+            case .unknown(let value): value
+            }
+        }
     }
 
     init?(json: Data) {

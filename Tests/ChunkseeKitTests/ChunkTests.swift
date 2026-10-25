@@ -121,7 +121,9 @@ import Testing
     }
 
     @Test func rejectsLegacyLevelWrapper() {
-        let legacy = NBT.compound(["DataVersion": .int(2586), "Level": .compound([:])])
+        let legacy = NBT.compound(["DataVersion": .int(2586), "Level": .compound([
+            "xPos": .int(0), "zPos": .int(0), "Sections": .list(.compound, []),
+        ])])
         #expect(throws: ChunkError.unsupportedLegacyFormat(dataVersion: 2586)) { try Chunk(nbt: legacy) }
     }
 
