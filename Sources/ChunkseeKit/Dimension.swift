@@ -123,6 +123,15 @@ extension Dimension {
         }
     }
 
+    /// Includes additions from the exact verified saved version. Other versions retain the
+    /// original 26.3 catalog, including its existing older-world behavior.
+    public func vanillaBiomes(dataVersion: Int?) -> [String] {
+        if id == "minecraft:overworld", dataVersion == SaveVersion.java26_4Snapshot5 {
+            return vanillaBiomes + ["minecraft:ice_caves"]
+        }
+        return vanillaBiomes
+    }
+
     static let overworldBiomes = [
         "minecraft:mushroom_fields",
         "minecraft:deep_frozen_ocean",

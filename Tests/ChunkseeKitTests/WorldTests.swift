@@ -166,4 +166,16 @@ import Testing
         #expect(biomes("minecraft:the_end").count == 5)
         #expect(biomes("mymod:skylands").isEmpty)
     }
+
+    @Test func snapshotBiomeCatalogAddsIceCavesOnlyInItsOverworld() {
+        for id in ["minecraft:overworld", "minecraft:the_nether", "minecraft:the_end", "mymod:skylands"] {
+            let dimension = Dimension(id: id, url: URL(fileURLWithPath: "/"))
+            let original = dimension.vanillaBiomes
+            for version: Int? in [nil, SaveVersion.java26_3, 5124, SaveVersion.java26_4Snapshot5, 5126] {
+                let expected = id == "minecraft:overworld" && version == SaveVersion.java26_4Snapshot5
+                    ? original + ["minecraft:ice_caves"] : original
+                #expect(dimension.vanillaBiomes(dataVersion: version) == expected)
+            }
+        }
+    }
 }

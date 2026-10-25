@@ -922,6 +922,8 @@ WorldTimelineReader requires a jar matching the world's saved data version, prev
 supported but different version from supplying timelines. RegionFacts interpretation version 8
 invalidates old Snapshot 5 creature-health facts; app tile invalidation follows adoption.
 Final 26.4 validation, library publication and app adoption remain separate steps on #217.
+Dimension's version-aware vanilla-biome catalog includes Snapshot 5's Ice Caves from the
+official `is_overworld` tag. The original property and all other versions retain the 26.3 list.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a

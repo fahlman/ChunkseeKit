@@ -29,6 +29,8 @@ statistics units. Snapshot-specific registry facts include the new ice blocks, t
 Uniform biome palettes now preserve their chunk's per-block format, including biome-only reads.
 Snapshot terrain uses those saved per-block biomes directly; `BiomeSampler` remains the 26.3
 four-block-cell algorithm.
+`Dimension.vanillaBiomes(dataVersion:)` adds Ice Caves to Snapshot 5's Overworld catalog;
+the existing unversioned catalog and 26.3 queries keep their previous contents.
 
 RegionFacts interpretation version **8** invalidates cached creatures whose Snapshot 5 health
 defaults were previously unavailable. App consumers must also invalidate rendered tiles when
