@@ -916,11 +916,12 @@ orbs, armor stands and players are excluded even if their saved fields resemble 
 Registered mobs remain readable when health is absent; `health` then remains nil. Namespaced
 identifiers use Minecraft's default namespace, and returned IDs are canonical.
 
-The type catalogs are mechanically extracted from official 26.1, 26.1.1, 26.1.2, 26.2, 26.3
-and 26.4 Snapshot 5 jars. Exact verified versions use their own catalog. Missing or unverified
+The type catalogs are mechanically extracted from official 26.1, 26.1.1, 26.1.2, 26.2 and 26.3
+release jars. Exact verified versions use their own catalog. Missing or unverified
 versions use the verified 26.3 catalog, as Minecraft resolves known types through its own
 registry when reading other save versions. This does not broaden version-specific health
-defaults or claim complete Snapshot 5 support.
+defaults. Snapshot-only catalogs are deliberately omitted; newly added mobs can still be
+read from their saved format as described below.
 
 Unfamiliar types remain readable when their saves contain all three booleans that Minecraft's
 `Mob` always writes: `CanPickUpLoot`, `PersistenceRequired` and `LeftHanded` (false counts too).
@@ -931,8 +932,8 @@ types and never overrides a recognized non-mob. Unfamiliar records without it re
 through raw entity reads. The CLI lists unfamiliar mobs by ID with an unrecognized-type notice;
 app presentation follows the library's release and the mob sidebar work.
 See [the extraction procedure](Tools/EntityTypes/README.md). RegionFacts interpretation version
-10 invalidates earlier classifications, including unpublished versions 8 (Snapshot 5 preparation)
-and 9 (the initial catalog-only reader).
+11 invalidates earlier classifications, including the unpublished Snapshot 5 and catalog-only
+preparations (versions 8–10).
 
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player

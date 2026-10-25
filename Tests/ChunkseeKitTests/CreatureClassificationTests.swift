@@ -22,7 +22,7 @@ import Testing
             "CanPickUpLoot": .byte(1), "PersistenceRequired": .byte(1), "LeftHanded": .byte(0),
         ])
         #expect(Creature(nbt) == nil)
-        for version in [4786, 4788, 4790, 4903, 5023, 5125] {
+        for version in [4786, 4788, 4790, 4903, 5023] {
             #expect(Creature(nbt, dataVersion: version) == nil)
         }
     }
@@ -40,11 +40,10 @@ import Testing
         for version in [4786, 4788, 4790] {
             #expect(Creature(entity("minecraft:sulfur_cube"), dataVersion: version) == nil)
         }
-        for version in [4903, 5023, 5125] {
+        for version in [4903, 5023] {
             #expect(Creature(entity("minecraft:sulfur_cube"), dataVersion: version) != nil)
         }
-        #expect(Creature(entity("minecraft:frostbite"), dataVersion: 5125) != nil)
-        let withoutFrostbite: [Int?] = [nil, 4786, 4903, 5023, 5124, 5126, 9999]
+        let withoutFrostbite: [Int?] = [nil, 4786, 4903, 5023, 5124, 5125, 5126, 9999]
         for version in withoutFrostbite {
             #expect(Creature(entity("minecraft:frostbite"), dataVersion: version) == nil)
         }
@@ -77,9 +76,7 @@ import Testing
         #expect(creature.maxHealth == nil)
         #expect(Creature(entity(id, fields: mobFields))?.isRecognizedType == false)
         #expect(Creature(entity(id, fields: mobFields))?.health == nil)
-        if id == "minecraft:frostbite" {
-            #expect(Creature(nbt, dataVersion: 5125)?.isRecognizedType == true)
-        }
+        #expect(Creature(nbt, dataVersion: 5125)?.isRecognizedType == false)
     }
 
     @Test func unknownTypesNeedTheMobSaveFieldsAndAValidID() {

@@ -4,7 +4,6 @@
 // 26.1.2 / 4790: 157 types, 89 mobs; client SHA-1 4e618f09a0c649dde3fdf829df443ce0b8831e65
 // 26.2 / 4903: 158 types, 90 mobs; client SHA-1 2dc72797acbc1b63fc16a11c4ac393605f453754
 // 26.3 / 5023: 161 types, 90 mobs; client SHA-1 e877b6a07acd633fb3bb475002175cec036e7b87
-// 26.4-snapshot-5 / 5125: 163 types, 91 mobs; client SHA-1 dabe2b9759859995565e7d01c4a96d05043718ee
 
 /// Mob membership from Minecraft's registered types and their Java class ancestry.
 enum MobTypes {
@@ -14,7 +13,6 @@ enum MobTypes {
         switch dataVersion {
         case SaveVersion.java26_1, SaveVersion.java26_1_1, SaveVersion.java26_1_2: return java26_1[id.path]
         case SaveVersion.java26_2: return java26_2[id.path]
-        case SaveVersion.java26_4Snapshot5: return java26_4Snapshot5[id.path]
         default: return java26_3[id.path]
         }
     }
@@ -186,5 +184,4 @@ enum MobTypes {
     ]
     private static let java26_1 = java26_3.filter { !["cushion", "poplar_boat", "poplar_chest_boat", "sulfur_cube"].contains($0.key) }
     private static let java26_2 = java26_3.filter { !["cushion", "poplar_boat", "poplar_chest_boat"].contains($0.key) }
-    private static let java26_4Snapshot5 = java26_3.merging(["frostbite": true, "ice_ball": false]) { _, new in new }
 }

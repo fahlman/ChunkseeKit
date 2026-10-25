@@ -18,8 +18,9 @@ generates `Sources/ChunkseeKit/MobTypes.swift`. No hand-maintained mob list, Jav
 dependency, game artwork or world data is included in the library.
 
 Run from the repository root, supplying the Minecraft installation, JDK home and a **new**
-evidence directory. The installed versions must include 26.1, 26.1.1, 26.1.2, 26.2, 26.3
-and 26.4-snapshot-5, with their launcher libraries. Java 25 is required by these jars.
+evidence directory. The installed versions must include 26.1, 26.1.1, 26.1.2, 26.2 and 26.3,
+with their launcher libraries. Java 25 is required by these jars. Only released versions
+have catalogs; add a new release to `VERSIONS` and regenerate with this one command.
 
 ```sh
 python3 Tools/EntityTypes/generate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA_HOME" "$NEW_EVIDENCE_DIR"
@@ -44,17 +45,18 @@ xcrun swiftc -O -swift-version 6 -parse-as-library \
   4790 "$NEW_EVIDENCE_DIR/26.1.2/entity-types.json" \
   4903 "$NEW_EVIDENCE_DIR/26.2/entity-types.json" \
   5023 "$NEW_EVIDENCE_DIR/26.3/entity-types.json" \
-  5125 "$NEW_EVIDENCE_DIR/26.4-snapshot-5/entity-types.json" \
   nil "$NEW_EVIDENCE_DIR/26.3/entity-types.json" \
   5124 "$NEW_EVIDENCE_DIR/26.3/entity-types.json" \
+  5125 "$NEW_EVIDENCE_DIR/26.3/entity-types.json" \
   9999 "$NEW_EVIDENCE_DIR/26.3/entity-types.json"
 ```
 
 Every entry is checked with health present and absent, while ownership and mob-like
-AI fields are present in both. The last three inputs check the approved 26.3 fallback.
+AI fields are present in both. The last four inputs check the 26.3 fallback, including
+a snapshot with no dedicated catalog.
 
-Verified catalogs have 89 mobs in 26.1/26.1.1/26.1.2, 90 in 26.2/26.3, and 91 in
-Snapshot 5. The additions are Sulfur Cube in 26.2 and Frostbite in Snapshot 5. The game
+Verified catalogs have 89 mobs in 26.1/26.1.1/26.1.2 and 90 in 26.2/26.3,
+with Sulfur Cube added in 26.2. The game
 registers Giant and Illusioner as mobs even though they have no ordinary spawning route.
 Players and armor stands inherit from `LivingEntity` but not `Mob`; items and experience
 orbs inherit directly from `Entity`.

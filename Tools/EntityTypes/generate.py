@@ -9,7 +9,7 @@ import zipfile
 
 VERSIONS = {
     "26.1": "java26_1", "26.1.1": "java26_1_1", "26.1.2": "java26_1_2",
-    "26.2": "java26_2", "26.3": "java26_3", "26.4-snapshot-5": "java26_4Snapshot5",
+    "26.2": "java26_2", "26.3": "java26_3",
 }
 
 
