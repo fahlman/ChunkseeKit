@@ -1389,6 +1389,34 @@ source model's bounds, but must remain finite. Other scales/rotations and transf
 layers remain unsupported. All selected parts keep the shared element/JSON/part budgets.
 No public type or cache interpretation changes.
 
+### Game tags
+
+```swift
+let assets = try GameAssets(contentsOf: gameJarURL)
+let tags = try world.tags(for: ["minecraft:leaves", "minecraft:air"],
+                          in: "minecraft:block", assets: assets)
+let leaves = tags["minecraft:leaves"]?.members.map(\.id)
+let village = try assets?.tag("minecraft:village", in: "minecraft:worldgen/structure")
+```
+
+These additive APIs read any version whose tag files parse. One shared reader handles all
+registry directories, nested tag references, first-occurrence ordering, enabled folder/ZIP
+pack priority and `replace`. A replacing higher layer can settle a tag without lower sources.
+The world API uses its saved enabled-pack list and a jar whose data version matches the save;
+it does not invent a pack list or fall back to built-in tag membership.
+
+`GameTag.members` describes the IDs declared by the files. Each member retains its `required`
+flag; optional direct IDs are not guessed to exist or not exist in a live registry. Consumers
+that need actual registry existence establish it from that registry's own data. The timeline
+reader uses the same tag engine and supplies its existing typed-definition validation.
+
+Missing optional tags are skipped. A missing required tag, unreadable resource, cycle or
+exceeded query limit leaves the requested tag unavailable; a valid empty tag has an empty
+member array. The reader does not reproduce Minecraft's partial recovery from malformed tag
+files. File errors and cancellation propagate. Bounds are 64 packs/levels, 4,096 requested tags
+or members per tag, 16 MiB per JSON file, 64 MiB of selected JSON and 65,536 member/reference
+steps. Reads keep no persistent mutable cache and never write to the world.
+
 ### Biome color definitions (v0.52.0)
 
 Biome colors come from the supplied game jar and the world's enabled data packs:

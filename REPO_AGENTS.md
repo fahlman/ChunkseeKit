@@ -368,8 +368,9 @@ clamping, weather/spatial layers, cache ownership and app rendering remain outsi
 The unreleased #181 extension adds `World.savedSkyLighting(assets:)`: base and timeline layers at
 named saved ticks, through existing dimension/clock readers. WorldResourcePack owns both
 first-present definitions and low-to-high resource stacks, including listing/containment and
-absent-versus-unreadable semantics. WorldTimelineReader owns bounded tag composition, ordered
-membership, replace, optional references and query-local memoization. Direct lists preserve
+absent-versus-unreadable semantics. ResourceTagReader owns bounded tag composition, ordered
+membership, replace, optional references and query-local memoization for every registry.
+WorldTimelineReader supplies typed timeline validation through that owner. Direct lists preserve
 duplicates. TagLoader, TagFile, TagEntry, DependencySorter and the shared official sampler establish
 behavior. Malformed/cyclic selections conservatively remain unavailable rather than reproduce
 partial-registry recovery or depend on hash ordering. Empty lighting tracks impose no clock;
@@ -441,6 +442,25 @@ is available in v0.40.0, with separate app adoption on #51.
 and biome definitions. Dimension defaults retain their existing verified-version rule; biome
 vanilla resources use the caller's matching game archive through the same ZIP path, so a
 malformed vanilla entry also shadows a lower-priority pack.
+`World.resourcePacks` is the shared matching-jar and saved enabled-pack owner for biome and
+tag queries. Its 64-pack bound also supplies lighting's preflight check; over-budget biome
+queries return no definitions. The remaining dimension and timeline version-specific source
+selection moves to this owner with #217/#218's data-reader gate removal, preserving its separate
+verified code-fact fallback until then.
+`GameTag`, `GameAssets.tag(_:in:)` and `World.tags(for:in:assets:)` read tag declarations for any
+registry from the supplied jar and enabled folder/ZIP packs. Registries.tagsDirPath uses the
+registry ID's path; member and tag namespaces are preserved. TagLoader/TagFile/TagEntry establish
+pack order, replace, optional references and first-occurrence ordering. A replacing high layer
+does not need lower sources; a missing or unreadable required input otherwise leaves the tag
+unavailable. Malformed/cyclic selections remain conservative rather than reproducing partial
+registry recovery. Valid empty tags remain distinct from unavailable tags.
+The public value describes declared IDs and retains each member's required flag; it does not
+guess whether an optional member exists in a live code-defined registry. Typed timeline reads
+add their existing definition validation. All consumers share ResourceTagReader and its query
+budget; no mutable cache escapes the read. No version inventory or new dependency is added.
+The world query uses the matching jar and the saved enabled-pack list, including future versions.
+These additive APIs implement #233; biome/structure/ore/POI/item consumers are separate changes.
+
 `BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
 26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
 and the saved grass modifier. World queries canonicalize only requested IDs and require a

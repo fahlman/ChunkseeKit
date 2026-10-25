@@ -13,7 +13,7 @@ extension World {
     /// with savedSkyLighting. Per-query resources only; no chunks, persistent cache or world writes.
     public func nightMonsterLighting(assets: GameAssets?) throws -> [String: MonsterSpawnLight] {
         try Task.checkCancellation()
-        guard WorldTimelineReader<MonsterLightTimeline>.allowsQuery(in: self) else { return [:] }
+        guard allowsResourceQuery else { return [:] }
         let types = try dimensionTypes(assets: assets)
         var reader: WorldTimelineReader<MonsterLightTimeline>?
         var result: [String: MonsterSpawnLight] = [:]
