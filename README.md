@@ -1531,7 +1531,7 @@ this list does not validate registry existence. Use `World.tags` when the requir
 flag is needed alongside each declared ID.
 
 **Migration:** the static `Dimension.vanillaBiomes` property and its built-in inventories are
-removed. Pass the world and selected game assets, at least as new as the save, to
+removed. Pass the world and the caller-selected game assets to
 `possibleBiomes(in:assets:)` instead;
 clients can use `?? []` when displaying an unavailable list. This intentional breaking API
 change requires a minor release before app adoption. No snapshot-specific catalog remains.
