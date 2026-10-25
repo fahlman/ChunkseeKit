@@ -25,7 +25,7 @@ public struct Creature: Sendable, Equatable, Codable {
     /// A saved collar dye name such as `orange`; owned wolves/cats default to red when omitted.
     public var collarColor: String?
     /// Equipped items by slot; the derived `storage` key represents an attached chest.
-    /// Empty when explicitly saved empty, or when an equipment-bearing pet has none; nil when unavailable.
+    /// Empty when saved empty or omitted by the mob's save format; nil when unavailable.
     public var equipment: [String: ItemStack]?
     /// The individual entity's stable identity, retained across movement and shared positions.
     public var uuid: UUID?
@@ -78,7 +78,7 @@ public struct Creature: Sendable, Equatable, Codable {
         if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
         appearance = CreatureData.appearance(nbt, species: id, villager: villager)
         collarColor = CreatureData.collarColor(nbt, species: id, isOwned: owner != nil)
-        equipment = CreatureData.equipment(nbt, species: id, isOwned: owner != nil)
+        equipment = CreatureData.equipment(nbt)
     }
 
     /// Living mobs among an entity chunk's entities, including all nested passengers.

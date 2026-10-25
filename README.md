@@ -1093,12 +1093,17 @@ known markings. Clients choose labels, ordering and how to present these partial
 
 Owned wolves/cats/parrots also expose their saved `sittingOrder`. A saved collar dye is retained
 for any mob; the existing omitted-red default applies only to owned wolves/cats. An empty
-equipment dictionary means explicitly empty saved equipment or an equipment-bearing pet with
-none; nil means unavailable. Equipment reads every current slot, legacy `ArmorItems`/`HandItems`
-lists, older body armor, horse armor/saddle, llama decor and attached chest fields. A current
-creature equipment compound supersedes those older fields, including when explicitly empty.
+equipment dictionary means explicitly empty or omitted equipment: LivingEntity omits empty slots
+and loads an empty equipment record when absent. An unreadable saved field stays unavailable;
+other readable fields are retained. Equipment reads every current slot, legacy `ArmorItems`/`HandItems`
+lists, `body_armor_item`, `ArmorItem`, `DecorItem`, `saddle`, `SaddleItem`, the older `Saddle`
+boolean and attached `ChestedHorse` flag, independently of species, ownership or version. A current
+creature equipment compound supersedes older item fields and the Saddle flag, including when
+explicitly empty. ChestedHorse remains a separate descriptive attachment.
 Older horse `ArmorItem` conversion clears the former chest entry, as Minecraft's data fix does;
-llama decor conversion retains other armor slots.
+`DecorItem` conversion retains other armor slots. A saved `saddle` item, including an empty
+compound, supersedes `SaddleItem` and the older flag. Saddle/chest item identities for saved flags
+come from the single release generator, with their code sources; item compounds retain their own IDs.
 Only the game's eight equipment slots participate in health; an attached storage chest is descriptive.
 Item `durability` uses saved damage and
 maximum components; vanilla wolf armor has an implicit maximum of 64. Unbreakable equipment
@@ -1115,7 +1120,8 @@ no saved `storage` slot. It is not a replacement for the animal's carried invent
 cover the nautilus, zombie nautilus and camel husk in 26.3.
 
 Stored fields remain optional so old cached creatures still decode. RegionFacts interpretation
-version 18 includes the additional saved appearance traits and resource-derived health. Making
+version 19 includes the additional saved appearance traits, resource-derived health and legacy
+equipment interpretation. Making
 `CreatureAppearance.variant` optional is an intentional breaking API change requiring a minor
 release: clients must unwrap it independently of `markings` and `traits`, and must not discard an
 appearance because its variant is nil. The app's `PetDetailText.appearance` needs this migration

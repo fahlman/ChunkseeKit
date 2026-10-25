@@ -60,6 +60,7 @@ public final class ExtractGameFacts {
         facts.add("itemModels", ExtractItemModelFacts.extract());
         facts.add("blockDefaults", ExtractBlockDefaults.extract());
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
+        facts.add("equipment", ExtractEquipmentFacts.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 
