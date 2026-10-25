@@ -263,6 +263,11 @@ cached regions to be reread. This additive API is introduced for v0.34.0; app ad
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
+NBT reading and skipped-field traversal share an explicit container stack. The existing
+512-tag nesting bound counts the root at zero; valid depth 511 remains readable on worker
+threads, and depth 512 throws nestingTooDeep. Skipped payloads retain their prior bounds and
+structural validation without constructing NBT values or decoding skipped strings. Bulk array
+reads and in-place accumulation remain shared by ordinary world, region and saved-data readers.
 
 `GameRule.wanderingTraderSpawning.value(in:)` looks up the current or legacy saved identifier
 in the existing `World.gameRules()` dictionary. It accepts explicit Boolean values only, gives
