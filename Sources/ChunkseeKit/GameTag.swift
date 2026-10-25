@@ -36,11 +36,7 @@ extension World {
     /// JSON and 65,536 reference/member steps. No world writes or persistent cache are made.
     public func tags(for identifiers: Set<String>, in registry: String, assets: GameAssets?) throws -> [String: GameTag] {
         try Task.checkCancellation()
-        guard identifiers.count <= 4096, level.enabledDataPacks.count <= 64 else { return [:] }
-        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == level.dataVersion {
-            .zip(assets.resources)
-        } else { .unavailable }
-        let packs = try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
+        guard identifiers.count <= 4096, let packs = try resourcePacks(assets: assets) else { return [:] }
         return try GameTag.read(identifiers, registry: registry, packs: packs)
     }
 }

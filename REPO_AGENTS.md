@@ -442,6 +442,11 @@ is available in v0.40.0, with separate app adoption on #51.
 and biome definitions. Dimension defaults retain their existing verified-version rule; biome
 vanilla resources use the caller's matching game archive through the same ZIP path, so a
 malformed vanilla entry also shadows a lower-priority pack.
+`World.resourcePacks` is the shared matching-jar and saved enabled-pack owner for biome and
+tag queries. Its 64-pack bound also supplies lighting's preflight check; over-budget biome
+queries return no definitions. The remaining dimension and timeline version-specific source
+selection moves to this owner with #217/#218's data-reader gate removal, preserving its separate
+verified code-fact fallback until then.
 `GameTag`, `GameAssets.tag(_:in:)` and `World.tags(for:in:assets:)` read tag declarations for any
 registry from the supplied jar and enabled folder/ZIP packs. Registries.tagsDirPath uses the
 registry ID's path; member and tag namespaces are preserved. TagLoader/TagFile/TagEntry establish
