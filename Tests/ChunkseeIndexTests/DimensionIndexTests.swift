@@ -253,10 +253,10 @@ import Testing
         }
         func entities(chunkX: Int) throws {
             let values: [NBT] = [
-                .compound(["id": .string("minecraft:wolf"), "UUID": .intArray([1, 2, 3, Int32(chunkX)]),
+                Fixtures.mob(["id": .string("minecraft:wolf"), "UUID": .intArray([1, 2, 3, Int32(chunkX)]),
                            "Owner": .intArray([5, 6, 7, 8]), "Health": .float(8),
                            "Pos": .list([.double(Double(chunkX * 16)), .double(64), .double(0)])]),
-                .compound(["id": .string("minecraft:sheep"), "Health": .float(8),
+                Fixtures.mob(["id": .string("minecraft:sheep"), "Health": .float(8),
                            "Pos": .list([.double(Double(chunkX * 16)), .double(64), .double(1)])]),
             ]
             try write(.compound(["DataVersion": .int(5023), "Entities": .list(values)]),

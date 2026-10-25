@@ -910,6 +910,26 @@ for item in contents.containers.flatMap(\.allItems) {
 
 ### Creatures
 
+Creature decoding reads the mob record Minecraft writes to the save. `Mob.addAdditionalSaveData`
+unconditionally saves three booleans: `CanPickUpLoot`, `PersistenceRequired` and `LeftHanded`.
+All three must be readable, including false values. `Health`, ownership and a familiar type
+name alone do not establish that a saved entity is a mob. Items, experience orbs, armor stands
+and players do not have this mob record in normal game saves.
+
+This rule has no built-in entity catalog or per-version type list. New and modded IDs use the
+same reader, and readable saved position, name, health, owner and UUID are retained without a
+blanket “unrecognized” label. Missing health remains nil. IDs use Minecraft's canonical namespace
+rules. The data version still governs existing version-specific facts such as omitted health
+defaults; it does not gate mob membership.
+
+This is a reader of the saved record, not a reconstruction of Minecraft's entity registry.
+Incomplete or hand-edited records without the mob fields cannot establish membership, and a
+record deliberately given those fields is read as a mob record. Raw entity APIs preserve all
+records regardless. See [the source verification procedure](Tools/EntityTypes/README.md).
+RegionFacts interpretation 13 discards earlier health-based and catalog-based classifications,
+including unpublished versions 8–12. `Fixtures.mob` supplies the game's saved mob booleans for
+synthetic tests; callers supply ID, position and the other fields under test.
+
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
 DataVersion. Saved owner, UUID, name, health and appearance are preserved. These

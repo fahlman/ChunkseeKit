@@ -911,6 +911,29 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
+Ryan's rule, 2026-10-25: **WWMD — What Would Minecraft Do?** Follow verified Minecraft
+behavior unless Ryan explicitly chooses a deviation. Establish interpretation from the game's
+own definitions and code before using a convenient saved-field heuristic.
+
+Ryan further clarified on 2026-10-25: **read, interpret, display**. Read the save and game
+resources dynamically wherever they provide the facts. Do not make new types depend on
+maintaining built-in ID lists, or label readable data “unrecognized” because our list lacks it.
+Only specific facts that cannot be established remain unavailable.
+
+Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
+PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
+Mob serializer, including false. Health, Owner and the type's name alone are insufficient.
+The same rule reads any type ID, including new/modded types, without a version catalog.
+Tools/EntityTypes collects reproducible official class/save-code evidence for caller-selected
+versions; its output is diagnostic only and no production table is generated or maintained.
+Incomplete/edited records without the mob fields cannot establish membership; records given
+those fields are interpreted as mob records. Raw entity reads preserve all records. Saved facts
+are retained without a blanket recognition flag. Missing facts remain nil, and this does not
+broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
+mob records for the shared test-support library.
+RegionFacts interpretation 13 discards earlier classifications, including unpublished 8–12.
+The separate rider and 26.4 preparations need fresh interpretation versions when integrating.
+
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a
 real 26.3 world (data version 5023): 314,171 chunks across three dimensions decoded with no

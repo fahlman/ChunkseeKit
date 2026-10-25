@@ -47,15 +47,25 @@ public struct Creature: Sendable, Equatable, Codable {
         self.uuid = uuid
     }
 
-    /// Reads a living entity; `nil` for anything without health (items, minecarts, falling blocks).
+    /// Reads Minecraft's saved mob format, including new and modded type IDs.
+    /// Health and the type's name alone do not establish that the saved record is a mob.
     public init?(_ nbt: NBT) {
         self.init(nbt, dataVersion: nil)
     }
 
-    /// The chunk's saved version permits defaults that Minecraft omits from its attributes.
+    /// The saved mob format establishes membership independently of the game's version.
+    /// The version is retained for facts such as omitted health defaults, not a type list.
     public init?(_ nbt: NBT, dataVersion: Int?) {
-        guard let id = nbt["id"]?.string, nbt["Health"] != nil,
+        guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
+              !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
+        // Mob.addAdditionalSaveData always writes these three booleans, even when false.
+        // Unlike Health or Owner, they identify the mob record written by the game. Reading
+        // that format admits new IDs without maintaining a creature list. See Tools/EntityTypes.
+        guard ["CanPickUpLoot", "PersistenceRequired", "LeftHanded"].allSatisfy({
+            nbt[$0]?.bool != nil
+        }) else { return nil }
+        let id = identifier.description
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText)
                       .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
