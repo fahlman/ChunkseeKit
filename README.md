@@ -1593,6 +1593,11 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
+The reader uses bounded recursive descent for the first 64 levels and explicit parent stacks
+for deeper retained or skipped containers. Both paths share the same tag-decoding rules. It
+accepts tag depths through 511, counting the root as zero, and throws `NBTError.nestingTooDeep`
+at depth 512. Skipping a field still checks its structure, lengths and nesting bound.
+
 `ItemStack`, `ItemContainer`, `Spawner`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` retain their existing `Codable` conformances; `NBT` encodes as binary NBT. For new combined scan caches, use the versioned `RegionFacts` envelope described above rather than treating each model as an independently versioned cache.
 
 For complete raw saves, use `NBT.read` and `RegionFile.chunkNBT` rather than retrieving the
