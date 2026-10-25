@@ -102,8 +102,20 @@ def generated_sources(facts, entities):
     source += "    ]\n"
     source += f"    static let pandaNormalVariant = {quoted(facts['pandaNormalVariant'])}\n"
     source += "}\n"
+    enchantments = notice + "enum GeneratedEnchantmentEffects {\n"
+    enchantments += "    enum Component: Sendable { case attributes, conditionalEffects, conditionalValues, value, sounds, sound, soundList, unit }\n"
+    enchantments += "    enum Effect: Sendable { case attribute, allOf, noAttribute, unavailable }\n"
+    for category, type_name in [("components", "Component"), ("effects", "Effect")]:
+        enchantments += f"\n    static let {category}: [String: {type_name}] = [\n"
+        for identifier, entry in sorted(facts["enchantmentEffects"][category].items()):
+            if not re.fullmatch(r"[a-zA-Z]+", entry["format"]): raise ValueError("Invalid effect format")
+            enchantments += f"        // {entry['source']}\n"
+            enchantments += f"        {quoted(identifier)}: .{entry['format']},\n"
+        enchantments += "    ]\n"
+    enchantments += "}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
-            "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source}
+            "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
+            "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments}
 
 
 def main():
@@ -130,10 +142,11 @@ def main():
                  for entry in metadata["libraries"] if "artifact" in entry.get("downloads", {})]
     libraries = [path.resolve() for path in libraries if path.exists()]
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
-    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java",
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

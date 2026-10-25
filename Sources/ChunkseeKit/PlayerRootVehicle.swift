@@ -8,6 +8,6 @@ extension PlayerInfo {
     /// this property preserves the saved tree even if that attachment cannot be reconstructed.
     public var rootVehicleCreatures: [Creature] {
         guard let entity = nbt["RootVehicle"]?["Entity"] else { return [] }
-        return Creature.creatures(in: [entity], dataVersion: dataVersion)
+        return Creature.creatures(in: [entity], dataVersion: dataVersion, enchantments: enchantments)
     }
 }

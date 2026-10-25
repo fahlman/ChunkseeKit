@@ -8,9 +8,13 @@ public struct RegionScanOptions: Sendable, Hashable {
     public var biomeSampleY: Int?
     /// The dimension's actual build height, when known. Never infer it from occupied sections.
     public var height: Int?
+    /// Immutable resource-derived health facts. A changed definition changes the cache input.
+    public var enchantments: [String: EnchantmentDefinition]
 
-    public init(blockIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil) {
+    public init(blockIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil,
+                enchantments: [String: EnchantmentDefinition] = [:]) {
         self.blockIDs = blockIDs; self.biomeSampleY = biomeSampleY; self.height = height
+        self.enchantments = enchantments
     }
 }
 
@@ -53,7 +57,7 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
     /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 17
+    public static let interpretationVersion = 18
 
     public let dimension: String
     public let region: RegionPosition
@@ -88,7 +92,8 @@ public struct RegionFacts: Sendable, Codable {
                 debugDescription: "RegionFacts contains an invalid grid size"))
         }
         self.init(dimension: archive.dimension, region: archive.region,
-                  options: .init(blockIDs: archive.blockIDs, biomeSampleY: archive.biomeSampleY, height: archive.height))
+                  options: .init(blockIDs: archive.blockIDs, biomeSampleY: archive.biomeSampleY, height: archive.height,
+                                 enchantments: archive.enchantments))
         containers = archive.containers; signs = archive.signs; spawners = archive.spawners
         structures = archive.structures.map(\.value); creatures = archive.creatures
         pointsOfInterest = archive.pointsOfInterest; chunks = archive.chunks.map(\.value)
@@ -106,6 +111,7 @@ private struct Archive: Codable {
     var blockIDs: Set<String>?
     var biomeSampleY: Int?
     var height: Int?
+    var enchantments: [String: EnchantmentDefinition]
     var containers: [ItemContainer]
     var signs: [Sign]
     var spawners: [Spawner]
@@ -120,6 +126,7 @@ private struct Archive: Codable {
     init(_ value: RegionFacts) {
         version = RegionFacts.interpretationVersion; dimension = value.dimension; region = value.region
         blockIDs = value.options.blockIDs; biomeSampleY = value.options.biomeSampleY; height = value.options.height
+        enchantments = value.options.enchantments
         containers = value.containers; signs = value.signs; spawners = value.spawners
         structures = value.structures.map(StructureRecord.init); creatures = value.creatures
         pointsOfInterest = value.pointsOfInterest; chunks = value.chunks.map(ChunkRecord.init)

@@ -135,7 +135,6 @@ import Testing
             item(["!minecraft:enchantments": .compound([:]), "minecraft:enchantments": active]),
             item(["minecraft:enchantments": active], count: 0),
             item(["minecraft:enchantments": active, "minecraft:damage": .int(64)]),
-            item(["minecraft:enchantments": .compound(["minecraft:protection": .int(4), "minecraft:mending": .int(1)])]),
         ]
         for gear in items {
             let values = try pair(["equipment": .compound(["body": gear])])
@@ -145,6 +144,10 @@ import Testing
         for gear in items.prefix(3) {
             #expect(ItemStack(gear)?.enchantments == ["example:vitality": 2])
         }
+        // Without a resource snapshot even a vanilla ID cannot prove its definition unchanged.
+        let unresolved = try pair(["equipment": .compound(["body": item([
+            "minecraft:enchantments": .compound(["minecraft:protection": .int(4), "minecraft:mending": .int(1)])])])])
+        #expect(unresolved.pet.maxHealth == nil && unresolved.player.maxHealth == nil)
     }
 
     @Test func onlyTheEquippedSelectedItemIntroducesEnchantmentUncertainty() throws {

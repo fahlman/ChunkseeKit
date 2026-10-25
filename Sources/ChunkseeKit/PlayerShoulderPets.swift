@@ -11,7 +11,7 @@ extension PlayerInfo {
     public var shoulderPets: [Creature] {
         ["ShoulderEntityLeft", "ShoulderEntityRight"].compactMap { key in
             guard let entity = nbt[key] else { return nil }
-            return Creature(entity, dataVersion: dataVersion)
+            return Creature(entity, dataVersion: dataVersion, enchantments: enchantments)
         }
     }
 }
