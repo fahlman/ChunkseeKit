@@ -74,9 +74,9 @@ extension GameAssets {
 }
 
 extension World {
-    /// Resolves only the requested biome IDs from enabled folder/ZIP packs and a matching game jar.
+    /// Resolves requested biome IDs from enabled folder/ZIP packs and a game jar at least as new as the save.
     /// Keys are canonical namespaced IDs. This reader supports saved 26.3 worlds; missing or other
-    /// data versions return no definitions. A missing or data-version-mismatched jar leaves vanilla unavailable,
+    /// data versions return no definitions. A missing or older jar leaves vanilla unavailable,
     /// while higher-priority pack definitions can still resolve. No default pack list is invented.
     /// Uses dimensionSettings()'s priority, safe paths and unsupported-pack rules: a malformed
     /// present override or an unresolved higher pack blocks lower fallbacks. File errors propagate.
@@ -92,7 +92,7 @@ extension World {
         return try Self.biomeDefinitions(for: ids, in: registry)
     }
 
-    /// Discovers and resolves all biome definitions in the matching game jar and enabled packs.
+    /// Discovers and resolves all biome definitions in a current/newer game jar and enabled packs.
     /// Uses the same version, priority, path and invalid-override rules as the requested-ID query.
     /// No chunks are read. Clients can retain this color snapshot and derive their cache identity
     /// from its values, then reread it when the enabled packs or resources change.

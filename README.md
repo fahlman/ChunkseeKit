@@ -1091,8 +1091,9 @@ let trader = try world.wanderingTrader()                // spawnDelay (ticks of 
 let minecraft = URL(fileURLWithPath: "/Users/me/Library/Application Support/minecraft")
 let names = UserCache.names(under: minecraft)
 
-// Every biome Minecraft 26.3 generates in a vanilla dimension; custom dimensions have none listed.
-let overworldBiomes = world.dimension("overworld")!.vanillaBiomes   // 56, from "minecraft:mushroom_fields" on
+// Read the game's dimension association tag, including enabled data-pack changes.
+let assets = try GameAssets(contentsOf: gameJarURL)
+let overworldBiomes = try world.possibleBiomes(in: "minecraft:overworld", assets: assets)
 
 // Every saved world in every installation's game folder (backups aren't included).
 let worlds = World.saved(under: minecraft).compactMap { try? World(contentsOf: $0) }
@@ -1403,8 +1404,10 @@ let village = try assets?.tag("minecraft:village", in: "minecraft:worldgen/struc
 These additive APIs read any version whose tag files parse. One shared reader handles all
 registry directories, nested tag references, first-occurrence ordering, enabled folder/ZIP
 pack priority and `replace`. A replacing higher layer can settle a tag without lower sources.
-The world API uses its saved enabled-pack list and a jar whose data version matches the save;
-it does not invent a pack list or fall back to built-in tag membership.
+The world API uses its saved enabled-pack list and a supplied jar at least as new as the save.
+As when Minecraft opens an older world, the selected game's data applies to that world.
+Older jars or an unknown saved version leave vanilla unavailable. The reader does not invent
+a pack list or fall back to built-in tag membership.
 
 `GameTag.members` describes the IDs declared by the files. Each member retains its `required`
 flag; optional direct IDs are not guessed to exist or not exist in a live registry. Consumers
@@ -1417,6 +1420,22 @@ member array. The reader does not reproduce Minecraft's partial recovery from ma
 files. File errors and cancellation propagate. Bounds are 64 packs/levels, 4,096 requested tags
 or members per tag, 16 MiB per JSON file, 64 MiB of selected JSON and 65,536 member/reference
 steps. Reads keep no persistent mutable cache and never write to the world.
+
+`World.possibleBiomes(in:assets:)` reads the standard `is_overworld`, `is_nether` or `is_end`
+biome association tag through this owner. New members and enabled data-pack additions need no
+reader change. These declarations do not prove saved usage or generation by a custom generator.
+Missing/unreadable tags and dimensions without a standard association return nil; a readable
+empty tag returns an empty array. A complete replacing data-pack tag can be read even without
+vanilla files. Saved biome usage is always independent of this query.
+Optional member declarations are retained even when their biome definitions are unavailable;
+this list does not validate registry existence. Use `World.tags` when the required/optional
+flag is needed alongside each declared ID.
+
+**Migration:** the static `Dimension.vanillaBiomes` property and its built-in inventories are
+removed. Pass the world and selected game assets, at least as new as the save, to
+`possibleBiomes(in:assets:)` instead;
+clients can use `?? []` when displaying an unavailable list. This intentional breaking API
+change requires a minor release before app adoption. No snapshot-specific catalog remains.
 
 ### Biome color definitions (v0.52.0)
 
@@ -1444,7 +1463,7 @@ Other biome fields are neither interpreted nor validated.
 World lookup canonicalizes requested IDs and reads only those resource payloads. Enabled folder and
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. Missing or
-data-version-mismatched jars make vanilla unavailable; higher-priority pack definitions can
+older jars make vanilla unavailable; higher-priority pack definitions can
 still resolve. Missing/other saved data versions return an empty result, and an absent enabled
 pack list is not replaced with an assumed vanilla pack. File errors propagate.
 
