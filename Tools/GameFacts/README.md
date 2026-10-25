@@ -6,7 +6,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
-registered block default properties and saved equipment attachment identities.
+registered block default properties, spawn-egg relationships and saved equipment attachment identities.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -21,7 +21,8 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
-`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedEquipmentFacts.swift`
+`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
+`GeneratedEquipmentFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -79,6 +80,12 @@ Sources and interpretation:
   properties remain unknown, while property-independent resource choices need no default.
   Generated defaults are available for any parseable asset version. Updating them requires
   this same release command, with no version-specific copy or hand-edited block list.
+- SpawnEggItem.byId queries registered item ENTITY_DATA for a matching TypedEntityData.type.
+  It supplies the entity-to-egg relationship after item prototypes are bound; neither a name
+  suffix nor an item-picture definition establishes that fact. The extractor records its
+  actual result for each entity, checking that a returned item is a SpawnEggItem. No explicit
+  no-egg or custom-entity list is generated. Runtime lookup also requires a readable item
+  definition in the supplied jar; model support and picture rendering remain separate.
 
 - SaddleEquipmentSlotFix.fixEntityWithSaddleFlag supplies the item/count represented by the
   old saved `Saddle` boolean. AbstractChestedHorse.mobInteract establishes Items.CHEST as the

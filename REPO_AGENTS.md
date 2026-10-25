@@ -592,6 +592,15 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
+The unreleased #236 `GameAssets.spawnEggItemID(for:)` query exposes the game's entity-to-egg
+relationship when the jar's item definition is readable. Tools/GameFacts invokes the official
+SpawnEggItem.byId after item components are bound; its ENTITY_DATA/TypedEntityData lookup is
+code-only. Each generated entry names that source. No suffix heuristic, exception list or
+version gate is used; unfamiliar relationships and missing resources return nil. Existing
+item/model/texture readers own the picture. Custom prototype relationships cannot be inferred
+from picture definitions. The additive API requires a minor release; fahlman/Chunksee#433 owns
+app adoption and the symbol fallback. No saved-field, RegionFacts or dependency change.
+
 `SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot,
 copper-statue and mob-head cuboids for selected special item definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
 ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
@@ -1111,8 +1120,9 @@ adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout 
 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
-format associations, item model prototype facts, block default properties and saved equipment
-attachment identities. It verifies the installed stable client's download hash, records tool/output hashes and exact commands, and
+format associations, item model prototype facts, block default properties, spawn-egg
+relationships and saved equipment attachment identities. It verifies the installed stable
+client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
 tables or runtime Java dependency are added. See Tools/GameFacts/README.md for commands and

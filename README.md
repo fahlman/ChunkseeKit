@@ -1338,6 +1338,16 @@ Those follow separately for fahlman/Chunksee#390 and #363 using this shared read
 The model format and defaults were checked against the official 26.3 client JSON and its
 cuboid/model resolver bytecode.
 
+`assets.spawnEggItemID(for: "minecraft:wolf")` returns the entity's code-defined egg when
+its item definition is readable in that jar (unreleased, #236). Pass the result to
+`defaultItemModel` and the existing texture reader. The single release tool extracts the
+game's actual `SpawnEggItem.byId` relationship through item ENTITY_DATA components; item
+picture names never establish this relationship. There is no naming heuristic, exception
+list or version gate. A missing relationship or resource returns nil, including custom
+entities whose prototype code facts are unavailable. A found item can still have an unsupported
+model, so the app retains its symbol fallback. This additive API requires a minor release;
+app adoption is fahlman/Chunksee#433. It changes no saved facts or cache interpretation.
+
 `assets.palettedTexture("minecraft:trims/items/helmet_trim_quartz", in: "minecraft:items")`
 resolves a palette-generated sprite from one atlas definition in **26.3 / 5023**. Its
 `AssetPalettedTexture` names the base image, key palette and replacement palette as texture IDs;
