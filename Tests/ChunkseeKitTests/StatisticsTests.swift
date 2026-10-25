@@ -16,7 +16,9 @@ import Testing
     @Test func flatFormatFromBefore1_7_6() throws {
         let json = #"{"stat.playOneMinute":1000,"stat.walkOneCm":250,"stat.leaveGame":2,"stat.useItem.7":3,"achievement.openInventory":1}"#
         let stats = try PlayerStatistics(json: Data(json.utf8))
-        #expect(stats.values == ["minecraft:custom": ["minecraft:play_time": 1000, "minecraft:walk_one_cm": 250, "minecraft:leave_game": 2]])
+        #expect(stats.values == ["minecraft:custom": ["minecraft:play_time": 1000, "minecraft:walk_one_cm": 250,
+                                                    "minecraft:leave_game": 2, "stat.useItem.7": 3]])
+        #expect(stats.unit(of: "stat.useItem.7") == nil)
     }
 
     @Test func scaledStatisticsKeepTheirRawValuesAndUnits() throws {

@@ -4,8 +4,8 @@ import Foundation
 /// `minecraft:mined` → `minecraft:stone` → 1,204.
 ///
 /// Also reads the flat format from before 1.7.6 (`stat.walkOneCm`, files named after the player),
-/// mapping its general statistics to `minecraft:custom` ids; its per-item statistics use numeric
-/// item ids that aren't mapped and are left out.
+/// mapping its general statistics to `minecraft:custom` ids. Numeric legacy item/block keys
+/// are retained verbatim in that category because their identities cannot be inferred.
 public struct PlayerStatistics: Sendable, Equatable {
     /// A scaled statistic's saved unit. Unscaled counts and unknown units have no unit value.
     public enum Unit: Sendable, Equatable {
@@ -34,8 +34,9 @@ public struct PlayerStatistics: Sendable, Equatable {
         }
         var custom: [String: Int] = [:]
         for (key, value) in root {
-            guard let count = value as? Int, key.hasPrefix("stat."), !key.contains(where: \.isNumber) else { continue }
-            custom[Self.modernID(legacy: String(key.dropFirst(5)))] = count
+            guard let count = value as? Int, key.hasPrefix("stat.") else { continue }
+            let id = key.contains(where: \.isNumber) ? key : Self.modernID(legacy: String(key.dropFirst(5)))
+            custom[id] = count
         }
         values = custom.isEmpty ? [:] : ["minecraft:custom": custom]
     }

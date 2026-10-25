@@ -19,6 +19,7 @@ extension BiomeDefinition {
     /// grass; neighboring-biome blending and choosing the column's biome belong to the caller.
     public func color(_ source: BiomeColor, x: Int32, z: Int32,
                       sample: (Identifier, SIMD2<Int>) -> UInt32?) -> UInt32? {
+        if source == .grass, case .unknown = grassColorModifier { return nil }
         // Swamp's modifier replaces the base color completely, including an explicit override.
         if colorDependsOnPosition(source) {
             return BiomeGrassNoise.color(x: x, z: z)

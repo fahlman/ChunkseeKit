@@ -232,10 +232,29 @@ import Testing
             #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1,"foliage_color":false}}"#,
             #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1,"dry_foliage_color":"bad"}}"#,
             #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1,"grass_color_modifier":null}}"#,
-            #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1,"grass_color_modifier":"future"}}"#
+            #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1,"grass_color_modifier":42}}"#
         ]
         let reader = try assets(invalid.enumerated().map { resource("example:bad\($0.offset)", $0.element) })
         for index in invalid.indices { #expect(reader.biomeDefinition("example:bad\(index)") == nil) }
+    }
+
+    @Test func unknownGrassModifierPreservesOtherColorsAndClimate() throws {
+        let reader = try assets([resource("example:future", #"""
+        {"temperature":0.8,"downfall":0.4,"effects":{"water_color":1193046,
+        "grass_color":16777215,"foliage_color":11259375,"dry_foliage_color":66051,
+        "grass_color_modifier":"example:future"}}
+        """#)])
+        let biome = try #require(reader.biomeDefinition("example:future"))
+        #expect(biome.temperature == 0.8 && biome.downfall == 0.4)
+        #expect(biome.grassColorModifier == .unknown("example:future"))
+        #expect(biome.grassColorModifier.rawValue == "example:future" && biome.grassColor == 0xffffff)
+        for (source, expected) in [(BiomeColor.water, UInt32(0x123456)), (.foliage, 0xabcdef), (.dryFoliage, 0x010203)] {
+            #expect(biome.color(source, x: 0, z: 0) { _, _ in nil } == expected)
+        }
+        #expect(biome.color(.grass, x: 0, z: 0) { _, _ in
+            Issue.record("An unknown modifier cannot be resolved by sampling a colormap")
+            return 0xffffff
+        } == nil)
     }
 
     @Test func jarPathsVersionsAndPayloadFailuresStayUnavailable() throws {
