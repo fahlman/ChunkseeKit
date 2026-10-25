@@ -12,7 +12,7 @@ public struct BiomeDefinition: Sendable, Equatable {
     public let dryFoliageColor: UInt32?
     public let grassColorModifier: GrassColorModifier
 
-    public enum GrassColorModifier: RawRepresentable, Sendable, Equatable {
+    public enum GrassColorModifier: RawRepresentable, Sendable, Hashable {
         case none
         case darkForest
         case swamp
