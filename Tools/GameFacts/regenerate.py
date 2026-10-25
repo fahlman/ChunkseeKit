@@ -61,20 +61,27 @@ def generated_sources(facts, entities):
         ("horse", "net.minecraft.world.entity.animal.equine.Horse", "Variant", "net.minecraft.world.entity.animal.equine.Variant"),
         ("sheep", "net.minecraft.world.entity.animal.sheep.Sheep", "Color", None),
         ("cat", "net.minecraft.world.entity.animal.feline.Cat", "CatType", None),
+        ("rabbit", "net.minecraft.world.entity.animal.rabbit.Rabbit", "RabbitType", "net.minecraft.world.entity.animal.rabbit.Rabbit$Variant"),
+        ("tropicalFish", "net.minecraft.world.entity.animal.fish.TropicalFish", "Variant", "net.minecraft.world.entity.animal.fish.TropicalFish$Pattern"),
+        ("fox", "net.minecraft.world.entity.animal.fox.Fox", "Type", None),
+        ("mooshroom", "net.minecraft.world.entity.animal.cow.MushroomCow", "Type", None),
     ]
     source = notice + "enum GeneratedMobAppearance {\n"
-    source += "    struct Schema: Sendable {\n        let field: String\n        let variants: [Int: String]\n        var markings: [Int: String]? = nil\n    }\n\n"
+    source += "    struct Schema: Sendable {\n        let field: String\n        var variants: [Int: String] = [:]\n        var markings: [Int: String]? = nil\n        var bodyShapes: [Int: String]? = nil\n    }\n\n"
     found = set()
     for label, superclass, field, enum in schemas:
         if label == "cat": values = keyed_values(facts["legacyCatTypes"], prefix="")
         elif label == "sheep": values = keyed_values({str(d['id']): d['name'] for d in dyes})
+        elif enum is None: values = "[:]"
         else: values = keyed_values(facts["variants"][enum])
         markings = ""
         if label == "horse":
             markings = ", markings: " + keyed_values({key: value for key, value in
                 facts["variants"]["net.minecraft.world.entity.animal.equine.Markings"].items() if value != "none"})
-        value_source = enum or ("net.minecraft.world.item.DyeColor" if label == "sheep"
-                               else "EntityVariantFix(CatType), then DataFixers through the current release")
+        if label == "tropicalFish":
+            markings = ", bodyShapes: " + keyed_values(facts["fishBodyShapes"], prefix="")
+        value_source = enum or {"sheep": "net.minecraft.world.item.DyeColor",
+            "cat": "EntityVariantFix(CatType), then DataFixers through the current release"}.get(label, "saved string, retained as-is")
         source += f"    // {superclass}.{field}; values: {value_source}.\n"
         if label == "horse": source += "    // Markings.getId/code symbols; NONE is represented by absent markings.\n"
         source += f"    private static let {label} = Schema(field: {quoted(field)}, variants: {values}{markings})\n"
@@ -86,7 +93,15 @@ def generated_sources(facts, entities):
             found.add(matching[0])
             source += f"        {quoted(identifier)}: {matching[0]}, // {entity['class']}\n"
     if found != {schema[0] for schema in schemas}: raise ValueError("Unresolved appearance classes")
-    source += "    ]\n}\n"
+    source += "    ]\n\n"
+    source += "    // TropicalFish.Base.id/code symbols supply bodyShapes; Pattern.getPackedId includes the size byte.\n"
+    source += "    // Panda.Gene.getSerializedName/isRecessive and NORMAL supply dominance and the normal look.\n"
+    source += "    static let pandaRecessiveGenes: [String: Bool] = [\n"
+    source += "".join(f"        {quoted(name)}: {str(recessive).lower()},\n"
+                      for name, recessive in sorted(facts["pandaRecessiveGenes"].items()))
+    source += "    ]\n"
+    source += f"    static let pandaNormalVariant = {quoted(facts['pandaNormalVariant'])}\n"
+    source += "}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source}
 
@@ -118,7 +133,7 @@ def main():
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "numeric_mob_appearance"]}
+                  "categories": ["dyes", "mob_appearance"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

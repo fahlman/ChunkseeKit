@@ -20,7 +20,7 @@ public struct Creature: Sendable, Equatable, Codable {
     public var maxHealth: Double?
     /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
     public var sittingOrder: Bool?
-    /// The saved coat/color variant and, for horses, markings, for wild mobs and pets alike.
+    /// Readable appearance facts, including coat/pattern, markings, colors and genes.
     public var appearance: CreatureAppearance?
     /// A saved collar dye name such as `orange`; owned wolves/cats default to red when omitted.
     public var collarColor: String?
@@ -75,7 +75,7 @@ public struct Creature: Sendable, Equatable, Codable {
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
         uuid = nbt.uuid
         if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
-        appearance = CreatureData.appearance(nbt, species: id)
+        appearance = CreatureData.appearance(nbt, species: id, villager: villager)
         collarColor = CreatureData.collarColor(nbt, species: id, isOwned: owner != nil)
         equipment = CreatureData.equipment(nbt, species: id, isOwned: owner != nil)
     }

@@ -2,8 +2,9 @@
 enum GeneratedMobAppearance {
     struct Schema: Sendable {
         let field: String
-        let variants: [Int: String]
+        var variants: [Int: String] = [:]
         var markings: [Int: String]? = nil
+        var bodyShapes: [Int: String]? = nil
     }
 
     // net.minecraft.world.entity.animal.axolotl.Axolotl.Variant; values: net.minecraft.world.entity.animal.axolotl.Axolotl$Variant.
@@ -19,14 +20,39 @@ enum GeneratedMobAppearance {
     private static let sheep = Schema(field: "Color", variants: [0: "minecraft:white", 1: "minecraft:orange", 2: "minecraft:magenta", 3: "minecraft:light_blue", 4: "minecraft:yellow", 5: "minecraft:lime", 6: "minecraft:pink", 7: "minecraft:gray", 8: "minecraft:light_gray", 9: "minecraft:cyan", 10: "minecraft:purple", 11: "minecraft:blue", 12: "minecraft:brown", 13: "minecraft:green", 14: "minecraft:red", 15: "minecraft:black"])
     // net.minecraft.world.entity.animal.feline.Cat.CatType; values: EntityVariantFix(CatType), then DataFixers through the current release.
     private static let cat = Schema(field: "CatType", variants: [0: "minecraft:tabby", 1: "minecraft:black", 2: "minecraft:red", 3: "minecraft:siamese", 4: "minecraft:british_shorthair", 5: "minecraft:calico", 6: "minecraft:persian", 7: "minecraft:ragdoll", 8: "minecraft:white", 9: "minecraft:jellie", 10: "minecraft:all_black"])
+    // net.minecraft.world.entity.animal.rabbit.Rabbit.RabbitType; values: net.minecraft.world.entity.animal.rabbit.Rabbit$Variant.
+    private static let rabbit = Schema(field: "RabbitType", variants: [0: "minecraft:brown", 1: "minecraft:white", 2: "minecraft:black", 3: "minecraft:white_splotched", 4: "minecraft:gold", 5: "minecraft:salt", 99: "minecraft:evil"])
+    // net.minecraft.world.entity.animal.fish.TropicalFish.Variant; values: net.minecraft.world.entity.animal.fish.TropicalFish$Pattern.
+    private static let tropicalFish = Schema(field: "Variant", variants: [0: "minecraft:kob", 1: "minecraft:flopper", 256: "minecraft:sunstreak", 257: "minecraft:stripey", 512: "minecraft:snooper", 513: "minecraft:glitter", 768: "minecraft:dasher", 769: "minecraft:blockfish", 1024: "minecraft:brinely", 1025: "minecraft:betty", 1280: "minecraft:spotty", 1281: "minecraft:clayfish"], bodyShapes: [0: "small", 1: "large"])
+    // net.minecraft.world.entity.animal.fox.Fox.Type; values: saved string, retained as-is.
+    private static let fox = Schema(field: "Type", variants: [:])
+    // net.minecraft.world.entity.animal.cow.MushroomCow.Type; values: saved string, retained as-is.
+    private static let mooshroom = Schema(field: "Type", variants: [:])
 
     static let schemas: [String: Schema] = [
         "minecraft:axolotl": axolotl, // net.minecraft.world.entity.animal.axolotl.Axolotl
         "minecraft:cat": cat, // net.minecraft.world.entity.animal.feline.Cat
+        "minecraft:fox": fox, // net.minecraft.world.entity.animal.fox.Fox
         "minecraft:horse": horse, // net.minecraft.world.entity.animal.equine.Horse
         "minecraft:llama": llama, // net.minecraft.world.entity.animal.equine.Llama
+        "minecraft:mooshroom": mooshroom, // net.minecraft.world.entity.animal.cow.MushroomCow
         "minecraft:parrot": parrot, // net.minecraft.world.entity.animal.parrot.Parrot
+        "minecraft:rabbit": rabbit, // net.minecraft.world.entity.animal.rabbit.Rabbit
         "minecraft:sheep": sheep, // net.minecraft.world.entity.animal.sheep.Sheep
         "minecraft:trader_llama": llama, // net.minecraft.world.entity.animal.equine.TraderLlama
+        "minecraft:tropical_fish": tropicalFish, // net.minecraft.world.entity.animal.fish.TropicalFish
     ]
+
+    // TropicalFish.Base.id/code symbols supply bodyShapes; Pattern.getPackedId includes the size byte.
+    // Panda.Gene.getSerializedName/isRecessive and NORMAL supply dominance and the normal look.
+    static let pandaRecessiveGenes: [String: Bool] = [
+        "aggressive": false,
+        "brown": true,
+        "lazy": false,
+        "normal": false,
+        "playful": false,
+        "weak": true,
+        "worried": false,
+    ]
+    static let pandaNormalVariant = "normal"
 }
