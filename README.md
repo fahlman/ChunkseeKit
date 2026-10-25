@@ -1021,8 +1021,19 @@ still decode as saved, so rescan them to obtain this corrected default.
 All mobs expose readable saved `appearance`, `collarColor` and `equipment`, whether wild or owned.
 Saved `variant` strings (or string-valued `Variant`) are retained as-is for any type, including
 new or modded IDs. Numeric variants use generated game-code mappings for sheep dyes, axolotls,
-parrots, horse coats/markings, llamas and legacy cat types. An unfamiliar numeric variant leaves
-only appearance unavailable; the mob's other facts remain readable.
+parrots, horse coats/markings, llamas, legacy cat types, rabbits and tropical fish. Saved fox and
+mooshroom `Type` strings remain intact, and the common appearance projection reuses
+`Villager.type`, including zombie villagers and unfamiliar mobs carrying `VillagerData`.
+An unfamiliar value leaves only that fact unavailable; independently readable traits remain.
+
+`CreatureAppearance.variant` is now optional so partial appearances can be retained. Its
+optional `traits` dictionary uses engine keys: `body_shape`, `base_color` and `pattern_color`
+for fish, and `main_gene`/`hidden_gene` for the saved gene format. Fish sizes and dye names are
+unprefixed code keys; gene strings stay as saved, including unfamiliar values. Panda looks follow
+the game's dominance rule using generated gene facts. A missing or unfamiliar gene leaves the
+look unavailable only when that gene is needed to determine it. No gene or color default is
+invented for absent or unreadable fields. Even a horse with an unknown coat can retain its
+known markings. Clients choose labels, ordering and how to present these partial records.
 
 Owned wolves/cats/parrots also expose their saved `sittingOrder`. A saved collar dye is retained
 for any mob; the existing omitted-red default applies only to owned wolves/cats. An empty
@@ -1048,8 +1059,12 @@ no saved `storage` slot. It is not a replacement for the animal's carried invent
 cover the nautilus, zombie nautilus and camel husk in 26.3.
 
 Stored fields remain optional so old cached creatures still decode. RegionFacts interpretation
-version 16 requires a rescan to obtain wild-mob appearance and equipment; the public API shape
-is unchanged. `Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
+version 17 requires a rescan to obtain the additional saved appearance traits. Making
+`CreatureAppearance.variant` optional is an intentional breaking API change requiring a minor
+release: clients must unwrap it independently of `markings` and `traits`, and must not discard an
+appearance because its variant is nil. The app's `PetDetailText.appearance` needs this migration
+when it adopts the published release (fahlman/Chunksee#432/#438).
+`Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
 callers decoding a single entity may use `Creature(entity, dataVersion: chunkVersion)`.
 For one chunk, `try dimension.creatures(chunkX: x, chunkZ: z)` retains the saved entity version
 automatically. `dimension.entities` still returns raw NBT without that context; existing callers

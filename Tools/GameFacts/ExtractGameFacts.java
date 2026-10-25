@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.TreeMap;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.datafix.fixes.References;
+import net.minecraft.world.entity.animal.panda.Panda;
 import net.minecraft.world.item.DyeColor;
 
 /** Code-only appearance facts. Registry ancestry comes from the existing verification tool. */
@@ -38,19 +39,32 @@ public final class ExtractGameFacts {
                 "net.minecraft.world.entity.animal.equine.Llama$Variant",
                 "net.minecraft.world.entity.animal.equine.Variant",
                 "net.minecraft.world.entity.animal.equine.Markings")) {
-            variants.add(name, enumValues(name));
+            variants.add(name, enumValues(name, "getId"));
         }
+        variants.add("net.minecraft.world.entity.animal.rabbit.Rabbit$Variant",
+            enumValues("net.minecraft.world.entity.animal.rabbit.Rabbit$Variant", "id"));
+        variants.add("net.minecraft.world.entity.animal.fish.TropicalFish$Pattern",
+            enumValues("net.minecraft.world.entity.animal.fish.TropicalFish$Pattern", "getPackedId"));
         facts.add("variants", variants);
+        var shapes = new JsonObject();
+        for (var shape : Class.forName("net.minecraft.world.entity.animal.fish.TropicalFish$Base").getEnumConstants()) {
+            shapes.addProperty(field(shape, "id").toString(), ((Enum<?>) shape).name().toLowerCase(Locale.ROOT));
+        }
+        facts.add("fishBodyShapes", shapes);
+        var genes = new JsonObject();
+        for (var gene : Panda.Gene.values()) genes.addProperty(gene.getSerializedName(), gene.isRecessive());
+        facts.add("pandaRecessiveGenes", genes);
+        facts.addProperty("pandaNormalVariant", Panda.Gene.NORMAL.getSerializedName());
         facts.add("legacyCatTypes", legacyCatTypes(Integer.parseInt(args[2])));
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 
-    private static JsonObject enumValues(String name) throws Exception {
+    private static JsonObject enumValues(String name, String idMethod) throws Exception {
         var type = Class.forName(name);
         if (!type.isEnum()) throw new IllegalStateException("Expected enum: " + name);
         var values = new TreeMap<Integer, String>();
         for (var value : type.getEnumConstants()) {
-            int id = (int) type.getMethod("getId").invoke(value);
+            int id = (int) type.getMethod(idMethod).invoke(value);
             String key;
             try { key = (String) type.getMethod("getSerializedName").invoke(value); }
             catch (NoSuchMethodException symbolicOnly) {

@@ -1057,11 +1057,21 @@ owner or type inventory. Numeric appearances use the generated schemas in Genera
 an unknown value leaves only that fact unavailable. Current/legacy equipment parsing has one
 owner in EntityEquipment, including the distinction between absent and explicitly empty saves.
 Existing owned-pet defaults and sitting-order policy stay intact. Saved ChestedHorse creates a
-descriptive storage item only when a readable saved storage slot is absent. No public API shape
-changes; RegionFacts interpretation 16 invalidates the prior cached omissions.
+descriptive storage item only when a readable saved storage slot is absent.
+
+The remaining #235 formats add rabbit codes, tropical-fish packed pattern/size/colors, fox and
+mooshroom Type strings, saved panda genes and the shared Villager.type projection. String values
+are retained as-is. Numeric codes, body shapes and gene recessiveness are generated from the
+official game. A panda's look follows Gene.getVariantFromGenes; independently readable genes,
+colors and horse markings survive an unknown variant. CreatureAppearance.variant is now optional,
+an intentional breaking API requiring a minor release; traits is an optional dictionary of
+engine keys, leaving labels/order to clients. RegionFacts interpretation 17 invalidates prior
+omissions. No new version gate or value inventory is added. Kit/Index/CLI uses were audited;
+the app's PetDetailText.appearance must unwrap variant and render other known facts when it
+adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout is not changed here.
 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
-Its first categories are dye IDs/names/texture RGB and numeric mob appearance. It verifies the
+Its first categories are dye IDs/names/texture RGB and mob appearance. It verifies the
 installed stable client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
