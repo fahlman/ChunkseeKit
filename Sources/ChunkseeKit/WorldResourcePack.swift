@@ -153,7 +153,8 @@ enum WorldResourcePack {
             return Array(result.reversed())
         }
 
-        func readAll<Value>(json: (Data) -> Value?) throws -> [String: Value] {
+        func readAll<Value>(maximumCount: Int? = nil, json: (Data) -> Value?) throws -> [String: Value] {
+            if let maximumCount, identifiers.count > maximumCount { return [:] }
             var result: [String: Value] = [:]
             for id in identifiers.sorted() {
                 result[id] = try read(id, vanilla: { _ in nil }, json: json)

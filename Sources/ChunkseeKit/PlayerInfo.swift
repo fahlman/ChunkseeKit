@@ -41,11 +41,14 @@ public struct PlayerInfo: Sendable {
     public let respawn: Location?
     /// Typed accessors own saved-key interpretation; raw-file callers use the NBT API directly.
     let nbt: NBT
+    let enchantments: [String: EnchantmentDefinition]
 
-    public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil) {
+    /// Supply current world enchantment definitions to interpret equipped enchantments' health effects.
+    public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil, enchantments: [String: EnchantmentDefinition] = [:]) {
         self.uuid = uuid
         self.nbt = nbt
         self.lastSaved = lastSaved
+        self.enchantments = enchantments
         dataVersion = nbt["DataVersion"]?.int
 
         dimension = nbt["Dimension"]?.dimensionID
@@ -80,17 +83,17 @@ extension World {
     /// Every player with saved data, most recently saved first. Files that can't be read are
     /// skipped. Older singleplayer worlds without a player file contribute the player embedded in
     /// `level.dat`.
-    public func players() -> [PlayerInfo] {
+    public func players(enchantments: [String: EnchantmentDefinition] = [:]) -> [PlayerInfo] {
         var players = playerUUIDs().compactMap { uuid -> PlayerInfo? in
             let file = playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
             guard let nbt = try? NBT.read(contentsOf: file) else { return nil }
             let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
-            return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved)
+            return PlayerInfo(uuid: uuid, nbt: nbt, lastSaved: saved, enchantments: enchantments)
         }
         if let embedded = level.nbt["Player"], embedded.compound != nil,
            let uuid = embedded.uuid ?? level.singleplayerUUID,
            !players.contains(where: { $0.uuid == uuid }) {
-            players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed))
+            players.append(PlayerInfo(uuid: uuid, nbt: embedded, lastSaved: level.lastPlayed, enchantments: enchantments))
         }
         return players.sorted { ($0.lastSaved ?? .distantPast) > ($1.lastSaved ?? .distantPast) }
     }

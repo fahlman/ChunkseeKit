@@ -57,36 +57,33 @@ enum EntityEquipment {
     static func canWearPetEquipment(_ species: String) -> Bool {
         species == "minecraft:wolf" || llamaSpecies.contains(species) || saddledSpecies.contains(species)
     }
+
+    static func matches(group: String, slot: String) -> Bool? {
+        switch group {
+        case "any": true
+        case "hand": ["mainhand", "offhand"].contains(slot)
+        case "armor": ["head", "chest", "legs", "feet", "body"].contains(slot)
+        default: slots.contains(group) ? group == slot : nil
+        }
+    }
 }
 
 /// Applicable unsaved modifiers from equipped items; arithmetic stays in EntityHealth.
 enum EquipmentHealth {
-    // The 43 vanilla 26.3 definitions have no max-health effects. Other definitions can add
-    // transient attributes absent from the save. Data packs overriding these IDs remain unsupported.
-    private static let vanillaEnchantments = Set([
-        "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection", "breach",
-        "channeling", "density", "depth_strider", "efficiency", "feather_falling", "fire_aspect",
-        "fire_protection", "flame", "fortune", "frost_walker", "impaling", "infinity", "knockback",
-        "looting", "loyalty", "luck_of_the_sea", "lunge", "lure", "mending", "multishot", "piercing",
-        "power", "projectile_protection", "protection", "punch", "quick_charge", "respiration",
-        "riptide", "sharpness", "silk_touch", "smite", "soul_speed", "sweeping_edge", "swift_sneak",
-        "thorns", "unbreaking", "vanishing_curse", "wind_burst",
-    ].map { "minecraft:" + $0 })
-
-    static func modifiers(in equipment: [String: ItemStack]) -> [NBT]? {
+    static func modifiers(in equipment: [String: ItemStack], enchantments: [String: EnchantmentDefinition]) -> [NBT]? {
         var found: [NBT] = []
         for slot in EntityEquipment.slots {
             guard let item = equipment[slot], item.count > 0 else { continue }
             if let durability = item.durability, durability.remaining == 0 { continue }
-            guard let modifiers = modifiers(item, slot: slot) else { return nil }
+            guard let modifiers = modifiers(item, slot: slot, enchantments: enchantments) else { return nil }
             found += modifiers
         }
         return found
     }
 
-    private static func modifiers(_ item: ItemStack, slot: String) -> [NBT]? {
+    private static func modifiers(_ item: ItemStack, slot: String, enchantments: [String: EnchantmentDefinition]) -> [NBT]? {
         guard item.activeEnchantments.keys.allSatisfy({ id in
-            Identifier(id).map { vanillaEnchantments.contains($0.description) } ?? false
+            Identifier(id).flatMap { enchantments[$0.description] }?.preservesSavedMaximum(in: slot) == true
         }) else { return nil }
         if item.components?["!minecraft:attribute_modifiers"] != nil { return [] }
         let component = item.components?["minecraft:attribute_modifiers"]
@@ -97,8 +94,7 @@ enum EquipmentHealth {
             let name = entry["type"]?.string ?? entry["AttributeName"]?.string ?? ""
             guard EntityHealth.healthNames.contains(name) else { return false }
             let group = entry["slot"]?.string ?? entry["Slot"]?.string ?? "any"
-            return group == "any" || group == slot || (group == "hand" && ["mainhand", "offhand"].contains(slot))
-                || (group == "armor" && ["head", "chest", "legs", "feet", "body"].contains(slot))
+            return EntityEquipment.matches(group: group, slot: slot) == true
         }
     }
 }

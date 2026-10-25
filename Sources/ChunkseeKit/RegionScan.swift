@@ -50,7 +50,7 @@ extension Dimension {
         facts.formats.unreadableTerrain += unreadable
         let unreadableEntities = try visit(.entities) { _, _, nbt in
             facts.containers += ItemContainer.containers(inEntityChunk: nbt)
-            facts.creatures += Creature.creatures(inEntityChunk: nbt)
+            facts.creatures += Creature.creatures(inEntityChunk: nbt, enchantments: options.enchantments)
         }
         facts.formats.unreadableEntities = unreadableEntities
         let unreadablePOIs = try visit(.pointsOfInterest) { _, _, nbt in

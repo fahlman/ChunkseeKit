@@ -826,8 +826,18 @@ owns current slots and legacy player/creature equipment reading; `EquipmentHealt
 equipped modifiers for both APIs. Empty/broken items, removed components and wrong-slot modifiers
 do not contribute. Unsupported item/effect/active-enchantment defaults leave either maximum
 unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
-book enchantments separate from equipped effects. The 43 vanilla 26.3 enchantment definitions
-have no max-health effects; data packs overriding their IDs are not resolved. Maximums
+book enchantments separate from equipped effects. EnchantmentDefinition reads health-relevant
+effects from GameAssets and the world's enabled packs; no enchantment-ID list remains. Direct
+and conditional attribute effects are interpreted through generated codec/class associations.
+Unknown formats/functions and missing definitions leave the maximum unavailable; known wrong-slot
+effects do not apply. PlayerInfo, shoulder/root-vehicle mobs, Creature and regional scans accept
+the same immutable snapshot. RegionScanOptions owns the snapshot as a hashable/serialized cache
+input; interpretation 18 invalidates totals that assumed vanilla definitions were unchanged.
+Clients without a snapshot now get nil for active enchantments, including familiar IDs.
+This deliberate availability change and the additive/defaulted APIs need a minor release;
+app loading/cache adoption is fahlman/Chunksee#446. Queries use existing pack priority and
+invalid-override handling, with 4,096 definitions/64 MiB total/16 MiB per-file bounds. Effect
+interpretation is bounded to 64 levels/65,536 steps. No condition or live function is executed. Maximums
 use the game's Float precision. Mob appearance/collar/equipment and pet sitting-order interpretation
 also belong here. All stored fields remain optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
@@ -1065,19 +1075,22 @@ are retained as-is. Numeric codes, body shapes and gene recessiveness are genera
 official game. A panda's look follows Gene.getVariantFromGenes; independently readable genes,
 colors and horse markings survive an unknown variant. CreatureAppearance.variant is now optional,
 an intentional breaking API requiring a minor release; traits is an optional dictionary of
-engine keys, leaving labels/order to clients. RegionFacts interpretation 17 invalidates prior
-omissions. No new version gate or value inventory is added. Kit/Index/CLI uses were audited;
+engine keys, leaving labels/order to clients. RegionFacts interpretation 18 invalidates prior
+cached omissions and health assumptions. No new version gate or value inventory is added. Kit/Index/CLI uses were audited;
 the app's PetDetailText.appearance must unwrap variant and render other known facts when it
 adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout is not changed here.
 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
-Its first categories are dye IDs/names/texture RGB and mob appearance. It verifies the
-installed stable client's download hash, records tool/output hashes and exact commands, and
+Its current categories are dye IDs/names/texture RGB, mob appearance and enchantment effect
+format associations. It verifies the installed stable client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
 tables or runtime Java dependency are added. See Tools/GameFacts/README.md for commands and
-the reproducibility check. Other code-fact categories and remaining legacy equipment capability
-lists are still tracked on #222/#228; this does not claim their migration is complete.
+the reproducibility check. EnchantmentEffectComponents' declared generic types and the registered
+effect codecs supply format associations; each entry names its class/field. Enchantment names
+and definitions are never generated. Unknown new code formats fail generation for inspection.
+Other code-fact categories and remaining legacy equipment capability lists are still tracked on
+#222/#228; this does not claim their migration is complete.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a

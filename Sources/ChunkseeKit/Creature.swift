@@ -55,7 +55,8 @@ public struct Creature: Sendable, Equatable, Codable {
 
     /// The saved mob format establishes membership independently of the game's version.
     /// The version is retained for facts such as omitted health defaults, not a type list.
-    public init?(_ nbt: NBT, dataVersion: Int?) {
+    /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
+    public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
               !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
@@ -72,7 +73,7 @@ public struct Creature: Sendable, Equatable, Codable {
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt), health: nbt["Health"]?.double)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
-        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
+        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed, enchantments: enchantments)
         uuid = nbt.uuid
         if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
         appearance = CreatureData.appearance(nbt, species: id, villager: villager)
@@ -82,12 +83,12 @@ public struct Creature: Sendable, Equatable, Codable {
 
     /// Living mobs among an entity chunk's entities, including all nested passengers.
     /// Each mob keeps its own saved position and the chunk's data version.
-    public static func creatures(inEntityChunk nbt: NBT) -> [Creature] {
-        creatures(in: nbt["Entities"]?.list ?? [], dataVersion: nbt["DataVersion"]?.int)
+    public static func creatures(inEntityChunk nbt: NBT, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
+        creatures(in: nbt["Entities"]?.list ?? [], dataVersion: nbt["DataVersion"]?.int, enchantments: enchantments)
     }
 
-    static func creatures(in entities: [NBT], dataVersion: Int?) -> [Creature] {
-        EntityTraversal.flatten(entities).compactMap { Creature($0, dataVersion: dataVersion) }
+    static func creatures(in entities: [NBT], dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
+        EntityTraversal.flatten(entities).compactMap { Creature($0, dataVersion: dataVersion, enchantments: enchantments) }
     }
 }
 
@@ -169,13 +170,13 @@ public struct Trade: Sendable, Equatable, Codable {
 extension Dimension {
     /// Living mobs in one entity chunk, preserving its saved version for omitted attributes.
     /// Unlike constructing creatures from raw `entities`, this retains the DataVersion context.
-    public func creatures(chunkX: Int, chunkZ: Int) throws -> [Creature] {
+    public func creatures(chunkX: Int, chunkZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
         guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
-        return Creature.creatures(inEntityChunk: nbt)
+        return Creature.creatures(inEntityChunk: nbt, enchantments: enchantments)
     }
 
     /// Living mobs in one region's entity file.
-    public func creatures(regionX: Int, regionZ: Int) throws -> [Creature] {
-        try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt) }
+    public func creatures(regionX: Int, regionZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
+        try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt, enchantments: enchantments) }
     }
 }

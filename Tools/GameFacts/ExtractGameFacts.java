@@ -56,6 +56,7 @@ public final class ExtractGameFacts {
         facts.add("pandaRecessiveGenes", genes);
         facts.addProperty("pandaNormalVariant", Panda.Gene.NORMAL.getSerializedName());
         facts.add("legacyCatTypes", legacyCatTypes(Integer.parseInt(args[2])));
+        facts.add("enchantmentEffects", ExtractEnchantmentEffects.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 
