@@ -70,14 +70,14 @@ import Testing
         #expect(try assets(missing).defaultItemModel("test") == nil)
     }
 
-    @Test func selectedDefinitionKeepsStaticFallbackPolicyAndCommonBounds() throws {
+    @Test func selectedDefinitionUsesSavedPoseAndKeepsCommonBounds() throws {
         let select: [String: Any] = ["type": "select", "property": "block_state", "block_state_property": "copper_golem_pose",
                                     "cases": [["when": "sitting", "model": node("sitting")]], "fallback": node()]
         let reader = try assets(select), plain = try assets(node()).defaultItemModel("test")
         let stack = ItemStack(id: "test", components: .compound([
             "minecraft:block_state": .compound(["copper_golem_pose": .string("sitting")])]))
         #expect(reader.defaultItemModel("test") == plain)
-        #expect(reader.itemModel(for: try #require(stack.itemModelSelection)) == plain)
+        #expect(try reader.itemModel(for: #require(stack.itemModelSelection)) == assets(node("sitting")).defaultItemModel("test"))
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
             #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("test") == nil)
         }

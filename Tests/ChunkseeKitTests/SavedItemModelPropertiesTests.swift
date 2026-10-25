@@ -82,6 +82,8 @@ import Testing
         #expect(try picture(stack(["minecraft:damage": .int(431)], id: "elytra"), reader) == "item/selected")
         #expect(try picture(stack(["minecraft:damage": .int(430)], id: "minecraft:elytra"), reader) == "item/plain")
         #expect(try picture(stack(["minecraft:damage": .int(431), "minecraft:unbreakable": .compound([:])], id: "minecraft:elytra"), reader) == "item/plain")
+        #expect(try picture(stack(["minecraft:damage": .int(431), "Unbreakable": .byte(1),
+                                  "!minecraft:unbreakable": .compound([:])], id: "minecraft:elytra"), reader) == "item/selected")
         #expect(try picture(stack(["minecraft:damage": .int(431), "!minecraft:max_damage": .compound([:])], id: "minecraft:elytra"), reader) == "item/plain")
         #expect(try picture(stack(["minecraft:damage": .string("bad")], id: "minecraft:elytra"), reader) == nil)
         #expect(try picture(stack([:], id: "pack:unknown"), reader) == nil)

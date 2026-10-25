@@ -135,8 +135,12 @@ import Testing
         renamed.count = 64; renamed.customName = "same picture"
         #expect(first.itemModelSelection == renamed.itemModelSelection)
         let old = ItemStack(id: "shield", components: .compound(["BlockEntityTag": .compound(["Base": .int(14)])]))
-        #expect(old.itemModelSelection == red.itemModelSelection)
+        #expect(old.itemModelSelection?.bannerDesign == red.itemModelSelection?.bannerDesign)
+        // An explicit prototype component can be queried with ignore_default; it is not the
+        // same key as an omitted component, even when this shield picture is unchanged.
+        #expect(old.itemModelSelection != red.itemModelSelection)
         let reader = try assets()
+        #expect(try picture(old, in: reader) == picture(red, in: reader))
         let plain = try material(#require(reader.defaultItemModel("shield")))
         let colored = try material(#require(try picture(red, in: reader)))
         #expect(Set([plain, colored, colored]).count == 2)

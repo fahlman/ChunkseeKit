@@ -105,8 +105,10 @@ public struct ItemStack: Sendable, Equatable, Codable {
     /// Known undamaged vanilla items use their prototype's damage component/default maximum.
     /// Removed damage components, unbreakable items and unknown damageability leave it nil.
     public var durability: ItemDurability? {
-        guard components?["minecraft:unbreakable"] == nil, components?["Unbreakable"]?.int != 1,
-              components?["!minecraft:max_damage"] == nil, components?["!minecraft:damage"] == nil else { return nil }
+        let unbreakable = components?["!minecraft:unbreakable"] == nil &&
+            (components?["minecraft:unbreakable"] != nil || components?["Unbreakable"]?.int == 1)
+        guard !unbreakable, components?["!minecraft:max_damage"] == nil,
+              components?["!minecraft:damage"] == nil else { return nil }
         let knownMaximum = Identifier(id).flatMap { VanillaItemDurability.values[$0.description] }
         let maximum: Int
         if let value = components?["minecraft:max_damage"] {
