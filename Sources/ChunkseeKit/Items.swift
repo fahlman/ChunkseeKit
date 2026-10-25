@@ -184,9 +184,9 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     }
 
     /// Containers among an entity chunk's entities (`entities/` region files): container
-    /// minecarts and boats, animals with chests, and item frames.
+    /// minecarts and boats, animals with chests, and item frames, including nested passengers.
     public static func containers(inEntityChunk nbt: NBT) -> [ItemContainer] {
-        (nbt["Entities"]?.list ?? []).compactMap { entity in
+        EntityTraversal.flatten(nbt["Entities"]?.list ?? []).compactMap { entity in
             guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
                   let savedX = pos[0].double, let savedY = pos[1].double, let savedZ = pos[2].double,
                   let position = BlockPosition(x: savedX, y: savedY, z: savedZ) else {

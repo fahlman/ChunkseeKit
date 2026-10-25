@@ -29,6 +29,8 @@ public struct PlayerInfo: Sendable {
     public let dataVersion: Int?
     /// When the player file was last written, if known.
     public let lastSaved: Date?
+    /// The saved dimension, independently of whether player coordinates are available.
+    public let dimension: String?
     /// Where the player was when the file was saved, or `nil` if the dimension isn't recognized
     /// (see `unrecognizedDimension`).
     public let position: Location?
@@ -46,7 +48,7 @@ public struct PlayerInfo: Sendable {
         self.lastSaved = lastSaved
         dataVersion = nbt["DataVersion"]?.int
 
-        let dimension = nbt["Dimension"]?.dimensionID
+        dimension = nbt["Dimension"]?.dimensionID
         if let dimension, let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 {
             position = Location(dimension: dimension, x: pos[0], y: pos[1], z: pos[2])
         } else {

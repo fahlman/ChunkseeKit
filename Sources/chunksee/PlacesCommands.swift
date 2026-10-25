@@ -71,7 +71,11 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
             }
         }
         for player in world.players() {
-            guard let location = player.position, location.dimension == dim.id else { continue }
+            guard player.dimension == dim.id else { continue }
+            for creature in player.rootVehicleCreatures {
+                show(creature, at: BlockPosition(x: creature.x, y: creature.y, z: creature.z), carrier: nil)
+            }
+            guard let location = player.position else { continue }
             for creature in player.shoulderPets {
                 // A shoulder entity's own saved coordinates predate mounting.
                 show(creature, at: location.blockPosition, carrier: player.uuid)

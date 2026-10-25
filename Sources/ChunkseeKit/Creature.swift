@@ -89,9 +89,14 @@ public struct Creature: Sendable, Equatable, Codable {
         }
     }
 
-    /// Living mobs among an entity chunk's entities.
+    /// Living mobs among an entity chunk's entities, including all nested passengers.
+    /// Each mob keeps its own saved position and the chunk's data version.
     public static func creatures(inEntityChunk nbt: NBT) -> [Creature] {
-        (nbt["Entities"]?.list ?? []).compactMap { Creature($0, dataVersion: nbt["DataVersion"]?.int) }
+        creatures(in: nbt["Entities"]?.list ?? [], dataVersion: nbt["DataVersion"]?.int)
+    }
+
+    static func creatures(in entities: [NBT], dataVersion: Int?) -> [Creature] {
+        EntityTraversal.flatten(entities).compactMap { Creature($0, dataVersion: dataVersion) }
     }
 }
 
