@@ -1210,6 +1210,31 @@ for map in world.mapItems() where !map.isBlank {
 
 ### Game asset models (v0.50.0 and later)
 
+`GameAssets.language(_:minecraftDirectory:)` reads the game's own translation keys and values.
+The client chooses a locale; English is loaded first, then the requested language overrides
+individual keys. With the Minecraft folder supplied, the reader uses this jar's version ID to
+read `versions/<id>/<id>.json`, its selected `assets/indexes/<index>.json`, and the matching
+installed language objects. Missing or unreadable translations retain the English fallback.
+Unknown keys return nil so the app can use its usual ID-derived name. The same subscript handles
+blocks, items, mobs, biomes, effects, statistics, merchant levels, advancement text, game modes,
+difficulties and dyes; there is no content-name catalog.
+
+```swift
+let language = assets.language("fr_fr", minecraftDirectory: minecraft)
+let stoneName = language["block.minecraft.stone"] // "Pierre" when installed, otherwise "Stone"
+```
+
+The immutable `GameLanguage` snapshot needs no further file reads. Locale codes ignore case and
+accept hyphens or underscores. Namespaces present in the jar or selected asset index are read;
+resource-pack layering, choosing a preferred language, substituting text arguments and layout
+stay outside this API. Minecraft's numeric-format placeholder conversion and data-supplied
+deprecated-key removals/renames are applied. Reads share a 16 MiB budget and remain inside the
+supplied installation. As in Minecraft, the current index and hash-named objects supply the
+text; older download checksums do not reject parseable local files. No files are
+downloaded, extracted or written, and no game text is bundled with the library. This additive
+API is unreleased for #225; app adoption is tracked on fahlman/Chunksee#438 and follows a minor
+dependency release. No save or region-cache interpretation changes.
+
 `GameAssets` reads a supplied Minecraft game jar through the same validated ZIP reader as data
 packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
 world data version. The client chooses an installed jar matching its world and caches results
