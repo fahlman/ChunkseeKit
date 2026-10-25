@@ -1,4 +1,4 @@
-/// A registered block-model tint, before optional neighboring-biome blending.
+/// A block-model tint, before optional neighboring-biome blending.
 public enum BlockTint: Sendable, Equatable {
     case constant(UInt32)
     /// Sample the biome at this vertical offset from the block (upper tall grass uses -1).
@@ -7,7 +7,8 @@ public enum BlockTint: Sendable, Equatable {
 
 extension BlockState {
     /// The in-world tint of a model face's tint index, verified against 26.3's BlockColors.
-    /// Unknown versions, blocks, indexes and invalid color-driving properties return nil.
+    /// A vanilla identifier or nonnegative index with no registered source returns white (no tint).
+    /// Unverified versions, other namespaces, invalid indexes and color-driving properties return nil.
     /// Omitted properties use the same verified 26.3 registry defaults as block models.
     /// This describes block models, not item or particle tints. Water fluid rendering uses the
     /// biome's water color directly; its particle-only block tint is white here, as in the game.
@@ -18,10 +19,12 @@ extension BlockState {
             return switch index {
             case 0: .constant(0xffffff)
             case 1: .biome(.grass, yOffset: 0)
-            default: nil
+            default: .constant(0xffffff)
             }
         }
-        guard index == 0 else { return nil }
+        // BlockColors supplies an empty source list for unregistered blocks; the model renderer
+        // uses white whenever the tint index is beyond that list (computeTintColor in 26.3).
+        guard index == 0 else { return .constant(0xffffff) }
         switch name.path {
         case "grass_block", "fern", "short_grass", "potted_fern", "bush", "sugar_cane":
             return .biome(.grass, yOffset: 0)
@@ -51,7 +54,7 @@ extension BlockState {
                 min(1, max(0, level * level * 0.7 - 0.5)),
                 min(1, max(0, level * level * 0.6 - 0.7))
             ]).map(BlockTint.constant)
-        default: return nil
+        default: return .constant(0xffffff)
         }
     }
 

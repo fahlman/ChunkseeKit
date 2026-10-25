@@ -1498,8 +1498,11 @@ verified 26.3/5023 registry. Its `BlockTint` is either a fixed 24-bit RGB color 
 spruce and birch leaves have fixed colors; oak and mangrove leaves use foliage; upper tall grass
 uses the grass biome one block below. Flower definitions keep their separate untinted and
 grass-tinted indexes. Stem age and redstone power retain their saved colors. The omitted
-half/power/age defaults use the same verified registry owner as block-model selection; invalid
-properties, unknown blocks/indexes and unverified versions return nil.
+half/power/age defaults use the same verified registry owner as block-model selection. A vanilla
+identifier or nonnegative index without a registered tint source returns white, leaving the
+texture's own colors intact, as Minecraft's model renderer does. This does not establish that
+the block exists. Invalid color-driving properties, negative indexes, other namespaces and
+unverified versions return nil.
 
 This API describes in-world **block models**, not item or particle colors. Fluid water obtains
 its color directly from the biome; the water/bubble block-model sources are white because the
