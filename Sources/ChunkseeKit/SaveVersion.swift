@@ -6,6 +6,8 @@ public enum SaveVersion {
     public static let java26_1_2 = 4790
     public static let java26_2 = 4903
     public static let java26_3 = 5023
+    /// Exact snapshot identity; each reader independently documents which facts are verified.
+    public static let java26_4Snapshot5 = 5125
 
     /// 1.18 (21w43a): root-level chunk sections and their paletted containers.
     public static let flatChunkRoot = 2844

@@ -47,15 +47,19 @@ public struct Creature: Sendable, Equatable, Codable {
         self.uuid = uuid
     }
 
-    /// Reads a living entity; `nil` for anything without health (items, minecarts, falling blocks).
+    /// Reads a registered vanilla mob using the verified 26.3 type catalog.
+    /// Health and other saved fields do not establish mob identity.
     public init?(_ nbt: NBT) {
         self.init(nbt, dataVersion: nil)
     }
 
-    /// The chunk's saved version permits defaults that Minecraft omits from its attributes.
+    /// Verified versions select their own mob catalog and health defaults. Missing or unverified
+    /// versions retain the 26.3 mob catalog, without acquiring unverified health defaults.
     public init?(_ nbt: NBT, dataVersion: Int?) {
-        guard let id = nbt["id"]?.string, nbt["Health"] != nil,
+        guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
+              MobTypes.contains(identifier, dataVersion: dataVersion),
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
+        let id = identifier.description
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText)
                       .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },

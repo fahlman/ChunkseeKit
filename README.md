@@ -910,6 +910,21 @@ for item in contents.containers.flatMap(\.allItems) {
 
 ### Creatures
 
+Creature decoding follows Minecraft's registered entity types and their `Mob` class ancestry.
+`Health`, `Owner` and loot/AI fields never establish mob identity. Dropped items, experience
+orbs, armor stands and players are excluded even if their saved fields resemble a mob's.
+Registered mobs remain readable when health is absent; `health` then remains nil. Namespaced
+identifiers use Minecraft's default namespace, and returned IDs are canonical.
+
+The type catalogs are mechanically extracted from official 26.1, 26.1.1, 26.1.2, 26.2, 26.3
+and 26.4 Snapshot 5 jars. Exact verified versions use their own catalog. Missing or unverified
+versions use the verified 26.3 catalog, following Ryan's compatibility decision. Unknown and
+modded types are not guessed from their fields; raw entity reads still retain them. This does
+not broaden version-specific health defaults or claim complete Snapshot 5 support.
+See [the extraction procedure](Tools/EntityTypes/README.md). RegionFacts interpretation version
+9 invalidates cached creatures from the old health-based classifier, including the unpublished
+version 8 used by the separate Snapshot 5 preparation.
+
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
 DataVersion. Saved owner, UUID, name, health and appearance are preserved. These
