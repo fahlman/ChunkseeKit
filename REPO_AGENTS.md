@@ -1009,6 +1009,22 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
+`GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
+category, with English then requested-locale precedence. The app owns language choice and the
+final ID-derived fallback. GameLanguage is an immutable Sendable snapshot; its subscript returns
+nil only when no readable translation remains. The jar supplies language resources across its
+namespaces; an optional installation folder supplies the jar version's launcher metadata,
+selected asset index and hash-addressed language objects. No installed-version inventory,
+download, runtime Java dependency or mutable cache is added. The read-only byte source and
+resource containment helpers are shared with the existing resource readers; a query consumes
+at most 16 MiB. As IndexedAssetSource does, it follows the current index and hash-named object
+files without rejecting readable local text against older launcher download checksums.
+The official Language, ClientLanguage, DeprecatedTranslationsInfo and IndexedAssetSource
+classes establish JSON primitives, numeric-placeholder normalization, merge order, key migrations
+and the launcher object layout. Invalid entries leave other readable translations intact.
+Resource-pack layering, argument substitution and text layout are client work. The additive API
+is unreleased for #225/fahlman/Chunksee#438; no public API removal or RegionFacts version change.
+
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
 Mob serializer, including false. Health, Owner and the type's name alone are insufficient.
