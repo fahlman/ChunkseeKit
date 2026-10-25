@@ -1543,6 +1543,12 @@ let bytes = NBT.compound(["answer": .int(42)]).serialized()
 let (rootName, value) = try NBT.read(bytes)
 ```
 
+`serialized` uses an explicit traversal stack, so deeply nested lists and compounds do not
+consume one function-call frame per tag. It preserves sorted compound keys, list element
+types and the existing binary encodings. The writer has no fixed nesting limit; the reader
+still rejects tag depth 512 or greater, with the root at depth zero. A value beyond that
+reading limit can therefore be serialized but cannot be read back by this reader.
+
 `ItemStack`, `ItemContainer`, `Spawner`, `Sign`, `BookContent`, `Creature`, `Villager`, `Trade`, `PointOfInterest`, `RegionContents` and `NBT` retain their existing `Codable` conformances; `NBT` encodes as binary NBT. For new combined scan caches, use the versioned `RegionFacts` envelope described above rather than treating each model as an independently versioned cache.
 
 For complete raw saves, use `NBT.read` and `RegionFile.chunkNBT` rather than retrieving the

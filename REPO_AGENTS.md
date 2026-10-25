@@ -263,6 +263,11 @@ cached regions to be reread. This additive API is introduced for v0.34.0; app ad
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
+The NBT writer traverses with one explicit continuation per enclosing container, avoiding
+recursive writer calls on worker-thread stacks. Compound keys remain sorted and all binary
+encodings are unchanged. Its nonthrowing API imposes no fixed nesting bound; the reader's
+independent limit still rejects tag depth 512 or greater, counting the root as depth zero.
+Regression coverage includes 200 saved passenger pairs and compound chains beyond that limit.
 
 `GameRule.wanderingTraderSpawning.value(in:)` looks up the current or legacy saved identifier
 in the existing `World.gameRules()` dictionary. It accepts explicit Boolean values only, gives
