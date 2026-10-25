@@ -184,7 +184,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     }
 
     /// Containers among an entity chunk's entities (`entities/` region files): container
-    /// minecarts and boats, animals with chests, and item frames, including nested passengers.
+    /// minecarts and boats, inventories, item displays and saved equipment, including nested passengers.
     public static func containers(inEntityChunk nbt: NBT) -> [ItemContainer] {
         EntityTraversal.flatten(nbt["Entities"]?.list ?? []).compactMap { entity in
             guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
@@ -194,7 +194,12 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             }
             // Dropped items despawn and players' items are read from player files, so neither counts.
             guard kind != "minecraft:item", kind != "minecraft:player" else { return nil }
-            let items = ItemStack.list(entity["Items"]) + (entity["Item"].flatMap(ItemStack.init).map { [$0] } ?? [])
+            // InventoryCarrier writes Inventory, ItemDisplay writes item, and LivingEntity
+            // writes equipment. Their format fields apply independently of the entity's type ID.
+            let inventory = ItemStack.list(entity["Items"]) + ItemStack.list(entity["Inventory"])
+            let single = ["Item", "item"].compactMap { entity[$0].flatMap(ItemStack.init) }
+            let equipment = EntityEquipment.creature(entity, species: kind)
+            let items = inventory + single + equipment.keys.sorted().compactMap { equipment[$0] }
             let lootTable = entity["LootTable"]
             let sealed = lootTable != nil
             guard !items.isEmpty || sealed else { return nil }

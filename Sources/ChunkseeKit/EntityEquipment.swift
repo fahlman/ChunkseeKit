@@ -11,7 +11,7 @@ enum EntityEquipment {
 
     static func current(_ nbt: NBT) -> [String: ItemStack]? {
         nbt["equipment"]?.compound.map { values in
-            values.filter { slots.contains($0.key) }.compactMapValues(ItemStack.init)
+            values.compactMapValues(ItemStack.init)
         }
     }
 

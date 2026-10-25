@@ -926,8 +926,8 @@ This is a reader of the saved record, not a reconstruction of Minecraft's entity
 Incomplete or hand-edited records without the mob fields cannot establish membership, and a
 record deliberately given those fields is read as a mob record. Raw entity APIs preserve all
 records regardless. See [the source verification procedure](Tools/EntityTypes/README.md).
-RegionFacts interpretation 14 discards earlier classifications and top-level-only entity scans,
-including unpublished versions 8–13. `Fixtures.mob` supplies the game's saved mob booleans for
+RegionFacts interpretation 15 discards earlier classifications, top-level-only entity scans and
+omitted saved fields, including unpublished versions 8–14. `Fixtures.mob` supplies the game's saved mob booleans for
 synthetic tests; callers supply ID, position and the other fields under test.
 
 Entity-chunk creature and container reads include nested `Passengers`, with a vehicle before
@@ -947,9 +947,10 @@ that tree with the player instead. These APIs read saved facts without simulatin
 The CLI combines these mobs with entity-region records. The app must adopt the player API
 after the library is published; region facts alone cannot supply player-file mounts.
 
-`PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
+`PlayerInfo.shoulderPets` reads mobs stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
-DataVersion. Saved owner, UUID, name, health and appearance are preserved. These
+DataVersion. The unreleased update retains every readable saved mob type without a species
+filter. Saved owner, UUID, name, health and appearance are preserved. These
 entity snapshots contain the position **before mounting**: locate a shoulder pet
 with the player's current `position`, applying dimension and coordinate checks. An
 unavailable player position does not discard its shoulder pets.
@@ -958,7 +959,7 @@ player and dimension records. Verified against the official 26.3 save/load and
 shoulder-mount code. This additive API is available starting in v0.30.0; app adoption is
 tracked separately in fahlman/ChunkseeKit#74.
 
-The `creatures` command includes shoulder parrots in its selected dimension's
+The `creatures` command includes shoulder mobs in its selected dimension's
 listing and totals. Their location is the carrier's saved position, with the
 carrier UUID shown separately from the saved owner. A nonfinite or out-of-range
 position prints as unknown; players without a recognized dimension/location record
@@ -1505,7 +1506,10 @@ to requested-ID biome queries and dimension-type/noise-settings references (an u
 correction to the earlier direct-resource lookup). Each queried category is listed once; payloads
 are read only for requested IDs. Inline dimension settings do not require listing, and type-only
 queries do not open noise-setting resources.
-Malformed definitions remain absent, and an unknown or changed higher pack cannot expose a
+An unfamiliar grass modifier retains its raw string in `GrassColorModifier.unknown` and leaves
+only resolved grass color unavailable; the other colors and climate remain readable. Adding
+this enum case is an intentional breaking change for exhaustive switches, requiring a minor
+release. Malformed definitions remain absent, and an unknown or changed higher pack cannot expose a
 lower definition. Cancellation and file-read errors propagate. Retain the returned value as
 a snapshot; reread after changing enabled packs or their contents. Image decoding, color
 caches and tile invalidation remain client-owned.
@@ -1707,13 +1711,27 @@ For example:
 
 | Version | Data version | Change | Handling |
 |---|---|---|---|
-| 1.18 | 2844 | Chunk fields moved to the root; `block_states` and `biomes` became paletted containers | Older chunks are rejected with `ChunkError.unsupportedLegacyFormat` |
+| 1.18 | 2844 | Chunk fields moved to the root; `block_states` and `biomes` became paletted containers | A legacy `Level.Sections` structure is rejected with `ChunkError.unsupportedLegacyFormat` |
 | 1.20.5 | | LZ4 chunk compression (lz4-java block framing) | Supported; checksums are not verified |
 | 26.1 | | Vanilla dimensions moved to `dimensions/minecraft/*`, player files to `players/`, world settings to `data/minecraft/` | Both the new and old layouts are read |
 | 26.3 | 5009 | Block palettes use `id`/`properties`, may be lists of strings, and omit default properties | All forms are accepted |
 | 26.4 | 5119 | Biomes stored per block (4096 per section); `Status` renamed to `status` | Detected from the data length; both names are read |
 
 Chunks upgraded from pre-1.18 worlds can keep a leftover `Level: {Structures}` compound. These chunks are parsed normally.
+
+Modern chunk structure is readable even when `DataVersion` is absent or unfamiliar. The unreleased
+`Chunk.dataVersion` and `TerrainChunkFacts.dataVersion` properties are now optional, preserving
+missing metadata instead of inventing a version. This is an intentional breaking API change;
+clients must handle nil, and the next Kit release must be a minor version. Legacy terrain support
+is unchanged. RegionFacts interpretation 15 requires a rescan for these and other newly retained facts.
+
+Saved sign text (`front_text`, `back_text`, or `Text1`–`Text4`) and spawner `SpawnData` are read
+independently of the type's name. Known empty spawners remain available when their nullable
+`SpawnData` is omitted. Entity item reads include `Items`, `Inventory`, `Item`, `item` and saved
+equipment through the shared equipment reader, preserving current-field precedence over legacy
+slots. Every saved equipment slot is retained. Dropped items and player records keep their existing
+exclusion from container totals; players have their own inventory reader. Numeric legacy statistic
+keys are retained verbatim in `minecraft:custom` with their raw counts and no guessed units.
 
 `ItemContainer.lootTable` exposes the saved optional loot-table ID on block and entity containers,
 including chest minecarts. It adds no item prediction. Consumers can pair it with `isSealedLoot`

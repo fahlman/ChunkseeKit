@@ -43,11 +43,8 @@ import Testing
     }
 
     @Test func emptyAndMalformedSidesDoNotHideTheOtherBird() throws {
-        var wolf = try #require(parrot(id: 4, variant: 0).compound)
-        wolf["id"] = .string("minecraft:wolf")
         for invalid in [NBT.compound([:]), .string("not an entity"),
-                        Fixtures.mob(["id": .string("minecraft:parrot")]),
-                        .compound(wolf)] {
+                        Fixtures.mob(["id": .string("minecraft:parrot")])] {
             for key in ["ShoulderEntityLeft", "ShoulderEntityRight"] {
                 let other = key == "ShoulderEntityLeft" ? "ShoulderEntityRight" : "ShoulderEntityLeft"
                 let player = PlayerInfo(uuid: owner, nbt: .compound([key: invalid, other: parrot(id: 2, variant: 0)]))
@@ -55,5 +52,17 @@ import Testing
             }
         }
         #expect(PlayerInfo(uuid: owner, nbt: .compound([:])).shoulderPets.isEmpty)
+    }
+
+    @Test func everySavedMobTypeCanOccupyAShoulder() throws {
+        for id in ["minecraft:wolf", "future:shoulder_companion"] {
+            var fields = try #require(parrot(id: 4, variant: 0).compound)
+            fields["id"] = .string(id)
+            let player = PlayerInfo(uuid: owner, nbt: .compound([
+                "ShoulderEntityLeft": .compound(fields), "ShoulderEntityRight": parrot(id: 2, variant: 0),
+            ]))
+            #expect(player.shoulderPets.map(\.id) == [id, "minecraft:parrot"])
+            #expect(player.shoulderPets.first?.customName == "Shoulder Friend")
+        }
     }
 }

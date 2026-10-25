@@ -26,7 +26,7 @@ public struct BlockDeposit: Sendable, Equatable {
 public struct TerrainChunkFacts: Sendable, Equatable {
     /// Position of the region-file entry, rather than an unchecked coordinate in its payload.
     public let position: ChunkPosition
-    public let dataVersion: Int
+    public let dataVersion: Int?
     public let status: String?
     public let isFullyGenerated: Bool
     public let sampledBiome: String?
@@ -53,7 +53,7 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
     /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 14
+    public static let interpretationVersion = 15
 
     public let dimension: String
     public let region: RegionPosition
@@ -149,7 +149,7 @@ private struct DepositRecord: Codable {
 
 private struct ChunkRecord: Codable {
     var position: ChunkPosition
-    var dataVersion: Int
+    var dataVersion: Int?
     var status: String?
     var isFullyGenerated: Bool
     var sampledBiome: String?
