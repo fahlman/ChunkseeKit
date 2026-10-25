@@ -1403,8 +1403,10 @@ let village = try assets?.tag("minecraft:village", in: "minecraft:worldgen/struc
 These additive APIs read any version whose tag files parse. One shared reader handles all
 registry directories, nested tag references, first-occurrence ordering, enabled folder/ZIP
 pack priority and `replace`. A replacing higher layer can settle a tag without lower sources.
-The world API uses its saved enabled-pack list and a jar whose data version matches the save;
-it does not invent a pack list or fall back to built-in tag membership.
+The world API uses its saved enabled-pack list and a supplied jar at least as new as the save.
+As when Minecraft opens an older world, the selected game's data applies to that world.
+Older jars or an unknown saved version leave vanilla unavailable. The reader does not invent
+a pack list or fall back to built-in tag membership.
 
 `GameTag.members` describes the IDs declared by the files. Each member retains its `required`
 flag; optional direct IDs are not guessed to exist or not exist in a live registry. Consumers
@@ -1429,7 +1431,8 @@ this list does not validate registry existence. Use `World.tags` when the requir
 flag is needed alongside each declared ID.
 
 **Migration:** the static `Dimension.vanillaBiomes` property and its built-in inventories are
-removed. Pass the world and its matching game assets to `possibleBiomes(in:assets:)` instead;
+removed. Pass the world and selected game assets, at least as new as the save, to
+`possibleBiomes(in:assets:)` instead;
 clients can use `?? []` when displaying an unavailable list. This intentional breaking API
 change requires a minor release before app adoption. No snapshot-specific catalog remains.
 
@@ -1459,7 +1462,7 @@ Other biome fields are neither interpreted nor validated.
 World lookup canonicalizes requested IDs and reads only those resource payloads. Enabled folder and
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. Missing or
-data-version-mismatched jars make vanilla unavailable; higher-priority pack definitions can
+older jars make vanilla unavailable; higher-priority pack definitions can
 still resolve. Missing/other saved data versions return an empty result, and an absent enabled
 pack list is not replaced with an assumed vanilla pack. File errors propagate.
 

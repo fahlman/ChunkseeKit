@@ -32,7 +32,21 @@ import ChunkseeKitTestSupport
         #expect(try world.possibleBiomes(in: "overworld", assets: jar) == [])
     }
 
-    @Test func absentMismatchedAndMalformedInputsDoNotInventBiomes() throws {
+    @Test func olderWorldsUseNewerGameDataWithoutAcceptingAnOlderJarForANewerWorld() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let jar = try assets([tag("is_overworld", ["example:current_game_biome"])])
+        for version in [1, 999_998, 999_999] as [Int32] {
+            let world = try world(root, version: version)
+            #expect(try world.possibleBiomes(in: "overworld", assets: jar) == ["example:current_game_biome"])
+        }
+        for version in [nil, 1_000_000] as [Int32?] {
+            let world = try world(root, version: version)
+            #expect(try world.possibleBiomes(in: "overworld", assets: jar) == nil)
+        }
+    }
+
+    @Test func absentOlderAndMalformedInputsDoNotInventBiomes() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root)
@@ -68,9 +82,10 @@ import ChunkseeKitTestSupport
         return try #require(GameAssets(data: Data(bytes)))
     }
 
-    private func world(_ root: URL, packs: [String] = ["vanilla"]) throws -> World {
-        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["DataVersion": .int(999_999),
-            "DataPacks": .compound(["Enabled": .list(packs.map(NBT.string))])])]), to: root.appendingPathComponent("level.dat"))
+    private func world(_ root: URL, packs: [String] = ["vanilla"], version: Int32? = 999_999) throws -> World {
+        var fields: [String: NBT] = ["DataPacks": .compound(["Enabled": .list(packs.map(NBT.string))])]
+        fields["DataVersion"] = version.map(NBT.int)
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(fields)]), to: root.appendingPathComponent("level.dat"))
         return try World(contentsOf: root)
     }
 

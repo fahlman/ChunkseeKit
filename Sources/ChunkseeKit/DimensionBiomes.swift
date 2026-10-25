@@ -1,10 +1,12 @@
 extension World {
     /// Biome IDs declared by the game's standard association tag for this dimension.
-    /// Reads the matching jar and enabled data packs at runtime; no biome inventory is built in.
+    /// Reads a supplied jar at least as new as the save and enabled data packs at runtime;
+    /// no biome inventory is built in. The running game's data also applies to older worlds.
     /// These tags describe associations, not proof of saved usage or custom-generator output.
     ///
-    /// Missing/unreadable tags, unavailable game files and dimensions without a standard tag
-    /// return nil. A valid empty tag returns an empty array. Saved biome usage stays independent.
+    /// Missing/unreadable tags and dimensions without a standard tag return nil. A replacing
+    /// pack can supply the tag without a game jar. A valid empty tag returns an empty array.
+    /// Saved biome usage stays independent.
     public func possibleBiomes(in dimensionID: String, assets: GameAssets?) throws -> [String]? {
         let tag: String
         switch Identifier(dimensionID)?.description {
