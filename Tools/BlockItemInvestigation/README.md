@@ -1,6 +1,7 @@
 # Block item/default-state investigation
 
 Investigation for [Kit #227](https://github.com/fahlman/ChunkseeKit/issues/227).
+Findings and the recommendation are in [REPORT.md](REPORT.md).
 This changes no reader or renderer. It asks whether an inventory model can replace a
 block's unknown default state without a block-name list. Product changes need Ryan's
 decision after the report.
