@@ -97,9 +97,11 @@ public struct Dimension: Sendable {
     }
 
     /// Entities saved in the given chunk (stored separately from terrain since 1.17).
+    /// Includes nested passengers, parent before children in saved order. Each raw compound
+    /// retains its Passengers field; do not traverse it again when consuming this flat list.
     public func entities(chunkX: Int, chunkZ: Int) throws -> [NBT] {
         guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
-        return nbt["Entities"]?.list ?? []
+        return EntityTraversal.flatten(nbt["Entities"]?.list ?? [])
     }
 
     /// Shared raw read so creature decoding retains the entity chunk's DataVersion.

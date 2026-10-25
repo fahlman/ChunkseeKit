@@ -926,9 +926,26 @@ This is a reader of the saved record, not a reconstruction of Minecraft's entity
 Incomplete or hand-edited records without the mob fields cannot establish membership, and a
 record deliberately given those fields is read as a mob record. Raw entity APIs preserve all
 records regardless. See [the source verification procedure](Tools/EntityTypes/README.md).
-RegionFacts interpretation 13 discards earlier health-based and catalog-based classifications,
-including unpublished versions 8–12. `Fixtures.mob` supplies the game's saved mob booleans for
+RegionFacts interpretation 14 discards earlier classifications and top-level-only entity scans,
+including unpublished versions 8–13. `Fixtures.mob` supplies the game's saved mob booleans for
 synthetic tests; callers supply ID, position and the other fields under test.
+
+Entity-chunk creature and container reads include nested `Passengers`, with a vehicle before
+its riders in saved order. `Dimension.entities(chunkX:chunkZ:)` returns that same flat walk of
+raw records. Their original `Passengers` fields remain intact; callers consuming this list
+must not traverse those fields again. A filtered or unreadable vehicle does not hide readable
+riders. Each mob keeps the entity chunk's data version and its own `Pos`: Minecraft saves a
+rider at the vehicle's current X/Z and the rider's current Y.
+
+`PlayerInfo.rootVehicleCreatures` reads mobs in `RootVehicle.Entity`, including nested
+passengers, through the same traversal and the player's data version. Use their own saved
+coordinates with `PlayerInfo.dimension`, which is available independently of player coordinates.
+`RootVehicle.Attach` names the player's immediate vehicle, not the player or the mob's owner;
+the reader retains saved mobs even if that attachment cannot be reconstructed. Minecraft
+excludes a root vehicle with exactly one player passenger from normal entity storage, saving
+that tree with the player instead. These APIs read saved facts without simulating mounting.
+The CLI combines these mobs with entity-region records. The app must adopt the player API
+after the library is published; region facts alone cannot supply player-file mounts.
 
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player
