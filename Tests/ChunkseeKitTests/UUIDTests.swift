@@ -69,7 +69,7 @@ import Testing
                 var entity = try #require(identity.compound)
                 entity.merge(["id": .string("minecraft:wolf"), "Health": .float(8),
                               "Pos": .list([.double(1), .double(64), .double(-1)]), "Owner": owner]) { _, new in new }
-                let pet = try #require(Creature(.compound(entity)))
+                let pet = try #require(Creature(Fixtures.mob(entity)))
                 #expect(pet.uuid == id && pet.owner == id)
             }
         }

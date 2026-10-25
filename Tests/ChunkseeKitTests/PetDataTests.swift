@@ -1,4 +1,5 @@
 import Foundation
+import ChunkseeKitTestSupport
 import Testing
 @testable import ChunkseeKit
 
@@ -6,7 +7,7 @@ import Testing
     func pet(_ species: String, _ fields: [String: NBT] = [:], version: Int? = 5023) throws -> Creature {
         let base: [String: NBT] = ["id": .string("minecraft:" + species), "Health": .float(8),
                                   "Pos": .list([.double(1), .double(64), .double(2)]), "Owner": .intArray([1, 2, 3, 4])]
-        return try #require(Creature(.compound(base.merging(fields) { _, new in new }), dataVersion: version))
+        return try #require(Creature(Fixtures.mob(base.merging(fields) { _, new in new }), dataVersion: version))
     }
 
     func item(_ id: String, _ components: [String: NBT] = [:]) -> NBT {
@@ -90,7 +91,7 @@ import Testing
     }
 
     @Test func versionedDefaultsPassThroughTheEntityChunkReader() throws {
-        let entity = NBT.compound(["id": .string("minecraft:cat"), "Health": .float(7), "Pos": .list([.double(0), .double(64), .double(0)])])
+        let entity = Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(7), "Pos": .list([.double(0), .double(64), .double(0)])])
         let chunk = NBT.compound(["DataVersion": .int(5023), "Entities": .list([entity])])
         #expect(Creature.creatures(inEntityChunk: chunk).first?.maxHealth == 10)
         #expect(Creature(entity)?.maxHealth == nil)
@@ -143,7 +144,7 @@ import Testing
         let parrot = try pet("parrot", ["Variant": .int(99), "Sitting": .string("unknown")])
         #expect(parrot.appearance == nil && parrot.sittingOrder == nil)
         #expect(try pet("cat", ["CollarColor": .byte(-1)]).collarColor == nil)
-        let wild = try #require(Creature(.compound(["id": .string("minecraft:wolf"), "Health": .float(8),
+        let wild = try #require(Creature(Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8),
             "Pos": .list([.double(0), .double(64), .double(0)]), "variant": .string("minecraft:pale"), "Sitting": .byte(1), "CollarColor": .byte(14)])))
         #expect(wild.appearance == nil && wild.sittingOrder == nil && wild.collarColor == nil && wild.equipment == nil)
     }

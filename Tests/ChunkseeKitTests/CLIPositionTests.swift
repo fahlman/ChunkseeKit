@@ -57,17 +57,17 @@ import ChunkseeKit
             ]))]), to: root.appendingPathComponent(path))
         }
         try write("dimensions/minecraft/overworld/entities/r.-1.0.mca", localX: 31, entities: [
-            .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "Owner": Fixtures.uuidInts(playerID),
+            Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8), "Owner": Fixtures.uuidInts(playerID),
                        "Pos": .list([.double(-8.7), .double(70.5), .double(1.25)])]),
             .compound(["id": .string("minecraft:item"), "CustomName": .string("Not a creature"),
                        "Pos": .list([.double(-8), .double(70), .double(1)])]),
         ])
         try write("dimensions/minecraft/overworld/entities/r.1.0.mca", localX: 1, entities: [
-            .compound(["id": .string("minecraft:cat"), "Health": .float(10), "CustomName": .string("Distant Cat"),
+            Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(10), "CustomName": .string("Distant Cat"),
                        "Pos": .list([.double(528.9), .double(64), .double(0)])]),
         ])
         try write("dimensions/minecraft/the_nether/entities/r.0.0.mca", localX: 0, entities: [
-            .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "CustomName": .string("Other Dimension"),
+            Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8), "CustomName": .string("Other Dimension"),
                        "Pos": .list([.double(0), .double(70), .double(0)])]),
         ])
         let result = try Fixtures.runCLI(root, command: "creatures")
@@ -83,13 +83,13 @@ import ChunkseeKit
         defer { try? FileManager.default.removeItem(at: root) }
         let villagerData = NBT.compound(["profession": .string("minecraft:farmer")])
         let entities: [NBT] = [
-            .compound(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
+            Fixtures.mob(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
                        "Pos": .list([.double(-8.7), .double(64.9), .double(-513.1)])]),
-            .compound(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
+            Fixtures.mob(["id": .string("minecraft:villager"), "Health": .float(20), "VillagerData": villagerData,
                        "Pos": .list([.double(.nan), .double(64), .double(2)])]),
-            .compound(["id": .string("minecraft:cat"), "Health": .float(10), "Owner": Fixtures.uuidInts(playerID),
+            Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(10), "Owner": Fixtures.uuidInts(playerID),
                        "Pos": .list([.double(4), .double(65), .double(6)])]),
-            .compound(["id": .string("minecraft:cow"), "Health": .float(10),
+            Fixtures.mob(["id": .string("minecraft:cow"), "Health": .float(10),
                        "Pos": .list([.double(7), .double(66), .double(8)])]),
         ]
         try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
@@ -120,7 +120,7 @@ import ChunkseeKit
             "LastDeathLocation": .compound(["dimension": .string("minecraft:the_nether"), "pos": .intArray([-16, 60, 32])]),
             "respawn": .compound(["dimension": .string("minecraft:overworld"), "pos": .intArray([8, 65, -12])]),
         ]), to: root.appendingPathComponent("players/data/\(playerID.uuidString.lowercased()).dat"))
-        let mob = NBT.compound(["id": .string("minecraft:wolf"), "Health": .float(8),
+        let mob = Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8),
                                 "Pos": pos, "CustomName": .string("Check Wolf")])
         try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
             "DataVersion": .int(5023), "Entities": .list([mob]),

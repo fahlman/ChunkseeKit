@@ -44,7 +44,7 @@ import ChunkseeKit
         for (folder, name) in [(ChunkseeKit.Dimension.Folder.terrain, "region"), (.entities, "entities"), (.pointsOfInterest, "poi")] {
             #expect(dimension.regionURL(folder, x: -1, z: -1) == dimension.url.appendingPathComponent("\(name)/r.-1.-1.mca"))
         }
-        let mob = NBT.compound(["id": .string("minecraft:wolf"), "Health": .float(8),
+        let mob = Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8),
                                "Pos": .list([.double(-1), .double(64), .double(-1)])])
         try Fixtures.write(try Fixtures.region([.init(localX: 31, localZ: 31, nbt: .compound([
             "DataVersion": .int(5023), "Entities": .list([mob]),

@@ -915,23 +915,24 @@ Ryan's rule, 2026-10-25: **WWMD — What Would Minecraft Do?** Follow verified M
 behavior unless Ryan explicitly chooses a deviation. Establish interpretation from the game's
 own definitions and code before using a convenient saved-field heuristic.
 
-Creature's NBT reader owns mob eligibility through the generated MobTypes catalog. The
-catalog comes from the official entity registry and declared classes' Mob ancestry, with
-every registry entry accounted for. Tools/EntityTypes documents reproducible extraction for
-26.1, 26.1.1, 26.1.2, 26.2 and 26.3. Health and Owner are not classifiers.
-Ryan chose released-version catalogs only; no snapshot-specific catalog is maintained.
-Missing/unverified versions use the verified 26.3 catalog, like Minecraft resolving known
-types through its own registry when loading other versions. Exact verified versions use
-their own catalog. Ryan also chose to retain unfamiliar types when their saves contain the
-three booleans Mob always writes: CanPickUpLoot, PersistenceRequired and LeftHanded. False
-values count; incomplete or malformed fields do not. This applies only to unknown types,
-never overriding a known non-mob. The optional isRecognizedType flag is false for these
-records, true for catalog mobs and nil for older cached/manually constructed values.
-The CLI identifies unfamiliar types; the app adopts the flag with its mob sidebar work.
-Raw entity reads retain all records. Missing health stays nil and no new health defaults are
-implied. RegionFacts interpretation version 11 discards earlier classifications, including 9–10.
-The separate 26.4 preparation uses unpublished interpretation version 8; reconcile both
-changes with a fresh version when integrating them so neither branch's caches can hide facts.
+Ryan further clarified on 2026-10-25: **read, interpret, display**. Read the save and game
+resources dynamically wherever they provide the facts. Do not make new types depend on
+maintaining built-in ID lists, or label readable data “unrecognized” because our list lacks it.
+Only specific facts that cannot be established remain unavailable.
+
+Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
+PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
+Mob serializer, including false. Health, Owner and the type's name alone are insufficient.
+The same rule reads any type ID, including new/modded types, without a version catalog.
+Tools/EntityTypes collects reproducible official class/save-code evidence for caller-selected
+versions; its output is diagnostic only and no production table is generated or maintained.
+Incomplete/edited records without the mob fields cannot establish membership; records given
+those fields are interpreted as mob records. Raw entity reads preserve all records. Saved facts
+are retained without a blanket recognition flag. Missing facts remain nil, and this does not
+broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
+mob records for the shared test-support library.
+RegionFacts interpretation 13 discards earlier classifications, including unpublished 8–12.
+The separate rider and 26.4 preparations need fresh interpretation versions when integrating.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a

@@ -29,7 +29,7 @@ import ChunkseeKit
         defer { try? FileManager.default.removeItem(at: root) }
         try player(in: root, id: carrier, fields: [
             "Dimension": .string("minecraft:overworld"), "Pos": position([-8.7, 64.9, -513.1]),
-            "ShoulderEntityLeft": .compound(["id": .string("minecraft:parrot"), "Health": .float(6),
+            "ShoulderEntityLeft": Fixtures.mob(["id": .string("minecraft:parrot"), "Health": .float(6),
                                               "Pos": position([1, 70, 2])]),
         ])
 
@@ -90,7 +90,7 @@ import ChunkseeKit
     private func position(_ values: [Double]) -> NBT { .list(values.map(NBT.double)) }
 
     private func parrot(_ name: String) -> NBT {
-        .compound(["id": .string("minecraft:parrot"), "CustomName": .string(name),
+        Fixtures.mob(["id": .string("minecraft:parrot"), "CustomName": .string(name),
                    "Health": .float(6), "Owner": .string(owner), "Pos": position([1, 70, 2])])
     }
 

@@ -29,12 +29,8 @@ public struct Creature: Sendable, Equatable, Codable {
     public var equipment: [String: ItemStack]?
     /// The individual entity's stable identity, retained across movement and shared positions.
     public var uuid: UUID?
-    /// Whether this type belongs to the selected verified mob catalog. False means the
-    /// type is unfamiliar but its saved fields identify a mob. Nil in older cached or
-    /// manually constructed records whose recognition has not been checked.
-    public var isRecognizedType: Bool?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil, isRecognizedType: Bool? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -49,26 +45,24 @@ public struct Creature: Sendable, Equatable, Codable {
         self.collarColor = collarColor
         self.equipment = equipment
         self.uuid = uuid
-        self.isRecognizedType = isRecognizedType
     }
 
-    /// Reads mobs using the verified 26.3 type catalog, retaining unfamiliar types whose
-    /// records have Minecraft's mob save fields. Health alone never establishes identity.
+    /// Reads Minecraft's saved mob format, including new and modded type IDs.
+    /// Health and the type's name alone do not establish that the saved record is a mob.
     public init?(_ nbt: NBT) {
         self.init(nbt, dataVersion: nil)
     }
 
-    /// Verified versions select their own mob catalog and health defaults. Missing or unverified
-    /// versions retain the 26.3 mob catalog, without acquiring unverified health defaults.
+    /// The saved mob format establishes membership independently of the game's version.
+    /// The version is retained for facts such as omitted health defaults, not a type list.
     public init?(_ nbt: NBT, dataVersion: Int?) {
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
               !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
-        let membership = MobTypes.membership(identifier, dataVersion: dataVersion)
         // Mob.addAdditionalSaveData always writes these three booleans, even when false.
-        // Use this evidence only for unknown types; a known non-mob cannot become a mob
-        // through extra fields in an edited save. See Tools/EntityTypes for source evidence.
-        guard membership ?? ["CanPickUpLoot", "PersistenceRequired", "LeftHanded"].allSatisfy({
+        // Unlike Health or Owner, they identify the mob record written by the game. Reading
+        // that format admits new IDs without maintaining a creature list. See Tools/EntityTypes.
+        guard ["CanPickUpLoot", "PersistenceRequired", "LeftHanded"].allSatisfy({
             nbt[$0]?.bool != nil
         }) else { return nil }
         let id = identifier.description
@@ -76,8 +70,7 @@ public struct Creature: Sendable, Equatable, Codable {
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText)
                       .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
-                  villager: Villager(nbt), health: nbt["Health"]?.double,
-                  isRecognizedType: membership != nil)
+                  villager: Villager(nbt), health: nbt["Health"]?.double)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
         uuid = nbt.uuid

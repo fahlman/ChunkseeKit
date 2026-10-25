@@ -1,4 +1,5 @@
 import Foundation
+import ChunkseeKitTestSupport
 import Testing
 @testable import ChunkseeKit
 
@@ -6,7 +7,7 @@ import Testing
     private let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
     private func parrot(id: Int32, variant: Int32) -> NBT {
-        .compound([
+        Fixtures.mob([
             "id": .string("minecraft:parrot"), "UUID": .intArray([0, 0, 0, id]),
             "Owner": .string(owner.uuidString), "Health": .float(4), "Variant": .int(variant),
             "CustomName": .string("Shoulder Friend"), "Sitting": .byte(0),
@@ -45,7 +46,7 @@ import Testing
         var wolf = try #require(parrot(id: 4, variant: 0).compound)
         wolf["id"] = .string("minecraft:wolf")
         for invalid in [NBT.compound([:]), .string("not an entity"),
-                        .compound(["id": .string("minecraft:parrot")]),
+                        Fixtures.mob(["id": .string("minecraft:parrot")]),
                         .compound(wolf)] {
             for key in ["ShoulderEntityLeft", "ShoulderEntityRight"] {
                 let other = key == "ShoulderEntityLeft" ? "ShoulderEntityRight" : "ShoulderEntityLeft"

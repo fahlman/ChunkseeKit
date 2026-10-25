@@ -910,30 +910,25 @@ for item in contents.containers.flatMap(\.allItems) {
 
 ### Creatures
 
-Creature decoding follows Minecraft's registered entity types and their `Mob` class ancestry.
-`Health` and `Owner` never establish mob identity. Dropped items, experience
-orbs, armor stands and players are excluded even if their saved fields resemble a mob's.
-Registered mobs remain readable when health is absent; `health` then remains nil. Namespaced
-identifiers use Minecraft's default namespace, and returned IDs are canonical.
+Creature decoding reads the mob record Minecraft writes to the save. `Mob.addAdditionalSaveData`
+unconditionally saves three booleans: `CanPickUpLoot`, `PersistenceRequired` and `LeftHanded`.
+All three must be readable, including false values. `Health`, ownership and a familiar type
+name alone do not establish that a saved entity is a mob. Items, experience orbs, armor stands
+and players do not have this mob record in normal game saves.
 
-The type catalogs are mechanically extracted from official 26.1, 26.1.1, 26.1.2, 26.2 and 26.3
-release jars. Exact verified versions use their own catalog. Missing or unverified
-versions use the verified 26.3 catalog, as Minecraft resolves known types through its own
-registry when reading other save versions. This does not broaden version-specific health
-defaults. Snapshot-only catalogs are deliberately omitted; newly added mobs can still be
-read from their saved format as described below.
+This rule has no built-in entity catalog or per-version type list. New and modded IDs use the
+same reader, and readable saved position, name, health, owner and UUID are retained without a
+blanket “unrecognized” label. Missing health remains nil. IDs use Minecraft's canonical namespace
+rules. The data version still governs existing version-specific facts such as omitted health
+defaults; it does not gate mob membership.
 
-Unfamiliar types remain readable when their saves contain all three booleans that Minecraft's
-`Mob` always writes: `CanPickUpLoot`, `PersistenceRequired` and `LeftHanded` (false counts too).
-Their saved ID, position, name and health are preserved; `isRecognizedType` is false so clients
-can explain that the type is unfamiliar. A recognized mob has true, while older cached or
-manually constructed records have nil. This saved-format evidence applies only to unfamiliar
-types and never overrides a recognized non-mob. Unfamiliar records without it remain available
-through raw entity reads. The CLI lists unfamiliar mobs by ID with an unrecognized-type notice;
-app presentation follows the library's release and the mob sidebar work.
-See [the extraction procedure](Tools/EntityTypes/README.md). RegionFacts interpretation version
-11 invalidates earlier classifications, including the unpublished Snapshot 5 and catalog-only
-preparations (versions 8–10).
+This is a reader of the saved record, not a reconstruction of Minecraft's entity registry.
+Incomplete or hand-edited records without the mob fields cannot establish membership, and a
+record deliberately given those fields is read as a mob record. Raw entity APIs preserve all
+records regardless. See [the source verification procedure](Tools/EntityTypes/README.md).
+RegionFacts interpretation 13 discards earlier health-based and catalog-based classifications,
+including unpublished versions 8–12. `Fixtures.mob` supplies the game's saved mob booleans for
+synthetic tests; callers supply ID, position and the other fields under test.
 
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player

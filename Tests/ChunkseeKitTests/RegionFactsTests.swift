@@ -36,7 +36,7 @@ import Testing
 
     var entityChunk: NBT {
         .compound(["DataVersion": .int(5023), "Entities": .list([
-            .compound(["id": .string("minecraft:wolf"), "Health": .float(6),
+            Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(6),
                        "Owner": Fixtures.uuidInts(UUID(uuidString: "06D119DA-BC79-410F-8F7B-062CE442A86D")!),
                        "Pos": .list([.double(-4), .double(63), .double(0)])]),
             .compound(["id": .string("minecraft:chest_minecart"), "Pos": .list([.double(-2.5), .double(30), .double(0)]),

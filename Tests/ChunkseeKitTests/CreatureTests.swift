@@ -12,10 +12,10 @@ import Testing
 
     @Test func creaturesPetsAndVillagers() throws {
         let chunk = NBT.compound(["Entities": .list([
-            .compound(["id": .string("minecraft:wolf"), "Health": .float(8), "Pos": pos(-4563, 63, -1247.4),
+            Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8), "Pos": pos(-4563, 63, -1247.4),
                        "CustomName": .string("§fSummer§r: [§a❤❤§c]"), "Owner": ownerInts()]),
-            .compound(["id": .string("minecraft:cat"), "Health": .float(10), "Pos": pos(1, 2, 3), "OwnerUUID": .string(owner.uuidString)]),
-            .compound(["id": .string("minecraft:villager"), "Health": .float(20), "Pos": pos(0, 64, 0),
+            Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(10), "Pos": pos(1, 2, 3), "OwnerUUID": .string(owner.uuidString)]),
+            Fixtures.mob(["id": .string("minecraft:villager"), "Health": .float(20), "Pos": pos(0, 64, 0),
                        "VillagerData": .compound(["profession": .string("minecraft:farmer"), "level": .int(2), "type": .string("minecraft:desert")]),
                        "Offers": .compound(["Recipes": .list([.compound([
                            "buy": .compound(["id": .string("minecraft:wheat"), "count": .int(20)]),
@@ -23,7 +23,7 @@ import Testing
                            "uses": .int(16), "maxUses": .int(16),
                        ])])])]),
             .compound(["id": .string("minecraft:item"), "Pos": pos(0, 0, 0), "Item": .compound(["id": .string("minecraft:dirt")])]),
-            .compound(["id": .string("minecraft:sheep"), "Health": .float(8), "Pos": pos(5, 64, 5), "CustomName": .string("§r")]),
+            Fixtures.mob(["id": .string("minecraft:sheep"), "Health": .float(8), "Pos": pos(5, 64, 5), "CustomName": .string("§r")]),
         ])])
         let creatures = Creature.creatures(inEntityChunk: chunk)
         #expect(creatures.map(\.id) == ["minecraft:wolf", "minecraft:cat", "minecraft:villager", "minecraft:sheep"])
@@ -40,7 +40,7 @@ import Testing
 
     @Test(arguments: [(NBT.float(7.5), 7.5), (.double(12.25), 12.25), (.short(20), 20), (.float(0), 0)])
     func savedHealthKeepsFractionalZeroAndOlderNumericValues(tag: NBT, expected: Double) throws {
-        let creature = try #require(Creature(.compound([
+        let creature = try #require(Creature(Fixtures.mob([
             "id": .string("minecraft:wolf"), "Health": tag, "Pos": pos(1, 64, 2), "Owner": ownerInts(),
         ])))
         #expect(creature.health == expected && creature.owner == owner)
@@ -48,7 +48,7 @@ import Testing
 
     @Test func unavailableHealthIsNotInvented() throws {
         #expect(Creature(id: "minecraft:cat", x: 0, y: 64, z: 0).health == nil)
-        let creature = try #require(Creature(.compound([
+        let creature = try #require(Creature(Fixtures.mob([
             "id": .string("minecraft:cat"), "Health": .string("unknown"), "Pos": pos(0, 64, 0),
         ])))
         #expect(creature.health == nil)

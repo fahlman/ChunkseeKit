@@ -11,7 +11,7 @@ import Testing
             "Health": .float(10), "Pos": .list([.double(0), .double(64), .double(0)]), "DataVersion": .int(5023),
             "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(20)])])]
         let file = folder.appendingPathComponent("saved.dat")
-        try Fixtures.writeGzippedNBT(.compound(saved.merging(fields) { $1 }), to: file)
+        try Fixtures.writeGzippedNBT(Fixtures.mob(saved.merging(fields) { $1 }), to: file)
         let nbt = try NBT.read(contentsOf: file)
         return (try #require(Creature(nbt, dataVersion: 5023)), PlayerInfo(uuid: UUID(), nbt: nbt))
     }
