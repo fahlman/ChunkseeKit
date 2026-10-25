@@ -732,6 +732,19 @@ mounting position. Player locations use vanilla dimension and coordinate rules w
 server-file policy. Unknown values remain unavailable; vanilla's Modded metadata remains. The
 server-specific PlayerInfo APIs were removed in v0.31.0, a breaking change documented in README's migration note (fahlman/ChunkseeKit#90).
 
+EntityTraversal owns the iterative parent-before-passenger walk for raw entities, creatures,
+entity containers and player root-vehicle mobs. The NBT reader already bounds input nesting;
+the walk uses an explicit stack and does not add recursive calls or an arbitrary depth cutoff.
+Dimension.entities returns a flat list whose raw compounds retain their Passengers fields.
+Clients consuming that list must not traverse the fields a second time.
+PlayerInfo.rootVehicleCreatures reads RootVehicle.Entity with the player's DataVersion.
+Each mob keeps its own saved position; PlayerInfo.dimension supplies the dimension independently
+of player coordinates. RootVehicle.Attach is the immediate vehicle's UUID, not an owner/player.
+Unreadable attachment metadata does not discard readable saved mobs. Official 26.3 Entity,
+EntityType and ServerPlayer save/load code verifies these rules, including the exclusion of
+single-player-carrying root vehicles from entity storage. The CLI combines these facts with
+region creatures and shoulder pets; app adoption follows a published library release.
+
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
 permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
 26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
@@ -946,8 +959,8 @@ those fields are interpreted as mob records. Raw entity reads preserve all recor
 are retained without a blanket recognition flag. Missing facts remain nil, and this does not
 broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
 mob records for the shared test-support library.
-RegionFacts interpretation 13 discards earlier classifications, including unpublished 8–12.
-The separate rider and 26.4 preparations need fresh interpretation versions when integrating.
+RegionFacts interpretation 14 discards earlier classifications and top-level-only entity scans,
+including unpublished 8–13. The separate 26.4 preparation needs a fresh version when integrating.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a
