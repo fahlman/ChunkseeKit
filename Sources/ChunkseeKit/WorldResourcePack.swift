@@ -4,12 +4,15 @@ extension World {
     /// Keep preflight checks cheap for queries that may only need inline definitions.
     var allowsResourceQuery: Bool { level.enabledDataPacks.count <= 64 }
 
-    /// One matching-jar and saved enabled-pack policy for file-backed world resources.
+    /// One current-game jar and saved enabled-pack policy for file-backed world resources.
     /// Nil rejects the whole over-budget query instead of silently truncating its packs.
     func resourcePacks(assets: GameAssets?) throws -> [WorldResourcePack]? {
         try Task.checkCancellation()
         guard allowsResourceQuery else { return nil }
-        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == level.dataVersion {
+        // Minecraft opens older saves using the running game's resources. An older jar cannot
+        // establish the data available to a newer save; an unknown save version cannot be ordered.
+        let vanilla: WorldResourcePack = if let assets, let savedVersion = level.dataVersion,
+            Int(assets.version.dataVersion) >= savedVersion {
             .zip(assets.resources)
         } else { .unavailable }
         return try WorldResourcePack.load(enabled: level.enabledDataPacks, in: url, vanilla: vanilla)
