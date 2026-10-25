@@ -18,11 +18,14 @@ public enum SaveVersion {
 
     /// Shared format/default checks verified against both official jars. Snapshot-specific
     /// registry additions are selected separately by their owning readers.
+    static let verifiedModernIDs = [java26_3: "26.3", java26_4Snapshot5: "26.4-snapshot-5"]
+
     static func isVerifiedModern(_ version: Int?) -> Bool {
-        version == java26_3 || version == java26_4Snapshot5
+        version.flatMap { verifiedModernIDs[$0] } != nil
     }
 
-    static let verifiedRecentPetHealth: Set<Int> = [java26_1, java26_1_1, java26_1_2, java26_2, java26_3, java26_4Snapshot5]
+    static let verifiedRecentPetHealth = Set([java26_1, java26_1_1, java26_1_2, java26_2])
+        .union(verifiedModernIDs.keys)
 }
 
 /// Source-compatible name for the original chunk-format constants.

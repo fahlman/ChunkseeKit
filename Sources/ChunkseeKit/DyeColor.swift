@@ -12,9 +12,9 @@ public enum DyeColor: String, CaseIterable, Sendable, Hashable {
         self = Self.allCases[legacyID]
     }
 
-    /// The game's texture multiplier, verified from 26.3 DyeColor.getTextureDiffuseColor.
+    /// The game's texture multiplier, identical in 26.3 DyeColor and Snapshot 5 CommonColors.
     /// Only the version-gated special-model reader uses it; this is not a UI color palette.
-    var textureDiffuseRGB26_3: UInt32 {
+    var textureDiffuseRGB: UInt32 {
         switch self {
         case .white: 0xf9fffe
         case .orange: 0xf9801d

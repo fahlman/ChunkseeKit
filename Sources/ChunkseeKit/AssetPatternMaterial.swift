@@ -56,7 +56,7 @@ enum AssetPatternMaterial {
                                   layers: [ItemBannerDesign.Layer], assets: GameAssets,
                                   budget: inout AssetReadBudget) throws -> AssetModel.Material {
         var overlays: [AssetModel.Material.Overlay] = [
-            .init(texture: try texture("minecraft:base", folder: folder), color: color.textureDiffuseRGB26_3)
+            .init(texture: try texture("minecraft:base", folder: folder), color: color.textureDiffuseRGB)
         ]
         // The save retains every layer, but BannerRenderer draws only the first sixteen.
         for layer in layers.prefix(16) {
@@ -69,7 +69,7 @@ enum AssetPatternMaterial {
                 guard root["translation_key"] is String else { throw Invalid.pattern }
             case .inline(let assetID, _): asset = assetID
             }
-            overlays.append(.init(texture: try texture(asset.description, folder: folder), color: layer.color.textureDiffuseRGB26_3))
+            overlays.append(.init(texture: try texture(asset.description, folder: folder), color: layer.color.textureDiffuseRGB))
         }
         try budget.consume(elements: overlays.count)
         return .init(texture: try AssetJSON.identifier(base),

@@ -12,8 +12,7 @@ public struct GameAssets: Sendable {
         private enum CodingKeys: String, CodingKey { case id, dataVersion = "world_version" }
 
         var hasVerifiedModels: Bool {
-            (id == "26.3" && dataVersion == SaveVersion.java26_3)
-                || (id == "26.4-snapshot-5" && dataVersion == SaveVersion.java26_4Snapshot5)
+            SaveVersion.verifiedModernIDs[Int(dataVersion)] == id
         }
     }
 
