@@ -191,112 +191,144 @@ struct NBTReader {
             throw NBTError.invalidRootTag(type)
         }
         let name = try readString()
-        return (name, try payload(NBTTagType(rawValue: type)!, depth: 0))
+        return (name, try payload(NBTTagType(rawValue: type)!))
     }
 
-    private mutating func payload(_ type: NBTTagType, depth: Int) throws -> NBT {
-        guard depth < Self.maxDepth else { throw NBTError.nestingTooDeep }
-        switch type {
-        case .end: throw NBTError.invalidTagType(0)
-        case .byte: return .byte(Int8(bitPattern: try u8()))
-        case .short: return .short(Int16(bitPattern: try be(UInt16.self)))
-        case .int: return .int(Int32(bitPattern: try be(UInt32.self)))
-        case .long: return .long(Int64(bitPattern: try be(UInt64.self)))
-        case .float: return .float(Float(bitPattern: try be(UInt32.self)))
-        case .double: return .double(Double(bitPattern: try be(UInt64.self)))
-        case .byteArray:
-            let n = try length()
-            try need(n)
-            let start = pos
-            pos += n
-            return .byteArray([Int8](unsafeUninitializedCapacity: n) { buffer, count in
-                if n > 0 { UnsafeMutableRawBufferPointer(buffer).copyMemory(from: UnsafeRawBufferPointer(rebasing: bytes[start..<start + n])) }
-                count = n
-            })
-        case .string: return .string(try readString())
-        case .list:
-            let rawType = try u8()
-            let n = try length()
-            guard let elementType = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
-            if n == 0 { return .list(elementType, []) }
-            guard elementType != .end else { throw NBTError.invalidTagType(0) }
-            var items = [NBT]()
-            items.reserveCapacity(min(n, bytes.count - pos))
-            for _ in 0..<n { items.append(try payload(elementType, depth: depth + 1)) }
-            return .list(elementType, items)
-        case .compound:
-            var dict = [String: NBT]()
-            while true {
-                let rawType = try u8()
-                if rawType == 0 { break }
-                guard let t = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
-                let name = try readString()
-                if !skipping.isEmpty, skipping.contains(name) {
-                    try skip(t, depth: depth + 1)
-                } else {
-                    dict[name] = try payload(t, depth: depth + 1)
+    private struct Container {
+        enum Kind { case list(NBTTagType), compound }
+        let kind: Kind
+        var items: [NBT]?
+        var remaining = 0
+        var fields: [String: NBT]?
+        var name: String?
+    }
+
+    private mutating func payload(_ rootType: NBTTagType) throws -> NBT {
+        var containers: [Container] = [], type = rootType, retaining = true
+        nextPayload: while true {
+            guard containers.count < Self.maxDepth else { throw NBTError.nestingTooDeep }
+            var value: NBT?
+            switch type {
+            case .end: throw NBTError.invalidTagType(0)
+            case .byte:
+                let number = try u8()
+                value = retaining ? .byte(Int8(bitPattern: number)) : nil
+            case .short:
+                let number = try be(UInt16.self)
+                value = retaining ? .short(Int16(bitPattern: number)) : nil
+            case .int:
+                let number = try be(UInt32.self)
+                value = retaining ? .int(Int32(bitPattern: number)) : nil
+            case .long:
+                let number = try be(UInt64.self)
+                value = retaining ? .long(Int64(bitPattern: number)) : nil
+            case .float:
+                let number = try be(UInt32.self)
+                value = retaining ? .float(Float(bitPattern: number)) : nil
+            case .double:
+                let number = try be(UInt64.self)
+                value = retaining ? .double(Double(bitPattern: number)) : nil
+            case .byteArray:
+                let n = try length(), start = pos
+                try advance(n)
+                if retaining {
+                    value = .byteArray([Int8](unsafeUninitializedCapacity: n) { buffer, count in
+                        if n > 0 { UnsafeMutableRawBufferPointer(buffer).copyMemory(from: UnsafeRawBufferPointer(rebasing: bytes[start..<start + n])) }
+                        count = n
+                    })
+                }
+            case .string:
+                if retaining { value = .string(try readString()) }
+                else { try advance(Int(try be(UInt16.self))) }
+            case .list:
+                let rawType = try u8(), n = try length()
+                // Skipping has always tolerated an unused type byte on an empty list.
+                if n == 0, !retaining { break }
+                guard let elementType = NBTTagType(rawValue: rawType), n == 0 || elementType != .end else {
+                    throw NBTError.invalidTagType(rawType)
+                }
+                if n == 0 { value = .list(elementType, []); break }
+                var items: [NBT]? = retaining ? [] : nil
+                items?.reserveCapacity(min(n, bytes.count - pos))
+                containers.append(Container(kind: .list(elementType), items: items, remaining: n))
+                type = elementType
+                continue
+            case .compound:
+                let fields: [String: NBT]? = retaining ? [:] : nil
+                if let entry = try compoundEntry(retaining: retaining) {
+                    containers.append(Container(kind: .compound, fields: fields, name: entry.name))
+                    type = entry.type
+                    retaining = entry.name != nil
+                    continue
+                }
+                value = fields.map(NBT.compound)
+            case .intArray:
+                let n = try length(), start = pos
+                try advance(n * 4)
+                if retaining {
+                    value = .intArray([Int32](unsafeUninitializedCapacity: n) { buffer, count in
+                        for i in 0..<n {
+                            buffer[i] = Int32(bitPattern: UInt32(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 4, as: UInt32.self)))
+                        }
+                        count = n
+                    })
+                }
+            case .longArray:
+                let n = try length(), start = pos
+                try advance(n * 8)
+                if retaining {
+                    value = .longArray([Int64](unsafeUninitializedCapacity: n) { buffer, count in
+                        for i in 0..<n {
+                            buffer[i] = Int64(bitPattern: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 8, as: UInt64.self)))
+                        }
+                        count = n
+                    })
                 }
             }
-            return .compound(dict)
-        case .intArray:
-            let n = try length()
-            try need(n * 4)
-            let start = pos
-            pos += n * 4
-            return .intArray([Int32](unsafeUninitializedCapacity: n) { buffer, count in
-                for i in 0..<n {
-                    buffer[i] = Int32(bitPattern: UInt32(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 4, as: UInt32.self)))
+            // Mutate accumulated values in place; popping and copying them for every child
+            // would make wide lists and compounds repeatedly copy their existing contents.
+            while let last = containers.indices.last {
+                switch containers[last].kind {
+                case .list(let elementType):
+                    if let value { containers[last].items?.append(value) }
+                    containers[last].remaining -= 1
+                    if containers[last].remaining > 0 {
+                        type = elementType
+                        retaining = containers[last].items != nil
+                        continue nextPayload
+                    }
+                    value = containers.removeLast().items.map { .list(elementType, $0) }
+                case .compound:
+                    if let name = containers[last].name, let value { containers[last].fields?[name] = value }
+                    if let entry = try compoundEntry(retaining: containers[last].fields != nil) {
+                        containers[last].name = entry.name
+                        type = entry.type
+                        retaining = entry.name != nil
+                        continue nextPayload
+                    }
+                    value = containers.removeLast().fields.map(NBT.compound)
                 }
-                count = n
-            })
-        case .longArray:
-            let n = try length()
-            try need(n * 8)
-            let start = pos
-            pos += n * 8
-            return .longArray([Int64](unsafeUninitializedCapacity: n) { buffer, count in
-                for i in 0..<n {
-                    buffer[i] = Int64(bitPattern: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 8, as: UInt64.self)))
-                }
-                count = n
-            })
+            }
+            // The root is always retained; only named descendants can be skipped.
+            return value!
         }
     }
 
-    /// Advances past a payload without decoding it, still validating its structure and bounds.
-    private mutating func skip(_ type: NBTTagType, depth: Int) throws {
-        guard depth < Self.maxDepth else { throw NBTError.nestingTooDeep }
-        func advance(_ n: Int) throws {
-            try need(n)
-            pos += n
+    private mutating func compoundEntry(retaining: Bool) throws -> (type: NBTTagType, name: String?)? {
+        let rawType = try u8()
+        guard rawType != 0 else { return nil }
+        guard let type = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
+        if retaining {
+            let name = try readString()
+            return (type, skipping.contains(name) ? nil : name)
         }
-        switch type {
-        case .end: throw NBTError.invalidTagType(0)
-        case .byte: try advance(1)
-        case .short: try advance(2)
-        case .int, .float: try advance(4)
-        case .long, .double: try advance(8)
-        case .byteArray: try advance(try length())
-        case .intArray: try advance(try length() * 4)
-        case .longArray: try advance(try length() * 8)
-        case .string: try advance(Int(try be(UInt16.self)))
-        case .list:
-            let rawType = try u8()
-            let n = try length()
-            guard n > 0 else { return }
-            guard let elementType = NBTTagType(rawValue: rawType), elementType != .end else {
-                throw NBTError.invalidTagType(rawType)
-            }
-            for _ in 0..<n { try skip(elementType, depth: depth + 1) }
-        case .compound:
-            while true {
-                let rawType = try u8()
-                if rawType == 0 { return }
-                guard let t = NBTTagType(rawValue: rawType) else { throw NBTError.invalidTagType(rawType) }
-                try advance(Int(try be(UInt16.self)))
-                try skip(t, depth: depth + 1)
-            }
-        }
+        try advance(Int(try be(UInt16.self)))
+        return (type, nil)
+    }
+
+    private mutating func advance(_ n: Int) throws {
+        try need(n)
+        pos += n
     }
 
     private func need(_ n: Int) throws {

@@ -7,6 +7,20 @@ import Testing
     private let metadata = #"{"pack":{"min_format":121,"max_format":121,"description":"Fixture"}}"#
     private let plain = ##"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":"#3f76e4"}}"##
 
+    @Test func worldResourceQueriesRejectOversizedPackListsWithoutTruncatingThem() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let reader = try assets([resource(plain), .init(
+            path: "data/minecraft/tags/worldgen/biome/is_overworld.json", text: #"{"values":["plains"]}"#)])
+        for count in [64, 65] {
+            let world = try world(root, packs: Array(repeating: "vanilla", count: count))
+            let expected: Set<String> = count == 64 ? ["minecraft:plains"] : []
+            #expect(Set(try world.biomeDefinitions(assets: reader).keys) == expected)
+            #expect(Set(try world.biomeDefinitions(for: ["plains"], assets: reader).keys) == expected)
+            #expect(try world.tags(for: ["is_overworld"], in: "worldgen/biome", assets: reader).isEmpty == (count == 65))
+        }
+    }
+
     @Test func completeCatalogUsesTheRequestedReaderPriorityAndKeepsNestedIDs() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
