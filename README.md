@@ -1013,7 +1013,7 @@ a world pack may have replaced it. No missing definition silently falls back to 
 The snapshot is part of RegionScanOptions equality, hashing and its persisted archive; reload it
 when the game resources or enabled packs change. RegionFacts interpretation 18 invalidates old
 totals that assumed vanilla enchantments were unchanged. These additive/defaulted APIs require
-a minor release; app resource/scan adoption follows fahlman/Chunksee#439.
+a minor release; app resource/scan adoption follows fahlman/Chunksee#446.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
 Starting in v0.39.0, the computed `Villager.isUnemployed` interprets the saved profession's explicit

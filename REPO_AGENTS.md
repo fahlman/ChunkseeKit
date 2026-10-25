@@ -835,7 +835,7 @@ the same immutable snapshot. RegionScanOptions owns the snapshot as a hashable/s
 input; interpretation 18 invalidates totals that assumed vanilla definitions were unchanged.
 Clients without a snapshot now get nil for active enchantments, including familiar IDs.
 This deliberate availability change and the additive/defaulted APIs need a minor release;
-app loading/cache adoption is fahlman/Chunksee#439. Queries use existing pack priority and
+app loading/cache adoption is fahlman/Chunksee#446. Queries use existing pack priority and
 invalid-override handling, with 4,096 definitions/64 MiB total/16 MiB per-file bounds. Effect
 interpretation is bounded to 64 levels/65,536 steps. No condition or live function is executed. Maximums
 use the game's Float precision. Mob appearance/collar/equipment and pet sitting-order interpretation
