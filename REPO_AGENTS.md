@@ -1017,7 +1017,8 @@ namespaces; an optional installation folder supplies the jar version's launcher 
 selected asset index and hash-addressed language objects. No installed-version inventory,
 download, runtime Java dependency or mutable cache is added. The read-only byte source and
 resource containment helpers are shared with the existing resource readers; a query consumes
-at most 16 MiB and validates supplied index/object hashes and sizes.
+at most 16 MiB. As IndexedAssetSource does, it follows the current index and hash-named object
+files without rejecting readable local text against older launcher download checksums.
 The official Language, ClientLanguage, DeprecatedTranslationsInfo and IndexedAssetSource
 classes establish JSON primitives, numeric-placeholder normalization, merge order, key migrations
 and the launcher object layout. Invalid entries leave other readable translations intact.

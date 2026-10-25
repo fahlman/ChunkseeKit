@@ -1219,8 +1219,9 @@ The immutable `GameLanguage` snapshot needs no further file reads. Locale codes 
 accept hyphens or underscores. Namespaces present in the jar or selected asset index are read;
 resource-pack layering, choosing a preferred language, substituting text arguments and layout
 stay outside this API. Minecraft's numeric-format placeholder conversion and data-supplied
-deprecated-key removals/renames are applied. Reads share a 16 MiB budget, validate available
-index/object hashes and sizes, and remain inside the supplied installation. No files are
+deprecated-key removals/renames are applied. Reads share a 16 MiB budget and remain inside the
+supplied installation. As in Minecraft, the current index and hash-named objects supply the
+text; older download checksums do not reject parseable local files. No files are
 downloaded, extracted or written, and no game text is bundled with the library. This additive
 API is unreleased for #225; app adoption is tracked on fahlman/Chunksee#438 and follows a minor
 dependency release. No save or region-cache interpretation changes.

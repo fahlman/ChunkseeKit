@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 /// An immutable translation snapshot from the supplied game files. Locale selection, text
@@ -75,12 +74,12 @@ private struct GameLanguageReader {
               let metadata = Self.object(data)?["assetIndex"] as? [String: Any],
               let index = metadata["id"] as? String, Self.component(index),
               let indexData = file("assets/indexes/\(index).json", under: root),
-              Self.matches(indexData, hash: metadata["sha1"], size: metadata["size"]),
               let objects = Self.object(indexData)?["objects"] as? [String: Any] else { return }
+        // IndexedAssetSource uses the current local index and hash-named files. Download
+        // checksums/sizes describe a launcher download, not whether these strings are readable.
         for path in objects.keys.sorted() where Self.isLanguage(path, locale: locale, inJar: false) {
             guard let object = objects[path] as? [String: Any], let hash = object["hash"] as? String,
-                  Self.isHash(hash), let data = file("assets/objects/\(hash.prefix(2))/\(hash)", under: root),
-                  Self.matches(data, hash: hash, size: object["size"]) else { continue }
+                  Self.isHash(hash), let data = file("assets/objects/\(hash.prefix(2))/\(hash)", under: root) else { continue }
             Self.append(data, to: &values)
         }
     }
@@ -110,15 +109,6 @@ private struct GameLanguageReader {
 
     private static func isHash(_ value: String) -> Bool {
         value.utf8.count == 40 && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
-    }
-
-    private static func matches(_ data: Data, hash: Any?, size: Any?) -> Bool {
-        if let size, (try? AssetJSON.integer(size)) != data.count { return false }
-        if let hash {
-            guard let hash = hash as? String, isHash(hash) else { return false }
-            return Insecure.SHA1.hash(data: data).map { String(format: "%02x", $0) }.joined() == hash
-        }
-        return true
     }
 
     private mutating func archive(_ path: String) -> Data? {

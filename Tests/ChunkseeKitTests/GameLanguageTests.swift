@@ -67,14 +67,20 @@ import ChunkseeKitTestSupport
         #expect(reader.language("../fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
     }
 
-    @Test func missingMalformedOrChangedLocaleObjectsKeepEnglishAvailable() throws {
+    @Test func currentLocalFilesAreUsedAndMissingOrMalformedValuesKeepEnglish() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let reader = try assets()
         #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
         let object = try install(Data(#"{"block.minecraft.stone":"Pierre"}"#.utf8), under: root)
-        try Data(#"{"block.minecraft.stone":"Wrong"}"#.utf8).write(to: object)
-        #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
+        // The launcher index can change while older version metadata still has its download hash.
+        let indexPath = root.appendingPathComponent("assets/indexes/chosen-index.json")
+        var indexBytes = try Data(contentsOf: indexPath)
+        indexBytes.append(contentsOf: [32, 10])
+        try indexBytes.write(to: indexPath)
+        #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Pierre")
+        try Data(#"{"block.minecraft.stone":"Local text"}"#.utf8).write(to: object)
+        #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Local text")
         try FileManager.default.removeItem(at: object)
         #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
         try install(Data("malformed JSON".utf8), under: root)
