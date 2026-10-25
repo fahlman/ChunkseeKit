@@ -515,8 +515,12 @@ files. Directories named with a .json suffix are not registered files.
 `BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
 sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
 stem age and redstone power. Color-driving properties use the same verified 26.3 registry
-defaults as block models; malformed values, unknown blocks/indexes and other versions remain
-unavailable.
+defaults as block models. Vanilla identifiers and nonnegative indexes without a registered
+source return white (no tint), matching BlockColors.getTintSources and
+ModelBlockRenderer.computeTintColor in the official 26.3 jar. This is a tint answer, not proof
+of block registry membership. Malformed color-driving values, negative indexes, other namespaces
+and unverified versions remain unavailable. The source registration table's regeneration is
+tracked on #222; the no-source rule adds no block inventory.
 Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
 uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
 kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
