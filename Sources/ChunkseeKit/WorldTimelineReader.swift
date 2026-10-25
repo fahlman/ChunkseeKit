@@ -8,10 +8,7 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
     private var budget = ResourceReadBudget()
 
     init(world: World, assets: GameAssets?) throws {
-        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
-            .zip(assets.resources)
-        } else { .unavailable }
-        try self.init(packs: WorldResourcePack.load(enabled: world.level.enabledDataPacks, in: world.url, vanilla: vanilla))
+        try self.init(packs: world.resourcePacks(assets: assets) ?? [.unavailable])
     }
 
     private init(packs: [WorldResourcePack]) throws {

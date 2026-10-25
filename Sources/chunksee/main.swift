@@ -37,6 +37,7 @@ struct Arguments {
 }
 
 let commands: [Command] = [
+    Command(name: "summary", arguments: "[game.jar]", summary: "world summary using the supplied game data", run: summaryAssetsCommand),
     Command(name: "chunk", arguments: "<cx> <cz> [dimension]", summary: "chunk summary", run: chunkCommand),
     Command(name: "block", arguments: "<x> <y> <z> [dimension]", summary: "block and biome at a position", run: blockCommand),
     Command(name: "scan", arguments: "[dimension]", summary: "decode every chunk and report errors", run: scanCommand),

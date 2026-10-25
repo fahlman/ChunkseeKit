@@ -5,7 +5,7 @@ extension World {
     /// their own named saved clock times. No simulation, weather/spatial layers or final range
     /// clamping is applied. Missing/unsupported inputs omit that dimension; read errors propagate.
     ///
-    /// Enabled folder/ZIP definitions and timeline tags use normal pack priority and a matching
+    /// Enabled folder/ZIP definitions and timeline tags use normal pack priority and the selected
     /// supplied jar. Tags compose low-to-high, preserve first occurrence and honor replace and
     /// optional references. Direct timeline lists retain duplicates. Malformed/cyclic selections
     /// remain unavailable, including invalid optional selections; no partial-registry recovery.
