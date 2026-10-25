@@ -445,10 +445,12 @@ is available in v0.40.0, with separate app adoption on #51.
 
 `WorldResourcePack` owns enabled data-pack priority and safe paths for both dimension settings
 and biome definitions. Dimension defaults retain their existing verified-version rule; biome
-vanilla resources use the caller's matching game archive through the same ZIP path, so a
+vanilla resources use the caller's current/newer game archive through the same ZIP path, so a
 malformed vanilla entry also shadows a lower-priority pack.
-`World.resourcePacks` is the shared matching-jar and saved enabled-pack owner for biome and
-tag queries. Its 64-pack bound also supplies lighting's preflight check; over-budget biome
+`World.resourcePacks` is the shared game-archive and saved enabled-pack owner for biome and
+tag queries. It accepts a jar at least as new as the saved world, matching Minecraft's use of
+the running game's data when opening an older world. An older jar or unknown saved version
+leaves vanilla unavailable. Its 64-pack bound also supplies lighting's preflight; over-budget biome
 queries return no definitions. The remaining dimension and timeline version-specific source
 selection moves to this owner with #217/#218's data-reader gate removal, preserving its separate
 verified code-fact fallback until then.
@@ -463,13 +465,20 @@ The public value describes declared IDs and retains each member's required flag;
 guess whether an optional member exists in a live code-defined registry. Typed timeline reads
 add their existing definition validation. All consumers share ResourceTagReader and its query
 budget; no mutable cache escapes the read. No version inventory or new dependency is added.
-The world query uses the matching jar and the saved enabled-pack list, including future versions.
-These additive APIs implement #233; biome/structure/ore/POI/item consumers are separate changes.
+The world query uses the selected current/newer jar and saved enabled-pack list, including future versions.
+These additive APIs implement #233; structure/ore/POI/item consumers are separate changes.
+World.possibleBiomes(in:assets:) implements #223 by reading the three standard dimension
+association tags through this owner. The standard dimension-to-tag association is format
+vocabulary; all biome membership comes from the supplied files and enabled packs at runtime.
+Missing/unreadable tags and custom dimensions without a standard association return nil;
+known empty tags remain empty. This is not proof of saved usage or custom-generator output.
+Dimension.vanillaBiomes and its hand-copied inventories are removed, an intentional breaking
+API change requiring a minor release and app adoption. No per-snapshot biome list is maintained.
 
 `BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
 26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
 and the saved grass modifier. World queries canonicalize only requested IDs and require a
-known saved version and saved enabled-pack list. A missing or mismatched jar makes vanilla
+known saved version and saved enabled-pack list. A missing or older jar makes vanilla
 unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
 cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the
 hex/integer/channel forms; unknown modifiers and malformed fields remain unavailable. Strict
