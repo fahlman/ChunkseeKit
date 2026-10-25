@@ -3,7 +3,8 @@
 Report for [Kit #227](https://github.com/fahlman/ChunkseeKit/issues/227), 2026-10-25.
 Recommendation: retain Minecraft's actual default states and bring their mechanical extraction
 into the single release tool on #222. Do not substitute inventory models for unknown block
-states. Ryan's decision is required before changing product behavior.
+states. Ryan approved this recommendation on 2026-10-25; the implementation decision is
+recorded on [Kit #227](https://github.com/fahlman/ChunkseeKit/issues/227#issuecomment-6404352160).
 
 ## What was compared
 
@@ -81,6 +82,11 @@ default properties mechanically, with provenance, through #222's existing releas
 This avoids a hand-maintained list without pretending an item illustration defines world state.
 
 ## Reproduction and limits
+
+The one-off comparison scripts were removed after the decision to avoid maintaining copied
+app rendering code. Their exact sources and reproduction instructions remain in
+[commit 5300e2c](https://github.com/fahlman/ChunkseeKit/tree/5300e2cb75c0c7b13a2edcced652a243552f0a05/Tools/BlockItemInvestigation)
+and the raw evidence below. Product extraction belongs in `Tools/GameFacts`.
 
 - Kit comparison tools/source: `5300e2cb75c0c7b13a2edcced652a243552f0a05` on base
   `41b20fed4131ec9bf3db94c9d845eba3dc1cda5f`; no product source changed.
