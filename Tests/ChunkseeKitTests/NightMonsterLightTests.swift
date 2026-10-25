@@ -73,7 +73,7 @@ import Testing
         }
     }
 
-    @Test func bothProjectionsShareTheEarlyPackBoundAndVanillaVersionGate() throws {
+    @Test func bothProjectionsShareTheEarlyPackBoundAndSelectedGameTimelines() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let types = ["test:static": definition(), "test:tracked": definition(extra: ["timelines": .string("test:night")])]
@@ -85,11 +85,11 @@ import Testing
         try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([
             "test:clock": .compound(["total_ticks": .long(0)])
         ])]), to: root.appendingPathComponent("data/minecraft/world_clocks.dat"))
-        for version in [5022, 5023] {
+        for version in [1, 5022, 5023, 999999] {
             let jar = try #require(GameAssets(data: Data(TestZIP.zip([
                 .init(path: "version.json", text: "{\"id\":\"test\",\"world_version\":\(version)}"), good
             ]))))
-            let expected = version == 5023 ? ["test:static", "test:tracked"] : ["test:static"]
+            let expected = ["test:static", "test:tracked"]
             #expect(try current.savedSkyLighting(assets: jar).keys.sorted() == expected)
             #expect(try current.nightMonsterLighting(assets: jar).keys.sorted() == expected)
         }
