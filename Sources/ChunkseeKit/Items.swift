@@ -198,7 +198,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
             // writes equipment. Their format fields apply independently of the entity's type ID.
             let inventory = ItemStack.list(entity["Items"]) + ItemStack.list(entity["Inventory"])
             let single = ["Item", "item"].compactMap { entity[$0].flatMap(ItemStack.init) }
-            let equipment = EntityEquipment.creature(entity, species: kind)
+            let equipment = EntityEquipment.creature(entity, species: kind) ?? [:]
             let items = inventory + single + equipment.keys.sorted().compactMap { equipment[$0] }
             let lootTable = entity["LootTable"]
             let sealed = lootTable != nil

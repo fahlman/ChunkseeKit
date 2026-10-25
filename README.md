@@ -1018,10 +1018,16 @@ matching the vanilla 26.3 codec. Explicit numeric values are preserved; malforme
 unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
 still decode as saved, so rescan them to obtain this corrected default.
 
-Owned pets also expose `sittingOrder` (wolves/cats/parrots), `appearance` (wolf/cat coat,
-parrot color, horse coat and markings, llama color), `collarColor` (wolves/cats), and `equipment`
-by slot. An empty equipment dictionary means a pet that can wear equipment has none; nil means
-not applicable or unavailable. Equipment reads current slots, legacy `ArmorItems`/`HandItems`
+All mobs expose readable saved `appearance`, `collarColor` and `equipment`, whether wild or owned.
+Saved `variant` strings (or string-valued `Variant`) are retained as-is for any type, including
+new or modded IDs. Numeric variants use generated game-code mappings for sheep dyes, axolotls,
+parrots, horse coats/markings, llamas and legacy cat types. An unfamiliar numeric variant leaves
+only appearance unavailable; the mob's other facts remain readable.
+
+Owned wolves/cats/parrots also expose their saved `sittingOrder`. A saved collar dye is retained
+for any mob; the existing omitted-red default applies only to owned wolves/cats. An empty
+equipment dictionary means explicitly empty saved equipment or an equipment-bearing pet with
+none; nil means unavailable. Equipment reads every current slot, legacy `ArmorItems`/`HandItems`
 lists, older body armor, horse armor/saddle, llama decor and attached chest fields. A current
 creature equipment compound supersedes those older fields, including when explicitly empty.
 Older horse `ArmorItem` conversion clears the former chest entry, as Minecraft's data fix does;
@@ -1032,15 +1038,18 @@ maximum components; vanilla wolf armor has an implicit maximum of 64. Unbreakabl
 has no durability value. These are saved values, not live pose or following behavior.
 
 `CreatureAppearance` normalizes numeric appearance values into symbolic keys with a `minecraft:`
-prefix: parrot colors, horse coats/markings and llama colors. These are engine keys, not registry
-IDs saved by Minecraft; wolf and cat variants retain their actual registry IDs. Equipment uses
+prefix. The numeric mappings and shared `DyeColor` identities/texture multipliers are regenerated
+from the installed official release by [Tools/GameFacts](Tools/GameFacts/README.md), with source
+hashes and no runtime Java dependency. Code symbols such as horse markings are engine keys;
+saved variant strings retain their actual IDs. Equipment uses
 the game's slot names (including `body` and `saddle`). The additional `storage` key is a derived
-indicator for an attached chest (`ChestedHorse`), represented by a chest item; it is not an
-equipped slot or a replacement for the animal's carried inventory. Equipment/default health also
+indicator for a saved attached chest (`ChestedHorse`), represented by a chest item when there is
+no saved `storage` slot. It is not a replacement for the animal's carried inventory. Equipment/default health also
 cover the nautilus, zombie nautilus and camel husk in 26.3.
 
-All new stored fields are optional so old cached creatures still decode. Rebuild those caches
-to obtain the new values. `Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
+Stored fields remain optional so old cached creatures still decode. RegionFacts interpretation
+version 16 requires a rescan to obtain wild-mob appearance and equipment; the public API shape
+is unchanged. `Creature.creatures(inEntityChunk:)` passes the chunk's saved version;
 callers decoding a single entity may use `Creature(entity, dataVersion: chunkVersion)`.
 For one chunk, `try dimension.creatures(chunkX: x, chunkZ: z)` retains the saved entity version
 automatically. `dimension.entities` still returns raw NBT without that context; existing callers

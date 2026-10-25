@@ -20,12 +20,12 @@ public struct Creature: Sendable, Equatable, Codable {
     public var maxHealth: Double?
     /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
     public var sittingOrder: Bool?
-    /// The saved coat/color variant and, for horses, markings. Only populated for pets.
+    /// The saved coat/color variant and, for horses, markings, for wild mobs and pets alike.
     public var appearance: CreatureAppearance?
-    /// A dye name such as `orange`, for pet wolves and cats.
+    /// A saved collar dye name such as `orange`; owned wolves/cats default to red when omitted.
     public var collarColor: String?
     /// Equipped items by slot; the derived `storage` key represents an attached chest.
-    /// Nil when not applicable; empty when an equipment-bearing pet has none.
+    /// Empty when explicitly saved empty, or when an equipment-bearing pet has none; nil when unavailable.
     public var equipment: [String: ItemStack]?
     /// The individual entity's stable identity, retained across movement and shared positions.
     public var uuid: UUID?
@@ -74,12 +74,10 @@ public struct Creature: Sendable, Equatable, Codable {
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
         uuid = nbt.uuid
-        if owner != nil {
-            sittingOrder = PetData.sittingOrder(nbt, species: id)
-            appearance = PetData.appearance(nbt, species: id)
-            collarColor = PetData.collarColor(nbt, species: id)
-            equipment = PetData.equipment(nbt, species: id)
-        }
+        if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
+        appearance = CreatureData.appearance(nbt, species: id)
+        collarColor = CreatureData.collarColor(nbt, species: id, isOwned: owner != nil)
+        equipment = CreatureData.equipment(nbt, species: id, isOwned: owner != nil)
     }
 
     /// Living mobs among an entity chunk's entities, including all nested passengers.
