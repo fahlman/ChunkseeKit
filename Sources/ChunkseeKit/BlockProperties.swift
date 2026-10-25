@@ -8,8 +8,11 @@ struct BlockProperties {
     init(_ state: BlockState, gameDataVersion: Int32) {
         id = Identifier(state.id)
         saved = state.properties
-        if gameDataVersion == SaveVersion.java26_3, let id, id.namespace == "minecraft" {
-            defaults = BlockPropertyDefaults.values[id.path] ?? [:]
+        if SaveVersion.isVerifiedModern(Int(gameDataVersion)), let id, id.namespace == "minecraft" {
+            if gameDataVersion == SaveVersion.java26_4Snapshot5,
+               let snapshotDefaults = BlockPropertyDefaults.snapshot5[id.path] {
+                defaults = snapshotDefaults
+            } else { defaults = BlockPropertyDefaults.values[id.path] ?? [:] }
         } else { defaults = [:] }
     }
 
@@ -21,6 +24,17 @@ struct BlockProperties {
 /// Exact names only: 884 property-bearing blocks share 114 immutable property dictionaries.
 /// Empty dictionaries need no entry. These facts do not validate explicit property domains.
 private enum BlockPropertyDefaults {
+    // Extracted from Snapshot 5's live registry. All other 26.3 defaults are unchanged.
+    static let snapshot5: [String: [String: String]] = [
+        "jukebox": ["has_record": "false", "playlist_mode": "false"],
+        "packed_ice_brick_slab": ["type": "bottom", "waterlogged": "false"],
+        "packed_ice_brick_stairs": ["facing": "north", "half": "bottom", "shape": "straight", "waterlogged": "false"],
+        "packed_ice_brick_wall": ["east": "none", "north": "none", "south": "none", "up": "true", "waterlogged": "false", "west": "none"],
+        "brittle_ice": ["age": "0"],
+        "ice_crystal": ["facing": "up", "waterlogged": "false"],
+        "icicle": ["attached": "false", "thickness": "tip", "vertical_direction": "up", "waterlogged": "false"],
+    ]
+
     static let values: [String: [String: String]] = {
         var result = [String: [String: String]]()
         func add(_ names: String, _ properties: [String: String]) {

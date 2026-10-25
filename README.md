@@ -15,6 +15,25 @@ A Swift library and command-line tool for reading Minecraft: Java Edition world 
 
 The ChunkseeKit reader is read-only apart from the NBT writer, and it never modifies world files.
 
+## Minecraft 26.4 preparation (unreleased)
+
+Provisional compatibility targets **26.4 Snapshot 5**, data version **5125**, alongside 26.3.
+`SaveVersion.java26_4Snapshot5` identifies that exact snapshot; other snapshots and the final
+26.4 release do not automatically acquire its verified defaults. Recheck the released game
+before claiming release support (fahlman/ChunkseeKit#217).
+
+The verified readers cover item models, block models and tints, biome definitions, dimension
+and lighting metadata, omitted block-light layers, existing health defaults, potion colors and
+statistics units. Snapshot-specific registry facts include the new ice blocks, the jukebox's
+`playlist_mode` default, and freezing potions. Existing 26.3 behavior remains versioned.
+Uniform biome palettes now preserve their chunk's per-block format, including biome-only reads.
+Snapshot terrain uses those saved per-block biomes directly; `BiomeSampler` remains the 26.3
+four-block-cell algorithm.
+
+RegionFacts interpretation version **8** invalidates cached creatures whose Snapshot 5 health
+defaults were previously unavailable. App consumers must also invalidate rendered tiles when
+adopting the new colors. No world files or game assets are written by these readers.
+
 ## Requirements
 
 - Swift 6.4 or later (Xcode 27)

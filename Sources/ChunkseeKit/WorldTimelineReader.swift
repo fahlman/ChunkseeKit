@@ -44,7 +44,8 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
     static func allowsQuery(in world: World) -> Bool { world.level.enabledDataPacks.count <= 64 }
 
     init(world: World, assets: GameAssets?) throws {
-        let vanilla: WorldResourcePack = if let assets, Int(assets.version.dataVersion) == SaveVersion.java26_3 {
+        let vanilla: WorldResourcePack = if let assets, SaveVersion.isVerifiedModern(Int(assets.version.dataVersion)),
+                                           Int(assets.version.dataVersion) == world.level.dataVersion {
             .zip(assets.resources)
         } else { .unavailable }
         try self.init(packs: WorldResourcePack.load(enabled: world.level.enabledDataPacks, in: world.url, vanilla: vanilla))

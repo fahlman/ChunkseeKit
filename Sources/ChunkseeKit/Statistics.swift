@@ -61,7 +61,7 @@ public struct PlayerStatistics: Sendable, Equatable {
 
     /// The saved scale for a known vanilla general statistic; nil means keep its raw number.
     /// Time and distance include the supported legacy IDs. Damage scaling is verified for 26.3
-    /// only; unknown versions must not acquire a conversion from their names.
+    /// and 26.4 Snapshot 5; unknown versions must not acquire a conversion from their names.
     public func unit(of id: String, in category: String = "minecraft:custom") -> Unit? {
         guard Identifier(category)?.description == "minecraft:custom",
               let id = Identifier(id), id.namespace == "minecraft" else { return nil }
@@ -75,7 +75,7 @@ public struct PlayerStatistics: Sendable, Equatable {
             return .centimeters
         case "damage_dealt", "damage_dealt_absorbed", "damage_dealt_resisted", "damage_taken",
              "damage_blocked_by_shield", "damage_absorbed", "damage_resisted":
-            return dataVersion == SaveVersion.java26_3 ? .tenthsOfDamagePoint : nil
+            return SaveVersion.isVerifiedModern(dataVersion) ? .tenthsOfDamagePoint : nil
         default:
             return nil
         }

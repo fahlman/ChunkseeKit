@@ -61,14 +61,14 @@ public struct LightingTimeline: Sendable, Equatable, WorldTimelineProjection {
 }
 
 extension GameAssets {
-    /// Reads a supplied jar's lighting timeline, verified only for 26.3/5023. Missing, malformed
+    /// Reads a supplied jar's lighting timeline, verified for 26.3 and 26.4 Snapshot 5. Missing, malformed
     /// or unsupported relevant tracks return nil. Supports linear, constant and cubic-Bezier
     /// easing; scalar override/add/subtract/multiply/minimum/maximum, RGB override/add/subtract/
     /// multiply, and moon-phase override. Other relevant operations are explicitly unavailable.
     /// Limits: 16 MiB JSON, 256 track entries, 4,096 relevant keyframes and Int32 segment endpoints
     /// and lengths. Other tracks/markers are not interpreted. No cache or image decoding is added.
     public func lightingTimeline(_ identifier: String) -> LightingTimeline? {
-        guard Int(version.dataVersion) == SaveVersion.java26_3, let id = Self.resourceID(identifier),
+        guard SaveVersion.isVerifiedModern(Int(version.dataVersion)), let id = Self.resourceID(identifier),
               let data = resources.read("data/\(id.namespace)/timeline/\(id.path).json") else { return nil }
         return LightingTimeline(json: data)
     }

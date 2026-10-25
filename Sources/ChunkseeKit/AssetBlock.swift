@@ -5,7 +5,7 @@ public struct AssetBlock: Sendable, Equatable {
     let seedOffset: SIMD3<Int32>?
     let isMultipart: Bool
 
-    /// One model per part, in drawing order, using the position's verified vanilla 26.3 seed.
+    /// One model per part, in drawing order, using the position's verified vanilla seed.
     /// Unverified versions/namespaces, missing seed-driving properties and coordinates outside
     /// signed 32-bit bounds return nil. No resources are reread; `parts` remains unchanged.
     public func selectedAlternatives(at position: BlockPosition) -> [Alternative]? {

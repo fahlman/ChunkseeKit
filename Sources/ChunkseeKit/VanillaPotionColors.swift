@@ -1,6 +1,19 @@
-// Vanilla 26.3 / data version 5023 only. These built-in registries have no asset JSON.
+// Vanilla 26.3 facts plus exact Snapshot 5 additions. These registries have no asset JSON.
 // Verified against the official MobEffects/Potions bytecode and live registry values (#149).
 enum VanillaPotionColors {
+    static func recipe(_ id: String, version: Int32) -> [PotionColorEffect]? {
+        if version == SaveVersion.java26_4Snapshot5,
+           id == "minecraft:freezing" || id == "minecraft:long_freezing" {
+            return [.init(id: "minecraft:freezing", amplifier: 0)]
+        }
+        return recipes[id]
+    }
+
+    static func color(_ id: String, version: Int32) -> UInt32? {
+        if version == SaveVersion.java26_4Snapshot5, id == "minecraft:freezing" { return 0x9eeeee }
+        return effects[id]
+    }
+
     static let effects: [String: UInt32] = [
         "minecraft:speed": 0x33ebff,
         "minecraft:slowness": 0x8bafe0,

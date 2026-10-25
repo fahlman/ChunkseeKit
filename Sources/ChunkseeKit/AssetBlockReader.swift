@@ -91,7 +91,7 @@ struct AssetBlockReader {
                 guard !expected.isEmpty else { throw Invalid.asset }
                 // This per-term negation is verified in 26.3. Older clients used a different
                 // grammar; unknown versions must not silently acquire its interpretation.
-                if negated, assets.version.dataVersion != SaveVersion.java26_3 { throw Invalid.asset }
+                if negated, !SaveVersion.isVerifiedModern(Int(assets.version.dataVersion)) { throw Invalid.asset }
                 return properties[key].map { ($0 == expected) != negated }
             }
             matches.append(any(alternatives))

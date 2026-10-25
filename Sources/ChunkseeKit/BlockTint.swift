@@ -6,13 +6,13 @@ public enum BlockTint: Sendable, Equatable {
 }
 
 extension BlockState {
-    /// The in-world tint of a model face's tint index, verified against 26.3's BlockColors.
+    /// The in-world tint of a model face's tint index, verified against 26.3 and 26.4 Snapshot 5.
     /// Unknown versions, blocks, indexes and invalid color-driving properties return nil.
-    /// Omitted properties use the same verified 26.3 registry defaults as block models.
+    /// Omitted properties use the same verified registry defaults as block models.
     /// This describes block models, not item or particle tints. Water fluid rendering uses the
     /// biome's water color directly; its particle-only block tint is white here, as in the game.
     public func tintSource(at index: Int, gameDataVersion: Int32) -> BlockTint? {
-        guard Int(gameDataVersion) == SaveVersion.java26_3, index >= 0,
+        guard SaveVersion.isVerifiedModern(Int(gameDataVersion)), index >= 0,
               let name = Identifier(id), name.namespace == "minecraft" else { return nil }
         if name.path == "pink_petals" || name.path == "wildflowers" {
             return switch index {

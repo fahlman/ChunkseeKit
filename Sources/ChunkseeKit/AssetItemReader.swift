@@ -65,8 +65,7 @@ struct AssetItemReader {
                     return value
                 }
             } else if property.description == "minecraft:trim_material", let selection {
-                guard selection.trimMaterialID == nil ||
-                        (assets.version.id == "26.3" && Int(assets.version.dataVersion) == SaveVersion.java26_3) else {
+                guard selection.trimMaterialID == nil || assets.version.hasVerifiedModels else {
                     throw Invalid.asset
                 }
                 child = try selectedCase(node, value: selection.trimMaterialID?.description) { value in
@@ -104,7 +103,7 @@ struct AssetItemReader {
 
     private func special(_ node: [String: Any], transform: AssetItemTransform,
                          budget: inout AssetReadBudget) throws -> AssetModel {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else { throw Invalid.asset }
+        guard assets.version.hasVerifiedModels else { throw Invalid.asset }
         let model = try AssetJSON.object(node["model"]), type = try AssetJSON.identifier(model["type"])
         guard let shape = SpecialItemModel(rawValue: type.description) else { throw Invalid.asset }
         if shape == .chest || shape == .shulker,
@@ -142,7 +141,7 @@ struct AssetItemReader {
     }
 
     private func customModelData() throws -> ItemCustomModelData {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3,
+        guard assets.version.hasVerifiedModels,
               let selection else { throw Invalid.asset }
         return selection.customModelData
     }

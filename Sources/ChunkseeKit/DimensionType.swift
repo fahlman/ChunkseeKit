@@ -54,9 +54,9 @@ public struct DimensionType: Sendable, Equatable {
         self.init(minY: minY, height: height, logicalHeight: logical, hasCeiling: ceiling,
                   monsterSpawnBlockLightLimit: nbt["monster_spawn_block_light_limit"]?.int,
                   monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
-                  time: version == SaveVersion.java26_3 ? DimensionTime(nbt: nbt) : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? (try? DimensionBaseLighting(nbt: nbt))?.value : nil,
-                  baseSkyLightLevel: version == SaveVersion.java26_3 ? (try? DimensionMonsterLighting(nbt: nbt))?.value : nil)
+                  time: SaveVersion.isVerifiedModern(version) ? DimensionTime(nbt: nbt) : nil,
+                  baseSkyLighting: SaveVersion.isVerifiedModern(version) ? (try? DimensionBaseLighting(nbt: nbt))?.value : nil,
+                  baseSkyLightLevel: SaveVersion.isVerifiedModern(version) ? (try? DimensionMonsterLighting(nbt: nbt))?.value : nil)
     }
 
     init?(json: Data, version: Int?) {
@@ -65,9 +65,9 @@ public struct DimensionType: Sendable, Equatable {
         self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
                   monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
-                  time: version == SaveVersion.java26_3 ? value.time : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? value.baseSkyLighting : nil,
-                  baseSkyLightLevel: version == SaveVersion.java26_3 ? value.baseSkyLightLevel : nil)
+                  time: SaveVersion.isVerifiedModern(version) ? value.time : nil,
+                  baseSkyLighting: SaveVersion.isVerifiedModern(version) ? value.baseSkyLighting : nil,
+                  baseSkyLightLevel: SaveVersion.isVerifiedModern(version) ? value.baseSkyLightLevel : nil)
     }
 
     private struct Definition: Decodable {
@@ -99,7 +99,7 @@ public struct DimensionType: Sendable, Equatable {
     }
 
     static func vanilla(_ id: String, version: Int?) -> Self? {
-        guard version == SaveVersion.java26_3 else { return nil }
+        guard SaveVersion.isVerifiedModern(version) else { return nil }
         switch id {
         case "minecraft:overworld", "minecraft:overworld_caves":
             return Self(minY: -64, height: 384, logicalHeight: 384, hasCeiling: id == "minecraft:overworld_caves",

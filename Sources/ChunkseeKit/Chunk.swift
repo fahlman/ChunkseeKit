@@ -159,7 +159,7 @@ public struct ChunkSection: Sendable {
     /// True when biomes are stored per block (26.4+) rather than per 4×4×4 cell.
     public var hasPerBlockBiomes: Bool { biomes?.hasPerBlockBiomes == true }
 
-    init(_ nbt: NBT) throws {
+    init(_ nbt: NBT, dataVersion: Int? = nil) throws {
         guard let y = nbt["Y"]?.int else { throw ChunkError.missingField("sections[].Y") }
         self.y = y
 
@@ -180,7 +180,10 @@ public struct ChunkSection: Sendable {
             let data = biomeNBT["data"]?.longArray
             // 64 cell entries pack into at most 32 longs (at 32 bits each); 4096 per-block entries
             // need at least 64, so the layout is unambiguous from the data length alone.
+            // Uniform palettes omit packed data. Their owning chunk supplies the format
+            // boundary so clients don't apply four-block sampling to saved per-block biomes.
             let perBlock = (data?.count ?? 0) >= 64
+                || ((data?.isEmpty ?? true) && (dataVersion ?? 0) >= SaveVersion.perBlockBiomes)
             biomes = try PalettedContainer(palette: names, data: data, entryCount: perBlock ? 4096 : 64, minimumBits: 1)
         } else {
             biomes = nil
@@ -293,7 +296,7 @@ public struct Chunk: Sendable {
         guard isLightOn, (0..<16).contains(x), (0..<16).contains(z), Int32(exactly: y) != nil else { return nil }
         let section = section(atBlockY: y)
         if section?.hasBlockLightTag == true { return section?.blockLight(x: x, y: y, z: z) }
-        return dataVersion == SaveVersion.java26_3 ? 0 : nil
+        return SaveVersion.isVerifiedModern(dataVersion) ? 0 : nil
     }
 
     /// Saved sky light with the same validity and missing-data rules as blockLight(x:y:z:).
@@ -316,7 +319,8 @@ public struct Chunk: Sendable {
         self.status = (nbt["status"] ?? nbt["Status"])?.string
         self.lastUpdate = nbt["LastUpdate"]?.int
         self.inhabitedTime = Self.inhabitedTime(in: nbt)
-        self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
+        self.sections = try (nbt["sections"]?.list ?? []).map { try ChunkSection($0, dataVersion: dataVersion) }
+            .sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
         self.nbt = nbt
     }

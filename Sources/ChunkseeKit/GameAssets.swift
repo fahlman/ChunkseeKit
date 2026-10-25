@@ -10,6 +10,11 @@ public struct GameAssets: Sendable {
         public let id: String
         public let dataVersion: Int32
         private enum CodingKeys: String, CodingKey { case id, dataVersion = "world_version" }
+
+        var hasVerifiedModels: Bool {
+            (id == "26.3" && dataVersion == SaveVersion.java26_3)
+                || (id == "26.4-snapshot-5" && dataVersion == SaveVersion.java26_4Snapshot5)
+        }
     }
 
     /// Opens a local file and retains its read-only handle, not its complete contents. Opening
@@ -45,7 +50,7 @@ public struct GameAssets: Sendable {
     /// This explicitly chooses a default variant, not live property evaluation or a saved override.
     /// Selected unsupported/malformed resources return nil. Resolution shares a 16 MiB JSON
     /// and 4096-element budget across at most 64 selected nodes and 32 model parts.
-    /// Closed single chests, shulker boxes and plain shields use verified 26.3 geometry as
+    /// Closed single chests, shulker boxes and plain shields use verified 26.3 and 26.4 Snapshot 5 geometry as
     /// ordinary elements. Supported ancestor transforms compose before the base GUI transform;
     /// other transforms and unverified versions remain unsupported. Textures come from the jar.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
@@ -54,7 +59,7 @@ public struct GameAssets: Sendable {
 
     /// Resolves an inventory illustration with the stack's saved model reference, trim material
     /// custom-model data and saved shield designs. Custom conditions, strings, numeric ranges and colors require
-    /// verified 26.3/5023 semantics. Non-nil trim keys require that version too; absent trim keys
+    /// verified 26.3 or 26.4 Snapshot 5 semantics. Non-nil trim keys require either version; absent trim keys
     /// keep the generic fallback in other versions. Obtain the key from ItemStack.itemModelSelection.
     /// Shield patterns resolve named definitions in this jar or saved inline asset holders. The
     /// material's ordered overlays carry the base dye and first sixteen pattern layers; clients
@@ -68,13 +73,13 @@ public struct GameAssets: Sendable {
 
     /// Matches supplied block properties and resolves the selected variant or multipart models.
     /// Weighted alternatives and block rotations are retained, not randomly chosen or baked.
-    /// Omitted properties use verified Minecraft 26.3/5023 registry defaults for known blocks.
+    /// Omitted properties use verified Minecraft 26.3 or 26.4 Snapshot 5 registry defaults for known blocks.
     /// Otherwise, missing properties that prevent a unique decision return nil. Explicit values
     /// are preserved; property domains are not validated against a game registry.
     /// Missing/unsupported/malformed selected resources and overlapping variants also return nil.
     /// Reads share a 16 MiB JSON / 4096-element budget across at most 256 selected models, with
     /// at most 4096 selectors/condition terms and 64 nested conditions. Images and caching stay
-    /// client-owned. Multipart per-term negation is verified only for 26.3 (data version 5023).
+    /// client-owned. Multipart per-term negation is verified for those same versions.
     public func blockModel(for state: BlockState) -> AssetBlock? {
         try? AssetBlockReader(assets: self).read(state)
     }
@@ -84,7 +89,7 @@ public struct GameAssets: Sendable {
         resource(identifier, directory: "textures", extension: "png")
     }
 
-    /// Resolves a generated palette sprite in one 26.3 atlas, without reading its PNG payloads.
+    /// Resolves a generated palette sprite in one verified game atlas, without reading its PNG payloads.
     /// Paletted, directory and single sources preserve their order; a later existing plain
     /// sprite hides a previous palette sprite. Missing base images add nothing. Missing palette
     /// images or invalid PNGs remain unavailable when the client reads/decodes the returned IDs.

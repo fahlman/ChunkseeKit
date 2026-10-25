@@ -23,12 +23,13 @@ import Testing
         #expect(types["test:list"]?.time?.timelines == .list(["minecraft:day", "custom:moon", "minecraft:day"]))
     }
 
-    @Test func matchingJarSuppliesDefinitionsWithoutChangingNoJarFallback() throws {
+    @Test(arguments: [Int32(SaveVersion.java26_3), Int32(SaveVersion.java26_4Snapshot5)])
+    func matchingJarSuppliesDefinitionsWithoutChangingNoJarFallback(version: Int32) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let world = try world(root, types: ["test:sky": .string("overworld"), "test:moon": .string("test:moon")])
+        let world = try world(root, types: ["test:sky": .string("overworld"), "test:moon": .string("test:moon")], version: version)
         let assets = try assets([entry("minecraft:overworld", json(["default_clock": "test:sun", "timelines": "#day"])),
-                                 entry("test:moon", json(["has_fixed_time": true, "default_clock": "test:moon"]))])
+                                 entry("test:moon", json(["has_fixed_time": true, "default_clock": "test:moon"]))], version: version)
         let paths = ["level.dat", "data/minecraft/world_gen_settings.dat"].map { root.appendingPathComponent($0) }
         let before = try paths.map { try Data(contentsOf: $0) }
         #expect(try world.dimensionTypes()["test:sky"]?.time == nil)

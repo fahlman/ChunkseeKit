@@ -5,7 +5,7 @@ struct AssetPalettedTextureReader {
     let assets: GameAssets
 
     func read(_ identifier: String, atlas: String) throws -> AssetPalettedTexture? {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3,
+        guard assets.version.hasVerifiedModels,
               let requested = GameAssets.resourceID(identifier),
               let data = assets.resource(atlas, directory: "atlases", extension: "json") else { throw Invalid.asset }
         var budget = AssetReadBudget()

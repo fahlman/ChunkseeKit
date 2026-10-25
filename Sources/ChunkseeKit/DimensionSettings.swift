@@ -13,7 +13,7 @@ extension World {
     ///
     /// Reads modern world_gen_settings or legacy WorldGenSettings, including inline definitions.
     /// References resolve through enabled folder/ZIP data packs, in priority order, and verified
-    /// 26.3 vanilla definitions. Built-in experimental packs, overlays and resource filters
+    /// 26.3 and 26.4 Snapshot 5 vanilla definitions. Built-in experimental packs, overlays and resource filters
     /// are unsupported: an unresolved higher-priority pack prevents falling back to lower ones.
     /// Missing/malformed/unresolved types are omitted. Read errors propagate. No files are written.
     /// Folder references use registered resources: linked category folders and descendants are
@@ -57,10 +57,10 @@ extension World {
         let hasTypes = dimensions.values.contains { $0["type"]?.string != nil }
         let hasNoise = includeGeneration && dimensions.values.contains { Self.noiseSettings(in: $0)?.string != nil }
         let vanilla: WorldResourcePack
-        if let assets, version == SaveVersion.java26_3, Int(assets.version.dataVersion) == version {
+        if let assets, SaveVersion.isVerifiedModern(version), Int(assets.version.dataVersion) == version {
             vanilla = .zip(assets.resources)
         } else {
-            vanilla = version == SaveVersion.java26_3 ? .vanilla : .unavailable
+            vanilla = SaveVersion.isVerifiedModern(version) ? .vanilla : .unavailable
         }
         let packs = try hasTypes || hasNoise ? WorldResourcePack.load(enabled: level.enabledDataPacks, in: url,
             vanilla: vanilla) : []

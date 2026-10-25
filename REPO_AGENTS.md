@@ -911,12 +911,24 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
+The unreleased 26.4 preparation on #217 targets exactly Snapshot 5 / data version 5125.
+SaveVersion owns that identity and the shared verified-format boundary; each reader owns its
+version-specific registry additions. The official 26.3 and Snapshot 5 jars establish unchanged
+model/biome/dimension/timeline interpretation and the small block/potion registry differences.
+BlockProperties applies the Snapshot 5 defaults without changing the saved BlockState.
+Uniform biome palettes use their chunk version when packed data is absent; nonuniform layouts
+remain identified from their stored length. Biome-only snapshots share that same decoding.
+WorldTimelineReader requires a jar matching the world's saved data version, preventing a
+supported but different version from supplying timelines. RegionFacts interpretation version 8
+invalidates old Snapshot 5 creature-health facts; app tile invalidation follows adoption.
+Final 26.4 validation, library publication and app adoption remain separate steps on #217.
+
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a
 real 26.3 world (data version 5023): 314,171 chunks across three dimensions decoded with no
 errors. Version-specific handling is listed in the README's "Format notes" table. A wiki entry
-is a claim, so verify it against a real save before relying on it. The 26.4 per-block biome
-change is covered only by synthetic tests.
+is a claim, so verify it against a real save before relying on it. The 26.4 Snapshot 5 preparation
+also decoded all 11,905 chunks in an isolated real-world copy and checked its matching game jar.
 
 ## Build and test
 

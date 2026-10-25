@@ -7,6 +7,14 @@ import Foundation
 public struct BiomeSampler: Sendable {
     private let zoomSeed: Int64
 
+    /// Makes the verified cell sampler for a saved world. Snapshot 5 worlds can still contain
+    /// older chunks with four-block palettes; their per-block palettes bypass this sampler.
+    /// Unknown versions remain unavailable instead of inheriting a newer-version assumption.
+    public init?(seed: Int64, dataVersion: Int?) {
+        guard SaveVersion.isVerifiedModern(dataVersion) else { return nil }
+        self.init(seed: seed)
+    }
+
     public init(seed: Int64) {
         // Guava hashLong/asLong use little-endian bytes at both ends of SHA-256.
         let bits = UInt64(bitPattern: seed)

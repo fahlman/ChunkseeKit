@@ -19,8 +19,8 @@ public struct ChunkBiomeSnapshot: Sendable {
     }
 
     /// Matches ChunkSection.hasPerBlockBiomes for a present palette. An absent section or
-    /// palette is unavailable, rather than evidence of either layout. Uniform palettes retain
-    /// the existing reader's cell layout because no packed data distinguishes their resolution.
+    /// palette is unavailable, rather than evidence of either layout. Uniform palettes use
+    /// the owning chunk's saved format version because they contain no packed data.
     public func hasPerBlockBiomes(atBlockY y: Int) -> Bool? {
         guard let biomes = sectionAtBlockY(y, in: sections, sectionY: { $0.y })?.biomes else { return nil }
         return biomes.hasPerBlockBiomes

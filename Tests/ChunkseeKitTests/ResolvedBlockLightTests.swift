@@ -16,9 +16,10 @@ import Testing
         return try Chunk(nbt: .compound(fields))
     }
 
-    @Test func verifiedOmittedLayerIsZeroButRawDataStaysAbsent() throws {
+    @Test(arguments: [SaveVersion.java26_3, SaveVersion.java26_4Snapshot5])
+    func verifiedOmittedLayerIsZeroButRawDataStaysAbsent(version: Int) throws {
         for sectionY: Int8? in [-4, nil] {
-            let chunk = try chunk(sectionY: sectionY)
+            let chunk = try chunk(version: version, sectionY: sectionY)
             for y in [-80, -64, -49, -48, 0, 319] {
                 #expect(chunk.resolvedBlockLight(x: 0, y: y, z: 15) == 0)
                 #expect(chunk.blockLight(x: 0, y: y, z: 15) == nil)

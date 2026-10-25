@@ -4,17 +4,30 @@ import Foundation
 import Testing
 
 @Suite struct WorldSkyLightingTests {
-    @Test func eachTimelineUsesItsNamedClockEvenWhenDimensionTimeIsFixed() throws {
+    @Test func supportedButMismatchedJarCannotSupplyAnotherVersionsTimeline() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let type = definition(.list(.string, [.string("test:day")]))
+        let entries = [try timeline("test:day", tracks: ["visual/sun_angle": track([(0, 20)])])]
+        let world = try world(root, types: ["test:sky": type], version: Int32(SaveVersion.java26_4Snapshot5))
+        let matching = try assets(entries, version: Int32(SaveVersion.java26_4Snapshot5))
+        let previous = try assets(entries, version: Int32(SaveVersion.java26_3))
+        #expect(try world.savedSkyLighting(assets: matching)["test:sky"]?.sunAngle == 20)
+        #expect(try world.savedSkyLighting(assets: previous)["test:sky"] == nil)
+    }
+
+    @Test(arguments: [Int32(SaveVersion.java26_3), Int32(SaveVersion.java26_4Snapshot5)])
+    func eachTimelineUsesItsNamedClockEvenWhenDimensionTimeIsFixed(version: Int32) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let type = definition(.list(.string, [.string("test:sun"), .string("test:moon")]), extra: [
             "has_fixed_time": .byte(1), "default_clock": .string("test:wrong")
         ])
-        let world = try world(root, types: ["custom:sky": type], clocks: ["test:sun": 25, "test:moon": 75, "test:wrong": 90])
+        let world = try world(root, types: ["custom:sky": type], clocks: ["test:sun": 25, "test:moon": 75, "test:wrong": 90], version: version)
         let jar = try assets([
             timeline("test:sun", clock: "test:sun", tracks: ["visual/sun_angle": track([(0, 0), (100, 100)])]),
             timeline("test:moon", clock: "test:moon", tracks: ["visual/moon_angle": track([(0, 0), (100, 100)])])
-        ])
+        ], version: version)
         let files = ["level.dat", "data/minecraft/world_clocks.dat"].map { root.appendingPathComponent($0) }
         let before = try files.map { try Data(contentsOf: $0) }
         let light = try #require(try world.savedSkyLighting(assets: jar)["custom:sky"])

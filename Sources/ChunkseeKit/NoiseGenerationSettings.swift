@@ -57,7 +57,7 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
     }
 
     static func vanilla(_ id: String, version: Int?) -> Self? {
-        guard version == SaveVersion.java26_3 else { return nil }
+        guard SaveVersion.isVerifiedModern(version) else { return nil }
         switch id {
         case "minecraft:overworld", "minecraft:amplified", "minecraft:large_biomes":
             return Self(minY: -64, height: 384, seaLevel: 63)

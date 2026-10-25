@@ -4,6 +4,29 @@ import Foundation
 import Testing
 
 @Suite struct ChunkBiomeSnapshotTests {
+    @Test(arguments: [SaveVersion.java26_3, SaveVersion.perBlockBiomes, 5125])
+    func uniformBiomesRetainTheirSavedResolution(version: Int) throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let section = Fixtures.section(y: -4, palette: [.string("minecraft:packed_ice_bricks")],
+                                       biomes: ["minecraft:ice_caves"])
+        let raw = Fixtures.chunk(x: -1, z: 0, dataVersion: version, sections: [section])
+        let url = root.appendingPathComponent("r.-1.0.mca")
+        try Data(Fixtures.region([.init(localX: 31, localZ: 0, nbt: raw)])).write(to: url)
+        let file = try RegionFile(contentsOf: url)
+        for skipping in [Set<String>(), Chunk.keysNotNeededForBiomes] {
+            let nbt = try #require(try file.chunkNBT(localX: 31, localZ: 0, skipping: skipping))
+            let chunk = try Chunk(nbt: nbt)
+            let perBlock = version >= SaveVersion.perBlockBiomes
+            #expect(chunk.sections.first?.hasPerBlockBiomes == perBlock)
+            #expect(chunk.biomeSnapshot.hasPerBlockBiomes(atBlockY: -64) == perBlock)
+            #expect(chunk.sections.first?.biomes?.paletteCounts() == [perBlock ? 4096 : 64])
+            for point in [(0, -64, 0), (1, -63, 1), (15, -49, 15)] {
+                #expect(chunk.biomeSnapshot.biome(x: point.0, y: point.1, z: point.2) == "minecraft:ice_caves")
+            }
+        }
+    }
+
     @Test func biomeOnlyRegionReadKeepsSavedLayoutsWithoutBlockData() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

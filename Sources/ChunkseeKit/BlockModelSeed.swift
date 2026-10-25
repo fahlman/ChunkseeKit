@@ -3,7 +3,7 @@
 /// overriding classes need a catalog; ordinary blocks use the shared position directly.
 enum BlockModelSeed {
     static func offset(for properties: BlockProperties, gameDataVersion: Int32) -> SIMD3<Int32>? {
-        guard gameDataVersion == SaveVersion.java26_3,
+        guard SaveVersion.isVerifiedModern(Int(gameDataVersion)),
               let id = properties.id, id.namespace == "minecraft" else { return nil }
         if doubleBlocks.contains(id.path) {
             switch properties["half"] {
