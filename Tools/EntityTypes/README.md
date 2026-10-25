@@ -2,7 +2,8 @@
 
 Ryan's rule is **WWMD: What Would Minecraft Do?** Minecraft resolves a saved entity's
 `id` through its entity-type registry. The corresponding Java class determines whether
-it is a `Mob`. `Health`, ownership and AI/loot fields do not establish that identity.
+it is a `Mob`. `Health` and ownership do not establish that identity. Registered non-mobs
+remain excluded even when an edited save gives them mob-like fields.
 
 `ExtractEntityTypes.java` boots the official built-in registries without opening a world
 or game window. It pairs every registered entity type with the concrete class declared
@@ -58,9 +59,24 @@ registers Giant and Illusioner as mobs even though they have no ordinary spawnin
 Players and armor stands inherit from `LivingEntity` but not `Mob`; items and experience
 orbs inherit directly from `Entity`.
 
-Ryan explicitly chose the verified 26.3 catalog for missing or unverified saved versions
-on 2026-10-25. Exact verified versions use their own catalog. This preserves existing
-versionless/unverified reads without guessing new type IDs or granting health defaults.
-Raw entity APIs keep unknown/modded records; only typed creature decoding is filtered.
-Missing health remains unavailable rather than suppressing a recognized mob or inventing
-a saved value. These choices are recorded on fahlman/ChunkseeKit#220.
+Missing or unverified saved versions use the 26.3 catalog: Minecraft resolves known IDs
+through its own registry when reading other versions. Exact verified versions use their
+own catalog. Neither grants unverified health defaults.
+
+Ryan's follow-up on PR #221 asks Chunksee to display unfamiliar mobs too. Both the official
+26.3 and Snapshot 5 `Mob.addAdditionalSaveData(ValueOutput)` unconditionally write
+`CanPickUpLoot`, `PersistenceRequired` and `LeftHanded` via `putBoolean`. Optional fields
+such as `NoAI` are not enough. The reader retains an unfamiliar ID only when all three
+booleans are readable, including false, and marks its `isRecognizedType` false. This is
+evidence from the saved mob format, not a verified class identity. Known non-mobs always
+remain excluded. The generated catalog includes them so these cases stay distinct.
+
+To reproduce the save-format check, use the same hash-checked client classpath in the
+version's `commands.json` and run the JDK's `javap -c -p -classpath "$CLASSPATH" \
+net.minecraft.world.entity.Mob`. Inspect `addAdditionalSaveData` and its three unconditional
+`putBoolean` calls. The source checks for this change are retained under
+`/Users/ryan/Developer/ChunkseeKit-runs/mob-classification-evidence/unknown-mob-source`.
+
+Raw entity APIs keep every record. Missing health remains unavailable rather than
+suppressing a recognized mob or inventing a saved value. These choices are recorded on
+fahlman/ChunkseeKit#220 and the Claude-F221-2 review finding on #221.

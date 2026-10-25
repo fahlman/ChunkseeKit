@@ -29,6 +29,7 @@ import Foundation
                     precondition((creature != nil) == expected.mob, "\(versionText): \(id), health \(healthPresent)")
                     if let creature {
                         precondition(creature.id == id)
+                        precondition(creature.isRecognizedType == true)
                         precondition(creature.health == (healthPresent ? 5 : nil))
                     }
                     checked += 1

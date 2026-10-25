@@ -911,19 +911,28 @@ for item in contents.containers.flatMap(\.allItems) {
 ### Creatures
 
 Creature decoding follows Minecraft's registered entity types and their `Mob` class ancestry.
-`Health`, `Owner` and loot/AI fields never establish mob identity. Dropped items, experience
+`Health` and `Owner` never establish mob identity. Dropped items, experience
 orbs, armor stands and players are excluded even if their saved fields resemble a mob's.
 Registered mobs remain readable when health is absent; `health` then remains nil. Namespaced
 identifiers use Minecraft's default namespace, and returned IDs are canonical.
 
 The type catalogs are mechanically extracted from official 26.1, 26.1.1, 26.1.2, 26.2, 26.3
 and 26.4 Snapshot 5 jars. Exact verified versions use their own catalog. Missing or unverified
-versions use the verified 26.3 catalog, following Ryan's compatibility decision. Unknown and
-modded types are not guessed from their fields; raw entity reads still retain them. This does
-not broaden version-specific health defaults or claim complete Snapshot 5 support.
+versions use the verified 26.3 catalog, as Minecraft resolves known types through its own
+registry when reading other save versions. This does not broaden version-specific health
+defaults or claim complete Snapshot 5 support.
+
+Unfamiliar types remain readable when their saves contain all three booleans that Minecraft's
+`Mob` always writes: `CanPickUpLoot`, `PersistenceRequired` and `LeftHanded` (false counts too).
+Their saved ID, position, name and health are preserved; `isRecognizedType` is false so clients
+can explain that the type is unfamiliar. A recognized mob has true, while older cached or
+manually constructed records have nil. This saved-format evidence applies only to unfamiliar
+types and never overrides a recognized non-mob. Unfamiliar records without it remain available
+through raw entity reads. The CLI lists unfamiliar mobs by ID with an unrecognized-type notice;
+app presentation follows the library's release and the mob sidebar work.
 See [the extraction procedure](Tools/EntityTypes/README.md). RegionFacts interpretation version
-9 invalidates cached creatures from the old health-based classifier, including the unpublished
-version 8 used by the separate Snapshot 5 preparation.
+10 invalidates earlier classifications, including unpublished versions 8 (Snapshot 5 preparation)
+and 9 (the initial catalog-only reader).
 
 `PlayerInfo.shoulderPets` reads parrots stored in `ShoulderEntityLeft` and
 `ShoulderEntityRight`, left first, through the same `Creature` reader and player

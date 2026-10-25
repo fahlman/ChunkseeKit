@@ -29,8 +29,12 @@ public struct Creature: Sendable, Equatable, Codable {
     public var equipment: [String: ItemStack]?
     /// The individual entity's stable identity, retained across movement and shared positions.
     public var uuid: UUID?
+    /// Whether this type belongs to the selected verified mob catalog. False means the
+    /// type is unfamiliar but its saved fields identify a mob. Nil in older cached or
+    /// manually constructed records whose recognition has not been checked.
+    public var isRecognizedType: Bool?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil, isRecognizedType: Bool? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -45,10 +49,11 @@ public struct Creature: Sendable, Equatable, Codable {
         self.collarColor = collarColor
         self.equipment = equipment
         self.uuid = uuid
+        self.isRecognizedType = isRecognizedType
     }
 
-    /// Reads a registered vanilla mob using the verified 26.3 type catalog.
-    /// Health and other saved fields do not establish mob identity.
+    /// Reads mobs using the verified 26.3 type catalog, retaining unfamiliar types whose
+    /// records have Minecraft's mob save fields. Health alone never establishes identity.
     public init?(_ nbt: NBT) {
         self.init(nbt, dataVersion: nil)
     }
@@ -57,14 +62,22 @@ public struct Creature: Sendable, Equatable, Codable {
     /// versions retain the 26.3 mob catalog, without acquiring unverified health defaults.
     public init?(_ nbt: NBT, dataVersion: Int?) {
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
-              MobTypes.contains(identifier, dataVersion: dataVersion),
+              !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
+        let membership = MobTypes.membership(identifier, dataVersion: dataVersion)
+        // Mob.addAdditionalSaveData always writes these three booleans, even when false.
+        // Use this evidence only for unknown types; a known non-mob cannot become a mob
+        // through extra fields in an edited save. See Tools/EntityTypes for source evidence.
+        guard membership ?? ["CanPickUpLoot", "PersistenceRequired", "LeftHanded"].allSatisfy({
+            nbt[$0]?.bool != nil
+        }) else { return nil }
         let id = identifier.description
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText)
                       .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
-                  villager: Villager(nbt), health: nbt["Health"]?.double)
+                  villager: Villager(nbt), health: nbt["Health"]?.double,
+                  isRecognizedType: membership != nil)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed)
         uuid = nbt.uuid

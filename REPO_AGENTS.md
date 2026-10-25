@@ -918,11 +918,17 @@ own definitions and code before using a convenient saved-field heuristic.
 Creature's NBT reader owns mob eligibility through the generated MobTypes catalog. The
 catalog comes from the official entity registry and declared classes' Mob ancestry, with
 every registry entry accounted for. Tools/EntityTypes documents reproducible extraction for
-26.1, 26.1.1, 26.1.2, 26.2, 26.3 and Snapshot 5. Health, Owner and loot/AI fields are not
-classifiers. Ryan explicitly chose the verified 26.3 catalog for missing/unverified versions;
-exact verified versions use their own catalog. Unknown/modded IDs remain unavailable as
-creatures but are retained by raw entity reads. Missing health remains nil. No new health
-defaults are implied. RegionFacts interpretation version 9 discards earlier classifications.
+26.1, 26.1.1, 26.1.2, 26.2, 26.3 and Snapshot 5. Health and Owner are not classifiers.
+Missing/unverified versions use the verified 26.3 catalog, like Minecraft resolving known
+types through its own registry when loading other versions. Exact verified versions use
+their own catalog. Ryan also chose to retain unfamiliar types when their saves contain the
+three booleans Mob always writes: CanPickUpLoot, PersistenceRequired and LeftHanded. False
+values count; incomplete or malformed fields do not. This applies only to unknown types,
+never overriding a known non-mob. The optional isRecognizedType flag is false for these
+records, true for catalog mobs and nil for older cached/manually constructed values.
+The CLI identifies unfamiliar types; the app adopts the flag with its mob sidebar work.
+Raw entity reads retain all records. Missing health stays nil and no new health defaults are
+implied. RegionFacts interpretation version 10 discards earlier classifications, including 9.
 The separate 26.4 preparation uses unpublished interpretation version 8; reconcile both
 changes with a fresh version when integrating them so neither branch's caches can hide facts.
 
