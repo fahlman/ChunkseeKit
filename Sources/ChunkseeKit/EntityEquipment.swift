@@ -1,6 +1,6 @@
 import Foundation
 
-/// Slot reading shared by health calculation and the public player/pet equipment records.
+/// Slot reading shared by health calculation and the public player/mob equipment records.
 enum EntityEquipment {
     // EquipmentSlot's order also decides replacement of modifiers sharing an identity.
     static let slots = ["mainhand", "offhand", "feet", "legs", "chest", "head", "body", "saddle"]
@@ -23,32 +23,39 @@ enum EntityEquipment {
         return items
     }
 
-    static func creature(_ nbt: NBT, species: String) -> [String: ItemStack] {
+    static func creature(_ nbt: NBT, species: String) -> [String: ItemStack]? {
         // A current compound, including an explicit empty one, supersedes old creature fields.
         if let items = current(nbt) { return items }
         var items: [String: ItemStack] = [:]
+        var hasSavedEquipment = false
         for (key, names) in [("ArmorItems", ["feet", "legs", "chest", "head"]), ("HandItems", ["mainhand", "offhand"])] {
-            for (name, item) in zip(names, nbt[key]?.list ?? []) { items[name] = ItemStack(item) }
+            guard let contents = nbt[key]?.list else { continue }
+            hasSavedEquipment = true
+            for (name, item) in zip(names, contents) { items[name] = ItemStack(item) }
         }
-        items["body"] = nbt["body_armor_item"].flatMap(ItemStack.init)
+        if let armor = nbt["body_armor_item"], armor.compound != nil {
+            hasSavedEquipment = true
+            items["body"] = ItemStack(armor)
+        }
         if species == "minecraft:horse", let armor = nbt["ArmorItem"] {
             // HorseBodyArmorItemFix clears the old chest entry, even for an empty ArmorItem.
+            hasSavedEquipment = hasSavedEquipment || armor.compound != nil
             items["chest"] = nil
             items["body"] = ItemStack(armor)
         }
-        if llamaSpecies.contains(species), let decor = nbt["DecorItem"] { items["body"] = ItemStack(decor) }
-        if saddledSpecies.contains(species) {
-            items["saddle"] = (nbt["saddle"] ?? nbt["SaddleItem"]).flatMap(ItemStack.init)
+        if llamaSpecies.contains(species), let decor = nbt["DecorItem"] {
+            hasSavedEquipment = hasSavedEquipment || decor.compound != nil
+            items["body"] = ItemStack(decor)
         }
-        return items
+        if saddledSpecies.contains(species), let saddle = nbt["saddle"] ?? nbt["SaddleItem"] {
+            hasSavedEquipment = hasSavedEquipment || saddle.compound != nil
+            items["saddle"] = ItemStack(saddle)
+        }
+        return hasSavedEquipment ? items : nil
     }
 
     static func canWearPetEquipment(_ species: String) -> Bool {
         species == "minecraft:wolf" || llamaSpecies.contains(species) || saddledSpecies.contains(species)
-    }
-
-    static func carriesChest(_ species: String) -> Bool {
-        llamaSpecies.contains(species) || ["minecraft:donkey", "minecraft:mule"].contains(species)
     }
 }
 

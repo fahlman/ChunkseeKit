@@ -828,8 +828,8 @@ do not contribute. Unsupported item/effect/active-enchantment defaults leave eit
 unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
 book enchantments separate from equipped effects. The 43 vanilla 26.3 enchantment definitions
 have no max-health effects; data packs overriding their IDs are not resolved. Maximums
-use the game's Float precision. Pet appearance/order/collar/equipment interpretation
-also belongs here. All new stored fields are optional, so older cached creatures still decode
+use the game's Float precision. Mob appearance/collar/equipment and pet sitting-order interpretation
+also belong here. All stored fields remain optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
@@ -887,7 +887,7 @@ fix establish the 26.3 field shapes and 41 short-ID migrations. Missing values s
 unreadable fields, ambiguous simultaneous legacy list spellings, invalid numeric dye IDs and
 over-budget input stay unavailable. Bounds are 4,096 layers and 16 MiB of pattern strings; no
 render-layer limit or invented white base is applied. DyeColor owns the saved names and checked
-legacy-ID ordering shared with the unchanged pet collar reader. Existing retained components
+legacy-ID ordering shared with the mob collar reader. Existing retained components
 already contain these facts, so neither ItemStack Codable nor RegionFacts interpretation changes.
 The model extension below owns supplied-jar resolution and picture selection. Sprite composition
 and app cache adoption remain on fahlman/Chunksee#390. No artwork, image decoder, UI, mutable cache
@@ -1030,14 +1030,16 @@ PersistenceRequired and LeftHanded are all unconditionally written as booleans b
 Mob serializer, including false. Health, Owner and the type's name alone are insufficient.
 The same rule reads any type ID, including new/modded types, without a version catalog.
 Tools/EntityTypes collects reproducible official class/save-code evidence for caller-selected
-versions; its output is diagnostic only and no production table is generated or maintained.
+versions. Its ancestry output also supplies Tools/GameFacts's numeric appearance schemas; it
+does not generate a mob-membership inventory. Membership still comes from the saved format.
 Incomplete/edited records without the mob fields cannot establish membership; records given
 those fields are interpreted as mob records. Raw entity reads preserve all records. Saved facts
 are retained without a blanket recognition flag. Missing facts remain nil, and this does not
 broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
 mob records for the shared test-support library.
-RegionFacts interpretation 15 discards earlier classifications, top-level-only entity scans and
-omitted saved fields, including unpublished 8–14. The separate 26.4 preparation needs a fresh version when integrating.
+RegionFacts interpretation 16 discards earlier classifications, top-level-only entity scans and
+omitted saved fields, including wild-mob appearance/equipment and unpublished 8–15. The separate
+26.4 preparation needs a fresh version when integrating.
 
 The unreleased #229 structural readers retain sign text and SpawnData regardless of the type's
 name, and preserve known empty spawners whose nullable SpawnData is absent. Entity item queries
@@ -1048,8 +1050,24 @@ no new type list is added. Dropped-item/player container exclusions remain uncha
 legacy statistic keys retain their raw counts without invented IDs or units. Chunk decoding uses
 the saved structure rather than the version label; Level.Sections remains unsupported. Chunk
 and TerrainChunkFacts dataVersion are optional, an intentional breaking API requiring a minor
-release. The CLI prints missing versions as unknown. Saved item-model branches remain on #229,
-and mob appearance/ownership gating remains separately on #235.
+release. The CLI prints missing versions as unknown. Saved item-model branches remain on #229.
+
+The unreleased #235 reader retains variant strings, saved collar dyes and equipment without an
+owner or type inventory. Numeric appearances use the generated schemas in GeneratedMobAppearance;
+an unknown value leaves only that fact unavailable. Current/legacy equipment parsing has one
+owner in EntityEquipment, including the distinction between absent and explicitly empty saves.
+Existing owned-pet defaults and sitting-order policy stay intact. Saved ChestedHorse creates a
+descriptive storage item only when a readable saved storage slot is absent. No public API shape
+changes; RegionFacts interpretation 16 invalidates the prior cached omissions.
+
+Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
+Its first categories are dye IDs/names/texture RGB and numeric mob appearance. It verifies the
+installed stable client's download hash, records tool/output hashes and exact commands, and
+uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
+entries name their code sources. Registry strings are read directly from saves; no snapshot
+tables or runtime Java dependency are added. See Tools/GameFacts/README.md for commands and
+the reproducibility check. Other code-fact categories and remaining legacy equipment capability
+lists are still tracked on #222/#228; this does not claim their migration is complete.
 
 The format knowledge comes from the Minecraft Wiki pages *Java Edition level format*,
 *Chunk format* and *Region file format*, checked on 2026-10-09. It was also checked against a
