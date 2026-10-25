@@ -17,7 +17,7 @@ import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.entity.animal.panda.Panda;
 import net.minecraft.world.item.DyeColor;
 
-/** Code-only appearance facts. Registry ancestry comes from the existing verification tool. */
+/** Code-only game facts. Registry ancestry comes from the existing verification tool. */
 public final class ExtractGameFacts {
     public static void main(String[] args) throws Exception {
         if (args.length != 3) throw new IllegalArgumentException("Expected facts/entity-class paths and current data version");
@@ -58,6 +58,7 @@ public final class ExtractGameFacts {
         facts.add("legacyCatTypes", legacyCatTypes(Integer.parseInt(args[2])));
         facts.add("enchantmentEffects", ExtractEnchantmentEffects.extract());
         facts.add("itemModels", ExtractItemModelFacts.extract());
+        facts.add("blockDefaults", ExtractBlockDefaults.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 

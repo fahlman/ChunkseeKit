@@ -10,7 +10,7 @@ struct AssetBlockReader {
         try budget.consume(bytes: data.count)
         let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
         guard root["variants"] != nil || root["multipart"] != nil else { throw Invalid.asset }
-        let properties = BlockProperties(state, gameDataVersion: assets.version.dataVersion)
+        let properties = BlockProperties(state)
         let seedOffset = BlockModelSeed.offset(for: properties, gameDataVersion: assets.version.dataVersion)
         if let raw = root["variants"] {
             let variants = try AssetJSON.object(raw)

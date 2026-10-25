@@ -9,7 +9,7 @@ extension BlockState {
     /// The in-world tint of a model face's tint index, verified against 26.3's BlockColors.
     /// A vanilla identifier or nonnegative index with no registered source returns white (no tint).
     /// Unverified versions, other namespaces, invalid indexes and color-driving properties return nil.
-    /// Omitted properties use the same verified 26.3 registry defaults as block models.
+    /// Omitted properties use the same generated code defaults as block models.
     /// This describes block models, not item or particle tints. Water fluid rendering uses the
     /// biome's water color directly; its particle-only block tint is white here, as in the game.
     public func tintSource(at index: Int, gameDataVersion: Int32) -> BlockTint? {
@@ -29,7 +29,7 @@ extension BlockState {
         case "grass_block", "fern", "short_grass", "potted_fern", "bush", "sugar_cane":
             return .biome(.grass, yOffset: 0)
         case "large_fern", "tall_grass":
-            return switch BlockProperties(self, gameDataVersion: gameDataVersion)["half"] {
+            return switch BlockProperties(self)["half"] {
             case "lower": .biome(.grass, yOffset: 0)
             case "upper": .biome(.grass, yOffset: -1)
             default: nil
@@ -44,10 +44,10 @@ extension BlockState {
         case "lily_pad": return .constant(0x208030)
         case "attached_melon_stem", "attached_pumpkin_stem": return .constant(0xe0c71c)
         case "melon_stem", "pumpkin_stem":
-            guard let age = tintProperty("age", in: 0...7, gameDataVersion: gameDataVersion) else { return nil }
+            guard let age = tintProperty("age", in: 0...7) else { return nil }
             return .constant(UInt32(age * 32) << 16 | UInt32(255 - age * 8) << 8 | UInt32(age * 4))
         case "redstone_wire":
-            guard let power = tintProperty("power", in: 0...15, gameDataVersion: gameDataVersion) else { return nil }
+            guard let power = tintProperty("power", in: 0...15) else { return nil }
             let level = Float(power) / 15
             return RGBColor.channels([
                 level * 0.6 + (power > 0 ? 0.4 : 0.3),
@@ -58,8 +58,8 @@ extension BlockState {
         }
     }
 
-    private func tintProperty(_ name: String, in range: ClosedRange<Int>, gameDataVersion: Int32) -> Int? {
-        guard let raw = BlockProperties(self, gameDataVersion: gameDataVersion)[name] else { return nil }
+    private func tintProperty(_ name: String, in range: ClosedRange<Int>) -> Int? {
+        guard let raw = BlockProperties(self)[name] else { return nil }
         guard let value = Int(raw), String(value) == raw, range.contains(value) else { return nil }
         return value
     }

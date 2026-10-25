@@ -5,7 +5,8 @@ than save files, data packs, registries or language files. Do not copy game-cont
 into the reader. Saved variant strings are read directly, without consulting this output.
 
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
-effect format associations and code-only item prototype facts needed by model selectors.
+effect format associations, code-only item prototype facts needed by model selectors, and
+registered block default properties.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -19,7 +20,8 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
-writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`, `GeneratedItemModelFacts.swift`
+writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
+`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -68,6 +70,15 @@ Sources and interpretation:
   No item-model definitions or pictures are bundled. Arbitrary component value equality is
   not claimed from presence: ignore_default remains unknown for an explicit value whose
   prototype also has that component, since the game sanitizes equal values out of its patch.
+- BuiltInRegistries.BLOCK supplies each block's actual defaultBlockState. Property.getName and
+  BlockState.getValue serialize its default property names/values. Resource blockstate files
+  enumerate choices but do not designate a default, as the #227 investigation established.
+  Empty defaults need no generated entry; identical dictionaries share one value. Every group
+  names the code source, and raw extracted facts retain each block's concrete class. This is
+  not an existence catalog or a legal-value validator. Saved properties win; unknown IDs and
+  properties remain unknown, while property-independent resource choices need no default.
+  Generated defaults are available for any parseable asset version. Updating them requires
+  this same release command, with no version-specific copy or hand-edited block list.
 
 Generated entries name these sources, and `source.json` records the release, client/tool hashes
 and extracted-output hashes. Missing/ambiguous classes or mappings fail generation visibly.

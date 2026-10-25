@@ -74,13 +74,17 @@ import Testing
         }
     }
 
-    @Test func unknownVersionsNamesNamespacesAndPropertiesHaveNoInventedDefault() throws {
-        let definition = #"{"variants":{"axis=y":{"model":"block/a"}}}"#
+    @Test func parseableAssetVersionsUseGeneratedDefaultsAndKeepSavedOverrides() throws {
+        let definition = #"{"variants":{"axis=y":{"model":"block/a"},"axis=x":{"model":"block/b"}}}"#
         for version in [0, 4903, 5022, 5024, Int(Int32.max)] {
             let reader = try assets("oak_log", definition, version: version)
-            #expect(reader.blockModel(for: .init("oak_log")) == nil)
-            #expect(try names(reader, .init("oak_log", properties: ["axis": "y"])) == ["block/a"])
+            #expect(try names(reader, .init("oak_log")) == ["block/a"])
+            #expect(try names(reader, .init("oak_log", properties: ["axis": "x"])) == ["block/b"])
         }
+    }
+
+    @Test func unknownNamesNamespacesAndPropertiesHaveNoInventedDefault() throws {
+        let definition = #"{"variants":{"axis=y":{"model":"block/a"}}}"#
         for id in ["example:oak_log", "minecraft:unregistered_log", "minecraft:stone"] {
             let reader = try assets(id, definition)
             #expect(reader.blockModel(for: .init(id)) == nil)
@@ -88,6 +92,14 @@ import Testing
         }
         let extra = try assets("oak_log", #"{"variants":{"unknown=true":{"model":"block/a"}}}"#)
         #expect(extra.blockModel(for: .init("oak_log")) == nil)
+    }
+
+    @Test func resourceDefinedUnconditionalChoicesDoNotNeedAGeneratedEntry() throws {
+        for definition in [#"{"variants":{"":{"model":"block/a"}}}"#,
+                           #"{"multipart":[{"apply":{"model":"block/a"}}]}"#] {
+            let reader = try assets("pack:new_block", definition, version: Int(Int32.max))
+            #expect(try names(reader, .init("pack:new_block")) == ["block/a"])
+        }
     }
 
     @Test func explicitInvalidValuesAndUnavailableSelectedResourcesKeepTheFallback() throws {

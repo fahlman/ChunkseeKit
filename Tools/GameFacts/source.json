@@ -3,12 +3,13 @@
     "dyes",
     "mob_appearance",
     "enchantment_effect_formats",
-    "item_model_prototypes"
+    "item_model_prototypes",
+    "block_default_properties"
   ],
   "clientSHA1": "e877b6a07acd633fb3bb475002175cec036e7b87",
   "extractedSHA256": {
     "entity-types.json": "66fdfdd99fdd7b73fffefe97ad6a52e29ef740d96216ccfd869d51432ce2ed34",
-    "facts.json": "58483088ee1ddbea2a303bf3990a525e1fc1a4caf8a9fea051007188db983f21"
+    "facts.json": "d6769423377680aed6978bcc51ae171fc62376de1c9f007b84a06aca7a4de455"
   },
   "minecraft": {
     "build_time": "2026-09-15T11:20:48+00:00",
@@ -30,9 +31,10 @@
   },
   "toolSHA256": {
     "Tools/EntityTypes/ExtractEntityTypes.java": "034ef2aa06a3d896a8a5d400f43931808f84a2651e3c1767f6ae8827312d320e",
+    "Tools/GameFacts/ExtractBlockDefaults.java": "aeaf59aeed1cd8f0fdd041d4342a1e42c58f0e9696094a0057650957e8250272",
     "Tools/GameFacts/ExtractEnchantmentEffects.java": "ffaa5e1d13bf377b7b9864f212d92c29d4ef986f944881a840b2e2e111a8d6f8",
-    "Tools/GameFacts/ExtractGameFacts.java": "568709eed2872f5d29b1d404bff1453886bb37cb1e1c20c8821f6ae632f2e56d",
+    "Tools/GameFacts/ExtractGameFacts.java": "26f8717a491e1a8e7cda810b87fa90f79fd27e9beaa220842b98ff36a6ed9aa1",
     "Tools/GameFacts/ExtractItemModelFacts.java": "eb89922e3e4600f2b950357eea289a23a46053f603d7e683628bfb50d3192d61",
-    "Tools/GameFacts/regenerate.py": "cb5a4d5dc7a6a03dd9ab4dff1133476b07e3edbf26b4f682fa398eaa0fb4a8d6"
+    "Tools/GameFacts/regenerate.py": "01eba75d1c7c69d01d7ec4b2c08999755d6e197458cba9dc777e8c106684dfad"
   }
 }

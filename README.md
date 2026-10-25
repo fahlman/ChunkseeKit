@@ -1652,13 +1652,17 @@ if let models = assets.blockModel(for: horizontalLog) {
 }
 ```
 
-In 26.3, a saved default state can omit its properties. For a 26.3/5023 asset jar, omitted
-properties now use verified registry defaults for known Minecraft blocks (unreleased, #195).
+A saved default state can omit its properties. Omitted values use Minecraft's actual registered
+code defaults, mechanically extracted by `Tools/GameFacts/regenerate.py` (unreleased, #227).
+The single release command refreshes `GeneratedBlockDefaults.swift` and its provenance; no
+per-version table or hand-edited block list is needed. Model files enumerate possible states
+without identifying which is the default; inventory pictures cannot reliably supply that fact.
 For example, `BlockState("minecraft:oak_log")` resolves the `axis=y` model; supplying `axis=x`
 still selects the horizontal model. Explicit saved values win, and the saved `BlockState`
 itself stays unchanged. Model predicates, special seed rules and color-driving properties share
-one default-property owner. Other versions, namespaces, names and properties gain no inferred
-defaults. If an unresolved property prevents a decision, the result stays nil so clients can
+one default-property owner. The generated lookup is available for any parseable asset version.
+Unknown names, namespaces and properties gain no inferred defaults; unconditional resource
+choices remain readable without them. If an unresolved property prevents a decision, the result stays nil so clients can
 retain their fallback. Explicit property domains are not validated against the game registry.
 Multipart AND/OR and pipe-separated alternatives are supported, including the
 26.3 per-term `!` negation only for data version 5023; negation in other versions stays unavailable.
