@@ -263,8 +263,9 @@ cached regions to be reread. This additive API is introduced for v0.34.0; app ad
 
 The library only reads world files. Apart from the NBT writer, which tests and tools use to
 build fixtures, it never writes into a world folder.
-NBT reading and skipped-field traversal use explicit parent stacks with a local active container.
-The skip traversal validates bytes without adding retained-value branches to ordinary decoding. The existing
+NBT reading and skipped-field traversal use recursive descent for depths below 64, then explicit
+parent stacks with a local active container. Both traversals share scalar decoding, list headers,
+compound entries, skip rules and depth checks. Skipping constructs no retained values. The existing
 512-tag nesting bound counts the root at zero; valid depth 511 remains readable on worker
 threads, and depth 512 throws nestingTooDeep. Skipped payloads retain their prior bounds and
 structural validation without constructing NBT values or decoding skipped strings. Bulk array
@@ -521,8 +522,12 @@ files. Directories named with a .json suffix are not registered files.
 `BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
 sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
 stem age and redstone power. Color-driving properties use the same verified 26.3 registry
-defaults as block models; malformed values, unknown blocks/indexes and other versions remain
-unavailable.
+defaults as block models. Vanilla identifiers and nonnegative indexes without a registered
+source return white (no tint), matching BlockColors.getTintSources and
+ModelBlockRenderer.computeTintColor in the official 26.3 jar. This is a tint answer, not proof
+of block registry membership. Malformed color-driving values, negative indexes, other namespaces
+and unverified versions remain unavailable. The source registration table's regeneration is
+tracked on #222; the no-source rule adds no block inventory.
 Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
 uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
 kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent

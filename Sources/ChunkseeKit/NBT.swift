@@ -177,12 +177,15 @@ extension NBT {
 struct NBTReader {
     private let bytes: UnsafeRawBufferPointer
     private let skipping: Set<String>
+    private let recursionLimit: Int
     private var pos = 0
     private static let maxDepth = 512
 
-    init(bytes: UnsafeRawBufferPointer, skipping: Set<String> = []) {
+    init(bytes: UnsafeRawBufferPointer, skipping: Set<String> = [], recursionLimit: Int = 64) {
+        precondition((0...Self.maxDepth).contains(recursionLimit))
         self.bytes = bytes
         self.skipping = skipping
+        self.recursionLimit = recursionLimit
     }
 
     mutating func readRoot() throws -> (name: String, value: NBT) {
@@ -191,7 +194,7 @@ struct NBTReader {
             throw NBTError.invalidRootTag(type)
         }
         let name = try readString()
-        return (name, try payload(NBTTagType(rawValue: type)!))
+        return (name, try payload(NBTTagType(rawValue: type)!, depth: 0))
     }
 
     private struct Container {
@@ -203,34 +206,38 @@ struct NBTReader {
         var name = ""
     }
 
-    private mutating func payload(_ rootType: NBTTagType) throws -> NBT {
+    private mutating func payload(_ type: NBTTagType, depth: Int) throws -> NBT {
+        try checkDepth(depth)
+        // Ordinary chunks keep the shallow traversal's cost. The fixed handoff bounds
+        // native stack use even when a valid save contains hundreds of nested passengers.
+        if depth >= recursionLimit { return try iterativePayload(type, depth: depth) }
+        switch type {
+        case .list:
+            let (elementType, count) = try listHeader()
+            var items: [NBT] = []
+            items.reserveCapacity(min(count, bytes.count - pos))
+            for _ in 0..<count { items.append(try payload(elementType, depth: depth + 1)) }
+            return .list(elementType, items)
+        case .compound:
+            var fields: [String: NBT] = [:]
+            while let entry = try compoundEntry(depth: depth + 1) {
+                fields[entry.name] = try payload(entry.type, depth: depth + 1)
+            }
+            return .compound(fields)
+        default: return try scalar(type)
+        }
+    }
+
+    private mutating func iterativePayload(_ rootType: NBTTagType, depth: Int) throws -> NBT {
         // Only suspended parents live in the stack. The active collection stays local so
         // appending a child does not repeatedly access and retain the stack's last element.
         var parents: [Container] = [], current = Container(kind: .root), type = rootType
         nextPayload: while true {
-            guard parents.count < Self.maxDepth else { throw NBTError.nestingTooDeep }
+            try checkDepth(depth + parents.count)
             var value: NBT
             switch type {
-            case .end: throw NBTError.invalidTagType(0)
-            case .byte: value = .byte(Int8(bitPattern: try u8()))
-            case .short: value = .short(Int16(bitPattern: try be(UInt16.self)))
-            case .int: value = .int(Int32(bitPattern: try be(UInt32.self)))
-            case .long: value = .long(Int64(bitPattern: try be(UInt64.self)))
-            case .float: value = .float(Float(bitPattern: try be(UInt32.self)))
-            case .double: value = .double(Double(bitPattern: try be(UInt64.self)))
-            case .byteArray:
-                let n = try length(), start = pos
-                try advance(n)
-                value = .byteArray([Int8](unsafeUninitializedCapacity: n) { buffer, count in
-                    if n > 0 { UnsafeMutableRawBufferPointer(buffer).copyMemory(from: UnsafeRawBufferPointer(rebasing: bytes[start..<start + n])) }
-                    count = n
-                })
-            case .string: value = .string(try readString())
             case .list:
-                let rawType = try u8(), n = try length()
-                guard let elementType = NBTTagType(rawValue: rawType), n == 0 || elementType != .end else {
-                    throw NBTError.invalidTagType(rawType)
-                }
+                let (elementType, n) = try listHeader()
                 if n == 0 { value = .list(elementType, []); break }
                 parents.append(current)
                 current = Container(kind: .list(elementType), remaining: n)
@@ -238,31 +245,14 @@ struct NBTReader {
                 type = elementType
                 continue
             case .compound:
-                if let entry = try compoundEntry(depth: parents.count + 1) {
+                if let entry = try compoundEntry(depth: depth + parents.count + 1) {
                     parents.append(current)
                     current = Container(kind: .compound, name: entry.name)
                     type = entry.type
                     continue
                 }
                 value = .compound([:])
-            case .intArray:
-                let n = try length(), start = pos
-                try advance(n * 4)
-                value = .intArray([Int32](unsafeUninitializedCapacity: n) { buffer, count in
-                    for i in 0..<n {
-                        buffer[i] = Int32(bitPattern: UInt32(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 4, as: UInt32.self)))
-                    }
-                    count = n
-                })
-            case .longArray:
-                let n = try length(), start = pos
-                try advance(n * 8)
-                value = .longArray([Int64](unsafeUninitializedCapacity: n) { buffer, count in
-                    for i in 0..<n {
-                        buffer[i] = Int64(bitPattern: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 8, as: UInt64.self)))
-                    }
-                    count = n
-                })
+            default: value = try scalar(type)
             }
             while true {
                 switch current.kind {
@@ -277,7 +267,7 @@ struct NBTReader {
                     value = .list(elementType, current.items)
                 case .compound:
                     current.fields[current.name] = value
-                    if let entry = try compoundEntry(depth: parents.count) {
+                    if let entry = try compoundEntry(depth: depth + parents.count) {
                         current.name = entry.name
                         type = entry.type
                         continue nextPayload
@@ -287,6 +277,60 @@ struct NBTReader {
                 current = parents.removeLast()
             }
         }
+    }
+
+    private func checkDepth(_ depth: Int) throws {
+        guard depth < Self.maxDepth else { throw NBTError.nestingTooDeep }
+    }
+
+    // Both traversals share decoding without adding a call for every shallow scalar.
+    @inline(__always) private mutating func scalar(_ type: NBTTagType) throws -> NBT {
+        switch type {
+        case .end: throw NBTError.invalidTagType(0)
+        case .byte: return .byte(Int8(bitPattern: try u8()))
+        case .short: return .short(Int16(bitPattern: try be(UInt16.self)))
+        case .int: return .int(Int32(bitPattern: try be(UInt32.self)))
+        case .long: return .long(Int64(bitPattern: try be(UInt64.self)))
+        case .float: return .float(Float(bitPattern: try be(UInt32.self)))
+        case .double: return .double(Double(bitPattern: try be(UInt64.self)))
+        case .string: return .string(try readString())
+        case .byteArray:
+            let n = try length(), start = pos
+            try advance(n)
+            return .byteArray([Int8](unsafeUninitializedCapacity: n) { buffer, count in
+                if n > 0 { UnsafeMutableRawBufferPointer(buffer).copyMemory(from: UnsafeRawBufferPointer(rebasing: bytes[start..<start + n])) }
+                count = n
+            })
+        case .intArray:
+            let n = try length(), start = pos
+            try advance(n * 4)
+            return .intArray([Int32](unsafeUninitializedCapacity: n) { buffer, count in
+                for i in 0..<n {
+                    buffer[i] = Int32(bitPattern: UInt32(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 4, as: UInt32.self)))
+                }
+                count = n
+            })
+        case .longArray:
+            let n = try length(), start = pos
+            try advance(n * 8)
+            return .longArray([Int64](unsafeUninitializedCapacity: n) { buffer, count in
+                for i in 0..<n {
+                    buffer[i] = Int64(bitPattern: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: start + i * 8, as: UInt64.self)))
+                }
+                count = n
+            })
+        case .list, .compound: preconditionFailure("Containers are handled by the traversal")
+        }
+    }
+
+    private mutating func listHeader(skipped: Bool = false) throws -> (NBTTagType, Int) {
+        let rawType = try u8(), count = try length()
+        // An unused type byte on an empty skipped list has always been tolerated.
+        if skipped, count == 0 { return (.end, 0) }
+        guard let type = NBTTagType(rawValue: rawType), count == 0 || type != .end else {
+            throw NBTError.invalidTagType(rawType)
+        }
+        return (type, count)
     }
 
     private mutating func compoundEntry(depth: Int) throws -> (type: NBTTagType, name: String)? {
@@ -302,30 +346,30 @@ struct NBTReader {
 
     /// Skipped values need only structure and byte bounds, not decoded collections or names.
     private mutating func skip(_ rootType: NBTTagType, depth: Int) throws {
+        try checkDepth(depth)
+        if depth >= recursionLimit { return try iterativeSkip(rootType, depth: depth) }
+        switch rootType {
+        case .list:
+            let (elementType, count) = try listHeader(skipped: true)
+            for _ in 0..<count { try skip(elementType, depth: depth + 1) }
+        case .compound:
+            while let type = try skippedCompoundEntry() { try skip(type, depth: depth + 1) }
+        default: try skipScalar(rootType)
+        }
+    }
+
+    private mutating func iterativeSkip(_ rootType: NBTTagType, depth: Int) throws {
         struct Frame {
             let kind: Container.Kind
             var remaining = 0
         }
         var parents: [Frame] = [], current = Frame(kind: .root), type = rootType
         nextPayload: while true {
-            guard depth + parents.count < Self.maxDepth else { throw NBTError.nestingTooDeep }
+            try checkDepth(depth + parents.count)
             switch type {
-            case .end: throw NBTError.invalidTagType(0)
-            case .byte: try advance(1)
-            case .short: try advance(2)
-            case .int, .float: try advance(4)
-            case .long, .double: try advance(8)
-            case .byteArray: try advance(try length())
-            case .intArray: try advance(try length() * 4)
-            case .longArray: try advance(try length() * 8)
-            case .string: try advance(Int(try be(UInt16.self)))
             case .list:
-                let rawType = try u8(), n = try length()
-                // Skipping has always tolerated an unused type byte on an empty list.
+                let (elementType, n) = try listHeader(skipped: true)
                 if n == 0 { break }
-                guard let elementType = NBTTagType(rawValue: rawType), elementType != .end else {
-                    throw NBTError.invalidTagType(rawType)
-                }
                 parents.append(current)
                 current = Frame(kind: .list(elementType), remaining: n)
                 type = elementType
@@ -337,6 +381,7 @@ struct NBTReader {
                     type = entry
                     continue
                 }
+            default: try skipScalar(type)
             }
             while true {
                 switch current.kind {
@@ -355,6 +400,21 @@ struct NBTReader {
                 }
                 current = parents.removeLast()
             }
+        }
+    }
+
+    @inline(__always) private mutating func skipScalar(_ type: NBTTagType) throws {
+        switch type {
+        case .end: throw NBTError.invalidTagType(0)
+        case .byte: try advance(1)
+        case .short: try advance(2)
+        case .int, .float: try advance(4)
+        case .long, .double: try advance(8)
+        case .byteArray: try advance(try length())
+        case .intArray: try advance(try length() * 4)
+        case .longArray: try advance(try length() * 8)
+        case .string: try advance(Int(try be(UInt16.self)))
+        case .list, .compound: preconditionFailure("Containers are handled by the traversal")
         }
     }
 
