@@ -488,6 +488,8 @@ extension NBT: Codable {
 
 extension NBT {
     /// Encodes this value as an uncompressed, named-root NBT payload.
+    /// Traversal uses an explicit stack rather than recursive calls and imposes no fixed depth
+    /// limit. The reader independently rejects tag depth 512 or greater (the root is depth zero).
     public func serialized(rootName: String = "") -> [UInt8] {
         var out = [UInt8]()
         out.append(tagType.rawValue)
@@ -496,38 +498,56 @@ extension NBT {
         return out
     }
 
+    private enum WriteFrame {
+        case value(NBT)
+        case list(Array<NBT>.Iterator)
+        case compound([String: NBT], Array<String>.Iterator)
+    }
+
     private func writePayload(into out: inout [UInt8]) {
-        switch self {
-        case .byte(let v): out.append(UInt8(bitPattern: v))
-        case .short(let v): NBT.be(UInt16(bitPattern: v), &out)
-        case .int(let v): NBT.be(UInt32(bitPattern: v), &out)
-        case .long(let v): NBT.be(UInt64(bitPattern: v), &out)
-        case .float(let v): NBT.be(v.bitPattern, &out)
-        case .double(let v): NBT.be(v.bitPattern, &out)
-        case .byteArray(let v):
-            NBT.be(UInt32(v.count), &out)
-            out.append(contentsOf: v.map { UInt8(bitPattern: $0) })
-        case .string(let v): NBT.writeString(v, into: &out)
-        case .list(let type, let items):
-            precondition(items.allSatisfy { $0.tagType == items[0].tagType }, "NBT lists must have a single element type")
-            out.append(items.isEmpty ? type.rawValue : items[0].tagType.rawValue)
-            NBT.be(UInt32(items.count), &out)
-            for item in items { item.writePayload(into: &out) }
-        case .compound(let dict):
-            // Sorted for deterministic output.
-            for key in dict.keys.sorted() {
-                let value = dict[key]!
+        // Retain one continuation per enclosing container, not one frame per remaining child.
+        var pending = [WriteFrame.value(self)]
+        while let frame = pending.popLast() {
+            switch frame {
+            case .list(var items):
+                guard let item = items.next() else { continue }
+                pending.append(.list(items))
+                pending.append(.value(item))
+            case .compound(let values, var keys):
+                guard let key = keys.next() else { out.append(0); continue }
+                let value = values[key]!
                 out.append(value.tagType.rawValue)
                 NBT.writeString(key, into: &out)
-                value.writePayload(into: &out)
+                pending.append(.compound(values, keys))
+                pending.append(.value(value))
+            case .value(let value):
+                switch value {
+                case .byte(let v): out.append(UInt8(bitPattern: v))
+                case .short(let v): NBT.be(UInt16(bitPattern: v), &out)
+                case .int(let v): NBT.be(UInt32(bitPattern: v), &out)
+                case .long(let v): NBT.be(UInt64(bitPattern: v), &out)
+                case .float(let v): NBT.be(v.bitPattern, &out)
+                case .double(let v): NBT.be(v.bitPattern, &out)
+                case .byteArray(let v):
+                    NBT.be(UInt32(v.count), &out)
+                    out.append(contentsOf: v.map { UInt8(bitPattern: $0) })
+                case .string(let v): NBT.writeString(v, into: &out)
+                case .list(let type, let items):
+                    precondition(items.allSatisfy { $0.tagType == items[0].tagType }, "NBT lists must have a single element type")
+                    out.append(items.isEmpty ? type.rawValue : items[0].tagType.rawValue)
+                    NBT.be(UInt32(items.count), &out)
+                    pending.append(.list(items.makeIterator()))
+                case .compound(let values):
+                    // Sorting preserves the writer's deterministic compound order.
+                    pending.append(.compound(values, values.keys.sorted().makeIterator()))
+                case .intArray(let v):
+                    NBT.be(UInt32(v.count), &out)
+                    for x in v { NBT.be(UInt32(bitPattern: x), &out) }
+                case .longArray(let v):
+                    NBT.be(UInt32(v.count), &out)
+                    for x in v { NBT.be(UInt64(bitPattern: x), &out) }
+                }
             }
-            out.append(0)
-        case .intArray(let v):
-            NBT.be(UInt32(v.count), &out)
-            for x in v { NBT.be(UInt32(bitPattern: x), &out) }
-        case .longArray(let v):
-            NBT.be(UInt32(v.count), &out)
-            for x in v { NBT.be(UInt64(bitPattern: x), &out) }
         }
     }
 

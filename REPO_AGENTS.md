@@ -271,6 +271,12 @@ threads, and depth 512 throws nestingTooDeep. Skipped payloads retain their prio
 structural validation without constructing NBT values or decoding skipped strings. Bulk array
 reads and in-place accumulation remain shared by ordinary world, region and saved-data readers.
 
+The NBT writer traverses with one explicit continuation per enclosing container, avoiding
+recursive writer calls on worker-thread stacks. Compound keys remain sorted and all binary
+encodings are unchanged. Its nonthrowing API imposes no fixed nesting bound; the reader's
+independent limit still rejects tag depth 512 or greater, counting the root as depth zero.
+Regression coverage includes 200 saved passenger pairs and compound chains beyond that limit.
+
 `GameRule.wanderingTraderSpawning.value(in:)` looks up the current or legacy saved identifier
 in the existing `World.gameRules()` dictionary. It accepts explicit Boolean values only, gives
 the current ID precedence, and leaves missing/malformed values unknown. Other namespaces and
