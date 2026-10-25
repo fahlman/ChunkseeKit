@@ -30,10 +30,10 @@ import Testing
     @Test func catAndParrotRetainTheirSavedDetails() throws {
         let cat = try pet("cat", ["variant": .string("minecraft:siamese"), "Sitting": .byte(0)])
         #expect(cat.maxHealth == 10 && cat.sittingOrder == false && cat.collarColor == "red")
-        #expect(cat.appearance?.variant == "minecraft:siamese" && cat.equipment == nil)
+        #expect(cat.appearance?.variant == "minecraft:siamese" && cat.equipment == [:])
         let parrot = try pet("parrot", ["Variant": .int(3), "CollarColor": .byte(1), "Sitting": .byte(1)])
         #expect(parrot.appearance?.variant == "minecraft:yellow_blue" && parrot.maxHealth == 6)
-        #expect(parrot.sittingOrder == true && parrot.collarColor == "orange" && parrot.equipment == nil)
+        #expect(parrot.sittingOrder == true && parrot.collarColor == "orange" && parrot.equipment == [:])
         let emptyWolf = try pet("wolf")
         #expect(emptyWolf.equipment?.isEmpty == true && emptyWolf.sittingOrder == false)
     }
@@ -147,7 +147,7 @@ import Testing
         let wild = try #require(Creature(Fixtures.mob(["id": .string("minecraft:wolf"), "Health": .float(8),
             "Pos": .list([.double(0), .double(64), .double(0)]), "variant": .string("minecraft:pale"), "Sitting": .byte(1), "CollarColor": .byte(14)])))
         #expect(wild.appearance?.variant == "minecraft:pale" && wild.collarColor == "red")
-        #expect(wild.sittingOrder == nil && wild.equipment == nil)
+        #expect(wild.sittingOrder == nil && wild.equipment == [:])
     }
 
     @Test func equipmentDurabilityUsesSavedOverridesAndSkipsUnbreakableOrInvalidItems() throws {
