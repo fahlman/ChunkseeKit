@@ -32,7 +32,9 @@ struct ResourceTagReader {
                 required = try Self.flag(fields["required"], default: true)
             }
             isTag = text.hasPrefix("#")
-            guard let id = GameAssets.resourceID(isTag ? String(text.dropFirst()) : text) else { throw Invalid.data }
+            // Member IDs are data, not file paths. Only a tag/resource lookup applies the
+            // pack's containment policy; a readable direct ID must not be discarded here.
+            guard let id = Identifier(isTag ? String(text.dropFirst()) : text), !id.path.isEmpty else { throw Invalid.data }
             self.id = id.description
         }
 

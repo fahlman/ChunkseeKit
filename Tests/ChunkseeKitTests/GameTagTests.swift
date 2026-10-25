@@ -77,6 +77,12 @@ import ChunkseeKitTestSupport
         }
     }
 
+    @Test func directMemberIdentifiersArePreservedWithoutOpeningThemAsPaths() throws {
+        let jar = try assets([tag("entity_type", "test:unusual", ["test:../declared", "test:nested//declared"])])
+        #expect(try jar.tag("test:unusual", in: "entity_type")?.members.map(\.id)
+                == ["test:../declared", "test:nested//declared"])
+    }
+
     @Test func deepWideAndCorruptInputsRemainUnavailable() throws {
         var entries = try [tag("block", "test:wide", Array(repeating: "air", count: 4097))]
         for depth in 0...64 {
