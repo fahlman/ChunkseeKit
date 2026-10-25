@@ -3,6 +3,13 @@ import ChunkseeKit
 
 /// Builders for synthetic world files. Packing is implemented independently of the library's decoder.
 public enum Fixtures {
+    /// A mob record as written by Minecraft's Mob serializer. Supply its ID, position and
+    /// other facts in fields; explicit fields can override the saved boolean defaults.
+    public static func mob(_ fields: [String: NBT]) -> NBT {
+        .compound(["CanPickUpLoot": NBT.byte(0), "PersistenceRequired": .byte(0), "LeftHanded": .byte(0)]
+            .merging(fields) { $1 })
+    }
+
     public static func pack(_ indices: [Int], bits: Int) -> [Int64] {
         let perLong = 64 / bits
         var longs = [UInt64](repeating: 0, count: (indices.count + perLong - 1) / perLong)

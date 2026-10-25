@@ -1,4 +1,5 @@
 import Foundation
+import ChunkseeKitTestSupport
 import Testing
 import ChunkseeKit
 
@@ -15,7 +16,7 @@ import ChunkseeKit
                 "sell": .compound(["id": .string("minecraft:fern"), "count": .int(1)]),
             ])])])
         }
-        let chunk = NBT.compound(["DataVersion": .int(5023), "Entities": .list([.compound(entity)])])
+        let chunk = NBT.compound(["DataVersion": .int(5023), "Entities": .list([Fixtures.mob(entity)])])
         return try #require(Creature.creatures(inEntityChunk: chunk).first)
     }
 

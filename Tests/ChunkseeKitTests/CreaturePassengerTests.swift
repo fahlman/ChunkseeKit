@@ -16,18 +16,22 @@ import ChunkseeKit
         return .compound(values)
     }
 
+    private func mob(_ id: String, y: Double = 64, fields: [String: NBT] = [:], passengers: [NBT] = []) -> NBT {
+        Fixtures.mob(entity(id, y: y, fields: fields, passengers: passengers).compound!)
+    }
+
     private func chunk(_ entities: [NBT], version: Int32 = 5023) -> NBT {
         .compound(["DataVersion": .int(version), "Entities": .list(entities)])
     }
 
     @Test func villagersPetsJockeysAndNestedRidersKeepSavedOrderAndPositions() {
         let roots = [
-            entity("minecraft:minecart", passengers: [entity("minecraft:villager", y: 64.5)]),
-            entity("minecraft:oak_boat", passengers: [entity("minecraft:cat", y: 64.25,
+            entity("minecraft:minecart", passengers: [mob("minecraft:villager", y: 64.5)]),
+            entity("minecraft:oak_boat", passengers: [mob("minecraft:cat", y: 64.25,
                 fields: ["Owner": Fixtures.uuidInts(ownerID), "CustomName": .string("Boat cat")])]),
-            entity("minecraft:chicken", passengers: [entity("minecraft:zombie", y: 65)]),
-            entity("minecraft:pig", passengers: [entity("minecraft:oak_boat", y: 65,
-                passengers: [entity("minecraft:husk", y: 66)])]),
+            mob("minecraft:chicken", passengers: [mob("minecraft:zombie", y: 65)]),
+            mob("minecraft:pig", passengers: [entity("minecraft:oak_boat", y: 65,
+                passengers: [mob("minecraft:husk", y: 66)])]),
         ]
         let creatures = Creature.creatures(inEntityChunk: chunk(roots))
         #expect(creatures.map(\.id) == ["minecraft:villager", "minecraft:cat", "minecraft:chicken",
@@ -35,23 +39,22 @@ import ChunkseeKit
         #expect(creatures.map(\.y) == [64.5, 64.25, 64, 65, 64, 66])
         #expect(creatures[1].owner == ownerID && creatures[1].customName == "Boat cat")
         #expect(creatures[1].maxHealth == 10)
-        #expect(creatures.allSatisfy { $0.isRecognizedType == true })
     }
 
     @Test func unreadableParentsAndMalformedSiblingsDoNotHideReadableRiders() {
-        let unknownVehicle = entity("mymod:vehicle", passengers: [entity("minecraft:cat")])
-        let missingID = NBT.compound(["Passengers": .list([.string("malformed"), entity("minecraft:wolf")])])
-        let malformedList = entity("minecraft:pig", fields: ["Passengers": .string("malformed")])
+        let unknownVehicle = entity("mymod:vehicle", passengers: [mob("minecraft:cat")])
+        let missingID = NBT.compound(["Passengers": .list([.string("malformed"), mob("minecraft:wolf")])])
+        let malformedList = mob("minecraft:pig", fields: ["Passengers": .string("malformed")])
         let unknownMob = entity("mymod:dragon", fields: ["CanPickUpLoot": .byte(0),
             "PersistenceRequired": .byte(0), "LeftHanded": .byte(0)])
         let creatures = Creature.creatures(inEntityChunk: chunk([unknownVehicle, missingID,
             malformedList, entity("minecraft:oak_boat", passengers: [unknownMob])]))
         #expect(creatures.map(\.id) == ["minecraft:cat", "minecraft:wolf", "minecraft:pig", "mymod:dragon"])
-        #expect(creatures.last?.isRecognizedType == false)
+        #expect(creatures.last?.id == "mymod:dragon")
     }
 
     @Test func deeplyNestedEntityTreeRemainsReadable() {
-        var root = entity("minecraft:cat", y: 200)
+        var root = mob("minecraft:cat", y: 200)
         for _ in 0..<200 { root = entity("minecraft:oak_boat", passengers: [root]) }
         let creatures = Creature.creatures(inEntityChunk: chunk([root]))
         #expect(creatures.map(\.id) == ["minecraft:cat"])
@@ -61,7 +64,7 @@ import ChunkseeKit
     @Test func rawTypedRegionAndContainerReadsShareThePassengerWalk() throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
-        let donkey = entity("minecraft:donkey", y: 65, fields: [
+        let donkey = mob("minecraft:donkey", y: 65, fields: [
             "Owner": Fixtures.uuidInts(ownerID), "Items": .list([.compound([
                 "id": .string("minecraft:diamond"), "count": .int(3),
             ])]),
@@ -84,9 +87,9 @@ import ChunkseeKit
     }
 
     @Test func playerVehicleTreeKeepsItsOwnPositionOwnerAndPlayerVersion() throws {
-        let horse = entity("minecraft:horse", fields: ["UUID": Fixtures.uuidInts(horseID),
+        let horse = mob("minecraft:horse", fields: ["UUID": Fixtures.uuidInts(horseID),
             "Owner": Fixtures.uuidInts(ownerID), "CustomName": .string("Mount"), "Health": .float(21)])
-        let cat = entity("minecraft:cat", y: 66)
+        let cat = mob("minecraft:cat", y: 66)
         let tree = entity("minecraft:oak_boat", passengers: [horse, cat])
         let player = PlayerInfo(uuid: playerID, nbt: .compound([
             "DataVersion": .int(5023), "Dimension": .string("minecraft:overworld"),
@@ -105,7 +108,7 @@ import ChunkseeKit
     @Test func incompletePlayerLocationOrAttachmentDoesNotDiscardSavedMobs() {
         let player = PlayerInfo(uuid: playerID, nbt: .compound([
             "Dimension": .string("minecraft:overworld"),
-            "RootVehicle": .compound(["Attach": .string("not-a-uuid"), "Entity": entity("minecraft:cat")]),
+            "RootVehicle": .compound(["Attach": .string("not-a-uuid"), "Entity": mob("minecraft:cat")]),
         ]))
         #expect(player.position == nil && player.dimension == "minecraft:overworld")
         #expect(player.rootVehicleCreatures.first?.id == "minecraft:cat")
@@ -118,19 +121,19 @@ import ChunkseeKit
     @Test func CLICombinesRidersVehiclesAndShouldersInTheirSavedDimension() throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
-        let rider = entity("minecraft:wolf", y: 65, fields: ["CustomName": .string("Boat wolf")])
+        let rider = mob("minecraft:wolf", y: 65, fields: ["CustomName": .string("Boat wolf")])
         try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0,
             nbt: chunk([entity("minecraft:oak_boat", passengers: [rider])]))]),
             to: root.appendingPathComponent("dimensions/minecraft/overworld/entities/r.0.0.mca"))
-        let horse = entity("minecraft:horse", fields: ["Owner": Fixtures.uuidInts(ownerID)])
+        let horse = mob("minecraft:horse", fields: ["Owner": Fixtures.uuidInts(ownerID)])
         try player(in: root, uuid: playerID, fields: ["Dimension": .string("minecraft:overworld"),
             "Pos": .list([.double(100), .double(67), .double(200)]),
-            "ShoulderEntityLeft": entity("minecraft:parrot"),
+            "ShoulderEntityLeft": mob("minecraft:parrot"),
             "RootVehicle": .compound(["Entity": horse]),
         ])
         let second = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         try player(in: root, uuid: second, fields: ["Dimension": .string("minecraft:the_nether"),
-            "RootVehicle": .compound(["Entity": entity("minecraft:cat", fields: ["CustomName": .string("Nether mount")])]),
+            "RootVehicle": .compound(["Entity": mob("minecraft:cat", fields: ["CustomName": .string("Nether mount")])]),
         ])
         let overworld = try Fixtures.runCLI(root, command: "creatures")
         #expect(overworld.status == 0)

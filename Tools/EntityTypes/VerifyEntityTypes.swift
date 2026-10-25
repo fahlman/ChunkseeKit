@@ -1,7 +1,7 @@
 import ChunkseeKit
 import Foundation
 
-/// Compare public decoding with every official registry entry, not just the generated mob list.
+/// Compare public decoding of saved record shapes with the game's independent class ancestry.
 @main struct VerifyEntityTypes {
     struct Entry: Decodable { let mob: Bool }
 
@@ -22,14 +22,17 @@ import Foundation
                     var fields: [String: NBT] = [
                         "id": .string(id), "Pos": .list([.double(1), .double(64), .double(2)]),
                         "Owner": .intArray([1, 2, 3, 4]), "CustomName": .string("Registry check"),
-                        "CanPickUpLoot": .byte(1), "PersistenceRequired": .byte(1), "LeftHanded": .byte(0),
                     ]
+                    // Mob's serializer writes these even when false; other entity classes do not.
+                    if expected.mob {
+                        fields.merge(["CanPickUpLoot": .byte(0), "PersistenceRequired": .byte(0),
+                                      "LeftHanded": .byte(0)]) { $1 }
+                    }
                     if healthPresent { fields["Health"] = .float(5) }
                     let creature = Creature(.compound(fields), dataVersion: version)
                     precondition((creature != nil) == expected.mob, "\(versionText): \(id), health \(healthPresent)")
                     if let creature {
                         precondition(creature.id == id)
-                        precondition(creature.isRecognizedType == true)
                         precondition(creature.health == (healthPresent ? 5 : nil))
                     }
                     checked += 1

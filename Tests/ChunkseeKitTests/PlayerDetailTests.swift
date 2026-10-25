@@ -1,4 +1,5 @@
 import Foundation
+import ChunkseeKitTestSupport
 import Testing
 @testable import ChunkseeKit
 
@@ -209,7 +210,7 @@ import Testing
         for fields in encodings {
             let entity: [String: NBT] = ["id": .string("minecraft:wolf"), "Health": .float(40),
                                        "Pos": .list([.double(1), .double(64), .double(2)])]
-            let creature = try #require(Creature(.compound(entity.merging(fields) { _, new in new })))
+            let creature = try #require(Creature(Fixtures.mob(entity.merging(fields) { _, new in new })))
             #expect(creature.uuid == expected)
             let encoded = try PropertyListEncoder().encode(creature)
             #expect(try PropertyListDecoder().decode(Creature.self, from: encoded).uuid == expected)

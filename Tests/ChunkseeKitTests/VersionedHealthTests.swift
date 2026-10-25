@@ -5,7 +5,7 @@ import Testing
 
 @Suite struct VersionedHealthTests {
     func entity(_ species: String, fields: [String: NBT] = [:]) -> NBT {
-        .compound(["id": .string("minecraft:" + species), "Health": .float(7),
+        Fixtures.mob(["id": .string("minecraft:" + species), "Health": .float(7),
                    "Pos": .list([.double(-520), .double(64), .double(-8)])].merging(fields) { $1 })
     }
 

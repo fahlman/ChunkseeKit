@@ -41,7 +41,7 @@ import Testing
             .compound(["id": .string("minecraft:chest_minecart"),
                        "Pos": .list([.double(1), .double(64), .double(2)]),
                        "CustomName": .string("§cSupplies§r"), "Items": .list([item])]),
-            .compound(["id": .string("minecraft:wolf"),
+            Fixtures.mob(["id": .string("minecraft:wolf"),
                        "Pos": .list([.double(2), .double(64), .double(3)]),
                        "Health": .float(8),
                        "CustomName": .string(" §aSummer§r ")]),
