@@ -2,6 +2,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import java.util.TreeMap;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.npc.villager.VillagerData;
 
 /** Professions name their trade-set keys in code; trade contents remain runtime data. */
 final class ExtractTradingFacts {
@@ -19,6 +20,13 @@ final class ExtractTradingFacts {
         if (professions.isEmpty()) throw new IllegalStateException("No profession code facts");
         var result = new JsonObject();
         result.addProperty("source", "BuiltInRegistries.VILLAGER_PROFESSION -> VillagerProfession.tradeSetsByLevel / getTrades; Villager.updateTrades");
+        int minimumLevel = new VillagerData(null, null, Integer.MIN_VALUE).level();
+        for (int input : new int[] {Integer.MIN_VALUE, -1, 0, 1, 2, 5, 6, Integer.MAX_VALUE}) {
+            if (new VillagerData(null, null, input).level() != Math.max(minimumLevel, input)) {
+                throw new IllegalStateException("Changed VillagerData level normalization");
+            }
+        }
+        result.addProperty("minimumLevel", minimumLevel);
         result.add("professions", new Gson().toJsonTree(professions));
         return result;
     }

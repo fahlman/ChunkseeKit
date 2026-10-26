@@ -78,6 +78,38 @@ import Testing
         }
     }
 
+    @Test func givesAcceptsTheGamesBareItemTemplateWhileWantsKeepsItsObjectFormat() throws {
+        for gives in [#""minecraft:emerald""#, #"{"id":"minecraft:emerald"}"#] {
+            let trade = TestZIP.Entry(path: offer.path, text: #"{"wants":{"id":"wheat"},"gives":\#(gives)}"#)
+            let definitions = try jar(sets(trades: ["test:offer"]) + [trade]).tradingDefinitions()
+            #expect(try villager("farmer").supportsTrading(using: definitions) == true)
+        }
+        let invalid = TestZIP.Entry(path: offer.path, text: #"{"wants":"minecraft:wheat","gives":"minecraft:emerald"}"#)
+        let definitions = try jar(sets(trades: ["test:offer"]) + [invalid]).tradingDefinitions()
+        #expect(try villager("farmer").supportsTrading(using: definitions) == nil)
+    }
+
+    @Test func onlyTheCurrentClampedLevelSelectsTheTradeSet() throws {
+        let entries = try sets(trades: [])
+        let definitions = try jar(entries.filter { !$0.path.hasSuffix("level_2.json") } + [offer,
+            .init(path: "data/minecraft/trade_set/farmer/level_2.json", text: #"{"amount":2,"trades":["test:offer"]}"#)
+        ]).tradingDefinitions()
+        var value = try villager("farmer")
+        for level in [Int.min, -1, 0, 1, 3, 5, 6, Int.max] {
+            value.level = level
+            #expect(value.supportsTrading(using: definitions) == false)
+        }
+        value.level = 2
+        #expect(value.supportsTrading(using: definitions) == true)
+        value.level = nil
+        #expect(value.supportsTrading(using: definitions) == nil)
+        let first = try jar(sets(trades: ["test:offer"]) + [offer]).tradingDefinitions()
+        for level in [Int.min, -1, 0, 1] {
+            value.level = level
+            #expect(value.supportsTrading(using: first) == true)
+        }
+    }
+
     @Test func enabledFolderAndZipOverridesChangeNewSnapshotsWithoutTouchingSaves() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -1072,11 +1072,11 @@ snapshot from `World.tradingDefinitions(assets:)` or `GameAssets.tradingDefiniti
 readable offers establish trading first. The single release tool extracts each profession's
 actual `tradeSetsByLevel` links; trade-set folder names do not establish a new profession.
 The selected runtime definitions, composed villager-trade tags and readable trade resources
-establish potential candidates. A known positive constant selection establishes true;
-known empty selections establish false. Missing code/resources or dynamic selection amounts
-stay unknown when no positive answer is available. Known professions with no links stay false
-without resources. No offers are rolled and merchant conditions, current level, age, sleep and
-sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
+establish potential candidates for the saved current level, clamped by the generated
+VillagerData minimum. A known positive constant selection establishes true; a known empty
+selection or a level with no code link establishes false. Missing code, level or resources and
+dynamic selection amounts stay unknown. Offers are not rolled and merchant conditions, age,
+sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
 a malformed override never reveals the lower definition. There is no version gate.
 This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
 fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the

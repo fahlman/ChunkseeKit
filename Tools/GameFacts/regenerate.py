@@ -32,7 +32,12 @@ def keyed_values(values, prefix="minecraft:"):
 
 def trading_source(facts, notice):
     result = notice + "// " + facts["source"] + ". Trade contents are never bundled.\n"
-    result += "enum GeneratedTradingFacts {\n    static let professions: [String: [Int: String]] = [\n"
+    if type(facts["minimumLevel"]) is not int:
+        raise ValueError("Invalid generated minimum villager level")
+    result += "enum GeneratedTradingFacts {\n"
+    result += "    // VillagerData constructor normalization, checked at signed-int boundaries.\n"
+    result += f"    static let minimumLevel = {facts['minimumLevel']}\n"
+    result += "    static let professions: [String: [Int: String]] = [\n"
     for profession, levels in sorted(facts["professions"].items()):
         for identifier in [profession] + list(levels.values()):
             if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):

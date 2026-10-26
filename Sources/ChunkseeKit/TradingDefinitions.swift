@@ -4,7 +4,7 @@ import Foundation
 /// Code supplies profession-to-trade-set links; contents come only from runtime data.
 /// Unknown code, missing resources or dynamic amounts cannot invent a positive answer.
 public struct TradingDefinitions: Sendable, Equatable {
-    let professions: [String: Bool]
+    let tradeSets: [String: Bool]
 
     fileprivate static func read(in packs: [WorldResourcePack]) throws -> Self {
         let sets = try WorldResourcePack.Registry(directory: "trade_set", in: packs)
@@ -13,7 +13,7 @@ public struct TradingDefinitions: Sendable, Equatable {
         var tags = try ResourceTagReader(registry: "villager_trade", packs: packs)
         var budget = ResourceReadBudget(), answers: [String: Bool] = [:]
         let identifiers = Set(GeneratedTradingFacts.professions.values.flatMap(\.values))
-        guard identifiers.count <= 4096 else { return Self(professions: [:]) }
+        guard identifiers.count <= 4096 else { return Self(tradeSets: [:]) }
         for id in identifiers.sorted() {
             try Task.checkCancellation()
             var visiting: Set<String> = []
@@ -49,12 +49,7 @@ public struct TradingDefinitions: Sendable, Equatable {
                 else if case .constant(let count) = amount { answers[id] = count > 0 }
             }
         }
-        var professions: [String: Bool] = [:]
-        for (id, levels) in GeneratedTradingFacts.professions {
-            if levels.values.contains(where: { answers[$0] == true }) { professions[id] = true }
-            else if levels.values.allSatisfy({ answers[$0] == false }) { professions[id] = false }
-        }
-        return Self(professions: professions)
+        return Self(tradeSets: answers)
     }
 
     /// The holder must resolve to a readable trade, including its required item references.
@@ -68,16 +63,14 @@ public struct TradingDefinitions: Sendable, Equatable {
         case .data(let data):
             guard let json = json(data, budget: &budget) as? [String: Any],
                   let wants = json["wants"] as? [String: Any],
-                  let gives = json["gives"] as? [String: Any],
                   (try? AssetJSON.identifier(wants["id"])) != nil,
-                  (try? AssetJSON.identifier(gives["id"])) != nil else { return .unavailable }
+                  (try? AssetJSON.identifier((json["gives"] as? [String: Any])?["id"] ?? json["gives"])) != nil else { return .unavailable }
             return .value(())
         }
     }
 
     private static func json(_ data: Data, budget: inout ResourceReadBudget) -> Any? {
-        guard data.count <= ZipResources.maximumResourceSize, data.count <= budget.bytes else { return nil }
-        budget.bytes -= data.count
+        guard budget.charge(data) else { return nil }
         return try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
     }
 
@@ -122,7 +115,7 @@ extension World {
     /// sets/members, 64 tag/reference levels, 16 MiB/file, 64 MiB total and 65,536 lookup/member steps.
     /// Retain this snapshot for Villager.supportsTrading(using:); saved offers stay independent.
     public func tradingDefinitions(assets: GameAssets?) throws -> TradingDefinitions {
-        guard let packs = try resourcePacks(assets: assets) else { return TradingDefinitions(professions: [:]) }
+        guard let packs = try resourcePacks(assets: assets) else { return TradingDefinitions(tradeSets: [:]) }
         return try TradingDefinitions.read(in: packs)
     }
 }
