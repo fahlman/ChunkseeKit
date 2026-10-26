@@ -7,7 +7,7 @@ import Testing
     @Test func categoryPrecedenceAndIdentityMatchExistingCreatureSelection() throws {
         let uuid = try #require(UUID(uuidString: "00112233-4455-6677-8899-AABBCCDDEEFF"))
         var creature = Creature(id: "minecraft:wolf", x: -8.7, y: 62, z: 0)
-        #expect(CreatureEntry(creature) == nil)
+        #expect(CreatureEntry(creature)?.group == .mob)
         creature.customName = "Summer"
         #expect(CreatureEntry(creature)?.group == .named)
         #expect(CreatureEntry(creature)?.id == "minecraft:wolf@-8.7,62.0,0.0")
@@ -21,7 +21,6 @@ import Testing
         creature.x = 512.5
         #expect(CreatureEntry(creature)?.id == original.id)
         #expect(original.id == "creature:00112233-4455-6677-8899-aabbccddeeff")
-        #expect(CreatureEntry.Group.allCases.map(\.rawValue) == ["named", "pet", "villager"])
     }
 
     @Test func invalidLocationsAreExcludedWithoutTrapping() throws {

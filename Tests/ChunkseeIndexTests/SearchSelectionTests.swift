@@ -42,7 +42,7 @@ import Testing
 
     @Test func parsedFiltersSelectTheExpectedCreatureCategories() throws {
         let queries: [(String, Set<CreatureEntry.Group>)] = [
-            ("creature: Summer", [.named, .pet, .villager]), ("PET: Summer", [.pet]),
+            ("creature: Summer", [.named, .pet, .villager, .mob]), ("PET: Summer", [.pet]),
             ("villager:", [.villager]), ("trade: mending", [.villager]),
             ("structure:", []), ("place:", []), ("biome:", []), ("block:", []),
         ]
