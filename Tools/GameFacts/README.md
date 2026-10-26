@@ -48,7 +48,7 @@ Sources and interpretation:
   class constants. All table entries and version boundaries have independent complete-game
   ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
   Nothing writes a world. This slice does not implement numeric
-  flattening, older chunk layouts, attribute renames, or every other data-fixer class;
+  flattening, older chunk layouts, other identifier/field formats, or every other data-fixer class;
   those remain on #255. These rename facts are not registry membership lists.
 
 - `SimplestEntityRenameFix` and `BlockEntityRenameFix` supply namespaced record aliases.
@@ -59,6 +59,15 @@ Sources and interpretation:
   proofs use ENTITY_TREE for passengers and PLAYER for shoulder/root-vehicle snapshots, plus
   spawn-egg and spawner records. Pre-namespace aliases need the earlier field-dependent entity
   splits and remain in the older-format slice; type-changing fixes are not inferred from an ID.
+
+- `AttributesRenameLegacy` and `AttributesRenameFix` provide ordered attribute-name functions.
+  Their captured maps/strings and class constants supply finite aliases. `AttributeIdPrefixFix`
+  supplies its actual PREFIXES and replacement results, preserving its namespace handling and
+  operation order for arbitrary names. `RenameEnchantmentsFix` supplies its alias map. Whole
+  PLAYER and ITEM_STACK records are passed through the full game chain before/at each boundary
+  and at the selected release, covering legacy attributes and both item-component layouts.
+  These are identity rewrites, not attribute or enchantment membership lists. Modifier IDs,
+  labels, numbers and unrelated fields stay unchanged; field/layout conversions remain separate.
 
 - `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
   Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor

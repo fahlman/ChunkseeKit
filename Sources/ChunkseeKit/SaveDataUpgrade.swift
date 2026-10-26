@@ -1,7 +1,7 @@
 /// In-memory save interpretation. Raw NBT/file APIs retain exactly what was saved.
 /// Content aliases come only from the game's generated fix chain; these adapters know fields.
 enum SaveDataUpgrade {
-    enum Kind: Sendable { case block, item, biome, entity, blockEntity }
+    enum Kind: Sendable { case block, item, biome, entity, blockEntity, enchantment }
     struct Rename: Sendable {
         let kind: Kind
         let version: Int
@@ -11,6 +11,12 @@ enum SaveDataUpgrade {
         let id: String
         let version: Int
         let changes: [Int: Int]
+    }
+    struct AttributeRename: Sendable {
+        struct Prefix: Sendable { let from: String; let to: String }
+        let version: Int
+        let changes: [String: String]
+        let prefixes: [Prefix]
     }
 
     static func chunk(_ nbt: NBT) -> NBT {
@@ -44,12 +50,15 @@ enum SaveDataUpgrade {
         var biome: [String: String] = [:]
         var entity: [String: String] = [:]
         var blockEntity: [String: String] = [:]
+        var enchantment: [String: String] = [:]
+        let attributeSteps: [AttributeRename]
         var itemBeforeFlattening: [String: String] = [:]
         var itemAfterFlattening: [String: String] = [:]
         let flattensItems: Bool
         let damageChanges: [String: [Int: Int]]
 
         init(after version: Int) {
+            attributeSteps = GeneratedSaveRenames.attributeSteps.filter { $0.version > version }
             flattensItems = version < GeneratedSaveRenames.itemNameBoundary
             damageChanges = Dictionary(uniqueKeysWithValues: GeneratedSaveRenames.itemDamageChanges
                 .filter { $0.version > version }.map { ($0.id, $0.changes) })
@@ -68,6 +77,7 @@ enum SaveDataUpgrade {
                 case .biome: Self.append(step.changes, to: &biome)
                 case .entity: Self.append(step.changes, to: &entity)
                 case .blockEntity: Self.append(step.changes, to: &blockEntity)
+                case .enchantment: Self.append(step.changes, to: &enchantment)
                 }
             }
             // DFU cannot apply a rename to a record whose name did not exist in its input
@@ -95,8 +105,24 @@ enum SaveDataUpgrade {
             case .biome: changed = biome[key]
             case .entity: changed = entity[key]
             case .blockEntity: changed = blockEntity[key]
+            case .enchantment: changed = enchantment[key]
             }
             return changed.map(NBT.string) ?? value
+        }
+
+        func attributeName(_ value: NBT) -> NBT {
+            guard let original = value.string else { return value }
+            var name = original
+            for step in attributeSteps {
+                if let changed = step.changes[name] { name = changed }
+                if !step.prefixes.isEmpty {
+                    let lookup = Identifier(name)?.description ?? name
+                    if let prefix = step.prefixes.first(where: { lookup.hasPrefix($0.from) }) {
+                        name = prefix.to + lookup.dropFirst(prefix.from.count)
+                    }
+                }
+            }
+            return name == original ? value : .string(name)
         }
 
         func itemName(in fields: [String: NBT]) -> NBT? {
@@ -137,6 +163,7 @@ enum SaveDataUpgrade {
             + GeneratedSaveRenames.itemDamageChanges.map(\.version)
             + Array(GeneratedSaveRenames.entityIntroductions.values)
             + Array(GeneratedSaveRenames.blockEntityIntroductions.values)
+            + GeneratedSaveRenames.attributeSteps.map(\.version)
             + [GeneratedSaveRenames.itemNameBoundary])
         return boundaries.sorted().map { Plan(boundary: $0, names: Names(after: $0 - 1)) }
     }()
@@ -158,6 +185,8 @@ enum SaveDataUpgrade {
         case equipment, entity, player, blockEntity, blockEntities, offers, trades, trade
         case potDecorations, potSide, itemNames
         case entityTree, entityTrees, spawnData, spawnPotentials, spawnPotential, bees, bee
+        case attributes, attribute, legacyItemAttributes, legacyItemAttribute, itemAttributes, itemAttribute
+        case enchantments, enchantment
     }
 
     private enum Work {
@@ -205,6 +234,14 @@ enum SaveDataUpgrade {
                 }
                 guard var fields = value.compound else { results.append(value); continue }
                 switch shape {
+                case .attribute:
+                    for key in ["id", "Name"] where fields[key] != nil { fields[key] = names.attributeName(fields[key]!) }
+                case .legacyItemAttribute:
+                    if let name = fields["AttributeName"] { fields["AttributeName"] = names.attributeName(name) }
+                case .itemAttribute:
+                    if let name = fields["type"] { fields["type"] = names.attributeName(name) }
+                case .enchantment:
+                    if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .enchantment) }
                 case .entity, .entityTree:
                     if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .entity) }
                 case .spawnData:
@@ -253,6 +290,10 @@ enum SaveDataUpgrade {
         case .entityTrees: .entityTree
         case .spawnPotentials: .spawnPotential
         case .bees: .bee
+        case .attributes: .attribute
+        case .legacyItemAttributes: .legacyItemAttribute
+        case .itemAttributes: .itemAttribute
+        case .enchantments: .enchantment
         default: nil
         }
     }
@@ -266,12 +307,15 @@ enum SaveDataUpgrade {
         case .item, .potSide: [("tag", .itemTag), ("components", .components)]
         case .itemTag:
             [("BlockEntityTag", .blockEntity), ("EntityTag", .entityTree),
-             ("Items", .items), ("ChargedProjectiles", .items)]
+             ("Items", .items), ("ChargedProjectiles", .items), ("AttributeModifiers", .legacyItemAttributes),
+             ("Enchantments", .enchantments), ("StoredEnchantments", .enchantments)]
         case .components:
             [("minecraft:container", .componentContainers), ("minecraft:bundle_contents", .items),
              ("minecraft:charged_projectiles", .items), ("minecraft:use_remainder", .item),
              ("minecraft:pot_decorations", .potDecorations), ("minecraft:entity_data", .entityTree),
-             ("minecraft:block_entity_data", .blockEntity), ("minecraft:bees", .bees)]
+             ("minecraft:block_entity_data", .blockEntity), ("minecraft:bees", .bees),
+             ("minecraft:attribute_modifiers", .itemAttributes)]
+        case .itemAttributes: [("modifiers", .itemAttributes)]
         case .componentContainer: [("item", .item)]
         case .blockEntity:
             [("Items", .items), ("item", .item), ("Book", .item), ("RecordItem", .item),
@@ -284,7 +328,7 @@ enum SaveDataUpgrade {
              ("ArmorItems", .items), ("HandItems", .items), ("equipment", .equipment),
              ("Item", .item), ("item", .item), ("body_armor_item", .item), ("ArmorItem", .item),
              ("DecorItem", .item), ("saddle", .item), ("SaddleItem", .item),
-             ("SelectedItem", .item), ("Offers", .offers)]
+             ("SelectedItem", .item), ("Offers", .offers), ("attributes", .attributes), ("Attributes", .attributes)]
         case .entityTree: childFields(.entity) + [("Passengers", .entityTrees)]
         case .spawnData: childFields(.entityTree) + [("entity", .entityTree)]
         case .spawnPotential: [("Entity", .entityTree), ("data", .spawnData)]

@@ -47,11 +47,11 @@ def save_renames_source(facts, notice):
         raise ValueError("No save rename steps")
     result = notice + "// DataFixers' actual rename instances, in application order. Not an ID catalog.\n"
     result += "enum GeneratedSaveRenames {\n"
-    result += f"    static let lastVersion = {max(step['version'] for step in steps)}\n"
+    result += f"    static let lastVersion = {max(step['version'] for step in steps + facts['attributeSteps'])}\n"
     result += "    static let steps: [SaveDataUpgrade.Rename] = [\n"
     previous = -1
     for step in steps:
-        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity"} or type(step["version"]) is not int or step["version"] < previous:
+        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity", "enchantment"} or type(step["version"]) is not int or step["version"] < previous:
             raise ValueError("Invalid or unordered save rename step")
         previous = step["version"]
         result += "        // " + step["source"] + ": " + step["name"] + ".\n"
@@ -61,6 +61,17 @@ def save_renames_source(facts, notice):
                 raise ValueError("Invalid save rename")
             result += f"            {quoted(old)}: {quoted(new)},\n"
         result += "        ]),\n"
+    result += "    ]\n"
+    result += "    static let attributeSteps: [SaveDataUpgrade.AttributeRename] = [\n"
+    previous = -1
+    for step in facts["attributeSteps"]:
+        if type(step["version"]) is not int or step["version"] < previous:
+            raise ValueError("Invalid attribute rename order")
+        previous = step["version"]
+        result += "        // " + step["source"] + ": " + step["name"] + ".\n"
+        changes = ", ".join(quoted(k) + ": " + quoted(v) for k, v in sorted(step["changes"].items())) or ":"
+        prefixes = ", ".join(f".init(from: {quoted(p['from'])}, to: {quoted(p['to'])})" for p in step["prefixes"])
+        result += f"        .init(version: {step['version']}, changes: [{changes}], prefixes: [{prefixes}]),\n"
     result += "    ]\n"
     for kind, versions in sorted(facts["entityIntroductions"].items()):
         result += f"    // First input schema accepting each renamed {kind} ID; not a membership catalog.\n"
@@ -533,7 +544,7 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
                   "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames"]}

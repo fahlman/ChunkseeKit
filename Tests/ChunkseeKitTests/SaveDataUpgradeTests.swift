@@ -81,6 +81,62 @@ import ChunkseeKitTestSupport
         #expect(egg["tag"]?["EntityTag"]?["id"] == id)
     }
 
+    @Test func attributeRulesPreserveUnknownFactsAndModifierIdentity() throws {
+        let modifier = NBT.compound([
+            "type": .string("generic.nameplate_distance"), "id": .string("minecraft:generic.keep_this_modifier"),
+            "amount": .double(3), "operation": .string("add_value"),
+            "custom": .compound(["type": .string("generic.nameplate_distance")]),
+        ])
+        let stack = item("example:wand", extra: ["components": .compound([
+            "minecraft:attribute_modifiers": .compound(["modifiers": .list([modifier])]),
+        ])])
+        let interpreted = try #require(ItemStack(stack, dataVersion: 4054))
+        let result = try #require(interpreted.components?["minecraft:attribute_modifiers"]?["modifiers"]?[0])
+        #expect(result["type"] == .string("minecraft:name_tag_distance"))
+        #expect(result["id"] == modifier["id"] && result["amount"] == modifier["amount"])
+        #expect(result["custom"] == modifier["custom"])
+        #expect(stack["components"]?["minecraft:attribute_modifiers"]?["modifiers"]?[0] == modifier)
+        let player = PlayerInfo(uuid: UUID(), nbt: .compound([
+            "DataVersion": .int(4054), "attributes": .list([
+                .compound(["id": .string("example:generic.custom"), "base": .double(7)]),
+                .compound(["id": .string("minecraft:generic.custom"), "base": .double(8)]),
+                .compound(["id": .int(99), "base": .double(9)]),
+            ]),
+        ]))
+        #expect(player.nbt["attributes"]?[0]?["id"] == .string("example:generic.custom"))
+        #expect(player.nbt["attributes"]?[1]?["id"] == .string("minecraft:custom"))
+        #expect(player.nbt["attributes"]?[2]?["id"] == .int(99))
+        let old = NBT.compound(["Attributes": .list([.compound(["Name": .string("Max Health"), "Base": .double(30)])])])
+        #expect(PlayerInfo(uuid: UUID(), nbt: old).nbt["Attributes"]?[0]?["Name"] == .string("minecraft:max_health"))
+        #expect(SaveDataUpgrade.player(old, dataVersion: Int.max) == old)
+    }
+
+    @Test func nestedEquippedEnchantmentNamesUseTheirContainingVersion() throws {
+        let sword = item("minecraft:diamond_sword", extra: ["tag": .compound([
+            "Enchantments": .list([.compound(["id": .string("minecraft:sweeping"), "lvl": .short(2)])]),
+            "AttributeModifiers": .list([.compound([
+                "AttributeName": .string("minecraft:horse.jump_strength"),
+                "Name": .string("minecraft:horse.jump_strength"), "Amount": .double(0.5),
+            ])]),
+        ])])
+        let mob = Fixtures.mob([
+            "id": .string("example:mob"), "Pos": .list([.double(0), .double(64), .double(0)]),
+            "HandItems": .list([sword]),
+        ])
+        let creature = try #require(Creature(mob, dataVersion: 3802))
+        let equipped = try #require(creature.equipment?["mainhand"])
+        #expect(equipped.enchantments == ["minecraft:sweeping_edge": 2])
+        let modifier = try #require(equipped.components?["AttributeModifiers"]?[0])
+        #expect(modifier["AttributeName"] == .string("minecraft:jump_strength"))
+        #expect(modifier["Name"] == .string("minecraft:horse.jump_strength"))
+        let player = PlayerInfo(uuid: UUID(), nbt: .compound([
+            "DataVersion": .int(3802), "Inventory": .list([sword]), "ShoulderEntityLeft": mob,
+        ]))
+        #expect(player.inventory.first?.enchantments == equipped.enchantments)
+        #expect(player.shoulderPets.first?.equipment?["mainhand"]?.enchantments == equipped.enchantments)
+        #expect(mob["HandItems"]?[0]?["tag"]?["Enchantments"]?[0]?["id"] == .string("minecraft:sweeping"))
+    }
+
     @Test func legacyNamesPrecedeLaterAliasesAndRespectDamageVariants() {
         #expect(ItemStack(item("minecraft:grass"), dataVersion: nil)?.id == "minecraft:grass_block")
         #expect(ItemStack(item("minecraft:grass"), dataVersion: 2865)?.id == "minecraft:short_grass")
@@ -270,6 +326,39 @@ import ChunkseeKitTestSupport
             let actual = try #require(ItemStack(input, dataVersion: record.version))
             let expected = try #require(ItemStack(output))
             #expect(actual.components?["EntityTag"]?["id"] == expected.components?["minecraft:entity_data"]?["id"])
+        case "attributePlayer":
+            let actual = PlayerInfo(uuid: UUID(), nbt: input).nbt
+            func attributes(_ value: NBT) -> [NBT] { (value["attributes"] ?? value["Attributes"])?.list ?? [] }
+            func names(_ values: [NBT]) -> [String] { values.compactMap { ($0["id"] ?? $0["Name"])?.string } }
+            #expect(names(attributes(actual)) == names(attributes(output)))
+            #expect(attributes(actual).count == 1)
+            #expect((attributes(actual)[0]["base"] ?? attributes(actual)[0]["Base"])?.double == 9.5)
+        case "attributeItem":
+            func modifiers(_ stack: ItemStack) -> [NBT] {
+                let current = stack.components?["minecraft:attribute_modifiers"]
+                return current?.list ?? current?["modifiers"]?.list ?? stack.components?["AttributeModifiers"]?.list ?? []
+            }
+            func names(_ values: [NBT]) -> [String] { values.compactMap { ($0["type"] ?? $0["AttributeName"])?.string } }
+            let actual = modifiers(try #require(ItemStack(input, dataVersion: record.version)))
+            let expected = modifiers(try #require(ItemStack(output)))
+            #expect(actual.count == 1 && names(actual) == names(expected))
+            #expect((actual[0]["amount"] ?? actual[0]["Amount"])?.double == 0.5)
+        case "enchantmentItem":
+            let actual = try #require(ItemStack(input, dataVersion: record.version))
+            // Compare identities with the game's raw fix output across its layout conversion.
+            // Keep an omitted namespace intact when that boundary does not rename the ID.
+            var expected: [String: Int] = [:]
+            for key in ["minecraft:enchantments", "minecraft:stored_enchantments"] {
+                for (id, level) in output["components"]?[key]?.compound ?? [:] {
+                    if let value = level.int { expected[id] = value }
+                }
+            }
+            for key in ["Enchantments", "StoredEnchantments"] {
+                for entry in output["tag"]?[key]?.list ?? [] {
+                    if let id = entry["id"]?.string, let level = entry["lvl"]?.int { expected[id] = level }
+                }
+            }
+            #expect(expected.count == 1 && actual.enchantments == expected)
         case "beehiveNames":
             let actual = SaveDataUpgrade.blockEntity(input, dataVersion: record.version)
             #expect(actual["Bees"]?[0]?["EntityData"]?["id"] == output["bees"]?[0]?["entity_data"]?["id"])
