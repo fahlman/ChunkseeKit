@@ -1094,9 +1094,18 @@ selection or a level with no code link establishes false. Missing code, level or
 dynamic selection amounts stay unknown. Offers are not rolled and merchant conditions, age,
 sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
 a malformed override never reveals the lower definition. There is no version gate.
-This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
-fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the
-world's resource snapshot and pass it when adopting the release.
+This intentionally replaces the old no-argument property, requiring a minor release. The app must
+retain the world's resource snapshot and pass it when adopting the release.
+
+`Villager.offerState` retains whether the game has an uninitialized list, a complete readable
+list or recipes Kit could not fully read. Minecraft saves an initialized empty list as `Offers: {}` (Recipes is optional), so
+both that compound and an empty Recipes list establish no saved trades. TagValueInput keeps codec partial values: a non-compound Offers is uninitialized and uses
+current definitions, while a non-list Recipes becomes an initialized empty list. Only
+uninitialized offers allow the current-level definition query. Incomplete saved recipes preserve every readable trade;
+without a readable trade the answer stays unknown. Offers without VillagerData still retain
+these facts. Older standalone Codable values decode with unknown offerState, preserving readable
+trades without guessing whether an empty list was saved. RegionFacts interpretation 20 requires
+a rescan for this distinction; the new optional property and enum are additive public API.
 
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
 matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
@@ -1149,8 +1158,8 @@ no saved `storage` slot. It is not a replacement for the animal's carried invent
 cover the nautilus, zombie nautilus and camel husk in 26.3.
 
 Stored fields remain optional so old cached creatures still decode. RegionFacts interpretation
-version 19 includes the additional saved appearance traits, resource-derived health and legacy
-equipment interpretation. Making
+version 20 includes the additional saved appearance traits, resource-derived health, legacy
+equipment interpretation and saved-offer state. Making
 `CreatureAppearance.variant` optional is an intentional breaking API change requiring a minor
 release: clients must unwrap it independently of `markings` and `traits`, and must not discard an
 appearance because its variant is nil. The app's `PetDetailText.appearance` needs this migration
