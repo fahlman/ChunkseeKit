@@ -7,6 +7,32 @@ import Testing
     private let metadata = #"{"pack":{"min_format":121,"max_format":121,"description":"Fixture"}}"#
     private let plain = ##"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":"#3f76e4"}}"##
 
+    @Test func versionLabelsNeverDiscardReadableColorsOrChangeOverrideRules() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let colors = #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":1193046,"grass_color":11259375,"foliage_color":1122867,"dry_foliage_color":4478310}}"#
+        _ = try folder("override", at: root, entries: [resource(colors), resource("example:blocked", "invalid")])
+        for savedVersion in [nil, 2860, 5023, 999999] as [Int32?] {
+            let world = try world(root, packs: ["vanilla", "file/override"], version: savedVersion)
+            let file = root.appendingPathComponent("level.dat"), before = try Data(contentsOf: file)
+            for jarVersion: Int32 in [1, 5023, 999999] {
+                let jar = try assets([resource(plain), resource("example:game", plain), resource("example:blocked", plain)], version: jarVersion)
+                #expect(jar.biomeDefinition("plains")?.waterColor == 0x3f76e4)
+                let all = try world.biomeDefinitions(assets: jar)
+                #expect(Set(all.keys) == ["minecraft:plains", "example:game"])
+                #expect(try world.biomeDefinitions(for: ["plains", "example:game", "example:blocked", "missing"], assets: jar) == all)
+                let biome = try #require(all["minecraft:plains"])
+                #expect(biome.temperature == 0.8 && biome.downfall == 0.4)
+                for (source, expected) in [(BiomeColor.water, UInt32(0x123456)), (.grass, 0xabcdef), (.foliage, 0x112233), (.dryFoliage, 0x445566)] {
+                    #expect(biome.color(source, x: 0, z: 0) { _, _ in nil } == expected)
+                }
+                #expect(all["example:game"]?.waterColor == 0x3f76e4)
+            }
+            #expect(world.level.dataVersion == savedVersion.map(Int.init))
+            #expect(try Data(contentsOf: file) == before)
+        }
+    }
+
     @Test func worldResourceQueriesRejectOversizedPackListsWithoutTruncatingThem() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -58,7 +84,7 @@ import Testing
         let reader = try assets([resource(plain)])
         for version in [nil, 1000, 9999] as [Int32?] {
             let old = try self.world(root, packs: ["vanilla", "file/override"], version: version)
-            #expect(try old.biomeDefinitions(assets: reader).isEmpty)
+            #expect(Set(try old.biomeDefinitions(assets: reader).keys) == ["example:custom", "minecraft:plains"])
         }
         let disabled = try self.world(root, packs: [])
         #expect(try disabled.biomeDefinitions(assets: reader).isEmpty)
@@ -257,7 +283,7 @@ import Testing
         } == nil)
     }
 
-    @Test func jarPathsVersionsAndPayloadFailuresStayUnavailable() throws {
+    @Test func jarPathsAndPayloadFailuresStayUnavailable() throws {
         var corrupt = resource("example:corrupt", plain)
         corrupt.wrongCRC = true
         let reader = try assets([resource(plain), corrupt])
@@ -265,7 +291,6 @@ import Testing
                    ".:plains", "minecraft:missing", "example:corrupt"] {
             #expect(reader.biomeDefinition(id) == nil)
         }
-        #expect(try assets([resource(plain)], version: 9999).biomeDefinition("plains") == nil)
     }
 
     @Test func folderAndZIPOverridesUseOnePriorityOrderAndCanonicalIDs() throws {
@@ -359,7 +384,7 @@ import Testing
         }
         for version in [nil, 1000, 9999] as [Int32?] {
             let old = try self.world(root, packs: ["vanilla", "file/override"], version: version)
-            #expect(try old.biomeDefinitions(for: ids, assets: assets([resource(plain)])).isEmpty)
+            #expect(Set(try old.biomeDefinitions(for: ids, assets: assets([resource(plain)])).keys) == ["example:custom", "minecraft:plains"])
         }
         let disabled = try self.world(root, packs: [])
         #expect(try disabled.biomeDefinitions(for: ids, assets: assets([resource(plain)])).isEmpty)
