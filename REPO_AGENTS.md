@@ -321,9 +321,13 @@ Single-column surface queries retain direct lookups without unpacking the whole 
 Checked Y arithmetic, heightmap starts and section/column iteration belong here; colors, water
 shading and roof hiding stay in the app. App adoption and its separate measured comparison are
 tracked on #51 and fahlman/Chunksee#354. No existing surface or cache interpretation changes.
-`BlockState.isAir` uses Identifier's shared namespace rules while retaining raw IDs. Short and
-empty-default-namespace air names therefore match their qualified vanilla names; foreign
-namespaces do not. RegionFacts interpretation version 5 invalidates cached surface samples
+`BlockState.isAir` is an optional flag generated from BlockState.isAir and verified against
+Heightmap.NOT_AIR for every registered state. The runtime air tag cannot replace that code flag:
+changing its membership does not change the game's surface predicate. Identifier still owns
+namespace aliases; unknown block code returns nil while raw IDs remain unchanged. Traversal and
+CLI skip only known air, preserving unfamiliar readable states as surface candidates. Changing
+the public Bool to Bool? is an intentional breaking API requiring a minor release. Current
+surface results and serialized facts remain unchanged. RegionFacts interpretation version 5 invalidates cached surface samples
 that treated valid short air names as solid blocks. The CLI's air-only section filter uses this
 same classification. ItemStack uses Identifier for the empty `minecraft:air` item too, including
 nested inventories, while retaining other raw IDs. Interpretation version 6 invalidates cached
@@ -1158,7 +1162,7 @@ Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for 
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities and upper-face support. It verifies the installed stable
+models, fluid identities, upper-face support and air flags. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
