@@ -32,6 +32,13 @@ without changing tracked files. Java compilation/extraction commands and logs, l
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
 No world or installed game file is written. Run this only when the shared Mac is not reserved.
 
+The extractor's original output is retained as `facts.raw.json` and `entity-types.raw.json`.
+Their `facts.json` and `entity-types.json` counterparts use sorted JSON object keys before
+`source.json` records their SHA-256 hashes. Object iteration order from the game's fixers is
+not stable; array order and all values are preserved, so meaningful extraction changes still
+fail `--check`. The focused provenance regression checks run with
+`python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
+
 Sources and interpretation:
 
 - `ColorLerper.Type.SHEEP.getColor` supplies the wool multiplier for each actual DyeColor,
