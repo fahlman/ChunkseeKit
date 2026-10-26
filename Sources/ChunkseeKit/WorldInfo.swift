@@ -20,7 +20,7 @@ public struct Weather: Sendable, Equatable {
 public struct WorldBorder: Sendable, Equatable {
     public var centerX: Double
     public var centerZ: Double
-    /// Side length in blocks; Minecraft's default is 60,000,000 (no practical border).
+    /// Saved side length in blocks, before any further movement while the game runs.
     public var size: Double
     /// The size the border is moving to, over `lerpTime` milliseconds.
     public var targetSize: Double
@@ -30,7 +30,7 @@ public struct WorldBorder: Sendable, Equatable {
     public var warningBlocks: Int
     public var warningTime: Int
 
-    public static let defaultSize = 60_000_000.0
+    public static let defaultSize = GeneratedPortalFacts.defaultBorderSize
 
     /// Whether the border is closer than the default, so it matters to players.
     public var isLimited: Bool { size < Self.defaultSize }
