@@ -121,9 +121,8 @@ public struct NetherPortal: Sendable, Equatable {
     /// finds portals whose chunks it can load.
     public func link(into candidates: [NetherPortal], dimensionTypes: [String: DimensionType],
                      borders: [String: WorldBorder], entering entry: Block? = nil) -> Link? {
-        guard let target = Self.targetDimension(from: dimension),
-              let entry = entry ?? blocks.first.map({ _ in self.entry }),
-              let destination = Self.destination(of: entry, from: dimension,
+        guard entry != nil || !blocks.isEmpty, let target = Self.targetDimension(from: dimension),
+              let destination = Self.destination(of: entry ?? self.entry, from: dimension,
                   dimensionTypes: dimensionTypes, destinationBorder: borders[target]),
               let bounds = BorderBounds(borders[target]) else { return nil }
         let radius = Self.searchRadius(arrivingIn: target)
@@ -175,29 +174,30 @@ public struct NetherPortal: Sendable, Equatable {
 /// WorldBorder's absolute limit, inclusive minimum and exclusive maximum are shared by
 /// destination clamping and candidate filtering. Border motion cannot be predicted offline.
 private struct BorderBounds {
-    let x: Range<Double>, z: Range<Double>
+    let x: (min: Double, max: Double), z: (min: Double, max: Double)
 
     init?(_ border: WorldBorder?) {
         guard let border, border.centerX.isFinite, border.centerZ.isFinite,
-              border.size.isFinite, border.size > 0 else { return nil }
+              border.size.isFinite else { return nil }
         let limit = Double(GeneratedPortalFacts.absoluteBorderLimit)
-        func range(_ center: Double) -> Range<Double>? {
-            let low = min(max(center - border.size / 2, -limit), limit)
-            let high = min(max(center + border.size / 2, -limit), limit)
-            guard low < high else { return nil }
-            return low..<high
+        func bounds(_ center: Double) -> (min: Double, max: Double) {
+            (min(max(center - border.size / 2, -limit), limit),
+             min(max(center + border.size / 2, -limit), limit))
         }
-        guard let x = range(border.centerX), let z = range(border.centerZ) else { return nil }
-        self.x = x; self.z = z
+        x = bounds(border.centerX); z = bounds(border.centerZ)
     }
 
-    func clamped(_ value: Double, within range: Range<Double>) -> Int? {
+    func clamped(_ value: Double, within bounds: (min: Double, max: Double)) -> Int? {
         guard value.isFinite else { return nil }
-        return Int(exactly: min(max(value, range.lowerBound), range.upperBound - GeneratedPortalFacts.borderInset).rounded(.down))
+        // Mth.clamp tests the lower edge first. Min(max(...)) differs for saved borders
+        // narrower than the inset, including zero/negative sizes accepted by the game codec.
+        let clamped = value < bounds.min ? bounds.min : min(value, bounds.max - GeneratedPortalFacts.borderInset)
+        return Int(exactly: clamped.rounded(.down))
     }
 
     func contains(_ block: NetherPortal.Block) -> Bool {
-        x.contains(Double(block.x)) && z.contains(Double(block.z))
+        Double(block.x) >= x.min && Double(block.x) < x.max
+            && Double(block.z) >= z.min && Double(block.z) < z.max
     }
 }
 

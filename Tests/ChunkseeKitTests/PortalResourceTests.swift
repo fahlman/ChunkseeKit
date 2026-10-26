@@ -105,4 +105,17 @@ import Testing
             borders: PortalFixtures.borders) == .oneWay(target: target, block: target.entry,
                 returning: .portal(returning, block: returning.entry)))
     }
+
+    @Test func tinyAndInvertedSavedBordersUseTheGamesClampOrder() {
+        var border = PortalFixtures.border
+        border.centerX = 0.000005; border.centerZ = 0.000005; border.size = 0.000001
+        #expect(NetherPortal.destination(of: Block(x: -1, y: 64, z: 1), from: "overworld",
+            dimensionTypes: PortalFixtures.types, destinationBorder: border) == Block(x: 0, y: 64, z: -1))
+        border.centerX = 0; border.centerZ = 0
+        for size in [0.0, -1.0] {
+            border.size = size
+            #expect(NetherPortal.destination(of: Block(x: -1, y: 64, z: 1), from: "overworld",
+                dimensionTypes: PortalFixtures.types, destinationBorder: border) == Block(x: 0, y: 64, z: -1))
+        }
+    }
 }
