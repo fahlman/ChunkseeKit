@@ -1130,6 +1130,23 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
+`SaveDataUpgrade` owns in-memory block, item and biome identifier renames from the ordered
+Minecraft fixers extracted by Tools/GameFacts. Chunk palettes, block/entity containers,
+creature equipment/trades and player inventories use the same owner before typed interpretation.
+Nested item contents and pot decorations retain their formats while their item names change.
+Named legacy items first use the game's saved-Damage identity conversion and original bed
+default, so earlier meanings are resolved before later aliases. Numeric item IDs remain separate.
+Raw NBT, RegionFile and World.playerData remain unchanged, and no save is written. Standalone
+item callers can supply their containing file's version through ItemStack.init(_:dataVersion:);
+the existing initializer consumes an already interpreted value. Missing DataVersion means -1;
+current/newer records return before traversing or allocating rename state. Each step applies once,
+and only later steps can rename its result again. Unrelated text, custom tags, malformed fields,
+unknown names and properties are preserved. Traversal uses an explicit stack for nested contents.
+Embedded level players use their own version, as LevelDatToSavedDataFileFix does, rather than
+inheriting the surrounding level's version. RegionFacts interpretation 21 invalidates earlier names.
+This additive API is unreleased for #255; remaining identifier/field changes, numeric flattening
+and pre-existing unsupported old chunk layouts remain separate work on that issue.
+
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the
 final ID-derived fallback. GameLanguage is an immutable Sendable snapshot; its subscript returns

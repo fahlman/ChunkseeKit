@@ -57,6 +57,7 @@ public struct Creature: Sendable, Equatable, Codable {
     /// The version is retained for facts such as omitted health defaults, not a type list.
     /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
     public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
+        let nbt = SaveDataUpgrade.entity(nbt, dataVersion: dataVersion)
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
               !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }

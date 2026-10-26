@@ -27,7 +27,8 @@ public struct ItemStack: Sendable, Equatable, Codable {
         self.components = components
     }
 
-    /// Reads an item; `nil` for an empty or malformed entry.
+    /// Reads an already interpreted item; `nil` for an empty or malformed entry.
+    /// Use init(_:dataVersion:) for a standalone item from a saved file's version context.
     public init?(_ nbt: NBT) {
         guard let id = nbt["id"]?.string, !id.isEmpty,
               Identifier(id)?.description != "minecraft:air" else { return nil }
@@ -53,6 +54,12 @@ public struct ItemStack: Sendable, Equatable, Codable {
             customName = tag?["display"]?["Name"].flatMap(TextComponent.plainText)
             contents = (tag?["BlockEntityTag"]?["Items"]?.list ?? []).compactMap(ItemStack.init)
         }
+    }
+
+    /// Applies the game's generated name changes before interpreting a saved item and its contents.
+    /// Supply the containing chunk/player file's version; nil means a file with no DataVersion.
+    public init?(_ nbt: NBT, dataVersion: Int?) {
+        self.init(SaveDataUpgrade.item(nbt, dataVersion: dataVersion))
     }
 
     /// The saved item-model reference, or the item's ID when no override is recorded.
@@ -169,7 +176,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
 
     /// Containers among a chunk's block entities: those with items or sealed loot.
     public static func containers(inChunk nbt: NBT) -> [ItemContainer] {
-        Chunk.blockEntities(in: nbt).compactMap { entity in
+        SaveDataUpgrade.blockEntities(inChunk: nbt).compactMap { entity in
             guard let kind = entity["id"]?.string, let position = entity.blockEntityPosition else {
                 return nil
             }
@@ -190,6 +197,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     /// minecarts and boats, inventories, item displays and saved equipment, including nested passengers.
     public static func containers(inEntityChunk nbt: NBT) -> [ItemContainer] {
         EntityTraversal.flatten(nbt["Entities"]?.list ?? []).compactMap { entity in
+            let entity = SaveDataUpgrade.entity(entity, dataVersion: nbt["DataVersion"]?.int)
             guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
                   let savedX = pos[0].double, let savedY = pos[1].double, let savedZ = pos[2].double,
                   let position = BlockPosition(x: savedX, y: savedY, z: savedZ) else {
