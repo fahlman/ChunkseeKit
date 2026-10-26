@@ -15,6 +15,14 @@ def digest(path, algorithm="sha256"):
     return hashlib.new(algorithm, path.read_bytes()).hexdigest()
 
 
+def canonical_extraction(raw, output):
+    # Game-fixer maps do not promise iteration order. Keep the original bytes as evidence,
+    # but hash a stable representation of JSON objects without reordering arrays or values.
+    value = json.loads(raw.read_text())
+    output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    return value
+
+
 def quoted(value):
     return json.dumps(value, ensure_ascii=False)
 
@@ -661,15 +669,16 @@ def main():
         [str(args.java_home / "bin/javac"), "-cp", classpath, "-d", str(evidence)]
             + [str(root / path) for path in tool_sources if path.endswith(".java")],
         [str(args.java_home / "bin/java"), "-Djava.awt.headless=true", "-cp", str(evidence) + ":" + classpath,
-         "ExtractGameFacts", str(evidence / "facts.json"), str(evidence / "entity-types.json"), str(version["world_version"])],
+         "ExtractGameFacts", str(evidence / "facts.raw.json"), str(evidence / "entity-types.raw.json"), str(version["world_version"])],
     ]
     (evidence / "commands.json").write_text(json.dumps(commands, indent=2) + "\n")
     for index, command in enumerate(commands):
         with (evidence / f"{index}.log").open("w") as output:
             result = subprocess.run(command, cwd=evidence, stdout=output, stderr=subprocess.STDOUT, timeout=180)
         if result.returncode: raise RuntimeError(f"Extraction failed; see {evidence / f'{index}.log'}")
-    sources = generated_sources(json.loads((evidence / "facts.json").read_text()),
-                                json.loads((evidence / "entity-types.json").read_text()))
+    extracted = {name: canonical_extraction(evidence / name.replace(".json", ".raw.json"), evidence / name)
+                 for name in ["facts.json", "entity-types.json"]}
+    sources = generated_sources(extracted["facts.json"], extracted["entity-types.json"])
     provenance["extractedSHA256"] = {name: digest(evidence / name) for name in ["facts.json", "entity-types.json"]}
     sources["Tools/GameFacts/source.json"] = json.dumps(provenance, indent=2, sort_keys=True) + "\n"
     for relative, content in sources.items():
