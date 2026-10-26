@@ -109,6 +109,34 @@ import Testing
         #expect(try Data(contentsOf: file) == before)
     }
 
+    @Test func conflictingAttributeAliasesAndOversizedCategoriesKeepAnswersUnknown() throws {
+        let table: [String: Any] = ["spawns_by_category": ["monster": []]]
+        let conflict = try entry("data/test/worldgen/biome/conflict.json", ["attributes": [
+            "gameplay/natural_mob_spawns": table, "minecraft:gameplay/natural_mob_spawns": table
+        ]])
+        let large = try biome("test:large", modifier: "override", categories: [
+            "monster": Array(repeating: ["type": "slime", "weight": 1], count: 4097),
+            "creature": [["type": "pig", "weight": 1]]
+        ])
+        let assets = try jar([conflict, large])
+        #expect(assets.biomeSpawnSettings("test:conflict", base: nil) == nil)
+        let spawns = try #require(assets.biomeSpawnSettings("test:large", base: nil))
+        #expect(spawns.contains("slime", in: "monster") == nil)
+        #expect(spawns.contains("pig", in: "creature") == true)
+    }
+
+    @Test func cancelledWorldQueriesPropagateCancellation() async throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeWorld(root, dimensions: [:])
+        let world = try World(contentsOf: root)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try world.biomeSpawnSettings(for: ["plains"], base: nil, assets: nil)
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
+    }
+
     private func baseSettings(_ categories: [String: Any]?) throws -> MobSpawnSettings {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

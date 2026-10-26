@@ -76,7 +76,7 @@ public struct MobSpawnSettings: Sendable, Equatable {
               categories.count <= 256 else { return nil }
         var result: [String: [Candidate]] = [:], incomplete: Set<String> = []
         var remaining = 65_536
-        for (category, rawEntries) in categories {
+        for (category, rawEntries) in categories.sorted(by: { $0.key < $1.key }) {
             guard let entries = rawEntries.array, entries.count <= 4096, entries.count <= remaining else {
                 result[category] = []; incomplete.insert(category); continue
             }
@@ -149,11 +149,10 @@ extension World {
         guard identifiers.count <= 4096, let packs = try resourcePacks(assets: assets) else { return [:] }
         let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
         let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
-        var remaining = 64 * 1024 * 1024, result: [String: MobSpawnSettings] = [:]
+        var budget = ResourceReadBudget(), result: [String: MobSpawnSettings] = [:]
         for id in ids.sorted() {
             result[id] = try registry.read(id) { data in
-                guard data.count <= remaining else { return nil }
-                remaining -= data.count
+                guard budget.charge(data) else { return nil }
                 return MobSpawnSettings.read(json: data, base: base)
             }
         }
