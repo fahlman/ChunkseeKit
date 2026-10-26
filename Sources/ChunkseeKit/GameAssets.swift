@@ -120,8 +120,9 @@ public struct GameAssets: Sendable {
     }
 
     func containsResource(_ identifier: String, directory: String, extension suffix: String) -> Bool {
-        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return false }
-        return resources.contains(path)
+        // A valid query whose archive changed must still shadow lower resources.
+        resourcePresence(identifier, directory: directory, extension: suffix)
+            ?? (Self.resourceID(identifier) != nil)
     }
 
     func resourcePresence(_ identifier: String, directory: String, extension suffix: String) -> Bool? {
