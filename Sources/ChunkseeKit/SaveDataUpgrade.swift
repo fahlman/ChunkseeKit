@@ -1,7 +1,7 @@
 /// In-memory save interpretation. Raw NBT/file APIs retain exactly what was saved.
 /// Content aliases come only from the game's generated fix chain; these adapters know fields.
 enum SaveDataUpgrade {
-    enum Kind: Sendable { case block, item, biome, entity, blockEntity, enchantment }
+    enum Kind: Sendable { case block, item, biome, entity, blockEntity, enchantment, recipe, advancement, stat }
     struct Rename: Sendable {
         let kind: Kind
         let version: Int
@@ -36,6 +36,32 @@ enum SaveDataUpgrade {
         upgrade(nbt, as: .blockEntity, dataVersion: dataVersion)
     }
 
+    static func statistics(_ values: [String: [String: Int]], dataVersion: Int?) -> [String: [String: Int]] {
+        guard let custom = values["minecraft:custom"] else { return values }
+        var values = values
+        values["minecraft:custom"] = progressKeys(custom, kind: .stat, dataVersion: dataVersion)
+        return values
+    }
+
+    static func advancements<Value>(_ entries: [String: Value], dataVersion: Int?) -> [String: Value] {
+        progressKeys(entries, kind: .advancement, dataVersion: dataVersion)
+    }
+
+    private static func progressKeys<Value>(_ entries: [String: Value], kind: Kind, dataVersion: Int?) -> [String: Value] {
+        let version = dataVersion ?? -1
+        guard version < GeneratedSaveRenames.lastVersion else { return entries }
+        let names = names(after: version)
+        var result: [String: Value] = [:]
+        for (id, value) in entries {
+            let renamed = names.renamed(.string(id), kind: kind, namespaced: kind != .advancement).string ?? id
+            // Minecraft can reject colliding advancement keys or discard a statistic value.
+            // Preserve the complete original map when its identities cannot be upgraded uniquely.
+            guard result[renamed] == nil else { return entries }
+            result[renamed] = value
+        }
+        return result
+    }
+
     static func player(_ nbt: NBT, dataVersion: Int?) -> NBT {
         upgrade(nbt, as: .player, dataVersion: dataVersion)
     }
@@ -51,6 +77,9 @@ enum SaveDataUpgrade {
         var entity: [String: String] = [:]
         var blockEntity: [String: String] = [:]
         var enchantment: [String: String] = [:]
+        var recipe: [String: String] = [:]
+        var advancement: [String: String] = [:]
+        var stat: [String: String] = [:]
         let attributeSteps: [AttributeRename]
         var itemBeforeFlattening: [String: String] = [:]
         var itemAfterFlattening: [String: String] = [:]
@@ -78,6 +107,9 @@ enum SaveDataUpgrade {
                 case .entity: Self.append(step.changes, to: &entity)
                 case .blockEntity: Self.append(step.changes, to: &blockEntity)
                 case .enchantment: Self.append(step.changes, to: &enchantment)
+                case .recipe: Self.append(step.changes, to: &recipe)
+                case .advancement: Self.append(step.changes, to: &advancement)
+                case .stat: Self.append(step.changes, to: &stat)
                 }
             }
             // DFU cannot apply a rename to a record whose name did not exist in its input
@@ -106,6 +138,9 @@ enum SaveDataUpgrade {
             case .entity: changed = entity[key]
             case .blockEntity: changed = blockEntity[key]
             case .enchantment: changed = enchantment[key]
+            case .recipe: changed = recipe[key]
+            case .advancement: changed = advancement[key]
+            case .stat: changed = stat[key]
             }
             return changed.map(NBT.string) ?? value
         }
@@ -187,6 +222,7 @@ enum SaveDataUpgrade {
         case entityTree, entityTrees, spawnData, spawnPotentials, spawnPotential, bees, bee
         case attributes, attribute, legacyItemAttributes, legacyItemAttribute, itemAttributes, itemAttribute
         case enchantments, enchantment
+        case recipeBook, recipes, recipe
     }
 
     private enum Work {
@@ -225,6 +261,9 @@ enum SaveDataUpgrade {
                 }
                 if shape == .biome, value.string != nil {
                     results.append(names.renamed(value, kind: .biome)); continue
+                }
+                if shape == .recipe, value.string != nil {
+                    results.append(names.renamed(value, kind: .recipe)); continue
                 }
                 if shape == .potSide, value.string != nil {
                     results.append(names.renamed(value, kind: .item)); continue
@@ -294,6 +333,7 @@ enum SaveDataUpgrade {
         case .legacyItemAttributes: .legacyItemAttribute
         case .itemAttributes: .itemAttribute
         case .enchantments: .enchantment
+        case .recipes: .recipe
         default: nil
         }
     }
@@ -321,7 +361,9 @@ enum SaveDataUpgrade {
             [("Items", .items), ("item", .item), ("Book", .item), ("RecordItem", .item),
              ("sherds", .itemNames), ("shards", .itemNames), ("SpawnData", .spawnData),
              ("SpawnPotentials", .spawnPotentials), ("Bees", .bees), ("bees", .bees)]
-        case .entity, .player:
+        case .player: childFields(.entity) + [("recipeBook", .recipeBook)]
+        case .recipeBook: [("recipes", .recipes), ("toBeDisplayed", .recipes)]
+        case .entity:
             // These saved formats are shared by vanilla and custom entities. Type catalogs do
             // not decide which readable inventory/equipment fields the existing readers retain.
             [("Items", .items), ("Inventory", .items), ("EnderItems", .items),

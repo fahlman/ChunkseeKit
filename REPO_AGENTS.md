@@ -1159,6 +1159,15 @@ Legacy enchantment names follow RenameEnchantmentsFix without changing their lev
 The tool records full PLAYER and ITEM_STACK upgrades before/at each boundary and at the current
 release; nested inventories/equipment use their containing file's version once.
 RegionFacts interpretation 23 invalidates earlier effect identities, including unpublished 21–22.
+Player recipe-book references, advancement IDs and custom-statistic IDs use generated
+NamespacedTypeRenameFix, AdvancementsRenameFix (including AdvancementsFix) and StatsRenameFix
+rules. Literal advancement-key handling comes from the actual function, including whether it
+accepts an omitted namespace. Full PLAYER/ADVANCEMENTS/STATS proofs cover every alias boundary;
+recipe order, counts, completion flags/dates, unrelated fields and original files are retained.
+Malformed key collisions keep the complete original progress map instead of losing entries or
+throwing as the game's advancement fixer can. Furnace recipe-use layouts, other statistics
+formats/units and scoreboard criteria remain separate #255/#222 work. This player-only slice
+does not change regional facts or their interpretation version.
 This additive API is unreleased for #255; remaining identifier/field changes, numeric flattening
 and pre-existing unsupported old chunk layouts remain separate work on that issue. Pre-namespace
 entity IDs stay with their required earlier type splits in the older-entity-format slice.

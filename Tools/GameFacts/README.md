@@ -69,6 +69,16 @@ Sources and interpretation:
   These are identity rewrites, not attribute or enchantment membership lists. Modifier IDs,
   labels, numbers and unrelated fields stay unchanged; field/layout conversions remain separate.
 
+- Recipe `NamespacedTypeRenameFix`, `AdvancementsRenameFix`/`AdvancementsFix` and
+  `StatsRenameFix` supply player-progress identities. Captured maps/strings and both the
+  registration and concrete fix classes' constants supply their inputs. Advancement aliases
+  retain literal versus default-namespace behavior from the actual function. Every alias has
+  full PLAYER/ADVANCEMENTS/STATS proofs before/at its boundary and at the selected release,
+  including omitted-namespace spellings. Namespaced recipe/statistic identities compare by
+  their resource IDs; an otherwise untouched spelling is retained by the reader. Criteria,
+  dates, counts and recipe order remain data. Furnace recipe-use field conversions, older
+  statistics formats and scoreboard criteria are separate #255 work.
+
 - `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
   Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor
   removes any such ID that has become a real block. It verifies mapper identity for the remaining
