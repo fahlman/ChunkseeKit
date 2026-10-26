@@ -51,13 +51,14 @@ def save_renames_source(facts, notice):
     result += "    static let steps: [SaveDataUpgrade.Rename] = [\n"
     previous = -1
     for step in steps:
-        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity", "enchantment"} or type(step["version"]) is not int or step["version"] < previous:
+        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity", "enchantment", "recipe", "advancement", "stat"} or type(step["version"]) is not int or step["version"] < previous:
             raise ValueError("Invalid or unordered save rename step")
         previous = step["version"]
         result += "        // " + step["source"] + ": " + step["name"] + ".\n"
         result += f"        .init(kind: .{step['kind']}, version: {step['version']}, changes: [\n"
         for old, new in sorted(step["changes"].items()):
-            if any(not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", x) for x in [old, new]) or old == new:
+            input_pattern = r"(?:[a-z0-9_.-]*:)?[a-z0-9_./-]+" if step["kind"] == "advancement" else r"[a-z0-9_.-]+:[a-z0-9_./-]+"
+            if not re.fullmatch(input_pattern, old) or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", new) or old == new:
                 raise ValueError("Invalid save rename")
             result += f"            {quoted(old)}: {quoted(new)},\n"
         result += "        ]),\n"
@@ -544,7 +545,7 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
                   "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames"]}

@@ -137,6 +137,69 @@ import ChunkseeKitTestSupport
         #expect(mob["HandItems"]?[0]?["tag"]?["Enchantments"]?[0]?["id"] == .string("minecraft:sweeping"))
     }
 
+    @Test func playerProgressPreservesLiteralKeysUnknownFactsAndCollisions() throws {
+        let advancements = Data(#"""
+        {"DataVersion":1500,
+         "recipes/brewing/speckled_melon":{"done":true},
+         "minecraft:recipes/brewing/speckled_melon":{"done":false},
+         "example:recipes/brewing/speckled_melon":{"done":true}}
+        """#.utf8)
+        let progress = try AdvancementProgress.list(json: advancements)
+        #expect(Set(progress.map(\.id)) == ["recipes/brewing/speckled_melon",
+                                            "minecraft:recipes/brewing/glistering_melon_slice",
+                                            "example:recipes/brewing/speckled_melon"])
+        #expect(progress.first { $0.id == "minecraft:recipes/brewing/glistering_melon_slice" }?.isDone == false)
+        let collision = Data(#"""
+        {"DataVersion":2099,"minecraft:recipes/misc/sugar":{"done":true},
+         "minecraft:recipes/misc/sugar_from_sugar_cane":{"done":false}}
+        """#.utf8)
+        #expect(try AdvancementProgress.list(json: collision).map(\.id)
+                == ["minecraft:recipes/misc/sugar", "minecraft:recipes/misc/sugar_from_sugar_cane"])
+        let stats = try PlayerStatistics(json: Data(#"""
+        {"DataVersion":2709,"stats":{"minecraft:custom":{
+          "minecraft:play_one_minute":17,"minecraft:play_time":23},
+          "example:custom":{"minecraft:play_one_minute":41}}}
+        """#.utf8))
+        #expect(stats.values["minecraft:custom"] == ["minecraft:play_one_minute": 17, "minecraft:play_time": 23])
+        #expect(stats.values["example:custom"] == ["minecraft:play_one_minute": 41])
+        let recipe = NBT.string("minecraft:sugar")
+        let book = NBT.compound(["recipes": .list([recipe, recipe, .string("example:new_recipe")]),
+                                 "toBeDisplayed": .list([recipe]), "custom": recipe])
+        let input = NBT.compound(["DataVersion": .int(2099), "recipeBook": book, "custom": book])
+        let player = PlayerInfo(uuid: UUID(), nbt: input)
+        #expect(player.nbt["recipeBook"]?["recipes"] == .list([
+            .string("minecraft:sugar_from_sugar_cane"), .string("minecraft:sugar_from_sugar_cane"), .string("example:new_recipe"),
+        ]))
+        #expect(player.nbt["recipeBook"]?["custom"] == recipe && player.nbt["custom"] == book)
+        #expect(input["recipeBook"] == book)
+        #expect(SaveDataUpgrade.player(input, dataVersion: Int.max) == input)
+        #expect(SaveDataUpgrade.statistics(stats.values, dataVersion: Int.max) == stats.values)
+    }
+
+    @Test func playerProgressFileReadsKeepEveryOriginalByte() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let uuid = UUID()
+        let levelURL = root.appendingPathComponent("level.dat")
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["DataVersion": .int(5023)])]), to: levelURL)
+        let statsURL = root.appendingPathComponent("players/stats/\(uuid.uuidString.lowercased()).json")
+        let progressURL = root.appendingPathComponent("players/advancements/\(uuid.uuidString.lowercased()).json")
+        let statistics = Data(#"{"DataVersion":2709,"stats":{"minecraft:custom":{"minecraft:play_one_minute":17}}}"#.utf8)
+        let advancements = Data(#"{"DataVersion":2099,"minecraft:recipes/misc/sugar":{"done":true,"criteria":{"proof":"2020-01-01 00:00:00 +0000"}}}"#.utf8)
+        for (url, data) in [(statsURL, statistics), (progressURL, advancements)] {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url)
+        }
+        let before = try [Data(contentsOf: levelURL), Data(contentsOf: statsURL), Data(contentsOf: progressURL)]
+        let world = try World(contentsOf: root)
+        let stats = try #require(world.statistics(for: uuid))
+        #expect(stats.dataVersion == 2709 && stats.values["minecraft:custom"] == ["minecraft:play_time": 17])
+        let progress = try #require(world.advancements(for: uuid)?.first)
+        #expect(progress.id == "minecraft:recipes/misc/sugar_from_sugar_cane" && progress.isDone)
+        #expect(progress.completed == ISO8601DateFormatter().date(from: "2020-01-01T00:00:00Z"))
+        #expect(try before == [Data(contentsOf: levelURL), Data(contentsOf: statsURL), Data(contentsOf: progressURL)])
+    }
+
     @Test func legacyNamesPrecedeLaterAliasesAndRespectDamageVariants() {
         #expect(ItemStack(item("minecraft:grass"), dataVersion: nil)?.id == "minecraft:grass_block")
         #expect(ItemStack(item("minecraft:grass"), dataVersion: 2865)?.id == "minecraft:short_grass")
@@ -269,7 +332,32 @@ import ChunkseeKitTestSupport
         let input = try jsonNBT(record.input), output = try jsonNBT(record.output)
         func ids(_ items: [ItemStack]) -> [String] { items.flatMap(\.allItems).map(\.id) }
         func counts(_ items: [ItemStack]) -> [Int] { items.flatMap(\.allItems).map(\.count) }
+        func upgradedJSON() throws -> Data {
+            var fields = try #require(JSONSerialization.jsonObject(with: Data(record.output.utf8)) as? [String: Any])
+            fields["DataVersion"] = Int.max
+            return try JSONSerialization.data(withJSONObject: fields)
+        }
         switch record.kind {
+        case "recipeProgress":
+            let actual = PlayerInfo(uuid: UUID(), nbt: input).nbt
+            func identifiers(_ nbt: NBT?) -> [String] {
+                (nbt?.list ?? []).compactMap(\.string).map { Identifier($0)?.description ?? $0 }
+            }
+            for field in ["recipes", "toBeDisplayed"] {
+                #expect(identifiers(actual["recipeBook"]?[field]) == identifiers(output["recipeBook"]?[field]))
+                #expect(actual["recipeBook"]?[field]?.list?.count == 1)
+            }
+        case "statProgress":
+            let actual = try PlayerStatistics(json: Data(record.input.utf8))
+            let expected = try PlayerStatistics(json: upgradedJSON())
+            func identifiers(_ values: [String: [String: Int]]) -> [String: [String: Int]] {
+                values.mapValues { Dictionary(uniqueKeysWithValues: $0.map { (Identifier($0.key)?.description ?? $0.key, $0.value) }) }
+            }
+            #expect(identifiers(actual.values) == identifiers(expected.values))
+            #expect(actual.dataVersion == record.version)
+        case "advancementProgress":
+            #expect(try AdvancementProgress.list(json: Data(record.input.utf8))
+                    == AdvancementProgress.list(json: upgradedJSON()))
         case "item":
             let actual = try #require(ItemStack(input, dataVersion: record.version))
             let expected = try #require(ItemStack(output))

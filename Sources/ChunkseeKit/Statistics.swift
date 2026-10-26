@@ -2,6 +2,7 @@ import Foundation
 
 /// A player's statistics from `players/stats/<uuid>.json`: counts by category and id, e.g.
 /// `minecraft:mined` → `minecraft:stone` → 1,204.
+/// Saved custom-statistic names follow the game's generated rename chain; counts are unchanged.
 ///
 /// Also reads the flat format from before 1.7.6 (`stat.walkOneCm`, files named after the player),
 /// mapping its general statistics to `minecraft:custom` ids. Numeric legacy item/block keys
@@ -29,7 +30,7 @@ public struct PlayerStatistics: Sendable, Equatable {
         }
         dataVersion = root["DataVersion"] as? Int
         if let stats = root["stats"] as? [String: [String: Int]] {
-            values = stats
+            values = SaveDataUpgrade.statistics(stats, dataVersion: dataVersion)
             return
         }
         var custom: [String: Int] = [:]
@@ -103,12 +104,14 @@ public struct AdvancementProgress: Sendable, Equatable {
     /// When the advancement was completed: its last criterion's date.
     public var completed: Date? { isDone ? criteria.values.max() : nil }
 
-    /// Reads every entry of an advancements file, sorted by id.
+    /// Reads every entry of an advancements file, upgrading saved names and sorting by id.
+    /// Ambiguous name collisions retain their original keys and progress.
     public static func list(json data: Data) throws -> [AdvancementProgress] {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
-        return root.compactMap { id, value -> AdvancementProgress? in
+        let interpreted = SaveDataUpgrade.advancements(root, dataVersion: root["DataVersion"] as? Int)
+        return interpreted.compactMap { id, value -> AdvancementProgress? in
             guard let entry = value as? [String: Any] else { return nil }
             let criteria = (entry["criteria"] as? [String: String] ?? [:]).compactMapValues(SavedDate.parse)
             return AdvancementProgress(id: id, isDone: entry["done"] as? Bool ?? false, criteria: criteria)
