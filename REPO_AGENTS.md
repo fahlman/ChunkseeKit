@@ -747,11 +747,12 @@ WeightedVariants/MultiPartModel collectParts calls establish expected selections
 API tests need no jar. This additive API shipped in v0.66.0 on #193 for fahlman/Chunksee#363. Images,
 cache format, close-zoom drawing and timing remain app work after a reviewed release.
 
-`GameAssets.palettedTexture(_:in:)` interprets one 26.3/5023 atlas's generated palette sprites
+`GameAssets.palettedTexture(_:in:)` interprets one readable atlas's generated palette sprites
 through the existing bounded archive reader. `AssetPalettedTexture` carries the original base,
-key-palette and replacement-palette texture IDs; palette resources use the `palettes/` prefix.
+key-palette and replacement-palette texture IDs; palette resources use the `palettes/` prefix
+when present, otherwise an existing older direct texture path is used.
 Paletted, directory and single sources retain their declared precedence, including missing base
-images and later plain overrides. Unsupported source kinds or unverified versions stay unavailable.
+images and later plain overrides. Unsupported source kinds stay unavailable; version labels do not gate lookup.
 Work is bounded to 16 MiB JSON, 256 sources and 4,096 generated sprite entries. No trim/material
 catalog, resource-pack layering, image decoding or mutable cache is added.
 `AssetPaletteMapping` owns the verified 26.3 replacement rule over unpremultiplied ARGB pixels:
@@ -896,8 +897,8 @@ holder has no registry key and therefore selects the fallback. Malformed model/m
 remain unavailable. This reads the selection-driving identity, not the full trim codec or registry.
 `GameAssets.itemModel(for:)` shares AssetItemReader and its bounds, with one case selector for GUI
 and normalized trim keys. TrimMaterialProperty/ArmorTrim and the item componentization fixer
-establish the 26.3/5023 behavior. Non-nil trim keys require that verified version; missing keys
-keep the generic fallback in older jars, preserving their untrimmed armor. Other live properties
+establish the behavior. Trim keys are interpreted independently of jar version labels; missing keys
+keep the generic fallback, preserving untrimmed armor. Other live properties
 keep their static choices, and defaultItemModel retains its existing behavior. These additive APIs
 are unreleased for fahlman/Chunksee#390; client adoption and generated-palette images follow a
 reviewed release. No serialized field, cache version, artwork or app presentation is added.
@@ -923,8 +924,8 @@ share a 4,096-value bound and strings a 16 MiB bound. NBTNumber owns direct Java
 including the NBT tag factories' zero normalization; the existing color reader owns RGB vectors
 and declines nonfinite/out-of-range channels. Mixed-list wrappers are unwrapped by the NBT owner.
 ItemModelSelection includes these facts, using game-compatible Float/Unicode cache identity.
-AssetItemReader resolves 26.3/5023 custom conditions, exact string cases, scaled numeric ranges
-and colors. Custom colors become existing constant tints, avoiding a new public tint enum case.
+AssetItemReader resolves readable custom conditions, exact string cases, scaled numeric ranges
+and colors independently of jar version labels. Custom colors become existing constant tints, avoiding a new public tint enum case.
 Case lookup is shared with GUI/trim; range lookup matches the game's stable Float sort and linear
 versus binary search at 16 entries. Missing/out-of-range values use the game's per-property
 defaults; unsupported selected branches stay unavailable. Default-only illustrations retain their
