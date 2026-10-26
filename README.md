@@ -1574,7 +1574,7 @@ if let plains = definitions["minecraft:plains"] {
 let jarPlains = assets?.biomeDefinition("plains")
 ```
 
-These additive APIs read the verified 26.3 format (data version 5023). Results contain
+These APIs read any game/save version whose biome resources parse. Results contain
 unclamped base temperature/downfall, a 24-bit RGB water color, optional grass, foliage and
 dry-foliage overrides, and the grass modifier (`none`, `dark_forest`, or `swamp`). Colors accept
 six-digit `#RRGGBB` strings, signed Int32 values, or three Float channels in 0...1, using the
@@ -1586,7 +1586,7 @@ World lookup canonicalizes requested IDs and reads only those resource payloads.
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. A missing
 jar makes vanilla unavailable; higher-priority pack definitions can
-still resolve. Missing/other saved data versions return an empty result, and an absent enabled
+still resolve. Save and jar version labels do not restrict these reads, and an absent enabled
 pack list is not replaced with an assumed vanilla pack. File errors propagate.
 
 No Minecraft biome-color table or artwork is bundled. The caller supplies the game file and
