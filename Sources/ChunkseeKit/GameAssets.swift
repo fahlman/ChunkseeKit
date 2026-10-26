@@ -9,7 +9,30 @@ public struct GameAssets: Sendable {
     public struct Version: Sendable, Equatable, Decodable {
         public let id: String
         public let dataVersion: Int32
-        private enum CodingKeys: String, CodingKey { case id, dataVersion = "world_version" }
+        /// The game's release classification, independent of its name. Nil when unavailable.
+        public let isStable: Bool?
+        /// The game's build instant, for ordering installed versions without parsing names.
+        public let buildTime: Date?
+
+        private enum CodingKeys: String, CodingKey {
+            case id, dataVersion = "world_version", isStable = "stable", buildTime = "build_time"
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            id = try values.decode(String.self, forKey: .id)
+            dataVersion = try values.decode(Int32.self, forKey: .dataVersion)
+            isStable = try? values.decode(Bool.self, forKey: .isStable)
+            if let text = try? values.decode(String.self, forKey: .buildTime) {
+                let format = ISO8601DateFormatter()
+                format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let fractional = format.date(from: text)
+                format.formatOptions = [.withInternetDateTime]
+                buildTime = fractional ?? format.date(from: text)
+            } else {
+                buildTime = nil
+            }
+        }
     }
 
     /// Opens a local file and retains its read-only handle, not its complete contents. Opening
