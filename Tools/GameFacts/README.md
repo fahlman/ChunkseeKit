@@ -8,7 +8,7 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
-and profession trade-set associations and natural-spawn defaults.
+and profession trade-set associations, natural-spawn defaults and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -24,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -33,6 +33,11 @@ No world or installed game file is written. Run this only when the shared Mac is
 
 Sources and interpretation:
 
+- `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
+  Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor
+  removes any such ID that has become a real block. It verifies mapper identity for the remaining
+  exceptions. Blockstate-file contents and the registered-block inventory are never bundled;
+  the reader uses file presence only as resource evidence, not as a live registry authority.
 - `EnvironmentAttributes.NATURAL_MOB_SPAWNS.defaultValue` supplies the static default candidates,
   including known empty defaults. `Weighted.codec(MapCodec)` is probed for an omitted weight;
   if the game requires one, the reader leaves an unreadable/missing weight unknown. The tool

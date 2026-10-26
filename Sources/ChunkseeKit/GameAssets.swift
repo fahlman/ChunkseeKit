@@ -82,6 +82,18 @@ public struct GameAssets: Sendable {
         try? AssetBlockReader(assets: self).read(state)
     }
 
+    /// Whether this selected jar contains a blockstate definition, excluding code-generated
+    /// rendering-only definitions such as entity frames. Reads the validated ZIP directory,
+    /// not a bundled block inventory; custom IDs and any parseable version are supported.
+    /// A definition is resource evidence, not proof of registration in a running/modded game
+    /// or of a readable model/texture. Nil means the path or archive snapshot is unavailable.
+    /// With no game files, callers retain nil through optional chaining on GameAssets?.
+    public func containsBlockDefinition(_ identifier: String) -> Bool? {
+        guard let id = Self.resourceID(identifier),
+              let present = resourcePresence(id.description, directory: "blockstates", extension: "json") else { return nil }
+        return present && !GeneratedNonBlockDefinitions.ids.contains(id.description)
+    }
+
     /// Original PNG bytes, CRC-checked and bounded to 16 MiB. Decoding and animation are client work.
     public func texture(_ identifier: String) -> Data? {
         resource(identifier, directory: "textures", extension: "png")
@@ -110,6 +122,11 @@ public struct GameAssets: Sendable {
     func containsResource(_ identifier: String, directory: String, extension suffix: String) -> Bool {
         guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return false }
         return resources.contains(path)
+    }
+
+    func resourcePresence(_ identifier: String, directory: String, extension suffix: String) -> Bool? {
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return nil }
+        return resources.presence(of: path)
     }
 
     private static func resourcePath(_ identifier: String, directory: String, extension suffix: String,
