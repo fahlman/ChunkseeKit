@@ -235,12 +235,18 @@ CLI item/text searches share inventory-plus-equipment selection and a deduplicat
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
 CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than
 expand an array of every block index before counting.
-`NetherPortal.roundTrip` owns the default-entry two-way/one-way classification; the CLI presents
-its result, including a return that would create another portal. Existing single-link prediction
-rules and `NetherPortal.Link` are unchanged; the additive API is available starting in v0.28.0.
-Portal grouping checks neighbor additions, and dimension scaling clamps before converting to
-Int. Link distances use Double subtraction/squares, matching 26.3 Vec3i/PortalForcer, so extreme
-saved heights cannot trap. Search radii, border bounds and the lower-Y tie rule are unchanged.
+`NetherPortal.destination`, link and roundTrip require resolved dimension types and saved border
+facts. DimensionType.coordinateScale is independently optional, validated with generated codec
+bounds; runtime jar/folder/ZIP/inline values own every scale. Portal coordinates use source/target
+scale, the destination border's current saved size, the game's clamp margin and floor conversion.
+The same border bounds exclude candidate portals outside the border. Code-only pairing/search
+radii and border limits/default size come from Tools/GameFacts; any non-Nether dimension routes
+to the Nether, and the return routes to the Overworld. Unknown outward facts return nil; a known
+outward link with unavailable return facts is retained by RoundTrip.returnUnknown. Empty source
+portal arrays cannot trap link prediction. The CLI accepts an optional game jar and uses the same
+public context. This #228 API migration is intentionally breaking and requires a minor release
+and app adoption. POI grouping, core region/chunk reads and serialized caches are unchanged.
+Predictions do not know later border movement, live portal-block validity or creation terrain.
 
 `Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
 `RegionFacts`. Each present chunk payload is decoded once using the shared format readers.

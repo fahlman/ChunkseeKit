@@ -7,6 +7,9 @@ public struct DimensionType: Sendable, Equatable {
     /// Minecraft's logical height can be smaller than its build height (128 versus 256 in the Nether).
     public let logicalHeight: Int
     public let hasCeiling: Bool
+    /// The dimension's travel-coordinate scale. Missing or invalid metadata stays unavailable
+    /// independently of readable build limits and lighting.
+    public let coordinateScale: Double?
     /// The independent block-light ceiling for the game's monster spawn-light check (0...15).
     /// Missing, invalid or unresolved values stay nil; a value of 15 disables this ceiling.
     public let monsterSpawnBlockLightLimit: Int?
@@ -29,13 +32,16 @@ public struct DimensionType: Sendable, Equatable {
     public var maxY: Int { minY + height - 1 }
     public var buildRange: ClosedRange<Int> { minY...maxY }
 
-    private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool,
+    private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool, coordinateScale: Double?,
                   monsterSpawnBlockLightLimit: Int?, monsterSpawnLightLevel: ClosedRange<Int>?,
                   time: DimensionTime?, baseSkyLighting: SkyLighting?, baseSkyLightLevel: Float?,
                   baseMobSpawnSettings: MobSpawnSettings?) {
         guard height > 0, Self.validYBounds(minY: minY, height: height),
               (0...height).contains(logicalHeight) else { return nil }
         self.minY = minY; self.height = height; self.logicalHeight = logicalHeight; self.hasCeiling = hasCeiling
+        self.coordinateScale = coordinateScale.flatMap {
+            $0.isFinite && (GeneratedPortalFacts.minimumScale...GeneratedPortalFacts.maximumScale).contains($0) ? $0 : nil
+        }
         self.monsterSpawnBlockLightLimit = monsterSpawnBlockLightLimit.flatMap { (0...15).contains($0) ? $0 : nil }
         self.monsterSpawnLightLevel = monsterSpawnLightLevel
         self.time = time
@@ -55,6 +61,7 @@ public struct DimensionType: Sendable, Equatable {
         guard let minY = nbt["min_y"]?.int, let height = nbt["height"]?.int,
               let logical = nbt["logical_height"]?.int, let ceiling = nbt["has_ceiling"]?.bool else { return nil }
         self.init(minY: minY, height: height, logicalHeight: logical, hasCeiling: ceiling,
+                  coordinateScale: nbt["coordinate_scale"]?.double,
                   monsterSpawnBlockLightLimit: nbt["monster_spawn_block_light_limit"]?.int,
                   monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
                   time: DimensionTime(nbt: nbt),
@@ -67,6 +74,7 @@ public struct DimensionType: Sendable, Equatable {
         guard json.count <= ZipResources.maximumResourceSize,
               let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
         self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
+                  coordinateScale: value.coordinateScale,
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
                   monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
                   time: value.time, baseSkyLighting: value.baseSkyLighting,
@@ -77,6 +85,7 @@ public struct DimensionType: Sendable, Equatable {
     private struct Definition: Decodable {
         let minY: Int, height: Int, logicalHeight: Int
         let hasCeiling: Bool
+        let coordinateScale: Double?
         let monsterSpawnBlockLightLimit: Int?
         let monsterSpawnLightLevel: SpawnLightRange?
         let time: DimensionTime?
@@ -84,6 +93,7 @@ public struct DimensionType: Sendable, Equatable {
         let baseSkyLightLevel: Float?
         enum CodingKeys: String, CodingKey {
             case minY = "min_y", height, logicalHeight = "logical_height", hasCeiling = "has_ceiling"
+            case coordinateScale = "coordinate_scale"
             case monsterSpawnBlockLightLimit = "monster_spawn_block_light_limit", monsterSpawnLightLevel = "monster_spawn_light_level"
         }
 
@@ -93,6 +103,7 @@ public struct DimensionType: Sendable, Equatable {
             height = try fields.decode(Int.self, forKey: .height)
             logicalHeight = try fields.decode(Int.self, forKey: .logicalHeight)
             hasCeiling = try fields.decode(Bool.self, forKey: .hasCeiling)
+            coordinateScale = try? fields.decode(Double.self, forKey: .coordinateScale)
             // These independently available facts must not discard valid build limits.
             monsterSpawnBlockLightLimit = try? fields.decode(Int.self, forKey: .monsterSpawnBlockLightLimit)
             monsterSpawnLightLevel = try? fields.decode(SpawnLightRange.self, forKey: .monsterSpawnLightLevel)

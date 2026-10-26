@@ -20,15 +20,18 @@ func poiCommand(_ world: World, _ arguments: Arguments) {
 }
 
 func portalsCommand(_ world: World, _ arguments: Arguments) throws {
+        let types = try world.dimensionTypes(assets: suppliedGameAssets(arguments))
         guard let overworld = world.dimension("overworld"), let nether = world.dimension("the_nether") else {
             fail("this world needs both an Overworld and a Nether")
         }
         let overworldPortals = try overworld.netherPortals(), netherPortals = try nether.netherPortals()
+        var borders: [String: WorldBorder] = [:]
+        for dimension in [overworld, nether] { borders[dimension.id] = try world.worldBorder(of: dimension) }
         func describe(_ p: NetherPortal) -> String { "(\(Int(p.centerX.rounded(.down))), \(p.minY), \(Int(p.centerZ.rounded(.down))))" }
         func show(_ portals: [NetherPortal], _ candidates: [NetherPortal], back: [NetherPortal], label: String) {
             print("\(label): \(portals.count) portals")
             for portal in portals {
-                switch portal.roundTrip(into: candidates, returningThrough: back) {
+                switch portal.roundTrip(into: candidates, returningThrough: back, dimensionTypes: types, borders: borders) {
                 case .twoWay(let target, _)?:
                     print("  \(describe(portal)) -> \(describe(target))")
                 case .oneWay(let target, _, let returning)?:
@@ -42,6 +45,8 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
                     print("  \(describe(portal)) -> \(describe(target))  (one-way: \(note))")
                 case .wouldCreateNewPortal(let destination)?:
                     print("  \(describe(portal)) -> no portal in range; would create one near (\(destination.x), \(destination.y), \(destination.z))")
+                case .returnUnknown(let target, _)?:
+                    print("  \(describe(portal)) -> \(describe(target))  (return unknown)")
                 case nil:
                     print("  \(describe(portal)) -> ?")
                 }

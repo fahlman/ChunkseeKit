@@ -14,12 +14,13 @@
     "equipment_attachments",
     "profession_trade_sets",
     "natural_spawn_defaults",
-    "non_block_definitions"
+    "non_block_definitions",
+    "portal_rules"
   ],
   "clientSHA1": "e877b6a07acd633fb3bb475002175cec036e7b87",
   "extractedSHA256": {
     "entity-types.json": "66fdfdd99fdd7b73fffefe97ad6a52e29ef740d96216ccfd869d51432ce2ed34",
-    "facts.json": "00baf61246a5284fe6984d12551e808d55ab3b1a86ce7109c298b6f828fedbf3"
+    "facts.json": "f3e6955480dd043ea6e31130a0bbdbd70c201869567d7b0d131cd58d96fde80f"
   },
   "minecraft": {
     "build_time": "2026-09-15T11:20:48+00:00",
@@ -49,13 +50,14 @@
     "Tools/GameFacts/ExtractBlockTints.java": "02b37cc4742b19543939ac683d1c733ecd5bb21640794082d23780c7dcbb1cad",
     "Tools/GameFacts/ExtractEnchantmentEffects.java": "ffaa5e1d13bf377b7b9864f212d92c29d4ef986f944881a840b2e2e111a8d6f8",
     "Tools/GameFacts/ExtractEquipmentFacts.java": "d606927f602618942d6e0d6f6874f0679f2b3338f957529ec27512876bda5a86",
-    "Tools/GameFacts/ExtractGameFacts.java": "8c7a3f31c6fa861706e465e7f26a3b4e9442baf14c79df2215910f4f9f88ce10",
+    "Tools/GameFacts/ExtractGameFacts.java": "50173406eaddf36fdca72c60041bc8b111306ad6caa5c9bdd7cf982503f7d611",
     "Tools/GameFacts/ExtractItemModelFacts.java": "eb89922e3e4600f2b950357eea289a23a46053f603d7e683628bfb50d3192d61",
     "Tools/GameFacts/ExtractMobSpawnFacts.java": "d8c7d44005b65da58841f70e347b44265376cea9d7dd008d1dd2e3bf02407f35",
+    "Tools/GameFacts/ExtractPortalFacts.java": "7a2bc0074479417c0db5bcd8b00a1807f283f8a2c0fec78da0cccc44d3178b2a",
     "Tools/GameFacts/ExtractSpawnEggs.java": "7f7b6f24175c42ec56f024c806f91ca4184e4997be56768aae6f4f84565a4eba",
     "Tools/GameFacts/ExtractSpecialItemModels.java": "8fda563fc726f8d3c796bf0db514954f1e3aaf5296878478f77f2c155cc90c16",
     "Tools/GameFacts/ExtractTradingFacts.java": "9ca04a78417f018741cc650e9d6d3b17564675e3eb2f427dc86ff651f960efb4",
-    "Tools/GameFacts/regenerate.py": "db13d45e712978581fe5c6d86a738b3ebc138357097fe793b9c9760be8e525a8",
+    "Tools/GameFacts/regenerate.py": "f7697f1581943305e31edde30139233c998102cdfe72a3824e5ce1286acde295",
     "Tools/GameFacts/special_item_models.py": "b530d0399a2297bb961a3d70788db26d56e48206f55eeeecf9fd26e97b9bf10e"
   }
 }
