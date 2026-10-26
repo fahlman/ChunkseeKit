@@ -1038,13 +1038,20 @@ nitwits and custom professions remain distinct. This is not a work/trade capabil
 profession, Codable data and cache interpretation are unchanged. This additive API is available in v0.39.0;
 the app's job-label adoption is tracked on #51.
 
-`Villager.supportsTrading` owns the vanilla 26.3 trading-profession rule beside `isUnemployed`.
-Saved readable offers establish trading first; otherwise the 13 vanilla trading professions
-return true, `none`/`nitwit` false, and unknown/custom/malformed professions nil. Offers are
-created lazily in the game, so their absence alone cannot rule out trading. The fact does not
-claim current interaction readiness or resolve custom registries. It is an additive computed
-API over existing fields, with no Codable or RegionFacts interpretation change. App adoption
-and the Profession label follow a published release, tracked on fahlman/Chunksee#295 and #131.
+`Villager.supportsTrading(using:)` combines saved offers with an immutable `TradingDefinitions`
+snapshot from `World.tradingDefinitions(assets:)` or `GameAssets.tradingDefinitions()`. Saved
+readable offers establish trading first. The single release tool extracts each profession's
+actual `tradeSetsByLevel` links; trade-set folder names do not establish a new profession.
+The selected runtime definitions, composed villager-trade tags and readable trade resources
+establish potential candidates. A known positive constant selection establishes true;
+known empty selections establish false. Missing code/resources or dynamic selection amounts
+stay unknown when no positive answer is available. Known professions with no links stay false
+without resources. No offers are rolled and merchant conditions, current level, age, sleep and
+sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
+a malformed override never reveals the lower definition. There is no version gate.
+This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
+fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the
+world's resource snapshot and pass it when adopting the release.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.

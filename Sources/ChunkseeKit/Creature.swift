@@ -102,21 +102,17 @@ public struct Villager: Sendable, Equatable, Codable {
     public var isUnemployed: Bool? {
         professionID.map { $0.namespace == "minecraft" && $0.path == "none" }
     }
-    /// Whether saved offers or a vanilla 26.3 profession establish trading. Readable saved
-    /// trades take precedence, including command-edited villagers. Without them, the 13
-    /// trading professions return true, `none` and `nitwit` return false, and unknown,
-    /// custom or malformed professions return nil. Does not determine interaction readiness
-    /// (such as age or sleeping), nor whether an offer is sold out.
-    public var supportsTrading: Bool? {
+    /// Whether saved offers or the profession's runtime definitions establish potential trading.
+    /// Saved offers win, including custom/edited villagers. Known code with no trade-set links
+    /// returns false; missing code or unresolved definitions return nil. The caller retains one
+    /// resource snapshot. This does not roll offers or evaluate merchant conditions, age, sleep,
+    /// current level or sold-out status. It replaces the old no-context property.
+    public func supportsTrading(using definitions: TradingDefinitions?) -> Bool? {
         if !trades.isEmpty { return true }
-        guard let id = professionID, id.namespace == "minecraft" else { return nil }
-        switch id.path {
-        case "none", "nitwit": return false
-        case "armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
-             "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
-             "weaponsmith": return true
-        default: return nil
-        }
+        guard let id = professionID?.description,
+              let sets = GeneratedTradingFacts.professions[id] else { return nil }
+        if sets.isEmpty { return false }
+        return definitions?.professions[id]
     }
     /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?

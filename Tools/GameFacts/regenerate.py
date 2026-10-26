@@ -30,6 +30,18 @@ def keyed_values(values, prefix="minecraft:"):
     return "[" + ", ".join(entries) + "]"
 
 
+def trading_source(facts, notice):
+    result = notice + "// " + facts["source"] + ". Trade contents are never bundled.\n"
+    result += "enum GeneratedTradingFacts {\n    static let professions: [String: [Int: String]] = [\n"
+    for profession, levels in sorted(facts["professions"].items()):
+        for identifier in [profession] + list(levels.values()):
+            if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+                raise ValueError("Unsupported trading identifier: " + identifier)
+        values = ", ".join(f"{int(level)}: {quoted(value)}" for level, value in sorted(levels.items(), key=lambda x: int(x[0])))
+        result += f"        {quoted(profession)}: [" + (values or ":") + "],\n"
+    return result + "    ]\n}\n"
+
+
 def block_defaults_source(blocks, notice):
     if not blocks:
         raise ValueError("No registered blocks extracted")
@@ -328,7 +340,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedBlockFluids.swift": block_fluids_source(facts["blockFluids"], notice),
             "Sources/ChunkseeKit/GeneratedSpecialItemModels.swift": generated_special_models(facts["specialItemModels"], notice),
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
-            "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source}
+            "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source,
+            "Sources/ChunkseeKit/GeneratedTradingFacts.swift": trading_source(facts["trading"], notice)}
 
 
 def main():
@@ -357,12 +370,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "special_item_models", "spawn_egg_relationships", "equipment_attachments"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
