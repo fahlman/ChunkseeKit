@@ -26,7 +26,7 @@ extension GameAssets {
 
 extension World {
     /// Reads requested tags from the world's enabled folder/ZIP packs and a supplied game jar
-    /// at least as new as the save. Older or absent jars leave vanilla resources unavailable.
+    /// chosen by the caller. An absent jar leaves vanilla resources unavailable.
     /// Keys are canonical tag IDs. Missing or unreadable tags are omitted, distinct from a
     /// valid empty tag. A higher replacing tag can settle its contents without a lower source.
     /// No default enabled-pack list is invented. Other read errors and cancellation propagate.

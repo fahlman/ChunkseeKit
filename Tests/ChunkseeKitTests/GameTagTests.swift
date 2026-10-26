@@ -46,6 +46,25 @@ import ChunkseeKitTestSupport
         #expect(try disabled.tags(for: ["test:replace"], in: "item", assets: nil).isEmpty)
     }
 
+    @Test func selectedJarSuppliesResourcesForOlderNewerAndUnlabeledSaves() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try folder("override", root: root, entries: [tag("block", "air", ["test:pack_air"])])
+        for savedVersion in [nil, 1, 5023, 999999] as [Int32?] {
+            let world = try world(root, packs: ["vanilla", "file/override"], version: savedVersion)
+            let file = root.appendingPathComponent("level.dat"), before = try Data(contentsOf: file)
+            for jarVersion in [1, 5023, 999999] {
+                let jar = try assets([tag("block", "air", ["test:game_air"])], version: jarVersion)
+                let result = try world.tags(for: ["air", "test:missing"], in: "block", assets: jar)
+                #expect(result["minecraft:air"]?.members.map(\.id) == ["test:game_air", "test:pack_air"])
+                #expect(result["test:missing"] == nil)
+            }
+            #expect(try world.tags(for: ["air"], in: "block", assets: nil).isEmpty)
+            #expect(world.level.dataVersion == savedVersion.map(Int.init))
+            #expect(try Data(contentsOf: file) == before)
+        }
+    }
+
     @Test func optionalMissingTagsAreSkippedButMalformedOrCyclicTagsStayUnknown() throws {
         let jar = try assets([
             tag("block", "test:optional", [["id": "#test:absent", "required": false], "test:real"]),
@@ -128,9 +147,10 @@ import ChunkseeKitTestSupport
         try Fixtures.write(TestZIP.zip([metadata] + entries), to: root.appendingPathComponent("datapacks/\(name)"))
     }
 
-    private func world(_ root: URL, packs: [String]) throws -> World {
-        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["DataVersion": .int(999_999),
-            "DataPacks": .compound(["Enabled": .list(packs.map(NBT.string))])])]), to: root.appendingPathComponent("level.dat"))
+    private func world(_ root: URL, packs: [String], version: Int32? = 999_999) throws -> World {
+        var fields: [String: NBT] = ["DataPacks": .compound(["Enabled": .list(packs.map(NBT.string))])]
+        fields["DataVersion"] = version.map(NBT.int)
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(fields)]), to: root.appendingPathComponent("level.dat"))
         return try World(contentsOf: root)
     }
 }

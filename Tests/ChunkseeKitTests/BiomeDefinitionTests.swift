@@ -50,11 +50,11 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         _ = try folder("override", at: root, entries: [resource("example:custom", plain)])
         let world = try world(root, packs: ["vanilla", "file/override"])
-        for reader in [nil, try assets([resource(plain)], version: 1)] {
-            #expect(Set(try world.biomeDefinitions(assets: reader).keys) == ["example:custom"])
-        }
-        #expect(Set(try world.biomeDefinitions(assets: assets([resource(plain)], version: 9999)).keys)
+        #expect(Set(try world.biomeDefinitions(assets: nil).keys) == ["example:custom"])
+        for version: Int32 in [1, 9999] {
+            #expect(Set(try world.biomeDefinitions(assets: assets([resource(plain)], version: version)).keys)
                 == ["example:custom", "minecraft:plains"])
+        }
         let reader = try assets([resource(plain)])
         for version in [nil, 1000, 9999] as [Int32?] {
             let old = try self.world(root, packs: ["vanilla", "file/override"], version: version)
@@ -346,18 +346,17 @@ import Testing
         #expect(try known.biomeDefinitions(for: ["plains"], assets: reader)["minecraft:plains"]?.waterColor == 0x3f76e4)
     }
 
-    @Test func missingAndOlderJarsDoNotPreventHigherPackDefinitions() throws {
+    @Test func missingJarsKeepHigherPackDefinitionsAndOlderJarsSupplyTheirResources() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         _ = try folder("override", at: root, entries: [resource("example:custom", plain)])
         let world = try world(root, packs: ["vanilla", "file/override"])
         let ids: Set<String> = ["plains", "example:custom"]
-        for reader in [nil, try assets([resource(plain)], version: 1)] {
-            let result = try world.biomeDefinitions(for: ids, assets: reader)
-            #expect(Set(result.keys) == ["example:custom"])
+        #expect(Set(try world.biomeDefinitions(for: ids, assets: nil).keys) == ["example:custom"])
+        for version: Int32 in [1, 9999] {
+            let result = try world.biomeDefinitions(for: ids, assets: assets([resource(plain)], version: version))
+            #expect(Set(result.keys) == ["example:custom", "minecraft:plains"])
         }
-        #expect(Set(try world.biomeDefinitions(for: ids, assets: assets([resource(plain)], version: 9999)).keys)
-                == ["example:custom", "minecraft:plains"])
         for version in [nil, 1000, 9999] as [Int32?] {
             let old = try self.world(root, packs: ["vanilla", "file/override"], version: version)
             #expect(try old.biomeDefinitions(for: ids, assets: assets([resource(plain)])).isEmpty)

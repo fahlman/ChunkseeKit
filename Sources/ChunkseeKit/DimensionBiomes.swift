@@ -1,6 +1,6 @@
 extension World {
     /// Biome IDs declared by the game's standard association tag for this dimension.
-    /// Reads a supplied jar at least as new as the save and enabled data packs at runtime;
+    /// Reads the caller-selected jar and enabled data packs at runtime, regardless of save version;
     /// no biome inventory is built in. The running game's data also applies to older worlds.
     /// These tags describe associations, not proof of saved usage or custom-generator output.
     ///
