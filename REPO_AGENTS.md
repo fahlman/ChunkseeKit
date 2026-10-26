@@ -1144,10 +1144,21 @@ cached omissions and health assumptions. No new version gate or value inventory 
 the app's PetDetailText.appearance must unwrap variant and render other known facts when it
 adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout is not changed here.
 
+`BlockState.containsFluid(in:)` owns fluid-tag membership over code-generated BlockState.getFluidState
+answers, with known-empty states independent of a missing runtime tag. The caller resolves the
+world's composed fluid tag once; water membership is never bundled. `hasSolidUpperFace` separately
+owns the isFaceSturdy(UP) support fact used by MapItem.getCorrectStateForFluidBlock, preserving
+unknown results for rules that query world/block-entity context. Tools/GameFacts samples every
+registered state and removes only proven irrelevant properties. Both facts share BlockProperties
+for omitted defaults; explicit relevant saved values win. These additive queries do not change
+existing scans, serialized facts, rendering or cache interpretation. App #443 adoption follows
+release and owns its water-surface presentation and required paired renderer timing.
+
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
-relationships, saved equipment attachment identities, block seed methods and block tints. It verifies the installed stable
+relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
+models, fluid identities and upper-face support. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot

@@ -7,7 +7,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
-and block seed methods, tints and static special-item models.
+and block seed methods, tints, fluid states, upper-face support and static special-item models.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -23,7 +23,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedSpecialItemModels.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedSpecialItemModels.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -115,6 +115,16 @@ Sources and interpretation:
   unknown block code; neither is used to decide existence or picture availability. Raw samples
   retain official method results for public-API verification. No color formulas or block IDs
   are maintained by hand, and the generated facts have no runtime version gate.
+
+- BlockState.getFluidState supplies every registered state's contained fluid identity or known
+  emptiness. Membership in the water tag is not generated; the caller supplies that composed
+  runtime tag. BlockState.isFaceSturdy(UP), used by MapItem.getCorrectStateForFluidBlock, supplies
+  the independent full upper-face support fact. A BlockGetter proxy refuses world queries, so
+  a shape needing neighbors or block entities remains unknown rather than using an empty world.
+  Every possible state is sampled. Properties are removed from each result only when all
+  registered combinations prove them irrelevant; this keeps unrelated saved errors independent.
+  The shared generated block defaults supply omitted properties at runtime. These facts are not
+  an existence catalog, texture-coverage estimate, fluid simulation or version gate.
 
 - LayerDefinitions and the game's special-renderer model builders supply baked model polygons,
   UVs, skin dimensions and static inventory poses. The extractor calls each supported model's
