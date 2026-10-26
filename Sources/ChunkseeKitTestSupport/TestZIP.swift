@@ -3,22 +3,31 @@ import Foundation
 import ChunkseeKit
 
 /// Synthetic archives shared by the ZIP, data-pack and game-asset reader tests.
-enum TestZIP {
+public enum TestZIP {
     /// Independent central/local header writer; no production ZIP parsing or framing is reused.
-    struct Entry {
-        let path: String, text: String
-        var data: Data?
-        var compressed = false
-        var flags: UInt16 = 0
-        var wrongCRC = false
-        var savedSize: UInt32?
-        var mode: UInt32 = 0o100644
-        var descriptorSignature = true
-        var payloadOverride: [UInt8]?
-        var extra: [UInt8] = []
+    public struct Entry: Sendable {
+        public let path: String, text: String
+        public var data: Data?
+        public var compressed = false
+        public var flags: UInt16 = 0
+        public var wrongCRC = false
+        public var savedSize: UInt32?
+        public var mode: UInt32 = 0o100644
+        public var descriptorSignature = true
+        public var payloadOverride: [UInt8]?
+        public var extra: [UInt8] = []
+
+        public init(path: String, text: String, data: Data? = nil, compressed: Bool = false,
+                    flags: UInt16 = 0, wrongCRC: Bool = false, savedSize: UInt32? = nil,
+                    mode: UInt32 = 0o100644, descriptorSignature: Bool = true,
+                    payloadOverride: [UInt8]? = nil, extra: [UInt8] = []) {
+            self.path = path; self.text = text; self.data = data; self.compressed = compressed
+            self.flags = flags; self.wrongCRC = wrongCRC; self.savedSize = savedSize; self.mode = mode
+            self.descriptorSignature = descriptorSignature; self.payloadOverride = payloadOverride; self.extra = extra
+        }
     }
 
-    static func zip(_ entries: [Entry], comment: [UInt8] = []) throws -> [UInt8] {
+    public static func zip(_ entries: [Entry], comment: [UInt8] = []) throws -> [UInt8] {
         var local = [UInt8](), central = [UInt8]()
         func number<T: FixedWidthInteger>(_ value: T, into bytes: inout [UInt8]) {
             withUnsafeBytes(of: value.littleEndian) { bytes.append(contentsOf: $0) }

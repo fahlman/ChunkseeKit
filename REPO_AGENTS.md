@@ -72,7 +72,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo`, `BiomeSampler` | Foundation, CryptoKit, `CZlib` |
 | `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; matching-item and storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
-| `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
+| `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`), plus independent synthetic ZIP framing (`TestZIP.swift`) | Foundation, `ChunkseeKit`, `CZlib` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
 | `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs and shared save fixtures | Foundation, `ChunkseeIndex`, `ChunkseeKit`, `ChunkseeKitTestSupport` |
 
@@ -99,14 +99,20 @@ that owner; app names, prompts, symbols, category membership and result formatti
 the library. This additive API is available in v0.44.0 and adopted by fahlman/Chunksee#385.
 Retained world-index state and typed result aggregation remain separate work on fahlman/Chunksee#214.
 
-`ChunkseeIndex.NotableBlock` owns the app's existing nine block-search groups and exact ID catalog.
-Its nested Deposit groups the core reader's per-ID counts and enclosing section-height bounds,
-combining ore variants and ordering by the group's raw value. Unknown IDs and common blocks outside
-the catalog remain excluded. These are indexed section ranges, not exact block locations. Core
-scan options and file interpretation are unchanged; client names and search-result wording stay
-outside the module. This additive API is available in v0.45.0; app adoption is fahlman/Chunksee#386.
-It prepares compact typed region contributions without retaining unused heightmaps or repeating
-group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
+`ChunkseeIndex.NotableBlock` owns the app's nine product search groups. Its immutable Catalog
+consumes the shared block-tag reader's diamond_ores, emerald_ores, gold_ores and lapis_ores;
+there is no copied ore-member list. Nether gold remains its explicitly separate product group,
+removed from gold, and the other individual block groups remain product choices. Missing tags
+stay distinct from known empty tags. Saved members of overlapping tags count in every relevant
+group, including optional declarations whose IDs occur in the save. Deposit groups per-ID counts
+and enclosing section-height bounds in stable group order. Labels and symbols remain client work.
+The same catalog supplies scan blockIDs and RegionIndex/DimensionIndex policy; mismatched
+replacement catalogs are rejected. A resource change requires a fresh dimension index and scans
+for the current IDs. This unreleased #228 change intentionally removes static ids/byID and
+requires catalog parameters on grouped/RegionIndex/DimensionIndex, so it needs a minor release
+and app adoption. Core decoding, serialized RegionFacts and its interpretation version do not
+change. Public tests compose jar/folder/ZIP tags, scan selected IDs, aggregate across groups,
+retain raw palette IDs, and reject contributions from another resource snapshot.
 
 `ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
 failed-read retention, selected deletion and complete cross-region aggregates. Its public
@@ -114,7 +120,7 @@ regionsToRead method supplies the read set for both the client scheduler and upd
 pass always covers all available regions; a completed empty/failed pass is distinct from never-read.
 A broad pass removes
 all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
-the dimension, selected/available coordinates and explicit cave-membership set. Empty successful
+the dimension, selected/available coordinates, explicit cave-membership set and block catalog. Empty successful
 reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
 native marker sort/presentation remains a client concern. Portal and biome joins happen after all
 retained contributions are combined. Heightmaps, inhabited-time grids and ordinary unnamed mobs
@@ -1062,9 +1068,17 @@ selection or a level with no code link establishes false. Missing code, level or
 dynamic selection amounts stay unknown. Offers are not rolled and merchant conditions, age,
 sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
 a malformed override never reveals the lower definition. There is no version gate.
-This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
-fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the
-world's resource snapshot and pass it when adopting the release.
+This intentionally replaces the old no-argument property, requiring a minor release. The app must
+retain the world's resource snapshot and pass it when adopting the release.
+`Villager.offerState` owns initialized-offer state and recipe readability. AbstractVillager stores
+every initialized offer list; MerchantOffers.CODEC omits Recipes when empty. Saved empty Offers
+therefore returns false without consulting resources. TagValueInput.read keeps codec partial
+values: non-compound Offers is uninitialized, while non-list Recipes is initialized empty. Only
+uninitialized offers use current-level definitions. Incomplete lists retain their readable recipes and otherwise stay unknown, including
+Offers-only records without VillagerData. The optional Codable state leaves older standalone
+records' presence unknown without discarding trades. RegionFacts interpretation 20 invalidates
+the former absence/empty/unreadable conflation. This additive API is the #228 follow-up to #267;
+trade-price and sold-out numeric defaults remain a separate #222 code-fact finding.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.

@@ -139,13 +139,22 @@ if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching 
 let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
 ```
 
-**v0.45.0:** `NotableBlock` owns the existing block-search catalog and its exact saved IDs.
-`NotableBlock.Deposit.grouped(_:)` combines the core reader's per-ID deposits into those groups,
-including ordinary/deepslate ore variants, and returns counts and enclosing section-height ranges.
-Results are ordered by the group's raw value; unknown IDs and blocks outside this catalog are
-omitted. The range is not an exact ore position. The core scan still accepts any chosen block IDs;
-this catalog does not expand the app's existing scan or search scope. Names and display wording
-remain in the app; adoption is tracked on fahlman/Chunksee#386.
+**Notable block groups:** `NotableBlock` keeps the existing nine product search groups.
+Its immutable `Catalog` takes diamond, emerald, gold and lapis membership from the world's
+composed block tags; custom and optional declared IDs count when found in saved blocks. Nether
+gold remains a separate product group and is explicitly removed from the gold group. Ancient
+debris, spawners, trial spawners and budding amethyst remain individually selected product IDs.
+A missing tag returns nil from `ids(for:)`, distinct from a known empty set; there is no fallback
+ore inventory. An ID in multiple tags contributes to each corresponding group.
+
+Resolve `NotableBlock.tagIDs` once through `World.tags(for:in:assets:)`, construct a catalog and
+use its `blockIDs` for the scan. Pass that same catalog to `Deposit.grouped(_:using:)`,
+`RegionIndex` and `DimensionIndex`. Counts retain enclosing section-height ranges, not exact
+block positions. Group order uses the group's raw value; labels and symbols remain client choices.
+This intentionally replaces the static `ids`/`byID` APIs and adds required catalog parameters,
+requiring a minor release and app migration. A new resource snapshot needs a new dimension index
+and scans for its current block IDs; replacements made under a different catalog are rejected.
+Core decoding, serialized RegionFacts and its interpretation version are unchanged.
 
 **v0.46.0:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
 terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
@@ -155,7 +164,7 @@ selection reconciles the whole dimension. A partial selection leaves other regio
 the first completed pass. Call `regionsToRead(available:selected:)` to schedule the reads: the first
 pass always reads all available regions, even after a partial notification. `updating` uses that same
 read-set rule. A completed empty or failed pass is distinct from a never-read index.
-Only replacements with matching dimension/cave policy and selected available coordinates are accepted.
+Only replacements with matching dimension, cave policy, block catalog and selected available coordinates are accepted.
 
 Callers explicitly supply the cave-biome IDs; the library does not define a new cave-membership rule.
 `CreatureEntry` keeps villagers, owned pets and named creatures with supported locations, using that
@@ -167,8 +176,11 @@ and publication remain outside the index. These values introduce no persisted ca
 
 ```swift
 let caves: Set<String> = ["minecraft:lush_caves"] // example client policy
-let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves)
-let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves)
+let tags = try world.tags(for: NotableBlock.tagIDs, in: "block", assets: assets)
+let blocks = NotableBlock.Catalog(tags: tags)
+let facts = try dimension.scan(region: position, options: .init(blockIDs: blocks.blockIDs))
+let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves, notableBlocks: blocks)
+let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves, notableBlocks: blocks)
 let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
 ```
 
@@ -222,7 +234,11 @@ Add it to a test target with
 The reader and CLI do not depend on this product. This release adds no breaking reader APIs
 and does not change saved-data interpretation or cache versions.
 
-Its public `Fixtures` builders are the same ones used by the library and CLI tests:
+Its public `Fixtures` builders are the same ones used by the library and CLI tests.
+The shared `TestZIP` builder also supplies synthetic game jars/data packs for both Kit and Index
+tests; its ZIP framing is independent of the production decoder. It uses the existing system zlib.
+
+For example:
 packed indices, sections, chunks, region files, UUID int arrays and compressed NBT files.
 They accept explicit NBT so tests can describe unusual or incomplete saves. For example:
 
@@ -1087,9 +1103,18 @@ selection or a level with no code link establishes false. Missing code, level or
 dynamic selection amounts stay unknown. Offers are not rolled and merchant conditions, age,
 sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
 a malformed override never reveals the lower definition. There is no version gate.
-This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
-fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the
-world's resource snapshot and pass it when adopting the release.
+This intentionally replaces the old no-argument property, requiring a minor release. The app must
+retain the world's resource snapshot and pass it when adopting the release.
+
+`Villager.offerState` retains whether the game has an uninitialized list, a complete readable
+list or recipes Kit could not fully read. Minecraft saves an initialized empty list as `Offers: {}` (Recipes is optional), so
+both that compound and an empty Recipes list establish no saved trades. TagValueInput keeps codec partial values: a non-compound Offers is uninitialized and uses
+current definitions, while a non-list Recipes becomes an initialized empty list. Only
+uninitialized offers allow the current-level definition query. Incomplete saved recipes preserve every readable trade;
+without a readable trade the answer stays unknown. Offers without VillagerData still retain
+these facts. Older standalone Codable values decode with unknown offerState, preserving readable
+trades without guessing whether an empty list was saved. RegionFacts interpretation 20 requires
+a rescan for this distinction; the new optional property and enum are additive public API.
 
 `Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
 matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
@@ -1142,8 +1167,8 @@ no saved `storage` slot. It is not a replacement for the animal's carried invent
 cover the nautilus, zombie nautilus and camel husk in 26.3.
 
 Stored fields remain optional so old cached creatures still decode. RegionFacts interpretation
-version 19 includes the additional saved appearance traits, resource-derived health and legacy
-equipment interpretation. Making
+version 20 includes the additional saved appearance traits, resource-derived health, legacy
+equipment interpretation and saved-offer state. Making
 `CreatureAppearance.variant` optional is an intentional breaking API change requiring a minor
 release: clients must unwrap it independently of `markings` and `traits`, and must not discard an
 appearance because its variant is nil. The app's `PetDetailText.appearance` needs this migration

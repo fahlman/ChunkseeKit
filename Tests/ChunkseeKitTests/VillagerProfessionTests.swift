@@ -1,3 +1,4 @@
+import ChunkseeKitTestSupport
 import Foundation
 import Testing
 import ChunkseeKit
@@ -51,7 +52,7 @@ import ChunkseeKit
         #expect(villager.isUnemployed == nil)
     }
 
-    @Test func tradingProfessionsDoNotNeedOffersToHaveBeenSaved() throws {
+    @Test func currentDefinitionsApplyOnlyBeforeOffersHaveBeenSaved() throws {
         let trading = ["armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
                        "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
                        "weaponsmith"]
@@ -63,7 +64,8 @@ import ChunkseeKit
                 for offersSaved in [false, true] {
                     if offersSaved { nbt["Offers"] = .compound(["Recipes": .list([])]) }
                     let villager = try #require(Villager(.compound(nbt)))
-                    #expect(villager.supportsTrading(using: definitions) == trading.contains(profession), "Saved profession: \(saved)")
+                    let expected = !offersSaved && trading.contains(profession)
+                    #expect(villager.supportsTrading(using: definitions) == expected, "Saved profession: \(saved)")
                     #expect(villager.level == 1 && villager.trades.isEmpty)
                 }
             }
@@ -109,8 +111,11 @@ import ChunkseeKit
         let definitions = try tradingDefinitions(for: ["farmer"])
         let old = Data(#"{"profession":"minecraft:nitwit","level":1,"trades":[]}"#.utf8)
         var villager = try JSONDecoder().decode(Villager.self, from: old)
-        #expect(villager.supportsTrading(using: definitions) == false && villager.level == 1)
+        #expect(villager.supportsTrading(using: definitions) == nil && villager.level == 1)
+        #expect(villager.offerState == nil)
         villager.profession = "minecraft:farmer"
+        #expect(villager.supportsTrading(using: definitions) == nil)
+        villager.offerState = .uninitialized
         #expect(villager.supportsTrading(using: definitions) == true)
         villager.profession = "example:farmer"
         #expect(villager.supportsTrading(using: definitions) == nil)
@@ -124,7 +129,7 @@ import ChunkseeKit
         #expect(villager.supportsTrading(using: definitions) == true && decoded.supportsTrading(using: definitions) == true)
         #expect(decoded == villager)
         let fields = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        #expect(Set(fields.keys) == ["profession", "level", "trades"])
+        #expect(Set(fields.keys) == ["profession", "level", "trades", "offerState"])
         villager.trades = []
         #expect(villager.supportsTrading(using: definitions) == nil)
     }
