@@ -13,8 +13,10 @@ extension BlockState {
     /// This describes block models, not item or particle tints. Water fluid rendering uses the
     /// biome's water color directly; its particle-only block tint is white here, as in the game.
     public func tintSource(at index: Int) -> BlockTint? {
-        guard index >= 0, let name = Identifier(id),
-              let sources = GeneratedBlockTints.sources[name.description] else { return nil }
+        guard index >= 0 else { return nil }
+        // Saved IDs are normally canonical. Parse aliases only after a direct lookup misses.
+        guard let sources = GeneratedBlockTints.sources[id]
+            ?? Identifier(id).flatMap({ GeneratedBlockTints.sources[$0.description] }) else { return nil }
         guard index < sources.count else { return GeneratedBlockTints.missingSource }
         switch sources[index] {
         case .fixed(let tint): return tint
