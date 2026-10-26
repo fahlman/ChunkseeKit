@@ -117,9 +117,7 @@ public struct Dimension: Sendable {
     func entityChunks(x: Int, z: Int) throws -> [NBT] {
         let position = ChunkPosition(x: x, z: z)
         var result: [NBT] = []
-        if let file = try region(x: position.region.x, z: position.region.z),
-           let terrain = try file.chunkNBT(localX: position.localX, localZ: position.localZ,
-                                           skipping: Chunk.keysNotNeededForEmbeddedEntities),
+        if let terrain = try rawChunk(.terrain, at: position, skipping: Chunk.keysNotNeededForEmbeddedEntities),
            let entities = SaveDataUpgrade.terrainEntityChunk(terrain) { result.append(entities) }
         if let separate = try entityChunk(x: x, z: z) { result.append(separate) }
         return result
@@ -127,9 +125,15 @@ public struct Dimension: Sendable {
 
     /// Shared raw read so creature decoding retains the entity chunk's DataVersion.
     func entityChunk(x: Int, z: Int) throws -> NBT? {
-        let position = ChunkPosition(x: x, z: z)
-        guard let region = try region(.entities, x: position.region.x, z: position.region.z) else { return nil }
-        return try region.chunkNBT(localX: position.localX, localZ: position.localZ)
+        try rawChunk(.entities, at: ChunkPosition(x: x, z: z))
+    }
+
+    private func rawChunk(_ folder: Folder, at position: ChunkPosition,
+                          skipping: Set<String> = []) throws -> NBT? {
+        let url = regionURL(folder, at: position.region)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try RegionFile.chunkNBT(contentsOf: url, localX: position.localX,
+                                       localZ: position.localZ, skipping: skipping)
     }
 }
 

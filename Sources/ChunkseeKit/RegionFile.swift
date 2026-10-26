@@ -53,10 +53,14 @@ public struct RegionFile: Sendable {
 
     private func headerInt(_ offset: Int) -> UInt32 {
         guard !bytes.isEmpty else { return 0 }
+        return Self.headerInt(bytes, at: offset)
+    }
+
+    private static func headerInt(_ bytes: [UInt8], at offset: Int = 0) -> UInt32 {
         return UInt32(bytes[offset]) << 24 | UInt32(bytes[offset + 1]) << 16 | UInt32(bytes[offset + 2]) << 8 | UInt32(bytes[offset + 3])
     }
 
-    private func headerIndex(_ localX: Int, _ localZ: Int) throws -> Int {
+    private static func headerIndex(_ localX: Int, _ localZ: Int) throws -> Int {
         guard (0..<32).contains(localX), (0..<32).contains(localZ) else {
             throw RegionError.chunkOutOfBounds(localX: localX, localZ: localZ)
         }
@@ -65,7 +69,7 @@ public struct RegionFile: Sendable {
 
     /// Whether the chunk at region-local coordinates has been generated.
     public func containsChunk(localX: Int, localZ: Int) -> Bool {
-        guard let i = try? headerIndex(localX, localZ) else { return false }
+        guard let i = try? Self.headerIndex(localX, localZ) else { return false }
         return headerInt(i) != 0
     }
 
@@ -78,7 +82,7 @@ public struct RegionFile: Sendable {
 
     /// When the chunk was last saved.
     public func timestamp(localX: Int, localZ: Int) throws -> Date? {
-        let seconds = headerInt(Self.sectorSize + (try headerIndex(localX, localZ)))
+        let seconds = headerInt(Self.sectorSize + (try Self.headerIndex(localX, localZ)))
         return seconds == 0 ? nil : Date(timeIntervalSince1970: TimeInterval(seconds))
     }
 
@@ -95,31 +99,70 @@ public struct RegionFile: Sendable {
         return try NBT.read(payload, skipping: skipping).value
     }
 
+    /// A standalone query needs only its header entry and payload, not a copy of every chunk
+    /// in the region. Bulk readers keep the ordinary RegionFile snapshot and reuse its bytes.
+    static func chunkNBT(contentsOf url: URL, localX: Int, localZ: Int,
+                         skipping: Set<String> = []) throws -> NBT? {
+        guard let (x, z) = parseCoordinates(url.lastPathComponent) else {
+            throw RegionError.invalidFileName(url.lastPathComponent)
+        }
+        let file = try FileHandle(forReadingFrom: url)
+        defer { try? file.close() }
+        guard let size = Int(exactly: try file.seekToEnd()) else { throw RegionError.invalidChunkLength }
+        guard size == 0 || size >= 2 * sectorSize else { throw RegionError.truncatedHeader }
+        let index = try headerIndex(localX, localZ)
+        guard size != 0 else { return nil }
+        func read(_ range: Range<Int>) throws -> [UInt8] {
+            try file.seek(toOffset: UInt64(range.lowerBound))
+            var result: [UInt8] = []
+            result.reserveCapacity(range.count)
+            while result.count < range.count {
+                guard let bytes = try file.read(upToCount: range.count - result.count), !bytes.isEmpty else {
+                    throw RegionError.invalidChunkLength
+                }
+                result.append(contentsOf: bytes)
+            }
+            return result
+        }
+        let location = headerInt(try read(index..<(index + 4)))
+        guard let payload = try chunkPayload(location: location, size: size, url: url,
+            region: RegionPosition(x: x, z: z), localX: localX, localZ: localZ, read: read) else { return nil }
+        return try NBT.read(payload, skipping: skipping).value
+    }
+
     /// The decompressed (raw NBT) bytes for a chunk.
     public func chunkPayload(localX: Int, localZ: Int) throws -> [UInt8]? {
-        let location = headerInt(try headerIndex(localX, localZ))
+        let location = headerInt(try Self.headerIndex(localX, localZ))
+        return try Self.chunkPayload(location: location, size: bytes.count, url: url,
+            region: RegionPosition(x: x, z: z), localX: localX, localZ: localZ) { Array(bytes[$0]) }
+    }
+
+    /// Both access paths share bounds, external-file and compression interpretation.
+    private static func chunkPayload(location: UInt32, size: Int, url: URL,
+                                     region: RegionPosition, localX: Int, localZ: Int,
+                                     read: (Range<Int>) throws -> [UInt8]) throws -> [UInt8]? {
         guard location != 0 else { return nil }
-        let start = Int(location >> 8) * Self.sectorSize
+        let start = Int(location >> 8) * sectorSize
         let sectorCount = Int(location & 0xFF)
 
-        guard start + 5 <= bytes.count else { throw RegionError.invalidChunkLength }
-        let length = Int(Int32(bitPattern: UInt32(bytes[start]) << 24 | UInt32(bytes[start + 1]) << 16
-                                         | UInt32(bytes[start + 2]) << 8 | UInt32(bytes[start + 3])))
-        guard length >= 1, start + 4 + length <= bytes.count,
-              sectorCount == 0 || 4 + length <= sectorCount * Self.sectorSize else {
+        guard start + 5 <= size else { throw RegionError.invalidChunkLength }
+        let prefix = try read(start..<(start + 5))
+        let length = Int(Int32(bitPattern: headerInt(prefix)))
+        guard length >= 1, start + 4 + length <= size,
+              sectorCount == 0 || 4 + length <= sectorCount * sectorSize else {
             throw RegionError.invalidChunkLength
         }
-        let typeByte = bytes[start + 4]
+        let typeByte = prefix[4]
 
         // A set high bit means the chunk was too large (>1020 KiB) and lives in c.<x>.<z>.mcc.
         let data: [UInt8]
         if typeByte & 0x80 != 0 {
-            let name = "c.\(x * 32 + localX).\(z * 32 + localZ).mcc"
+            let name = "c.\(region.x * 32 + localX).\(region.z * 32 + localZ).mcc"
             let external = url.deletingLastPathComponent().appendingPathComponent(name)
             guard let contents = try? Data(contentsOf: external) else { throw RegionError.missingExternalChunk(name) }
             data = [UInt8](contents)
         } else {
-            data = Array(bytes[(start + 5)..<(start + 4 + length)])
+            data = try read((start + 5)..<(start + 4 + length))
         }
 
         guard let compression = ChunkCompression(rawValue: typeByte & 0x7F) else {

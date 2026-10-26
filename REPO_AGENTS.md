@@ -1182,6 +1182,11 @@ container/creature/dimension/region queries and retain their file's DataVersion.
 return from the layout adapter without traversing sections. RegionFacts interpretation 24
 invalidates earlier omissions. The additive Dimension.entities(in: Chunk) overload lets the CLI
 reuse decoded terrain instead of reading it again; existing callers remain source-compatible.
+Standalone entity queries use RegionFile's bounded header-entry/payload read rather than copying
+the entire region per chunk. Bulk readers retain their existing region snapshot. Both paths share
+payload bounds, external-file handling and compression interpretation; neither introduces a cache
+or assumes that a world's current version identifies every chunk's format. Terrain inspection is
+still required to discover embedded entities when the caller has not supplied complete terrain.
 The adapter interprets the saved build range using the actual fixer's no-context path. It does
 not invent loader-only dimension/generator context or simulate below-zero terrain generation.
 That contextual regeneration metadata, numeric block/item flattening and older field formats

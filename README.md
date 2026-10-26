@@ -1977,6 +1977,12 @@ unchanged. The additive `Dimension.entities(in: Chunk)` query reuses already dec
 the CLI uses it to avoid reading each terrain chunk again. RegionFacts interpretation 24
 invalidates cached omissions.
 
+Standalone entity queries read only the requested chunk's header entry and payload from each
+source file. Bulk queries retain one region snapshot, and both paths share the same bounds,
+external-chunk and compression rules. Discovering embedded entities still requires reading the
+terrain payload; a world's current version does not establish the format of each saved chunk.
+Callers that already have complete terrain should reuse `entities(in: Chunk)`.
+
 The adapter does not supply Minecraft's loader-only `__context` or simulate future terrain
 generation below the original build range. Its proofs compare the game's no-context upgrade;
 dimension/generator-dependent regeneration metadata and the still older numeric block/item
