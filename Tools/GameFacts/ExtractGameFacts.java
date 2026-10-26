@@ -62,6 +62,7 @@ public final class ExtractGameFacts {
         facts.add("blockModelSeeds", ExtractBlockModelSeeds.extract());
         facts.add("blockTints", ExtractBlockTints.extract());
         facts.add("blockFluids", ExtractBlockFluids.extract());
+        facts.add("airBlocks", ExtractAirBlocks.extract());
         facts.add("specialItemModels", ExtractSpecialItemModels.extract());
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
         facts.add("equipment", ExtractEquipmentFacts.extract());

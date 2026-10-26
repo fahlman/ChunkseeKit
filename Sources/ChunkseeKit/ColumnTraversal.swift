@@ -87,7 +87,8 @@ extension Chunk {
 
             let uniform = blocks.isUniform
             let indices = uniform || columns.count == 1 ? nil : blocks.allPaletteIndices()
-            let air = seeking.contains(true) ? blocks.palette.map(\.isAir) : []
+            // Unfamiliar but readable states remain visible candidates; only known air is skipped.
+            let air = seeking.contains(true) ? blocks.palette.map { $0.isAir == true } : []
             for offset in 0..<(uniform ? 1 : 16) {
                 guard remaining > 0 else { break }
                 let upper = high.partialValue - offset

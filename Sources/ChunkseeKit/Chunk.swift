@@ -26,9 +26,10 @@ public struct BlockState: Hashable, Sendable, CustomStringConvertible {
         return id + "[" + properties.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ",") + "]"
     }
 
-    public var isAir: Bool {
-        guard let id = Identifier(id), id.namespace == "minecraft" else { return false }
-        return id.path == "air" || id.path == "cave_air" || id.path == "void_air"
+    /// Minecraft's code flag used by its surface-height predicate, independently of the air tag.
+    /// Unknown block code returns nil. Generated facts apply across save and game versions.
+    public var isAir: Bool? {
+        GeneratedAirBlocks.values[id] ?? Identifier(id).flatMap { GeneratedAirBlocks.values[$0.description] }
     }
 
     /// Accepts every palette entry shape seen across versions:
