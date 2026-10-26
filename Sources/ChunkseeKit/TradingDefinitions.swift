@@ -9,15 +9,18 @@ public struct TradingDefinitions: Sendable, Equatable {
     fileprivate static func read(in packs: [WorldResourcePack]) throws -> Self {
         let sets = try WorldResourcePack.Registry(directory: "trade_set", in: packs)
         let trades = try WorldResourcePack.Registry(directory: "villager_trade", in: packs)
+        let amounts = try WorldResourcePack.Registry(directory: "context_int_provider", in: packs)
         var tags = try ResourceTagReader(registry: "villager_trade", packs: packs)
         var budget = ResourceReadBudget(), answers: [String: Bool] = [:]
         let identifiers = Set(GeneratedTradingFacts.professions.values.flatMap(\.values))
         guard identifiers.count <= 4096 else { return Self(professions: [:]) }
         for id in identifiers.sorted() {
             try Task.checkCancellation()
+            var visiting: Set<String> = []
             guard budget.consume(1), case .data(let data) = try sets.resource(id),
-                  let json = object(data, budget: &budget),
-                  let amount = Amount(json["amount"]), json["trades"] != nil else { continue }
+                  let json = json(data, budget: &budget) as? [String: Any],
+                  let amount = try Amount.read(json["amount"], in: amounts, budget: &budget, visiting: &visiting),
+                  json["trades"] != nil else { continue }
             let members: [String]?
             if let reference = json["trades"] as? String, reference.hasPrefix("#"),
                let tagID = GameAssets.resourceID(String(reference.dropFirst())) {
@@ -63,7 +66,7 @@ public struct TradingDefinitions: Sendable, Equatable {
         case .absent: return .missing
         case .unavailable: return .unavailable
         case .data(let data):
-            guard let json = object(data, budget: &budget),
+            guard let json = json(data, budget: &budget) as? [String: Any],
                   let wants = json["wants"] as? [String: Any],
                   let gives = json["gives"] as? [String: Any],
                   (try? AssetJSON.identifier(wants["id"])) != nil,
@@ -72,10 +75,10 @@ public struct TradingDefinitions: Sendable, Equatable {
         }
     }
 
-    private static func object(_ data: Data, budget: inout ResourceReadBudget) -> [String: Any]? {
+    private static func json(_ data: Data, budget: inout ResourceReadBudget) -> Any? {
         guard data.count <= ZipResources.maximumResourceSize, data.count <= budget.bytes else { return nil }
         budget.bytes -= data.count
-        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        return try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
     }
 
     /// ContextIntProviders accepts a bare integer, a typed provider or a registry reference.
@@ -83,17 +86,25 @@ public struct TradingDefinitions: Sendable, Equatable {
     private enum Amount {
         case constant(Int), dynamic
 
-        init?(_ raw: Any?) {
-            if let value = try? AssetJSON.integer(raw) { self = .constant(value); return }
-            if let reference = raw as? String, GameAssets.resourceID(reference) != nil {
-                self = .dynamic; return
+        static func read(_ raw: Any?, in registry: WorldResourcePack.Registry,
+                         budget: inout ResourceReadBudget, visiting: inout Set<String>) throws -> Self? {
+            try Task.checkCancellation()
+            guard budget.consume(1) else { return nil }
+            if let value = try? AssetJSON.integer(raw) { return .constant(value) }
+            if let reference = raw as? String {
+                guard let id = GameAssets.resourceID(reference)?.description,
+                      visiting.count < 64, visiting.insert(id).inserted else { return nil }
+                defer { visiting.remove(id) }
+                guard case .data(let data) = try registry.resource(id),
+                      let value = TradingDefinitions.json(data, budget: &budget) else { return nil }
+                return try read(value, in: registry, budget: &budget, visiting: &visiting)
             }
             guard let fields = raw as? [String: Any],
                   let type = try? AssetJSON.identifier(fields["type"]) else { return nil }
             if type.description == "minecraft:constant" {
                 guard let value = try? AssetJSON.integer(fields["value"]) else { return nil }
-                self = .constant(value)
-            } else { self = .dynamic }
+                return .constant(value)
+            } else { return .dynamic }
         }
     }
 }
@@ -108,7 +119,7 @@ extension GameAssets {
 extension World {
     /// Reads the selected game and enabled folder/ZIP packs in normal resource priority.
     /// Invalid overrides do not expose lower definitions. Limits: 64 packs, 4,096 selected
-    /// sets/members, 64 tag levels, 16 MiB/file, 64 MiB total and 65,536 lookup/member steps.
+    /// sets/members, 64 tag/reference levels, 16 MiB/file, 64 MiB total and 65,536 lookup/member steps.
     /// Retain this snapshot for Villager.supportsTrading(using:); saved offers stay independent.
     public func tradingDefinitions(assets: GameAssets?) throws -> TradingDefinitions {
         guard let packs = try resourcePacks(assets: assets) else { return TradingDefinitions(professions: [:]) }

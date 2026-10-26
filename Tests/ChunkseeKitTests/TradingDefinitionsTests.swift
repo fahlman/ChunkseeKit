@@ -64,10 +64,25 @@ import Testing
         }
     }
 
+    @Test func namedConstantAmountsResolveAtRuntimeAndCyclesRemainUnknown() throws {
+        let positive = try jar(sets(trades: ["test:offer"], amount: "test:count") + [offer,
+            .init(path: "data/test/context_int_provider/count.json", text: #""test:actual""#),
+            .init(path: "data/test/context_int_provider/actual.json", text: #"{"type":"constant","value":2}"#)
+        ]).tradingDefinitions()
+        #expect(try villager("farmer").supportsTrading(using: positive) == true)
+        for text in [#""test:count""#, #""test:missing""#, "invalid"] {
+            let unknown = try jar(sets(trades: ["test:offer"], amount: "test:count") + [offer,
+                .init(path: "data/test/context_int_provider/count.json", text: text)
+            ]).tradingDefinitions()
+            #expect(try villager("farmer").supportsTrading(using: unknown) == nil)
+        }
+    }
+
     @Test func enabledFolderAndZipOverridesChangeNewSnapshotsWithoutTouchingSaves() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let assets = try jar(sets(trades: "#test:root") + [offer, tag("root", ["test:offer"])])
+        let assets = try jar(sets(trades: "#test:root", amount: "test:count") + [offer, tag("root", ["test:offer"]),
+            .init(path: "data/test/context_int_provider/count.json", text: "2")])
         let folder = root.appendingPathComponent("datapacks/low")
         let extra = try tag("root", [["id": "test:missing", "required": false]])
         try Fixtures.write(Array(extra.text.utf8), to: folder.appendingPathComponent(extra.path))
@@ -85,6 +100,8 @@ import Testing
         try high([])
         let original = try world.tradingDefinitions(assets: assets)
         #expect(try villager("farmer").supportsTrading(using: original) == true)
+        try high([.init(path: "data/test/context_int_provider/count.json", text: "0")])
+        #expect(try villager("farmer").supportsTrading(using: world.tradingDefinitions(assets: assets)) == false)
         try high([tag("root", [], replace: true)])
         let empty = try world.tradingDefinitions(assets: assets)
         #expect(try villager("farmer").supportsTrading(using: empty) == false)
