@@ -14,7 +14,9 @@ extension Dimension {
         guard let origin = position.chunkOrigin else { throw RegionScanError.invalidRegion(position) }
         if let height = options.height, Chunk.heightmapBitWidth(for: height) == nil { throw RegionScanError.invalidHeight(height) }
         var facts = RegionFacts(dimension: id, region: position, options: options)
-        let omitted = Chunk.keysNotNeededForTerrain.subtracting(["block_entities", "structures"])
+        let omitted = Chunk.keysNotNeededForTerrain.subtracting([
+            "block_entities", "structures", "entities", "TileEntities", "Structures", "Entities",
+        ])
 
         func visit(_ folder: Folder, skipping: Set<String> = [],
                    body: (Int, Int, NBT) throws -> Void) throws -> Int {
@@ -36,6 +38,9 @@ extension Dimension {
             facts.containers += ItemContainer.containers(inChunk: nbt)
             facts.signs += Sign.signs(inChunk: nbt)
             facts.spawners += Spawner.spawners(inChunk: nbt)
+            if let entities = SaveDataUpgrade.terrainEntityChunk(nbt) {
+                facts.creatures += Creature.creatures(inEntityChunk: entities, enchantments: options.enchantments)
+            }
             facts.inhabitedTimes[z * 32 + x] = Chunk.inhabitedTime(in: nbt) ?? 0
             let chunk: Chunk
             do { chunk = try Chunk(nbt: nbt) }

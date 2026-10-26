@@ -120,9 +120,11 @@ import Testing
         #expect(try Chunk(nbt: .compound(fields)).status == "minecraft:features")
     }
 
-    @Test func rejectsLegacyLevelWrapper() {
+    @Test func rejectsUnflattenedNumericBlocks() {
         let legacy = NBT.compound(["DataVersion": .int(2586), "Level": .compound([
-            "xPos": .int(0), "zPos": .int(0), "Sections": .list(.compound, []),
+            "xPos": .int(0), "zPos": .int(0), "Sections": .list([
+                .compound(["Y": .byte(0), "Blocks": .byteArray([Int8](repeating: 1, count: 4096))]),
+            ]),
         ])])
         #expect(throws: ChunkError.unsupportedLegacyFormat(dataVersion: 2586)) { try Chunk(nbt: legacy) }
     }

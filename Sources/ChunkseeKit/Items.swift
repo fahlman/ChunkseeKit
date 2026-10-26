@@ -174,9 +174,9 @@ public struct ItemContainer: Sendable, Equatable, Codable {
     /// Every item, including the contents of shulker boxes and bundles inside it.
     public var allItems: [ItemStack] { items.flatMap(\.allItems) }
 
-    /// Containers among a chunk's block entities: those with items or sealed loot.
+    /// Containers among a chunk's block entities and older terrain-embedded entities.
     public static func containers(inChunk nbt: NBT) -> [ItemContainer] {
-        SaveDataUpgrade.blockEntities(inChunk: nbt).compactMap { entity in
+        let blocks = SaveDataUpgrade.blockEntities(inChunk: nbt).compactMap { entity -> ItemContainer? in
             guard let kind = entity["id"]?.string, let position = entity.blockEntityPosition else {
                 return nil
             }
@@ -191,6 +191,7 @@ public struct ItemContainer: Sendable, Equatable, Codable {
                                  customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  lootTable: lootTable?.string, isSealedLoot: sealed && items.isEmpty, isEntity: false)
         }
+        return blocks + (SaveDataUpgrade.terrainEntityChunk(nbt).map(containers(inEntityChunk:)) ?? [])
     }
 
     /// Containers among an entity chunk's entities (`entities/` region files): container
@@ -226,7 +227,8 @@ extension Chunk {
     /// Entries a container scan doesn't need: block data, light, ticks and other bookkeeping.
     /// Keeps `block_entities`, which `keysNotNeededForTerrain` drops.
     public static let keysNotNeededForContainers: Set<String> =
-        keysNotNeededForTerrain.subtracting(["block_entities"]).union(["sections", "Heightmaps", "structures"])
+        keysNotNeededForTerrain.subtracting(["block_entities", "entities", "TileEntities", "Entities"])
+            .union(["sections", "Sections", "Heightmaps", "structures", "Structures", "Biomes"])
 }
 
 extension Dimension {

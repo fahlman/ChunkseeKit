@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ChunkError: Error, Equatable {
-    /// Pre-1.18 chunks (with a `Level` wrapper) aren't supported.
+    /// Numeric block storage has not yet been flattened into named palette entries.
     case unsupportedLegacyFormat(dataVersion: Int?)
     case missingField(String)
     case invalidPalette(String)
@@ -231,7 +231,7 @@ public struct BlockEntity: Sendable, Equatable {
     }
 }
 
-/// A decoded terrain chunk (1.18+ format, including the 26.x changes).
+/// A decoded terrain chunk, including older Level-wrapped named palettes.
 public struct Chunk: Sendable {
     /// Saved metadata, when present; structural decoding does not require a version label.
     public let dataVersion: Int?
@@ -253,7 +253,7 @@ public struct Chunk: Sendable {
     /// light arrays or the chunk's NBT. Reuse it when neighboring terrain needs these biomes.
     public var biomeSnapshot: ChunkBiomeSnapshot { ChunkBiomeSnapshot(sections: sections) }
     /// Saved order is preserved, including entries with unavailable identity or position.
-    public var blockEntities: [BlockEntity] { Self.blockEntities(in: nbt).map(BlockEntity.init(nbt:)) }
+    public var blockEntities: [BlockEntity] { SaveDataUpgrade.blockEntities(inChunk: nbt).map(BlockEntity.init(nbt:)) }
     /// Saved input retained for typed readers within the library.
     let nbt: NBT
 
@@ -263,6 +263,7 @@ public struct Chunk: Sendable {
     public static let keysNotNeededForTerrain: Set<String> = [
         "block_ticks", "fluid_ticks", "PostProcessing", "structures", "blending_data", "block_entities",
         "BlockLight", "SkyLight", "entities", "CarvingMasks", "Lights", "UpgradeData", "isLightOn",
+        "Entities", "TileEntities", "TileTicks", "LiquidTicks", "LiquidsToBeTicked", "ToBeTicked",
     ]
 
     /// Opt-in terrain read retaining the saved light channels and their validity flag.
@@ -307,8 +308,8 @@ public struct Chunk: Sendable {
     public init(nbt: NBT) throws {
         let nbt = SaveDataUpgrade.chunk(nbt)
         let dataVersion = nbt["DataVersion"]?.int
-        // Chunks upgraded from pre-1.18 worlds can keep a vestigial `Level: {Structures}` compound,
-        // so detect the old format by where `Sections` lives, not by `Level` or a version number.
+        // Supported wrapped palettes have already been normalized. Remaining wrapped sections
+        // use a different storage format; a vestigial Level.Structures alone is harmless.
         guard nbt["Level"]?["Sections"] == nil else {
             throw ChunkError.unsupportedLegacyFormat(dataVersion: dataVersion)
         }
@@ -338,12 +339,14 @@ public struct Chunk: Sendable {
         section(atBlockY: y)?.biome(x: x & 15, y: y & 15, z: z & 15)
     }
 
-    /// Modern chunk block entities. This does not opt legacy terrain into modern decoding.
-    static func blockEntities(in nbt: NBT) -> [NBT] { nbt["block_entities"]?.list ?? [] }
+    /// Block entities from the chunk's interpreted format.
+    static func blockEntities(in nbt: NBT) -> [NBT] {
+        nbt["block_entities"]?.list ?? nbt["Level"]?["TileEntities"]?.list ?? []
+    }
 
     /// The first block entity at chunk-local x/z and absolute y, if any.
     public func blockEntity(x: Int, y: Int, z: Int) -> BlockEntity? {
-        Self.blockEntities(in: nbt).lazy.map(BlockEntity.init(nbt:)).first {
+        SaveDataUpgrade.blockEntities(inChunk: nbt).lazy.map(BlockEntity.init(nbt:)).first {
             guard let position = $0.position else { return false }
             return position.x & 15 == x & 15 && position.y == y && position.z & 15 == z & 15
         }
