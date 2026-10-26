@@ -12,6 +12,7 @@
     "air_flags",
     "special_item_models",
     "spawn_egg_relationships",
+    "block_item_relationships",
     "equipment_attachments",
     "profession_trade_sets",
     "natural_spawn_defaults",
@@ -23,7 +24,7 @@
   "clientSHA1": "e877b6a07acd633fb3bb475002175cec036e7b87",
   "extractedSHA256": {
     "entity-types.json": "957e6552fea999c5c2f92c9001f004d27936a112e7885f8443340ebfa88816b1",
-    "facts.json": "6857ee15888b2e65c22baa6f859cfb0ee7c0de89159bc474558532169d756151"
+    "facts.json": "176da3b55b6d4a7eac10a873f3c3a794c6886867b235aeb279f00c41a6cd1bf4"
   },
   "minecraft": {
     "build_time": "2026-09-15T11:20:48+00:00",
@@ -49,6 +50,7 @@
     "Tools/GameFacts/ExtractBlockDefaults.java": "aeaf59aeed1cd8f0fdd041d4342a1e42c58f0e9696094a0057650957e8250272",
     "Tools/GameFacts/ExtractBlockDefinitionFacts.java": "88c1ee549a2aea353dbfdb4beca7974f958c36c49b951c3eb77fe284df231c17",
     "Tools/GameFacts/ExtractBlockFluids.java": "2c1036dbf5909a5b745c7d7d95d633b77f0a8b8ba13ba24aed8a281a5b83a24b",
+    "Tools/GameFacts/ExtractBlockItems.java": "893e8068dc8399916465122f29fa28b4ae747d8a3eb8a5dd459435a92713c95f",
     "Tools/GameFacts/ExtractBlockModelSeeds.java": "fb19695b5ea82ac2d7f419a0aacea3f58e34dbc6adee28d89560f7bc30b61e2d",
     "Tools/GameFacts/ExtractBlockTints.java": "02b37cc4742b19543939ac683d1c733ecd5bb21640794082d23780c7dcbb1cad",
     "Tools/GameFacts/ExtractCreatureColors.java": "ca792f8e8b8df9d9307cb70151d61a519a3afe388ecfa21c27f057a0e066736b",
@@ -56,7 +58,7 @@
     "Tools/GameFacts/ExtractEnchantmentEffects.java": "ffaa5e1d13bf377b7b9864f212d92c29d4ef986f944881a840b2e2e111a8d6f8",
     "Tools/GameFacts/ExtractEntityRenames.java": "69e37560a0e7e55b9a65560630ce40314bdeec96a58ee628827b8066f216eeca",
     "Tools/GameFacts/ExtractEquipmentFacts.java": "d606927f602618942d6e0d6f6874f0679f2b3338f957529ec27512876bda5a86",
-    "Tools/GameFacts/ExtractGameFacts.java": "510982a6c8f72eae6746f31a77b3459106f7b438773086ebbdc36fad0cc71d9b",
+    "Tools/GameFacts/ExtractGameFacts.java": "ddd08957016438646cfbb7c4ed1afa7c71c08cc21b556018b9574c452a4f6cea",
     "Tools/GameFacts/ExtractItemModelFacts.java": "eb89922e3e4600f2b950357eea289a23a46053f603d7e683628bfb50d3192d61",
     "Tools/GameFacts/ExtractLegacyChunkFacts.java": "2e90b32efdd49914a7385d480cdf75aa4027b586d3ed049fb985a7c7fb80ec3d",
     "Tools/GameFacts/ExtractMobSpawnFacts.java": "d8c7d44005b65da58841f70e347b44265376cea9d7dd008d1dd2e3bf02407f35",
@@ -67,7 +69,7 @@
     "Tools/GameFacts/ExtractSpawnEggs.java": "7f7b6f24175c42ec56f024c806f91ca4184e4997be56768aae6f4f84565a4eba",
     "Tools/GameFacts/ExtractSpecialItemModels.java": "8fda563fc726f8d3c796bf0db514954f1e3aaf5296878478f77f2c155cc90c16",
     "Tools/GameFacts/ExtractTradingFacts.java": "9ca04a78417f018741cc650e9d6d3b17564675e3eb2f427dc86ff651f960efb4",
-    "Tools/GameFacts/regenerate.py": "169e46b0db39d20e7b307ab08b175ce849a48a4028443822438473d72c35a627",
+    "Tools/GameFacts/regenerate.py": "696f430015086aba01444a725d3fdb0b06616a6440ca813954c85ef3dbe2ca52",
     "Tools/GameFacts/special_item_models.py": "b530d0399a2297bb961a3d70788db26d56e48206f55eeeecf9fd26e97b9bf10e"
   }
 }

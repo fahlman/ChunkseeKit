@@ -657,6 +657,16 @@ item/model/texture readers own the picture. Custom prototype relationships canno
 from picture definitions. The additive API requires a minor release; fahlman/Chunksee#433 owns
 app adoption and the symbol fallback. No saved-field, RegionFacts or dependency change.
 
+The additive #286 `GameAssets.blockItemID(for:)` query returns a block's inventory item when
+the selected jar supplies its readable item definition. The same Tools/GameFacts entrypoint
+calls Block.asItem and checks Item.byBlock after registry bootstrap, including wall/standing
+registrations; it omits the game's no-item AIR result. A nil result means no item or unavailable
+code/resource facts, never a block-existence verdict. Saved state properties do not alter this
+lookup. Clients read the actual saved block through the existing Dimension/Chunk API instead of
+guessing from POI or block-entity categories. Item models and textures remain runtime data.
+No name conversion, version gate, save/region/cache interpretation or dependency change is added.
+This needs a minor release before app #433 adopts it.
+
 `SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot,
 copper-statue, mob-head and player-head cuboids for selected special item definitions, independently
 of version labels. `Tools/GameFacts` generates their baked polygons, UVs, skin dimensions and
@@ -1313,7 +1323,7 @@ reader, serialized/cache data or slime-chunk arithmetic changes. App adoption fo
 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
-format associations, item model prototype facts, block default properties, spawn-egg
+format associations, item model prototype facts, block default properties, spawn-egg and block-item
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and

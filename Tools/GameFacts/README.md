@@ -6,7 +6,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
-registered block default properties, spawn-egg relationships, saved equipment attachment identities
+registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
 and profession trade-set associations, natural-spawn defaults and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
@@ -23,7 +23,7 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColors.swift`, `GeneratedEnchantmentEffects.swift`,
-`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
+`GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`, `GeneratedBlockItems.swift`,
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, and `Tools/GameFacts/source.json`.
@@ -179,6 +179,13 @@ Sources and interpretation:
   actual result for each entity, checking that a returned item is a SpawnEggItem. No explicit
   no-egg or custom-entity list is generated. Runtime lookup also requires a readable item
   definition in the supplied jar; model support and picture rendering remain separate.
+
+- Block.asItem supplies the inventory item for each block, checked against Item.byBlock.
+  Its no-item AIR result is omitted rather than treated as an inventory picture. The code's
+  BlockItem and StandingAndWallBlockItem registrations establish differently named block/item
+  pairs; resource filenames do not. Runtime lookup requires that item's readable definition
+  in the selected jar. No no-item or custom-block catalog is generated, and the relationship
+  is never used to determine block existence. Saved properties do not change this code lookup.
 
 - SaddleEquipmentSlotFix.fixEntityWithSaddleFlag supplies the item/count represented by the
   old saved `Saddle` boolean. AbstractChestedHorse.mobInteract establishes Items.CHEST as the
