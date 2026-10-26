@@ -13,8 +13,9 @@ import Testing
                     skyLightColor: SIMD3(0.25, 0.5, 0.75), moonPhase: .fullMoon)!
     }
 
-    @Test func jarQueryPreservesClockIdentityAndMissingAttributes() throws {
-        let reader = try assets(["clock": ":custom", "tracks": [sun: track([(10, 90)])]])
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func jarQueryPreservesClockIdentityAndMissingAttributes(version: Int) throws {
+        let reader = try assets(["clock": ":custom", "tracks": [sun: track([(10, 90)])]], version: version)
         let timeline = try #require(reader.lightingTimeline("test:sky"))
         #expect(timeline.clockID == "minecraft:custom" && timeline.periodTicks == nil)
         let value = try #require(timeline.applying(at: .min, to: base))
@@ -23,7 +24,7 @@ import Testing
         #expect(value.moonPhase == base.moonPhase)
         #expect(reader.lightingTimeline("test:missing") == nil)
         #expect(reader.lightingTimeline("test:../sky") == nil)
-        #expect(try assets(["clock": "overworld"], version: 9999).lightingTimeline("test:sky") == nil)
+        #expect(try assets(["clock": "overworld"], version: version).lightingTimeline("test:sky")?.clockID == "minecraft:overworld")
     }
 
     @Test func cyclicSegmentsPreserveJumpsAndWrapNegativeAndExtremeTicks() throws {

@@ -14,6 +14,13 @@ import Testing
         try TestZIP.zip(entries, comment: comment)
     }
 
+    private func assets() throws -> GameAssets {
+        try #require(GameAssets(data: Data(zip([
+            Entry(path: "version.json", text: #"{"id":"fixture","world_version":1}"#),
+            Entry(path: path, text: #"{"min_y":-64,"height":384,"logical_height":384,"has_ceiling":false}"#)
+        ]))))
+    }
+
     private func world(at root: URL, pack: [UInt8], reference: String = "overworld",
                        packs: [String] = ["vanilla", "file/Test.zip"], noise: String = "overworld") throws -> World {
         try Fixtures.write(pack, to: root.appendingPathComponent("datapacks/Test.zip"))
@@ -36,7 +43,7 @@ import Testing
         let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata, compressed: compressed, flags: flags),
                              Entry(path: path, text: custom, compressed: compressed, flags: flags)])
         let world = try world(at: root, pack: bytes)
-        #expect(try world.dimensionTypes()["example:mine"]?.buildRange == 0...127)
+        #expect(try world.dimensionTypes(assets: assets())["example:mine"]?.buildRange == 0...127)
         #expect(try Array(Data(contentsOf: root.appendingPathComponent("datapacks/Test.zip"))) == bytes)
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("datapacks").path) == ["Test.zip"])
     }
@@ -46,10 +53,10 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let plain = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: "data/example/function/a.mcfunction", text: "say test")])
         let world = try world(at: root, pack: plain)
-        #expect(try world.dimensionTypes()["example:mine"]?.buildRange == -64...319)
+        #expect(try world.dimensionTypes(assets: assets())["example:mine"]?.buildRange == -64...319)
         let override = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom)])
         let lower = try self.world(at: root, pack: override, packs: ["file/Test.zip", "vanilla"])
-        #expect(try lower.dimensionTypes()["example:mine"]?.buildRange == -64...319)
+        #expect(try lower.dimensionTypes(assets: assets())["example:mine"]?.buildRange == -64...319)
     }
 
     @Test func invalidPresentOverridesNeverExposeLowerDefinitions() throws {
@@ -61,7 +68,7 @@ import Testing
                        Entry(path: path, text: custom, mode: 0o120777)]
         for item in invalid {
             let world = try world(at: root, pack: zip([Entry(path: "pack.mcmeta", text: metadata), item]))
-            #expect(try world.dimensionTypes().isEmpty)
+            #expect(try world.dimensionTypes(assets: assets()).isEmpty)
         }
     }
 
@@ -69,21 +76,21 @@ import Testing
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let duplicate = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom), Entry(path: path, text: "{}")])
-        #expect(try world(at: root, pack: duplicate).dimensionTypes().isEmpty)
+        #expect(try world(at: root, pack: duplicate).dimensionTypes(assets: assets()).isEmpty)
         var broken = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom)])
         let centralSignature: [UInt8] = [0x50, 0x4b, 0x01, 0x02]
         let starts = (0..<broken.count - 4).filter { Array(broken[$0..<$0 + 4]) == centralSignature }
         let last = try #require(starts.last)
         broken[last] = 0
-        #expect(try world(at: root, pack: broken).dimensionTypes().isEmpty)
-        #expect(try world(at: root, pack: Array(broken.dropLast(10))).dimensionTypes().isEmpty)
+        #expect(try world(at: root, pack: broken).dimensionTypes(assets: assets()).isEmpty)
+        #expect(try world(at: root, pack: Array(broken.dropLast(10))).dimensionTypes(assets: assets()).isEmpty)
     }
 
     @Test(arguments: ["{}", "{\"pack\":{},\"overlays\":{\"entries\":[]}}", "{\"pack\":{},\"filter\":{\"block\":[]}}"])
     func unsupportedMetadataStillBlocksFallback(text: String) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        #expect(try world(at: root, pack: zip([Entry(path: "pack.mcmeta", text: text)])).dimensionTypes().isEmpty)
+        #expect(try world(at: root, pack: zip([Entry(path: "pack.mcmeta", text: text)])).dimensionTypes(assets: assets()).isEmpty)
     }
 
     @Test func pathLookupsDoNotNormalizeDotSegmentsOrFollowArchiveSymlinks() throws {
@@ -91,12 +98,12 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata),
                              Entry(path: "data/example/dimension_type/../escape.json", text: custom)])
-        #expect(try world(at: root, pack: bytes, reference: "example:../escape").dimensionTypes().isEmpty)
+        #expect(try world(at: root, pack: bytes, reference: "example:../escape").dimensionTypes(assets: assets()).isEmpty)
         let outside = root.appendingPathComponent("outside.zip")
         try Fixtures.write(bytes, to: outside)
         let alias = root.appendingPathComponent("datapacks/Alias.zip")
         try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: outside)
-        #expect(try world(at: root, pack: bytes, packs: ["vanilla", "file/Alias.zip"]).dimensionTypes().isEmpty)
+        #expect(try world(at: root, pack: bytes, packs: ["vanilla", "file/Alias.zip"]).dimensionTypes(assets: assets()).isEmpty)
     }
 
     @Test func unreadResourcesAreNotDecompressed() throws {
@@ -105,8 +112,8 @@ import Testing
         let bytes = try zip([Entry(path: "pack.mcmeta", text: metadata), Entry(path: path, text: custom),
                              Entry(path: "data/example/worldgen/noise_settings/broken.json", text: "{}", compressed: true, wrongCRC: true)])
         let world = try world(at: root, pack: bytes, noise: "example:broken")
-        #expect(try world.dimensionTypes()["example:mine"]?.buildRange == 0...127)
-        let settings = try #require(try world.dimensionSettings()["example:mine"])
+        #expect(try world.dimensionTypes(assets: assets())["example:mine"]?.buildRange == 0...127)
+        let settings = try #require(try world.dimensionSettings(assets: assets())["example:mine"])
         #expect(settings.type?.buildRange == 0...127)
         #expect(settings.noiseGeneration == nil)
     }
@@ -118,7 +125,7 @@ import Testing
                              Entry(path: "data/example/worldgen/noise_settings/custom.json",
                                    text: "{\"noise\":{\"min_y\":16,\"height\":64},\"sea_level\":45}", compressed: true)])
         let world = try world(at: root, pack: bytes, noise: "example:custom")
-        let settings = try #require(try world.dimensionSettings()["example:mine"])
+        let settings = try #require(try world.dimensionSettings(assets: assets())["example:mine"])
         let type = try #require(settings.type)
         #expect(type.buildRange == 0...127)
         #expect(settings.noiseGeneration?.range == 16..<80)

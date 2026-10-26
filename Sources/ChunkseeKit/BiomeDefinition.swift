@@ -106,7 +106,7 @@ extension World {
         var result: [String: BiomeDefinition] = [:]
         for id in ids.sorted() {
             try Task.checkCancellation()
-            result[id] = try registry.read(id, vanilla: { _ in nil }, json: BiomeDefinition.init(json:))
+            result[id] = try registry.read(id, json: BiomeDefinition.init(json:))
         }
         return result
     }

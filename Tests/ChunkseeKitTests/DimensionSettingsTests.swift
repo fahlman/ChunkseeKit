@@ -44,6 +44,13 @@ import Testing
         return file
     }
 
+    private func assets(_ resources: [String: String]) throws -> GameAssets {
+        let entries = resources.map { TestZIP.Entry(path: "data/minecraft/\($0.key).json", text: $0.value) }
+        return try #require(GameAssets(data: Data(TestZIP.zip([
+            .init(path: "version.json", text: #"{"id":"test","world_version":1}"#)
+        ] + entries))))
+    }
+
     @Test func savedGeneratorReferencesAreIndependentOfDimensionNamesAndLogicalHeight() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -54,7 +61,13 @@ import Testing
         ])
         let files = ["level.dat", "data/minecraft/world_gen_settings.dat"].map { root.appendingPathComponent($0) }
         let before = try files.map { try Data(contentsOf: $0) }
-        let settings = try world.dimensionSettings()
+        let assets = try assets([
+            "dimension_type/the_nether": #"{"min_y":0,"height":256,"logical_height":128,"has_ceiling":true}"#,
+            "dimension_type/overworld": #"{"min_y":-64,"height":384,"logical_height":384,"has_ceiling":false}"#,
+            "worldgen/noise_settings/nether": #"{"noise":{"min_y":0,"height":128},"sea_level":32}"#,
+            "worldgen/noise_settings/floating_islands": #"{"noise":{"min_y":0,"height":256},"sea_level":-64}"#
+        ])
+        let settings = try world.dimensionSettings(assets: assets)
         let underground = try #require(settings["example:underground"])
         let dimensionType = try #require(underground.type)
         let generator = try #require(underground.noiseGeneration)
@@ -68,23 +81,21 @@ import Testing
         let inline = try #require(settings["example:inline"])
         #expect(inline.noiseGeneration?.surfaceRuleRange(in: try #require(inline.type)) == 0..<128)
         #expect(inline.noiseGeneration?.seaLevel == nil)
-        #expect(try world.dimensionTypes() == settings.compactMapValues(\.type))
+        #expect(try world.dimensionTypes(assets: assets) == settings.compactMapValues(\.type))
         #expect(try files.map { try Data(contentsOf: $0) } == before)
     }
 
-    @Test func vanillaNoiseBoundsMatchTheSevenVerifiedDefinitions() throws {
+    @Test func missingGameResourcesDoNotInventNoiseDefaults() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let expected = ["overworld": -64..<320, "amplified": -64..<320, "large_biomes": -64..<320,
-                        "nether": 0..<128, "end": 0..<128, "caves": -64..<128, "floating_islands": 0..<256]
-        let definitions = expected.mapValues { _ in type() }
-            .map { name, dimensionType in ("example:" + name, definition(type: dimensionType, noise: .string(name))) }
+        let references = ["overworld", "nether", "custom:unknown"]
+        let definitions = references.enumerated().map { index, name in
+            ("example:dimension\(index)", definition(type: type(), noise: .string(name)))
+        }
         let world = try world(at: root, definitions: Dictionary(uniqueKeysWithValues: definitions))
         let settings = try world.dimensionSettings()
-        for (name, range) in expected { #expect(settings["example:" + name]?.noiseGeneration?.range == range) }
-        let seaLevels = ["overworld": 63, "amplified": 63, "large_biomes": 63,
-                         "nether": 32, "end": 0, "caves": 32, "floating_islands": -64]
-        for (name, seaLevel) in seaLevels { #expect(settings["example:" + name]?.noiseGeneration?.seaLevel == seaLevel) }
+        #expect(settings.count == references.count)
+        #expect(settings.values.allSatisfy { $0.noiseGeneration == nil && $0.type?.buildRange == 0...255 })
     }
 
     @Test func surfaceAnchorsUseGenerationContextRatherThanAHeightIntersection() throws {

@@ -1,8 +1,8 @@
 import Foundation
 
 extension World {
-    /// Ordinary monster light eligibility for a clear-night planning overlay, verified for
-    /// 26.3 definitions. Each sky-lit dimension uses its selected timelines' first declared
+    /// Ordinary monster light eligibility for a clear-night planning overlay from readable
+    /// definitions. Each sky-lit dimension uses its selected timelines' first declared
     /// minecraft:midnight on one clock. All gameplay light tracks must use that clock and period;
     /// missing/ambiguous markers, other relevant clocks and unsupported definitions omit it.
     /// Static sky levels need no marker; dimensions without sky light need no sky projection.

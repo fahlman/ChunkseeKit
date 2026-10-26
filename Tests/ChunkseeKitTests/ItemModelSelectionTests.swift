@@ -124,12 +124,14 @@ import Testing
         #expect(try picture(stack(.string("quartz")), in: assets(nested)) == nil)
     }
 
-    @Test func unverifiedTrimVersionsStayUnavailableWithoutChangingTheDefaultReader() throws {
+    @Test func trimSelectionUsesReadableDataIndependentlyOfVersionLabels() throws {
         let definition = selector("[{\"when\":\"quartz\",\"model\":\(trimmed)}]")
-        for (name, version) in [("fixture", 5023), ("26.3", 5000)] {
+        let expected = try #require(try picture(stack(.string("quartz")), in: assets(definition)))
+        for (name, version) in [("fixture", 1), ("fixture", 5023), ("26.3", 5000), ("future", Int(Int32.max))] {
             let reader = try assets(definition, version: name, dataVersion: version)
-            #expect(try picture(stack(.string("quartz")), in: reader) == nil)
+            #expect(try picture(stack(.string("quartz")), in: reader) == expected)
             #expect(reader.defaultItemModel("sample") != nil)
+            #expect(try picture(stack(), in: reader) == reader.defaultItemModel("sample"))
             #expect(try picture(stack(), in: assets(plain, version: name, dataVersion: version)) != nil)
         }
         let unrelated = definition.replacingOccurrences(of: "\"trim_material\"", with: "\"pack:trim_material\"")
@@ -145,7 +147,8 @@ import Testing
         for item in [stack(), stack(.string("quartz"), extra: ["!minecraft:trim": .compound([:])]), stack(inline)] {
             #expect(try picture(item, in: reader) == fallback)
         }
-        #expect(try picture(stack(.string("quartz")), in: reader) == nil)
+        let selected = try #require(try picture(stack(.string("quartz")), in: reader))
+        #expect(selected != fallback)
     }
 
     @Test func cachedStacksRetainTheirSelectionWithoutAddingSerializedFields() throws {

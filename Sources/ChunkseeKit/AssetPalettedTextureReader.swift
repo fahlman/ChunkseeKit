@@ -5,8 +5,7 @@ struct AssetPalettedTextureReader {
     let assets: GameAssets
 
     func read(_ identifier: String, atlas: String) throws -> AssetPalettedTexture? {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3,
-              let requested = GameAssets.resourceID(identifier),
+        guard let requested = GameAssets.resourceID(identifier),
               let data = assets.resource(atlas, directory: "atlases", extension: "json") else { throw Invalid.asset }
         var budget = AssetReadBudget()
         try budget.consume(bytes: data.count)
@@ -72,6 +71,9 @@ struct AssetPalettedTextureReader {
         guard let texture = GameAssets.resourceID("\(identifier.namespace):palettes/\(identifier.path)") else {
             throw Invalid.asset
         }
+        // Current atlases name palette resources; older atlases name texture paths directly.
+        // An existing palette resource takes precedence, including an unreadable image.
+        if !containsTexture(texture), containsTexture(identifier) { return identifier }
         return texture
     }
 }
