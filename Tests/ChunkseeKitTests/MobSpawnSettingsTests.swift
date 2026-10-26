@@ -137,6 +137,29 @@ import Testing
         await #expect(throws: CancellationError.self) { try await task.value }
     }
 
+    @Test func colorsAndSpawnsShareResourceSelectionAndRequestLimits() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeWorld(root, dimensions: [:])
+        let world = try World(contentsOf: root)
+        let json = #"{"temperature":0.5,"downfall":0.5,"effects":{"water_color":123},"attributes":{"minecraft:gameplay/natural_mob_spawns":{"spawns_by_category":{"monster":[{"type":"slime","weight":1}]}}}}"#
+        let ids = Set((0..<4097).map { "test:biome_\($0)" })
+        let entries = ids.sorted().map {
+            TestZIP.Entry(path: "data/test/worldgen/biome/\(Identifier($0)!.path).json", text: json)
+        }
+        let assets = try jar(entries)
+        #expect(try world.biomeDefinitions(for: ids, assets: assets).isEmpty)
+        #expect(try world.biomeDefinitions(assets: assets).isEmpty)
+        #expect(try world.biomeSpawnSettings(for: ids, base: nil, assets: assets).isEmpty)
+        let selected: Set<String> = ["test:biome_0", "test:biome_1"]
+        let colors = try world.biomeDefinitions(for: selected, assets: assets)
+        let spawns = try world.biomeSpawnSettings(for: selected, base: nil, assets: assets)
+        #expect(Set(colors.keys) == selected && Set(spawns.keys) == selected)
+        #expect(colors["test:biome_0"] == assets.biomeDefinition("test:biome_0"))
+        #expect(spawns["test:biome_0"] == assets.biomeSpawnSettings("test:biome_0", base: nil))
+        #expect(spawns["test:biome_0"]?.contains("slime", in: "monster") == true)
+    }
+
     private func baseSettings(_ categories: [String: Any]?) throws -> MobSpawnSettings {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

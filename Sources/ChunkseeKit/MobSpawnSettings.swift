@@ -134,9 +134,7 @@ extension GameAssets {
     /// that base is unavailable; an overlay can still settle the categories it explicitly names.
     /// Missing color/climate fields do not hide readable spawn data. No version gate is applied.
     public func biomeSpawnSettings(_ identifier: String, base: MobSpawnSettings?) -> MobSpawnSettings? {
-        guard let id = Self.resourceID(identifier),
-              let data = resources.read("data/\(id.namespace)/worldgen/biome/\(id.path).json") else { return nil }
-        return MobSpawnSettings.read(json: data, base: base)
+        biomeResource(identifier) { MobSpawnSettings.read(json: $0, base: base) }
     }
 }
 
@@ -146,16 +144,6 @@ extension World {
     /// Limits: 64 packs, 4,096 biomes, 16 MiB/file, 64 MiB total; no chunks or saves are changed.
     public func biomeSpawnSettings(for identifiers: Set<String>, base: MobSpawnSettings?,
                                    assets: GameAssets?) throws -> [String: MobSpawnSettings] {
-        guard identifiers.count <= 4096, let packs = try resourcePacks(assets: assets) else { return [:] }
-        let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
-        let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
-        var budget = ResourceReadBudget(), result: [String: MobSpawnSettings] = [:]
-        for id in ids.sorted() {
-            result[id] = try registry.read(id) { data in
-                guard budget.charge(data) else { return nil }
-                return MobSpawnSettings.read(json: data, base: base)
-            }
-        }
-        return result
+        try biomeResources(for: identifiers, assets: assets) { MobSpawnSettings.read(json: $0, base: base) }
     }
 }

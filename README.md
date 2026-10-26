@@ -1595,7 +1595,9 @@ the others. Pass nil for an unavailable dimension base; an overlay still settles
 categories. The attribute's code default and omitted-weight rule come from the single release
 tool; biome membership is never bundled. A malformed higher-priority resource does not reveal
 a lower one. Reads are bounded to 4,096 requested biomes, 16 MiB per resource, 64 MiB total,
-256 categories and 4,096 candidates per category (65,536 per definition).
+256 categories and 4,096 candidates per category (65,536 per definition). Color and spawn queries
+share one biome-resource lookup and the same resource limits; the all-colors query also returns
+no definitions when its discovered catalog exceeds 4,096 IDs.
 
 These are declared static candidates, not a prediction that a mob can actually spawn. Counts,
 spawn costs, light, height, structures, timelines, weather and entity-specific rules are separate.

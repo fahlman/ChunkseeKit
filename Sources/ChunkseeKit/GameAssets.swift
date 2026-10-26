@@ -99,8 +99,11 @@ public struct GameAssets: Sendable {
         try? AssetPalettedTextureReader(assets: self).read(identifier, atlas: atlas)
     }
 
-    func resource(_ identifier: String, directory: String, extension suffix: String) -> Data? {
-        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return nil }
+    enum ResourceDomain: String { case assets, data }
+
+    func resource(_ identifier: String, directory: String, extension suffix: String,
+                  domain: ResourceDomain = .assets) -> Data? {
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix, domain: domain) else { return nil }
         return resources.read(path)
     }
 
@@ -109,9 +112,10 @@ public struct GameAssets: Sendable {
         return resources.contains(path)
     }
 
-    private static func resourcePath(_ identifier: String, directory: String, extension suffix: String) -> String? {
+    private static func resourcePath(_ identifier: String, directory: String, extension suffix: String,
+                                     domain: ResourceDomain = .assets) -> String? {
         guard let id = resourceID(identifier) else { return nil }
-        return "assets/\(id.namespace)/\(directory)/\(id.path).\(suffix)"
+        return "\(domain.rawValue)/\(id.namespace)/\(directory)/\(id.path).\(suffix)"
     }
 
     static func resourceID(_ value: String) -> Identifier? {

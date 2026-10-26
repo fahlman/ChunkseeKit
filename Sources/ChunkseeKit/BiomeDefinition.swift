@@ -67,9 +67,7 @@ extension GameAssets {
     /// interpreted or validated. Hex strings, integer colors and RGB channel lists are supported;
     /// numeric fields use the same strict primitive conversion as the asset readers.
     public func biomeDefinition(_ identifier: String) -> BiomeDefinition? {
-        guard let id = Self.resourceID(identifier),
-              let data = resources.read("data/\(id.namespace)/worldgen/biome/\(id.path).json") else { return nil }
-        return BiomeDefinition(json: data)
+        biomeResource(identifier, decode: BiomeDefinition.init(json:))
     }
 }
 
@@ -82,13 +80,11 @@ extension World {
     /// present override or an unresolved higher pack blocks lower fallbacks. File errors propagate.
     /// Only resources registered by folder/ZIP listing participate, even for a subset of IDs.
     /// Linked category folders and descendants are skipped; contained namespace aliases are allowed.
-    /// Queries with more than 64 enabled packs return no definitions. No world files are written,
+    /// Queries with more than 64 enabled packs or 4,096 IDs return no definitions. Resources share
+    /// the spawn reader's 16 MiB/file and 64 MiB/query limits. No world files are written,
     /// chunks scanned, images decoded or mutable caches introduced.
     public func biomeDefinitions(for identifiers: Set<String>, assets: GameAssets?) throws -> [String: BiomeDefinition] {
-        let ids = Set(identifiers.compactMap { GameAssets.resourceID($0)?.description })
-        guard !ids.isEmpty, let packs = try resourcePacks(assets: assets) else { return [:] }
-        let registry = try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
-        return try Self.biomeDefinitions(for: ids, in: registry)
+        try biomeResources(for: identifiers, assets: assets, decode: BiomeDefinition.init(json:))
     }
 
     /// Discovers and resolves all biome definitions in the selected game jar and enabled packs.
@@ -97,17 +93,6 @@ extension World {
     /// from its values, then reread it when the enabled packs or resources change.
     /// Registry discovery ignores symbolic links at or below the biome category folder.
     public func biomeDefinitions(assets: GameAssets?) throws -> [String: BiomeDefinition] {
-        guard let packs = try resourcePacks(assets: assets) else { return [:] }
-        return try WorldResourcePack.Registry(directory: "worldgen/biome", in: packs)
-            .readAll(json: BiomeDefinition.init(json:))
-    }
-
-    private static func biomeDefinitions(for ids: Set<String>, in registry: WorldResourcePack.Registry) throws -> [String: BiomeDefinition] {
-        var result: [String: BiomeDefinition] = [:]
-        for id in ids.sorted() {
-            try Task.checkCancellation()
-            result[id] = try registry.read(id, json: BiomeDefinition.init(json:))
-        }
-        return result
+        try biomeResources(assets: assets, decode: BiomeDefinition.init(json:))
     }
 }

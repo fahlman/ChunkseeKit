@@ -1172,7 +1172,10 @@ category replacement follow EnvironmentAttributes.NATURAL_MOB_SPAWNS and MobSpaw
 an empty named category replaces rather than inherits. Unknown bases do not hide readable overlay
 categories. Type IDs and weights remain independently available, and positive evidence survives an
 unrelated unreadable entry. Shared pack priority, containment, cancellation and ResourceReadBudget
-apply; colors/climate do not control these facts. GeneratedMobSpawnFacts supplies only the code's
+apply; colors/climate do not control these facts. BiomeResources is the single jar/World lookup
+owner for both color and spawn projections, with shared ID normalization, 4,096-biome and resource
+byte limits, including all-biome color discovery. GameAssets.resource owns both assets/data paths.
+GeneratedMobSpawnFacts supplies only the code's
 attribute default and omitted-weight rule through the one release tool. No biome list, dimension-name
 gate or actual-spawn probability is inferred. Counts, costs, light, height, structures and dynamic
 environment layers remain separate. These additive APIs are unreleased for #232 item 4; no chunk
