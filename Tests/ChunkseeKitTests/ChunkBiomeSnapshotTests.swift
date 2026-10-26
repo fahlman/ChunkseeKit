@@ -83,7 +83,7 @@ import Testing
                 "example:source": .compound(["type": type])
             ])])
         ])]), to: root.appendingPathComponent("level.dat"))
-        let dimension = try #require(World(contentsOf: root).dimensionTypes()["example:source"])
+        let dimension = try #require(World(contentsOf: root).dimensionTypes(assets: nil)["example:source"])
         let sampler = BiomeSampler(seed: 0)
         let lower = try #require(sampler.cellOrigin(at: BlockPosition(blockX: -1, blockY: -10000, blockZ: 0), in: dimension))
         let upper = try #require(sampler.cellOrigin(at: BlockPosition(blockX: -1, blockY: 10000, blockZ: 0), in: dimension))

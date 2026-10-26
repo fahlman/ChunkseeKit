@@ -131,7 +131,7 @@ import Testing
             "test:bad_gameplay": definition(extra: ["attributes": .compound([
                 "gameplay/sky_light_level": .string("bad"), "visual/sun_angle": .float(20)])])
         ])
-        let types = try world.dimensionTypes(), night = try world.nightMonsterLighting(assets: nil)
+        let types = try world.dimensionTypes(assets: nil), night = try world.nightMonsterLighting(assets: nil)
         #expect(types["test:low"]?.baseSkyLightLevel == -15)
         #expect(night["test:low"]?.skyDarkening == 15 && night["test:high"]?.skyDarkening == 0)
         #expect(types["test:bad_visual"]?.baseSkyLighting == nil && night["test:bad_visual"]?.skyDarkening == 11)

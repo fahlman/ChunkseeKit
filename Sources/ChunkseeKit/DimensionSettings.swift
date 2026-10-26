@@ -13,16 +13,14 @@ extension World {
     ///
     /// Reads modern world_gen_settings or legacy WorldGenSettings, including inline definitions.
     /// References resolve through enabled folder/ZIP data packs, in priority order.
-    /// Without supplied game assets, missing definitions remain unavailable. Built-in packs, overlays and resource filters
+    /// Pass nil explicitly when no game is available; missing definitions remain unavailable.
+    /// Built-in packs, overlays and resource filters
     /// are unsupported: an unresolved higher-priority pack prevents falling back to lower ones.
     /// Missing/malformed/unresolved types are omitted. Read errors propagate. No files are written.
     /// Folder references use registered resources: linked category folders and descendants are
     /// skipped, while contained namespace aliases are allowed. Inline values need no registry read.
     /// This type-only query does not load generator resources.
-    public func dimensionTypes() throws -> [String: DimensionType] {
-        try dimensionTypes(assets: nil)
-    }
-
+    ///
     /// Uses the caller's supplied jar for vanilla definitions, including time/sky metadata.
     /// Version labels do not gate readable definitions. Enabled folder/ZIP overrides retain
     /// priority; a bad override never falls back to the jar. No jar artwork is read or retained here.
@@ -32,13 +30,9 @@ extension World {
 
     /// Reads each saved dimension's type and noise-generation facts together. The two values
     /// resolve independently; an unavailable generator does not discard a known dimension type.
-    /// Uses the same pack priority and unsupported-resource rules as dimensionTypes().
+    /// Uses the same pack priority and unsupported-resource rules as dimensionTypes(assets:).
     /// Only minecraft:noise generators have noiseGeneration. No roof or biome is inferred.
-    public func dimensionSettings() throws -> [String: DimensionSettings] {
-        try dimensionSettings(assets: nil)
-    }
-
-    /// Reads type and generator definitions using dimensionTypes(assets:)'s selected-jar policy.
+    /// Pass nil explicitly when no game is available; missing definitions remain unavailable.
     public func dimensionSettings(assets: GameAssets?) throws -> [String: DimensionSettings] {
         try readDimensionSettings(includeGeneration: true, assets: assets)
     }

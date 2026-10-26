@@ -36,9 +36,13 @@ targets: [
 
 ## v0.40.0
 
-`World.dimensionSettings()` exposes independently available dimension types and noise-generation
+The no-argument dimension queries have been removed. Callers must explicitly pass their selected
+`GameAssets`, or `nil` when no game is available. This source-breaking change prevents a pin
+update from silently losing vanilla dimension facts.
+
+`World.dimensionSettings(assets:)` exposes independently available dimension types and noise-generation
 bounds through `DimensionSettings` and `NoiseGenerationSettings`. They share the saved mapping
-and resource priorities with `dimensionTypes()`. The type-only query does not read generator
+and resource priorities with `dimensionTypes(assets:)`. The type-only query does not read generator
 resources. Unknown definitions stay unavailable, and empty noise heights remain valid.
 `surfaceRuleRange(in:)` follows verified 26.3 surface-rule anchors; it does not locate a physical roof.
 
@@ -407,7 +411,7 @@ cache-version changes.
 
 ### Dimension build limits (v0.33.0)
 
-`World.dimensionTypes()` reads each saved dimension's type from modern world-generation data
+`World.dimensionTypes(assets:)` reads each saved dimension's type from modern world-generation data
 or the older inline `WorldGenSettings`. It resolves inline definitions and references in enabled
 folder data packs, with later packs taking priority. Supply game assets to resolve the game's
 definitions. A dimension can use a different type from its own ID; neither its
@@ -442,12 +446,12 @@ The resource reader follows [PKWARE's ZIP format specification](https://pkware.c
 declarations, archive-writing API or external package is added.
 
 
-`World.dimensionSettings()` is the companion query when both the type and generator context
+`World.dimensionSettings(assets:)` is the companion query when both the type and generator context
 are needed. Each value has independently optional `type` and `noiseGeneration` fields. Noise
 settings resolve through the same saved mapping and enabled-pack rules; they are available only
 for a saved `minecraft:noise` generator. Game definitions come from the supplied jar;
 inline/custom bounds are validated without assuming a complete game registry.
-`dimensionTypes()` remains a type-only read and never opens generator resources.
+`dimensionTypes(assets:)` remains a type-only read and never opens generator resources.
 
 The additive `dimensionTypes(assets:)` and `dimensionSettings(assets:)` overloads can read vanilla
 definitions from the caller-selected `GameAssets` jar, independently of save or jar version labels.
