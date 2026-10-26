@@ -1,7 +1,7 @@
 import ChunkseeKit
 
 /// Compact retained inputs for one region. Large heightmaps, inhabited-time grids, chunk NBT
-/// and unnamed ordinary creatures are not retained. This is an in-memory index, not a cache format.
+/// are not retained. All located saved mobs are retained. This is an in-memory index, not a cache format.
 public struct RegionIndex: Sendable {
     public let dimension: String
     public let region: RegionPosition

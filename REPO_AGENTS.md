@@ -123,17 +123,22 @@ all unavailable regions; a partial pass preserves unselected contributions. Repl
 the dimension, selected/available coordinates, explicit cave-membership set and block catalog. Empty successful
 reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
 native marker sort/presentation remains a client concern. Portal and biome joins happen after all
-retained contributions are combined. Heightmaps, inhabited-time grids and ordinary unnamed mobs
-are not retained. These are in-memory values, with no persistence or file/task owner.
+retained contributions are combined. Heightmaps and inhabited-time grids are not retained.
+Every saved mob with a supported map location is retained, including ordinary unnamed/unowned
+and custom types. These are in-memory values, with no persistence or file/task owner.
 
-`CreatureEntry` owns the app's existing villager > owned pet > named category precedence, stable
+`CreatureEntry` owns the villager > owned pet > named > ordinary mob category precedence, stable
 UUID/fallback identity and checked location eligibility through core BlockPosition.mapCoordinates
 (floored X/Z fit Int32, supplied Y fits Int, unknown Y stays nil). Native map navigation and creature
 eligibility share this public helper; it does not enforce the game world border.
-The CLI uses `CreatureEntry.Group.group(for:)` for the same categories, including unnamed villagers,
-without applying the map's location filter: text listings retain records with unknown positions.
+The CLI uses `CreatureEntry.Group.group(for:)` for its existing special-category individual listings,
+including unnamed villagers, without applying the map's location filter: text listings retain records
+with unknown positions. Ordinary mobs remain in its per-type totals.
 Player-carried shoulder pets remain a client projection; totals include every decoded creature.
-Its category raw values remain named/pet/villager for client settings. Names, colors, symbols and
+The #276 extension adds the public `Group.mob` case and makes `Group.group(for:)` nonoptional;
+both require a minor release and client adoption. Existing named/pet/villager raw values remain
+unchanged for settings; the new raw value is mob. The creature search filter includes all groups;
+pet/villager/trade filters keep their existing scope. Names, colors, symbols and
 player-carried projections remain in the app. The additive region/dimension APIs are available in v0.46.0;
 separate app adoption on fahlman/Chunksee#214 will remove its matching rules and retain cached native
 marker projections for unchanged regions. Background-work scheduling and canceled-publication

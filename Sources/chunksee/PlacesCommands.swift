@@ -61,8 +61,9 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
         var kinds: [String: Int] = [:]
         func show(_ creature: Creature, at block: BlockPosition?, carrier: UUID?) {
             kinds[creature.id, default: 0] += 1
-            // Text listings retain unknown positions, so use categories without the map's location filter.
-            guard carrier != nil || CreatureEntry.Group.group(for: creature) != nil else { return }
+            // Individual listings retain the existing special groups, including unknown positions;
+            // the per-type totals above include ordinary mobs too.
+            guard carrier != nil || CreatureEntry.Group.group(for: creature) != .mob else { return }
             let owner = creature.owner.map { " owned by \($0.uuidString.lowercased())" } ?? ""
             let position = block.map { "(\($0.x), \($0.y), \($0.z))" } ?? "unknown position"
             let shoulder = carrier.map { " on shoulder of \($0.uuidString.lowercased())" } ?? ""

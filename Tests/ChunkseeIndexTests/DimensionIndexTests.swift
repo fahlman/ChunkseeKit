@@ -51,9 +51,11 @@ import Testing
         #expect(index.storage.map(\.id) == ["minecraft:diamond"])
         #expect(index.storage.first?.count == 7 && index.storage.first?.containers == 2)
         #expect(index.signs.count == 2 && index.spawners.count == 2 && index.structures.count == 2)
-        #expect(index.creatures.count == 2 && index.creatures.allSatisfy { $0.group == .pet })
+        #expect(index.creatures.count == 4)
+        #expect(index.creatures.filter { $0.group == .pet }.count == 2)
+        #expect(index.creatures.filter { $0.group == .mob }.map(\.creature.id) == ["minecraft:sheep", "minecraft:sheep"])
         #expect(index.creatures.first?.creature.x == -528)
-        #expect(index.regions[a]?.creatures.count == 1) // the ordinary sheep is discarded
+        #expect(index.regions[a]?.creatures.count == 2)
         #expect(index.formats == .init(readable: 2, legacy: 0))
         #expect(index.blocks.map(\.deposit.count) == [5, 2])
         #expect(index.blocks.allSatisfy { $0.deposit.block == .diamond && $0.deposit.minY == 0 && $0.deposit.maxY == 15 })
@@ -62,6 +64,48 @@ import Testing
         #expect(Set(index.biomeAreas.map(\.biomeID)) == ["minecraft:plains", "minecraft:lush_caves"])
         #expect(index.biomeAreas.allSatisfy { $0.chunkCount == 2 })
         #expect(index.biomes.count == 2 && index.caveBiomes.count == 2)
+    }
+
+    @Test func ordinaryAndCustomMobsSurviveReadsAndReconcileBySavedIdentity() throws {
+        let world = try SavedWorld()
+        defer { world.remove() }
+        let uuid = UUID(uuidString: "00000001-0000-0002-0000-000300000004")!
+        func custom(x: Double, variant: String) -> NBT {
+            Fixtures.mob(["id": .string("example:river_mob"), "UUID": Fixtures.uuidInts(uuid),
+                          "Pos": .list([.double(x), .double(64), .double(2)]),
+                          "variant": .string(variant)])
+        }
+        func sheep(x: Double) -> NBT {
+            Fixtures.mob(["id": .string("minecraft:sheep"), "Color": .byte(15),
+                          "Pos": .list([.double(x), .double(64), .double(2)])])
+        }
+        try world.entities(chunkX: 0, values: [custom(x: 1, variant: "example:spotted"), sheep(x: 3), sheep(x: .nan)])
+        try world.entities(chunkX: 32, values: [sheep(x: 513)])
+        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+            .updating(available: [a, b], selected: nil,
+                      replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
+        #expect(initial.creatures.count == 3 && initial.creatures.allSatisfy { $0.group == .mob })
+        let original = try #require(initial.creatures.first { $0.creature.uuid == uuid })
+        #expect(original.creature.appearance?.variant == "example:spotted")
+        #expect(initial.creatures.filter { $0.creature.id == "minecraft:sheep" }
+            .allSatisfy { $0.creature.appearance?.variant == "minecraft:black" })
+        let acrossWorld = WorldIndex(dimensions: [overworld: initial]).all(\.creatures)
+        #expect(acrossWorld.count == 3 && acrossWorld.allSatisfy { $0.dimension == overworld })
+
+        try world.entities(chunkX: 0, values: [custom(x: 9, variant: "example:striped")])
+        let refreshed = initial.updating(available: [a, b], selected: [a],
+                                         replacements: [try world.scan(a, caves: caves)])
+        #expect(refreshed.creatures.count == 2)
+        let moved = try #require(refreshed.creatures.first { $0.id == original.id })
+        #expect(moved.creature.x == 9 && moved.creature.appearance?.variant == "example:striped")
+        #expect(initial.creatures.count == 3 && original.creature.x == 1)
+        let failed = refreshed.updating(available: [a, b], selected: [a], replacements: [])
+        #expect(failed.creatures == refreshed.creatures)
+        let deleted = refreshed.updating(available: [a], selected: [b], replacements: [])
+        #expect(deleted.creatures.map(\.id) == [original.id])
+        try world.entities(chunkX: 0, values: [])
+        let emptied = deleted.updating(available: [a], selected: [a], replacements: [try world.scan(a, caves: caves)])
+        #expect(emptied.creatures.isEmpty)
     }
 
     @Test func partialReplacementMatchesACompletePassAndLeavesOldSnapshotIntact() throws {
@@ -255,8 +299,8 @@ import Testing
                                        extra: ["block_entities": .list(entities), "structures": structure])
             try write(chunk, chunkX: chunkX, folder: .terrain, dimension: id)
         }
-        func entities(chunkX: Int) throws {
-            let values: [NBT] = [
+        func entities(chunkX: Int, values: [NBT]? = nil) throws {
+            let values: [NBT] = values ?? [
                 Fixtures.mob(["id": .string("minecraft:wolf"), "UUID": .intArray([1, 2, 3, Int32(chunkX)]),
                            "Owner": .intArray([5, 6, 7, 8]), "Health": .float(8),
                            "Pos": .list([.double(Double(chunkX * 16)), .double(64), .double(0)])]),
