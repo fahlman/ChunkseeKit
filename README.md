@@ -838,12 +838,12 @@ by brick as in the official migration. Work is bounded to four sides and 16 MiB 
 strings. The computed facts use existing saved components; ItemStack's archive format is unchanged.
 
 `ItemModelSelection` includes these sides, so changing a side or its pattern changes the model
-cache key, while stack count/name and template count/tooltips do not. The verified **26.3 / 5023**
+cache key, while stack count/name and template count/tooltips do not. The generated
 special-model path renders the neck, rim, caps and side faces through the existing shared cuboid,
 UV, part-pose and item-transform code. The game's 23 sherd component defaults come from its code;
 each pattern's asset comes from the supplied jar's `decorated_pot_pattern` registry. Explicit named
 and inline patterns override defaults, and removed patterns stay blank. Unknown mod-item defaults,
-unsafe/missing/malformed selected definitions and unsupported versions remain unavailable. This
+unsafe/missing/malformed selected definitions remain unavailable. This
 is a static inventory model, without wobble animation or world writes. It adds no image decoder,
 app renderer or bundled artwork. App adoption remains on fahlman/Chunksee#390 after release.
 
@@ -859,8 +859,8 @@ the reader keeps every accepted layer rather than applying a renderer's layer li
 reader changes no stored item or cache format. Picture selection and material resolution use
 the shared model API below; pixel decoding/compositing and the app's adoption remain separate.
 
-The unreleased #191 extension includes this design in `ItemModelSelection`. For the verified
-26.3 shield model, `GameAssets.itemModel(for:)` resolves named patterns from the supplied jar's
+The unreleased #191 extension includes this design in `ItemModelSelection`. For the
+shield model, `GameAssets.itemModel(for:)` resolves named patterns from the supplied jar's
 `data/<namespace>/banner_pattern` JSON or uses saved inline assets. Its existing plate/handle
 geometry carries one `AssetModel.Material`: the patterned base skin plus ordered `overlays`,
 each with a texture ID and RGB multiplier. Clients composite the overlays over the base before
@@ -872,14 +872,14 @@ definitions stay unavailable. This interprets the supplied jar, not resource-pac
 world registry overrides. Image decoding, compositing and cache-cost adoption remain app work
 on fahlman/Chunksee#390. Consumers must handle material overlays before adopting patterned images.
 
-The unreleased #197 extension resolves 26.3 banner special models through those same APIs.
+The unreleased #197 extension resolves banner special models through those same APIs.
 The definition chooses the base dye and ground (default) or wall attachment; a stack's base-color
 component does not override that dye. Only the cloth receives the dyed base and first sixteen
 saved patterns. Its support/pole keeps the plain `entity/banner/banner_base` skin. The cloth retains the
 game's fixed inventory pose (phase zero), while the definition supplies node and GUI transforms.
 Existing cuboids, rotations and material overlays describe the whole banner; clients need no
 banner-specific renderer. A transform that would shear the tilted cloth stays unavailable.
-Unknown versions, malformed definitions and unresolved selected patterns retain the usual fallback.
+Malformed definitions and unresolved selected patterns retain the usual fallback; version labels do not restrict these models.
 
 `ItemStack.dyedColor` and `customPotionColor` expose explicit saved color overrides as optional
 `UInt32` values in 0xRRGGBB form (unreleased, #145). They read current components and legacy tags;
@@ -1439,7 +1439,13 @@ The official 26.3 component/property/tint codecs and range selector establish th
 synthetic saved NBT and definitions are compared directly with those game classes. No game artwork,
 live property simulation or app parser is added.
 
-Since v0.50.2, closed single chests and shulker boxes are supported special models for **26.3 / 5023**. They
+The single `Tools/GameFacts` release tool generates the supported static special-item shapes,
+poses, skin dimensions and default skull textures from Minecraft's actual baked models.
+These code-only facts apply to every parseable asset version. Item definitions, texture resources,
+GUI presentation and saved pattern choices are still resolved at runtime. Unknown renderer formats
+remain unavailable; a different version label alone never suppresses a supported model.
+
+Closed single chests and shulker boxes are supported special models. They
 resolve to ordinary `AssetModel` cuboids, so clients use the same drawing path as block items.
 The chest body, lid and latch and the two shulker boxes use verified game-code geometry and UVs;
 their texture IDs and inherited GUI presentation come from the supplied jar. Normal, trapped,
@@ -1449,39 +1455,37 @@ No artwork is included. Clients still handle absent or undecodable PNGs as for o
 
 Texture identifiers retain their namespace and path: for example, a chest's `example:painted`
 reads `example:entity/chest/painted`. There is no fixed catalog of texture names.
-Special geometry stays unavailable for other game versions, open lids or double chests.
+Special geometry stays unavailable for open lids or double chests.
 
 Since v0.55.0, the plain shield's plate and handle come from the official
 `ShieldModel`, using `entity/shield/shield_base_nopattern` and the definition's base GUI settings.
 Saved banner patterns and base colors remain outside this static default-variant API.
 
-The v0.66.3 extension supports the static **26.3 / 5023** conduit item through the same
+The v0.66.3 extension supports the static conduit item through the same
 APIs. Its closed shell uses `entity/conduit/base` and the game's 32×16 skin dimensions; the item
 definition still supplies its transform and base GUI settings. Shared cuboids and face UVs describe
 it without a conduit-specific client renderer. Active world-conduit animation is not an item model.
-Missing images keep the client's normal fallback, and unverified game versions remain unavailable.
+Missing images keep the client's normal fallback; game-version labels do not restrict this format.
 
-The v0.67.1 extension supports **26.3 / 5023** copper-golem statues through these same
+The v0.67.1 extension supports copper-golem statues through these same
 cuboids and rotations. The selected special definition supplies one of four fixed poses and a
 full texture resource; all eight vanilla items (including waxed and weathered variants) are
 covered. Their supplied item transform and base GUI presentation are preserved. `textures/*.png`
 resources keep their namespace and use the same client image-loading path as other materials;
-unsupported paths, poses and versions stay unavailable. The existing static selection policy
-uses the standing fallback for block-state selectors; it does not resolve a saved statue's pose
-or animate a live golem. No public API, cache format, image decoder or artwork is added.
+unsupported paths and poses stay unavailable. Block-state selectors use saved properties when
+available and the definition's fallback otherwise; this does not animate a live golem. No public API, cache format, image decoder or artwork is added.
 
-The unreleased #205 extension supports **26.3 / 5023** skeleton and wither-skeleton skulls,
+The unreleased #205 extension supports skeleton and wither-skeleton skulls,
 and zombie, creeper, dragon and piglin heads through the same cuboid/material APIs. The selected
 `minecraft:head` definition supplies the kind, optional texture override and item transform;
 the base model supplies its GUI presentation. The fixed phase-zero geometry includes the
 zombie's inflated outer skin, dragon jaw and mirrored skin regions, and piglin ears. These
 parts share the existing transforms, rotations and skin-size-aware UV mapping. The renderer's
 verified default skin IDs are used unless the definition provides a namespace-preserving
-`entity/` texture override. Nonzero animation, unknown kinds and unverified versions
-stay unavailable. Missing images keep the client's usual fallback. No player-skin download,
+`entity/` texture override. Nonzero animation and unknown kinds stay unavailable. Missing images keep the client's usual fallback. No player-skin download,
 new public API, image decoder, app renderer, artwork or world write is introduced.
 
-The unreleased #209 extension adds local **26.3 / 5023** player-head pictures.
+The unreleased #209 extension adds local player-head pictures.
 `ItemStack.headSkin` and `ItemModelSelection.headSkin` distinguish the unprofiled default,
 an explicit current profile's `texture` resource, and an unresolved account skin. Missing or
 removed profiles use the game's default slim Steve resource. Current profile data takes precedence

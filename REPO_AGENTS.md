@@ -609,15 +609,20 @@ from picture definitions. The additive API requires a minor release; fahlman/Chu
 app adoption and the symbol fallback. No saved-field, RegionFacts or dependency change.
 
 `SpecialItemModel` supplies closed single-chest, shulker, shield, banner, conduit, decorated-pot,
-copper-statue and mob-head cuboids for selected special item definitions in exactly 26.3/5023. Shapes and entity-skin UVs were checked against the official
-ChestModel, ShulkerModel, ShieldModel and ModelPart.Cube, including an independent export of their baked
-face vertices. The texture ID and base GUI presentation still come from the jar. Texture mapping
+copper-statue, mob-head and player-head cuboids for selected special item definitions, independently
+of version labels. `Tools/GameFacts` generates their baked polygons, UVs, skin dimensions and
+static poses from the game's actual layer builders and setupAnim methods. Skull kinds, statue
+poses and default head skins come from the game's owners. `SpecialItemGeometry` converts these
+facts through the common transform owner, retaining runtime material and saved-pattern selection.
+The extractor verifies every emitted posed vertex and UV layout against the original polygons;
+unsupported future geometry fails generation for inspection. No shapes or skin inventories are
+maintained by hand. The texture ID and base GUI presentation still come from the jar. Texture mapping
 shares SpriteMapper's namespace-preserving `entity/chest/` or `entity/shulker/` path prefix;
 there is no list of accepted texture names. Waxed variants share their definition's texture.
 Static selection uses the normal chest fallback, without evaluating Christmas dates. Missing
 images remain a client fallback, as for ordinary models. The plain shield uses ShieldSpecialRenderer's
 `entity/shield/shield_base_nopattern` skin; saved patterns/base colors remain separate from this
-static default-variant API. Nonzero container openness, double chests and unverified versions
+static default-variant API. Nonzero container openness and double chests
 return nil. `AssetItemTransform` composes selected ancestor and local transforms in parent-to-child
 order, matching Transformation.compose. The supported subset has positive X scale, same-sign
 nonzero Y/Z scales, translation, identity/axis-aligned-half-turn left rotation and identity right rotation.
@@ -634,7 +639,7 @@ bakes the closed shell and uses `entity/conduit/base`; ConduitRenderer.createShe
 its 6×6×6 cube and 32×16 skin. The shared UV conversion now uses the skin's width and height;
 existing 64×64 skins retain their mapping. The supplied item definition owns transforms and
 base GUI presentation. The special renderer is stateless; active world-conduit animation stays
-outside this item path. Existing version, part and coordinate limits still apply. No public API,
+outside this item path. Existing part and coordinate limits still apply. No public API,
 image decoder, app renderer, world interpretation or artwork is added. App adoption remains on
 fahlman/Chunksee#390 after release.
 
@@ -644,7 +649,7 @@ pattern facts; older lists and BlockEntityTag.sherds use the official back/left/
 and missing-entry brick migration. Malformed present data stays unavailable, bounded to four
 sides and 16 MiB of identifier strings. Template count and tooltip data do not select pictures.
 ItemModelSelection includes these computed facts without changing ItemStack Codable or scan facts.
-The 26.3/5023 renderer reuses the common part/UV mapping for the two deformed neck/rim cubes,
+The generated renderer reuses the common part/UV mapping for the two deformed neck/rim cubes,
 top/bottom planes and four outward side planes. A part pose composes through AssetItemTransform;
 deformation moves vertices without stretching the nominal UV layout. The 23 sherd component
 defaults come from the official Items registrations, with pattern assets resolved from the
@@ -658,11 +663,11 @@ The v0.67.1 copper-golem-statue extension uses those same cuboids, deformations,
 and element rotations. The selected definition supplies the required standing/sitting/running/star
 pose and full texture resource. It preserves the namespace while normalizing `textures/*.png` to
 the shared material format; other resource layouts stay unavailable. CopperGolemModel's four
-static layers and CopperGolemStatueModel's root half-turn supply the fixed 26.3/5023 geometry.
+static layers and CopperGolemStatueModel's root half-turn supply the generated geometry.
 Nested forearm offsets/rotations compose before entering the existing element representation.
 All eight vanilla definitions, four poses, four supplied image hashes and baked corner/UV pairs
-are checked against the official jar. The existing block-state selector policy still chooses its
-static fallback (standing); this does not read saved block-state poses or simulate a live golem.
+are checked against the official jar. Block-state selectors use saved properties when available and the definition's fallback
+otherwise; this does not simulate a live golem.
 There is no new public API, artwork, image decoder, app renderer, cache or world write. Published
 app adoption/native pictures remain separate on fahlman/Chunksee#390.
 
@@ -686,7 +691,7 @@ Current components/removal take precedence over legacy SkullOwner. Only relevant
 are read, not the complete account codec; malformed relevant fields stay unavailable, with a
 16 MiB retained-identifier bound. ResolvableProfile/PlayerSkin.Patch and ClientAsset.ResourceTexture
 establish the flat component shape and texture path; DefaultPlayerSkin supplies slim Steve.
-The separate 26.3/5023 player-head renderer shares SkullModel's humanoid boxes with zombie heads,
+The separate player-head renderer shares SkullModel's humanoid boxes with zombie heads,
 the existing geometry/UV/transform/budget owner, and the verified translucent material. No guessed
 UUID skin, online request, downloaded-skin-cache access, app renderer or world write is added.
 This additive API requires a minor release and separate app adoption on fahlman/Chunksee#390;
@@ -952,8 +957,8 @@ or world write is added.
 
 The unreleased #191 extension includes bannerDesign in the shared ItemModelSelection identity.
 AssetPatternMaterial resolves named definitions from the supplied jar's banner_pattern data
-resources and saved inline assets through existing identifier/path/JSON owners. The verified
-26.3 special-model path emits one existing plate/handle geometry with a material carrying the
+resources and saved inline assets through existing identifier/path/JSON owners. The
+special-model path emits one existing plate/handle geometry with a material carrying the
 base skin and ordered dyed texture overlays. DyeColor owns the verified texture multipliers;
 the renderer's missing-base white and first-16-pattern limit stay here, not in the saved reader.
 Pattern JSON and overlays consume the common item budget. Plain/default shields and other
@@ -972,7 +977,7 @@ dyed base and first sixteen patterns apply only to the cloth; support/pole faces
 banner_base skin. BannerModel/BannerFlagModel supply the cuboids and fixed phase-zero inventory
 tilt. The existing transform owner preserves that angle under uniform perpendicular scaling and
 rejects transforms that would shear it. The node's translation/scale and inherited GUI settings
-remain separate. All materials share existing pattern/path/JSON budgets and version gating.
+remain separate. All materials share existing pattern/path/JSON budgets, without version gating.
 No new public enum case, item catalog, image decoder, cache, app renderer or saved-fact change is
 introduced. Official baked model and submitted-pattern comparisons accompany synthetic public
 API tests; app pictures and published adoption remain separate on fahlman/Chunksee#390.

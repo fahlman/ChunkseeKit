@@ -25,7 +25,8 @@ import Testing
     private func elements(_ node: [String: Any]) throws -> [AssetModel.Element] {
         let item = try #require(assets(node).defaultItemModel("shield"))
         guard case .elements(let boxes) = item.parts.first?.model.geometry else { throw Invalid.geometry }
-        return boxes
+        // The plate and handle are identified by size, not the builder's child order.
+        return boxes.sorted { $0.to.y - $0.from.y > $1.to.y - $1.from.y }
     }
 
     @Test func shieldUsesItsParentTransformPlateHandleAndPlainSkin() throws {
@@ -113,9 +114,9 @@ import Testing
         }
     }
 
-    @Test func shieldUsesTheSameVerifiedVersionAndPartLimitsAsContainers() throws {
+    @Test func shieldIgnoresVersionLabelsAndKeepsTheSharedPartLimits() throws {
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(selected(special), version: name, dataVersion: version).defaultItemModel("shield") == nil)
+            #expect(try assets(selected(special), version: name, dataVersion: version).defaultItemModel("shield") != nil)
         }
         #expect(try assets(["type": "composite", "models": Array(repeating: selected(special), count: 33)]).defaultItemModel("shield") == nil)
         var missing = special

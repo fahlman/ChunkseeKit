@@ -8,6 +8,7 @@ import re
 import subprocess
 import textwrap
 import zipfile
+from special_item_models import generated_special_models
 
 
 def digest(path, algorithm="sha256"):
@@ -278,6 +279,7 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice),
             "Sources/ChunkseeKit/GeneratedBlockModelSeeds.swift": seed_source,
             "Sources/ChunkseeKit/GeneratedBlockTints.swift": block_tints_source(facts["blockTints"], notice),
+            "Sources/ChunkseeKit/GeneratedSpecialItemModels.swift": generated_special_models(facts["specialItemModels"], notice),
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
             "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source}
 
@@ -309,11 +311,11 @@ def main():
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java",
-                    "Tools/GameFacts/ExtractBlockTints.java",
+                    "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "spawn_egg_relationships", "equipment_attachments"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "special_item_models", "spawn_egg_relationships", "equipment_attachments"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

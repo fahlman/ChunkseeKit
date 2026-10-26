@@ -50,9 +50,10 @@ import Testing
 
     @Test func standingModelComposesTheRootAndItemTransformWithItsInflations() throws {
         let boxes = try elements(#require(assets(node()).defaultItemModel("test")))
-        #expect(boxes[0].from == SIMD3(4, 19, 6) && boxes[0].to == SIMD3(8, 24, 10))
-        #expect(boxes[0].faces[.down]?.uv == SIMD4(5, 6.75, 6, 7.75))
-        let head = boxes[3]
+        let leg = try #require(boxes.first { $0.from == SIMD3(4, 19, 6) })
+        #expect(leg.to == SIMD3(8, 24, 10))
+        #expect(leg.faces[.down]?.uv == SIMD4(5, 6.75, 6, 7.75))
+        let head = try #require(boxes.first { abs($0.from.y - 7.985) < 0.00001 })
         #expect((0..<3).allSatisfy { abs(head.from[$0] - SIMD3<Float>(3.985, 7.985, 2.985)[$0]) < 0.00001 })
         #expect((0..<3).allSatisfy { abs(head.to[$0] - SIMD3<Float>(12.015, 13.015, 13.015)[$0]) < 0.00001 })
         #expect(head.faces[.north]?.uv == SIMD4(7, 2.5, 9, 3.75))
@@ -79,7 +80,7 @@ import Testing
         #expect(reader.defaultItemModel("test") == plain)
         #expect(try reader.itemModel(for: #require(stack.itemModelSelection)) == assets(node("sitting")).defaultItemModel("test"))
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("test") == nil)
+            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("test") != nil)
         }
         #expect(try assets(["type": "composite", "models": Array(repeating: node(), count: 33)]).defaultItemModel("test") == nil)
         var scaled = node("running"); var nonuniform = transform; nonuniform["scale"] = [2, 1, 1]

@@ -38,6 +38,12 @@ import Testing
         return elements
     }
 
+    private func sideFace(_ direction: AssetModel.Direction, in boxes: [AssetModel.Element]) throws -> AssetModel.Face {
+        let sides = boxes.filter { $0.faces.count == 1 && $0.faces[direction] != nil }
+        #expect(sides.count == 1)
+        return try #require(sides.first?.faces[direction])
+    }
+
     @Test func plainPotKeepsItsNeckRimCapsAndFourOutwardSides() throws {
         let reader = try assets(), item = try #require(reader.defaultItemModel("decorated_pot"))
         let boxes = try elements(item)
@@ -45,16 +51,16 @@ import Testing
         #expect(item.parts[0].model.guiLight == .front)
         #expect(item.parts[0].model.guiTransform.rotation == SIMD3(30, 45, 0))
         #expect(item.parts[0].model.guiTransform.scale == SIMD3(repeating: 0.6))
-        #expect((0..<3).allSatisfy { abs(boxes[0].from[$0] - SIMD3<Float>(4.1, 17.1, 4.1)[$0]) < 0.00001 })
-        #expect((0..<3).allSatisfy { abs(boxes[0].to[$0] - SIMD3<Float>(11.9, 19.9, 11.9)[$0]) < 0.00001 })
-        #expect(boxes[2].from == SIMD3(1, 16, 1) && boxes[2].to == SIMD3(15, 16, 15))
-        #expect(boxes[3].from == SIMD3(1, 0, 1) && boxes[3].to == SIMD3(15, 0, 15))
-        #expect(boxes.prefix(4).flatMap { $0.faces.values }.allSatisfy {
+        let neck = try #require(boxes.first { abs($0.from.y - 17.1) < 0.00001 })
+        #expect((0..<3).allSatisfy { abs(neck.from[$0] - SIMD3<Float>(4.1, 17.1, 4.1)[$0]) < 0.00001 })
+        #expect((0..<3).allSatisfy { abs(neck.to[$0] - SIMD3<Float>(11.9, 19.9, 11.9)[$0]) < 0.00001 })
+        #expect(boxes.contains { $0.from == SIMD3(1, 16, 1) && $0.to == SIMD3(15, 16, 15) })
+        #expect(boxes.contains { $0.from == SIMD3(1, 0, 1) && $0.to == SIMD3(15, 0, 15) })
+        #expect(boxes.filter { $0.faces.count == 6 }.flatMap { $0.faces.values }.allSatisfy {
             $0.material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_base"
         })
-        for (index, direction) in [AssetModel.Direction.north, .west, .east, .south].enumerated() {
-            let face = try #require(boxes[index + 4].faces[direction])
-            #expect(boxes[index + 4].faces.count == 1)
+        for direction in [AssetModel.Direction.north, .west, .east, .south] {
+            let face = try sideFace(direction, in: boxes)
             #expect(face.material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_side")
             #expect(face.uv == SIMD4(1, 0, 15, 16) && face.rotation == 0)
             #expect(face.tintIndex == nil && face.cullFace == nil && face.material.overlays.isEmpty)
@@ -68,8 +74,8 @@ import Testing
         for pattern in patterns {
             let item = try #require(reader.itemModel(for: selection(["back": .string(pattern + "_pottery_sherd")])))
             let boxes = try elements(item)
-            #expect(boxes[4].faces[.north]?.material.texture.description == "minecraft:entity/decorated_pot/\(pattern)_pottery_pattern")
-            #expect(boxes[7].faces[.south]?.material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_side")
+            #expect(try sideFace(.north, in: boxes).material.texture.description == "minecraft:entity/decorated_pot/\(pattern)_pottery_pattern")
+            #expect(try sideFace(.south, in: boxes).material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_side")
         }
         #expect(try assets(includePatterns: false).itemModel(for: selection(["front": .string("angler_pottery_sherd")])) == nil)
         #expect(reader.itemModel(for: try selection(["front": .string("pack:unknown")])) == nil)
@@ -89,9 +95,9 @@ import Testing
                 "!minecraft:provides_pottery_pattern": .compound([:])])])
         ])))
         let boxes = try elements(item)
-        #expect(boxes[5].faces[.west]?.material.texture.description == "pack:entity/decorated_pot/stars")
-        #expect(boxes[6].faces[.east]?.material.texture.description == "pack:entity/decorated_pot/moon")
-        #expect(boxes[7].faces[.south]?.material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_side")
+        #expect(try sideFace(.west, in: boxes).material.texture.description == "pack:entity/decorated_pot/stars")
+        #expect(try sideFace(.east, in: boxes).material.texture.description == "pack:entity/decorated_pot/moon")
+        #expect(try sideFace(.south, in: boxes).material.texture.description == "minecraft:entity/decorated_pot/decorated_pot_side")
         for pattern in [NBT.string("pack:missing"), .string("pack:../unsafe"), .compound(["asset_id": .string("../unsafe")])] {
             #expect(reader.itemModel(for: try selection(["front": side("brick", pattern)])) == nil)
         }
@@ -111,7 +117,7 @@ import Testing
             #expect(b.faces == a.faces)
         }
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(version: name, dataVersion: version).defaultItemModel("decorated_pot") == nil)
+            #expect(try assets(version: name, dataVersion: version).defaultItemModel("decorated_pot") != nil)
         }
         #expect(try assets(["type": "composite", "models": Array(repeating: node(), count: 33)]).defaultItemModel("decorated_pot") == nil)
         var invalid = node(); invalid["base"] = "item/missing"

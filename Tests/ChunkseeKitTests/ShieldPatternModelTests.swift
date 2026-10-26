@@ -116,13 +116,13 @@ import Testing
         #expect(stack(layers: [layer(.int(1))]).itemModelSelection == nil)
     }
 
-    @Test func patternResourcesShareTheWholeItemBudgetAndVersionGate() throws {
+    @Test func patternResourcesShareTheWholeItemBudgetAcrossVersionLabels() throws {
         let filler = String(repeating: "x", count: 1024 * 1024)
         let reader = try assets(patterns: ["pack:stripe": "{\"asset_id\":\"stripe\",\"translation_key\":\"\(filler)\"}"])
         #expect(try picture(stack(layers: [layer()]), in: reader) != nil)
         #expect(try picture(stack(layers: Array(repeating: layer(), count: 16)), in: reader) == nil)
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try picture(stack(base: "blue"), in: assets(version: name, dataVersion: version)) == nil)
+            #expect(try picture(stack(base: "blue"), in: assets(version: name, dataVersion: version)) != nil)
         }
     }
 

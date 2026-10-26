@@ -61,6 +61,7 @@ public final class ExtractGameFacts {
         facts.add("blockDefaults", ExtractBlockDefaults.extract());
         facts.add("blockModelSeeds", ExtractBlockModelSeeds.extract());
         facts.add("blockTints", ExtractBlockTints.extract());
+        facts.add("specialItemModels", ExtractSpecialItemModels.extract());
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
         facts.add("equipment", ExtractEquipmentFacts.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");

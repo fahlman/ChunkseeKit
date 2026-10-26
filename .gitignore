@@ -3,3 +3,6 @@
 .DS_Store
 *.xcodeproj
 Package.resolved
+
+# Python release-tool imports.
+__pycache__/

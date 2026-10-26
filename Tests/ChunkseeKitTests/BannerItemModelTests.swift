@@ -132,7 +132,7 @@ import Testing
         }
     }
 
-    @Test func invalidDefinitionsUnverifiedVersionsAndShearingTransformsStayUnavailable() throws {
+    @Test func versionsRenderWhileInvalidDefinitionsAndShearingTransformsStayUnavailable() throws {
         for definition: [String: Any] in [
             ["type": "banner"], ["type": "banner", "color": false], ["type": "banner", "color": "unknown"],
             ["type": "banner", "color": "white", "attachment": "ceiling"],
@@ -141,7 +141,7 @@ import Testing
             #expect(try assets(node(definition)).defaultItemModel("sample") == nil)
         }
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("sample") == nil)
+            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("sample") != nil)
         }
         var shear = transform
         shear["scale"] = [0.6666667, -0.6666667, -0.5]

@@ -75,6 +75,7 @@ import Testing
 
     @Test func shulkerDefinitionTransformPreservesTheTopAndSideRegions() throws {
         let boxes = try elements(assets(definition("shulker_box", texture: "shulker_red", transform: transform)))
+            .sorted { $0.to.y - $0.from.y > $1.to.y - $1.from.y }
         let expectedFrom: [SIMD3<Float>] = [SIMD3(0.004, 4.002, 0.004), SIMD3(0.004, 0.004, 0.004)]
         let expectedTo: [SIMD3<Float>] = [SIMD3(15.996, 15.996, 15.996), SIMD3(15.996, 8, 15.996)]
         for index in boxes.indices {
@@ -89,13 +90,14 @@ import Testing
         #expect(boxes.allSatisfy { $0.faces.values.allSatisfy { $0.rotation == 0 } })
         let shifted = transform.replacingOccurrences(of: "[0.5,1.4995,0.5]", with: "[0.75,1.4995,0.5]")
         let changed = try elements(assets(definition("shulker_box", texture: "shulker_red", transform: shifted)))
+            .sorted { $0.to.y - $0.from.y > $1.to.y - $1.from.y }
         #expect(abs(changed[0].from.x - boxes[0].from.x - 4) < 0.00001)
     }
 
-    @Test func unverifiedVersionsAndSpecialKindsStayUnavailable() throws {
+    @Test func versionLabelsDoNotRestrictRenderingAndUnsupportedKindsStayUnavailable() throws {
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999), ("modded", 5023)] {
             let reader = try assets(definition(), version: name, dataVersion: version)
-            #expect(reader.defaultItemModel("sample") == nil)
+            #expect(reader.defaultItemModel("sample") != nil)
             #expect(reader.model("item/container") != nil)
         }
         for node in [definition(texture: "../normal"), definition(texture: "mod:../normal"),
