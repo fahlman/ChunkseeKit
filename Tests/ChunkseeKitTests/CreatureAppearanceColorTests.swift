@@ -14,9 +14,11 @@ import Testing
         for version in versions {
             let wool = try #require(Creature(Fixtures.mob([
                 "id": .string("minecraft:sheep"), "Color": .byte(15),
+                "Pos": .list([.double(0), .double(64), .double(0)]),
             ]), dataVersion: version)?.appearance)
             let axolotl = try #require(Creature(Fixtures.mob([
                 "id": .string("minecraft:axolotl"), "Variant": .int(4),
+                "Pos": .list([.double(0), .double(64), .double(0)]),
             ]), dataVersion: version)?.appearance)
             #expect(wool.colorSource(for: "sheep") == CreatureAppearance(variant: "black").colorSource(for: "minecraft:sheep"))
             #expect(axolotl.colorSource(for: "axolotl") == CreatureAppearance(variant: "blue").colorSource(for: "minecraft:axolotl"))
