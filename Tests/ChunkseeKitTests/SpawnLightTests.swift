@@ -92,7 +92,7 @@ import Testing
         let assets = try #require(GameAssets(data: Data(TestZIP.zip([
             .init(path: "version.json", text: #"{"id":"fixture","world_version":1}"#)
         ] + entries))))
-        #expect(try world.dimensionTypes().isEmpty)
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
         let types = try world.dimensionTypes(assets: assets)
         #expect(types["minecraft:overworld"]?.monsterSpawnBlockLightLimit == 15)
         #expect(types["minecraft:overworld"]?.monsterSpawnLightLevel == 7...7)
@@ -115,7 +115,7 @@ import Testing
             "example:constant": type(limit: .int(3), provider: constant), "example:scalar": type(limit: .int(15), provider: .int(0)),
             "example:badlimit": type(limit: .int(16), provider: .int(7)), "example:unknown": type(limit: .int(1), provider: unknown),
             "example:unverified": .string("overworld")], version: 9999)
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         #expect(types.count == 6)
         #expect(types["example:missing"]?.monsterSpawnBlockLightLimit == nil)
         #expect(types["example:missing"]?.monsterSpawnLightLevel == nil)
@@ -140,7 +140,7 @@ import Testing
         let definitions = Dictionary(uniqueKeysWithValues: providers.enumerated().map {
             ("example:bad\($0.offset)", type(limit: .int(2), provider: $0.element))
         })
-        let types = try world(at: root, types: definitions).dimensionTypes()
+        let types = try world(at: root, types: definitions).dimensionTypes(assets: nil)
         #expect(types.count == providers.count)
         #expect(types.values.allSatisfy { $0.monsterSpawnLightLevel == nil && $0.monsterSpawnBlockLightLimit == 2 && $0.height == 384 })
     }
@@ -164,7 +164,7 @@ import Testing
         for (limit, provider, expectedLimit, expectedRange) in cases {
             let json = "{\"min_y\":0,\"height\":128,\"logical_height\":128,\"has_ceiling\":false,\"monster_spawn_block_light_limit\":\(limit),\"monster_spawn_light_level\":\(provider)}"
             try Fixtures.write(Array(json.utf8), to: file)
-            let result = try #require(try world.dimensionTypes()["example:remapped"])
+            let result = try #require(try world.dimensionTypes(assets: nil)["example:remapped"])
             #expect(result.buildRange == 0...127)
             #expect(result.monsterSpawnBlockLightLimit == expectedLimit)
             #expect(result.monsterSpawnLightLevel == expectedRange)

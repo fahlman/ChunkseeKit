@@ -93,7 +93,7 @@ import Testing
             ("example:dimension\(index)", definition(type: type(), noise: .string(name)))
         }
         let world = try world(at: root, definitions: Dictionary(uniqueKeysWithValues: definitions))
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         #expect(settings.count == references.count)
         #expect(settings.values.allSatisfy { $0.noiseGeneration == nil && $0.type?.buildRange == 0...255 })
     }
@@ -105,7 +105,7 @@ import Testing
             "example:offset": definition(type: type(minY: -64, height: 128), noise: noise(minY: 0, height: 128)),
             "example:empty": definition(type: type(), noise: noise(minY: 16, height: 0)),
         ])
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         let offset = try #require(settings["example:offset"])
         #expect(offset.type?.buildRange == -64...63)
         // WorldGenerationContext takes max(minima) and min(heights), not intersected endpoints.
@@ -122,7 +122,7 @@ import Testing
             "example:inline": definition(type: type(), noise: noise(minY: -2032, height: 4064, seaLevel: .int(47))),
             "example:reference": definition(type: .string("the_nether"), noise: .string("nether")),
         ], version: 9999, modern: false)
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         #expect(settings["example:inline"]?.noiseGeneration?.range == -2032..<2032)
         #expect(settings["example:inline"]?.noiseGeneration?.seaLevel == 47)
         #expect(settings["example:inline"]?.type?.buildRange == 0...255)
@@ -143,7 +143,7 @@ import Testing
             "minecraft:overworld": definition(type: type(), noise: noise()),
             "invalid ID": definition(type: type(), noise: noise()),
         ])
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         #expect(settings.count == 5)
         #expect(settings["example:short"]?.noiseGeneration?.height == 128)
         #expect(settings["example:empty_namespace"]?.noiseGeneration?.height == 128)
@@ -163,7 +163,7 @@ import Testing
         let world = try world(at: root, definitions: Dictionary(uniqueKeysWithValues: invalid.enumerated().map {
             ("example:bad\($0.offset)", definition(type: type(), noise: $0.element))
         }))
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         #expect(settings.count == invalid.count)
         #expect(settings.values.allSatisfy { $0.type != nil && $0.noiseGeneration == nil })
     }
@@ -175,14 +175,14 @@ import Testing
         let upper = try pack("Upper", at: root, json: "{\"noise\":{\"min_y\":0,\"height\":64},\"sea_level\":47}")
         let world = try world(at: root, definitions: ["example:mine": definition(type: type(), noise: .string("example:custom"))],
                               packs: ["vanilla", "file/Lower", "file/Upper"])
-        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.range == 0..<64)
-        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.seaLevel == 47)
+        #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.range == 0..<64)
+        #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.seaLevel == 47)
         try FileManager.default.removeItem(at: upper)
-        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.range == -64..<128)
-        #expect(try world.dimensionSettings()["example:mine"]?.noiseGeneration?.seaLevel == -32)
+        #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.range == -64..<128)
+        #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.seaLevel == -32)
         for bad in ["{}", "{\"noise\":{\"min_y\":0.5,\"height\":128}}", "{\"noise\":{\"min_y\":0,\"height\":1e100}}"] {
             try Fixtures.write(Array(bad.utf8), to: upper)
-            let value = try #require(try world.dimensionSettings()["example:mine"])
+            let value = try #require(try world.dimensionSettings(assets: nil)["example:mine"])
             #expect(value.type?.height == 256 && value.noiseGeneration == nil)
         }
     }
@@ -199,7 +199,7 @@ import Testing
         let definitions = Dictionary(uniqueKeysWithValues: cases.enumerated().map {
             ("example:case\($0.offset)", definition(type: type(), noise: noise(seaLevel: $0.element.0)))
         })
-        let settings = try world(at: root, definitions: definitions).dimensionSettings()
+        let settings = try world(at: root, definitions: definitions).dimensionSettings(assets: nil)
         for (index, entry) in cases.enumerated() {
             let generation = try #require(settings["example:case\(index)"]?.noiseGeneration)
             #expect(generation.range == 0..<128)
@@ -223,7 +223,7 @@ import Testing
         for (raw, expected) in cases {
             let field = raw.map { ",\"sea_level\":\($0)" } ?? ""
             try Fixtures.write(Array("{\"noise\":{\"min_y\":0,\"height\":64}\(field)}".utf8), to: upper)
-            let generation = try #require(try world.dimensionSettings()["example:mine"]?.noiseGeneration)
+            let generation = try #require(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration)
             #expect(generation.range == 0..<64)
             #expect(generation.seaLevel == expected)
         }
@@ -240,7 +240,7 @@ import Testing
         let world = try world(at: root, definitions: ["example:mine": definition(type: type(), noise: .string("nether")),
                                                       "example:inline": definition(type: type(), noise: noise())],
                               packs: ["vanilla", packID])
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         #expect(settings["example:mine"]?.type != nil && settings["example:mine"]?.noiseGeneration == nil)
         #expect(settings["example:inline"]?.noiseGeneration?.height == 128)
     }
@@ -259,16 +259,16 @@ import Testing
             "example:dot": definition(type: type(), noise: .string("example:../outside")),
             "example:read_error": definition(type: type(), noise: .string("example:directory")),
         ], packs: ["file/Custom"])
-        #expect(try world.dimensionSettings().values.allSatisfy { $0.noiseGeneration == nil })
+        #expect(try world.dimensionSettings(assets: nil).values.allSatisfy { $0.noiseGeneration == nil })
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-        #expect(try world.dimensionTypes().count == 3)
-        #expect(try world.dimensionSettings().values.allSatisfy { $0.noiseGeneration == nil })
+        #expect(try world.dimensionTypes(assets: nil).count == 3)
+        #expect(try world.dimensionSettings(assets: nil).values.allSatisfy { $0.noiseGeneration == nil })
         try FileManager.default.removeItem(at: directory)
         try FileManager.default.copyItem(at: file, to: directory)
         try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: directory.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: directory.path) }
-        #expect(try world.dimensionTypes().count == 3)
-        #expect(throws: (any Error).self) { try world.dimensionSettings() }
+        #expect(try world.dimensionTypes(assets: nil).count == 3)
+        #expect(throws: (any Error).self) { try world.dimensionSettings(assets: nil) }
     }
 
     @Test func savedDimensionRegistriesSkipLinkedOverridesAndKeepMalformedRegularShadowing() throws {
@@ -311,7 +311,7 @@ import Testing
         let world = try world(at: root, definitions: references.mapValues {
             definition(type: .string($0), noise: .string($0))
         }, packs: ["file/Low", "file/High"])
-        let settings = try world.dimensionSettings()
+        let settings = try world.dimensionSettings(assets: nil)
         for id in ["test:linked", "test:descendant", "test:category"] {
             #expect(settings[id]?.type?.height == 128)
             #expect(settings[id]?.noiseGeneration?.height == 128)
@@ -319,7 +319,7 @@ import Testing
         #expect(settings["test:namespace"]?.type?.height == 256)
         #expect(settings["test:namespace"]?.noiseGeneration?.height == 256)
         #expect(settings["test:invalid"]?.type == nil && settings["test:invalid"]?.noiseGeneration == nil)
-        #expect(try world.dimensionTypes() == settings.compactMapValues(\.type))
+        #expect(try world.dimensionTypes(assets: nil) == settings.compactMapValues(\.type))
     }
 
     @Test func anExistingModernRecordDoesNotResurrectLegacyGenerationSettings() throws {
@@ -328,6 +328,6 @@ import Testing
         let world = try world(at: root, definitions: ["example:mine": definition(type: type(), noise: noise())], modern: false)
         try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([:])]),
                                     to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
-        #expect(try world.dimensionSettings().isEmpty)
+        #expect(try world.dimensionSettings(assets: nil).isEmpty)
     }
 }

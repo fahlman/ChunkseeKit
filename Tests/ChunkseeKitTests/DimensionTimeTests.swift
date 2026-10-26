@@ -13,7 +13,7 @@ import Testing
             "test:single": definition(["timelines": .string("day")]),
             "test:list": definition(["timelines": .list(.string, [.string("day"), .string("custom:moon"), .string("day")])])
         ], packs: ["file/Unavailable"])
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         let sky = try #require(types["test:sky"]?.time)
         #expect(sky.hasSkylight && !sky.hasFixedTime)
         #expect(sky.defaultClock == "custom:moon" && sky.timelines == .tag("custom:night"))
@@ -31,8 +31,8 @@ import Testing
                                  entry("test:moon", json(["has_fixed_time": true, "default_clock": "test:moon"]))])
         let paths = ["level.dat", "data/minecraft/world_gen_settings.dat"].map { root.appendingPathComponent($0) }
         let before = try paths.map { try Data(contentsOf: $0) }
-        #expect(try world.dimensionTypes()["test:sky"]?.time == nil)
-        #expect(try world.dimensionTypes()["test:sky"] == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"] == nil)
         let types = try world.dimensionTypes(assets: assets)
         #expect(types["test:sky"]?.time?.defaultClock == "test:sun")
         #expect(types["test:sky"]?.time?.timelines == .tag("minecraft:day"))
@@ -47,7 +47,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["overworld": .string("overworld"), "custom:sky": .string("custom:sky"),
                                             "test:inline": definition()], version: version)
-        #expect(try world.dimensionTypes()["minecraft:overworld"] == nil)
+        #expect(try world.dimensionTypes(assets: nil)["minecraft:overworld"] == nil)
         for jarVersion: Int32 in [1, 5023, .max] {
             let jar = try assets([entry("minecraft:overworld", json())], version: jarVersion)
             let types = try world.dimensionTypes(assets: jar)
@@ -94,7 +94,7 @@ import Testing
         ]
         let types = Dictionary(uniqueKeysWithValues: bad.enumerated().map { ("test:bad\($0.offset)", definition($0.element)) })
         let world = try world(root, types: types)
-        let read = try world.dimensionTypes()
+        let read = try world.dimensionTypes(assets: nil)
         #expect(read.count == bad.count)
         #expect(read.values.allSatisfy { $0.time == nil && $0.buildRange == -64...319 })
     }
@@ -166,13 +166,13 @@ import Testing
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["test:sky": definition(["default_clock": .string(":sun")])], modern: false)
-        #expect(try world.dimensionTypes()["test:sky"]?.time?.defaultClock == "minecraft:sun")
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.defaultClock == "minecraft:sun")
         try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(9999), "data": .compound([
             "dimensions": .compound(["test:sky": .compound(["type": definition()])])
         ])]), to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
-        #expect(try world.dimensionTypes()["test:sky"]?.time?.hasSkylight == true)
-        #expect(try world.dimensionTypes()["test:sky"]?.time?.defaultClock == nil)
-        #expect(try world.dimensionTypes()["test:sky"]?.buildRange == -64...319)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.hasSkylight == true)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.defaultClock == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.buildRange == -64...319)
     }
 
     @Test func resourceBoundsPreserveInlineFactsAndCancellationStopsInlineOnlyQueries() async throws {
@@ -185,7 +185,7 @@ import Testing
         let inline = try self.world(root, types: ["test:inline": definition()])
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
-            return try inline.dimensionSettings()
+            return try inline.dimensionSettings(assets: nil)
         }
         await #expect(throws: CancellationError.self) { try await task.value }
     }

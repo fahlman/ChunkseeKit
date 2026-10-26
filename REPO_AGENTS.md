@@ -330,7 +330,10 @@ nested inventories, while retaining other raw IDs. Interpretation version 6 inva
 item reads with the old literal-only rule. No public API or serialized shape changes.
 
 `DimensionType` owns validated build bounds, logical height and the ceiling flag.
-`World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
+The no-argument dimension queries are removed: callers must explicitly supply selected assets
+or `nil`. This source-breaking change requires a minor release and app adoption on #431.
+
+`World.dimensionTypes(assets:)` follows saved dimension-to-type links in modern world-generation data
 or legacy inline settings. Enabled folder packs resolve in reverse priority order; game
 definitions come from the supplied jar. Missing, malformed or unresolved values remain absent.
 Experimental packs, overlays and filters are not resolved, so an unsupported higher-priority
@@ -770,7 +773,7 @@ roundoff; inverted/outside rectangles stay intact. Neither method changes model 
 selection, weights, caches or sampling. These additive APIs are unreleased for fahlman/Chunksee#363;
 the app's drawing-path adoption follows a reviewed release.
 
-The companion `World.dimensionSettings()` reads that same mapping once for independently
+The companion `World.dimensionSettings(assets:)` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
 or referenced `minecraft:noise` settings; vanilla bounds and sea levels come from the supplied game resources.
 Its optional `seaLevel` reads the root `sea_level` signed 32-bit integer independently of the bounds.
