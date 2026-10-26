@@ -305,6 +305,7 @@ public struct Chunk: Sendable {
     }
 
     public init(nbt: NBT) throws {
+        let nbt = SaveDataUpgrade.chunk(nbt)
         let dataVersion = nbt["DataVersion"]?.int
         // Chunks upgraded from pre-1.18 worlds can keep a vestigial `Level: {Structures}` compound,
         // so detect the old format by where `Sections` lives, not by `Level` or a version number.

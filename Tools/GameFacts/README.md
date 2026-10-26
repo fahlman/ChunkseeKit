@@ -24,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -32,6 +32,24 @@ raw extracted JSON and generated copies stay in each evidence directory, includi
 No world or installed game file is written. Run this only when the shared Mac is not reserved.
 
 Sources and interpretation:
+
+- `DataFixers` supplies its ordered `LegacyBlockRenameFix`, `ItemRenameFix` and biome
+  `NamespacedTypeRenameFix` instances. Captured equality maps/strings and the class's literal
+  string pool supply inputs; the real rename functions supply outputs and DataFix version keys
+  supply applicability. Every emitted transition must also match the real fix chain across
+  that boundary. Unsupported captures, subversions, empty steps or malformed IDs fail generation.
+  The test-only proofs run the complete remaining game chain before/at each boundary and at
+  the selected release. Additional chunk, entity, item, player and level examples compare the
+  exposed names/counts, allowing unrelated game layout changes. `LevelDat.read` runs LEVEL;
+  `LevelDatToSavedDataFileFix.extractPlayerDataToFile` then runs PLAYER using the embedded
+  player's own DataVersion. String item IDs also use `ItemStackTheFlatteningFix.MAP/updateItem`
+  before later aliases, including its saved Damage variant and zero fallback. The preceding
+  `BedItemColorFix` is sampled for its original default variant; its identity comes from its
+  class constants. All table entries and version boundaries have independent complete-game
+  ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
+  Nothing writes a world. This slice does not implement numeric
+  flattening, older chunk layouts, entity/attribute renames, or every other data-fixer class;
+  those remain on #255. These rename facts are not registry membership lists.
 
 - `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
   Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor
