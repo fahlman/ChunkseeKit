@@ -30,6 +30,28 @@ def keyed_values(values, prefix="minecraft:"):
     return "[" + ", ".join(entries) + "]"
 
 
+def mob_spawn_source(facts, notice):
+    weight = None if facts["requiresWeight"] else facts["defaultWeight"]
+    if weight is not None and (type(weight) is not int or weight < 0):
+        raise ValueError("Invalid default spawn weight")
+    result = notice + "enum GeneratedMobSpawnFacts {\n"
+    result += "    // Weighted.codec(MapCodec): omitted selection weight.\n"
+    result += f"    static let defaultWeight: Int? = {weight if weight is not None else 'nil'}\n"
+    result += "    // EnvironmentAttributes.NATURAL_MOB_SPAWNS.defaultValue -> MobSpawnSettings.\n"
+    groups = []
+    for category, entries in sorted(facts["defaultCandidates"].items()):
+        values = []
+        for entry in entries:
+            if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", entry["type"]):
+                raise ValueError("Invalid default spawn type")
+            if type(entry["weight"]) is not int or entry["weight"] < 0:
+                raise ValueError("Invalid default spawn weight")
+            values.append(f".init(entityType: {quoted(entry['type'])}, weight: {entry['weight']})")
+        groups.append(quoted(category) + ": [" + ", ".join(values) + "]")
+    result += "    static let defaultCandidates: [String: [MobSpawnSettings.Candidate]] = [" + (", ".join(groups) or ":") + "]\n}\n"
+    return result
+
+
 def trading_source(facts, notice):
     result = notice + "// " + facts["source"] + ". Trade contents are never bundled.\n"
     if type(facts["minimumLevel"]) is not int:
@@ -366,7 +388,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedSpecialItemModels.swift": generated_special_models(facts["specialItemModels"], notice),
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
             "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source,
-            "Sources/ChunkseeKit/GeneratedTradingFacts.swift": trading_source(facts["trading"], notice)}
+            "Sources/ChunkseeKit/GeneratedTradingFacts.swift": trading_source(facts["trading"], notice),
+            "Sources/ChunkseeKit/GeneratedMobSpawnFacts.swift": mob_spawn_source(facts["mobSpawns"], notice)}
 
 
 def main():
@@ -395,12 +418,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
