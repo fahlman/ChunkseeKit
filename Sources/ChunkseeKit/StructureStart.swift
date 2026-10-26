@@ -46,7 +46,7 @@ public struct StructureStart: Sendable, Equatable {
     /// Other pieces don't have a universal placement flag, so missing evidence is not a reason to
     /// discard a structure. Callers showing explored terrain should also check the chunk's status.
     public static func starts(inChunk nbt: NBT) -> [StructureStart] {
-        guard let starts = nbt["structures"]?["starts"]?.compound else { return [] }
+        guard let starts = (nbt["structures"]?["starts"] ?? nbt["Level"]?["Structures"]?["Starts"])?.compound else { return [] }
         return starts.compactMap { key, start in
             let id = start["id"]?.string ?? key
             guard id != "INVALID", let chunkX = start["ChunkX"]?.int, let chunkZ = start["ChunkZ"]?.int else { return nil }
@@ -83,5 +83,5 @@ extension Chunk {
     /// `RegionFile.chunkNBT(localX:localZ:skipping:)` to read structures quickly; the resulting
     /// `Chunk` has no sections.
     public static let keysNotNeededForStructures: Set<String> =
-        keysNotNeededForTerrain.subtracting(["structures"]).union(["sections", "Heightmaps"])
+        keysNotNeededForTerrain.subtracting(["structures", "Structures"]).union(["sections", "Heightmaps"])
 }

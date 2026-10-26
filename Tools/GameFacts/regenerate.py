@@ -41,6 +41,53 @@ def non_block_definitions_source(identifiers, notice):
     return result
 
 
+def legacy_chunk_source(facts, notice):
+    result = notice + "// ChunkHeightAndBiomeFix and the preceding format fixers; not a biome catalog.\n"
+    result += "enum GeneratedLegacyChunkFacts {\n"
+    for name, source in {"heightmapNameBoundary": "HeightmapRenamingFix",
+                         "sectionBoundary": "ChunkHeightAndBiomeFix"}.items():
+        result += f"    static let {name} = {int(facts['boundaries'][source])}\n"
+    result += "    // Repeated ChunkDeleteLightFix instances; any later reset invalidates saved light.\n"
+    result += f"    static let lightResetBoundary = {max(map(int, facts['lightResets']))}\n"
+    for name, source in {"oldSectionCount": "OLD_SECTION_COUNT", "newSectionCount": "NEW_SECTION_COUNT",
+                         "newMinSectionY": "NEW_MIN_SECTION_Y", "heightmapBits": "HEIGHTMAP_BITS",
+                         "biomeContainerSize": "BIOME_CONTAINER_SIZE"}.items():
+        result += f"    static let {name} = {int(facts['geometry'][source])}\n"
+    for name in ["emptyBlock", "defaultBiome"]:
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", facts[name]):
+            raise ValueError("Invalid legacy chunk default")
+        result += f"    static let {name} = {quoted(facts[name])}\n"
+    result += "    // ChunkHeightAndBiomeFix.BIOMES_BY_ID; only numeric save-code meanings.\n"
+    result += "    static let biomes: [Int: String] = [\n"
+    for number, identifier in sorted(facts["biomes"].items(), key=lambda row: int(row[0])):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+            raise ValueError("Invalid legacy biome identity")
+        result += f"        {int(number)}: {quoted(identifier)},\n"
+    result += "    ]\n    static let statusSteps: [SaveDataUpgrade.ChunkStatusRename] = [\n"
+    for step in facts["statusSteps"]:
+        result += "        // " + step["source"] + ".\n"
+        changes = ", ".join(quoted(k) + ": " + quoted(v) for k, v in sorted(step["aliases"].items())) or ":"
+        fallback = quoted(step["fallback"]) if "fallback" in step else "nil"
+        result += f"        .init(version: {step['version']}, aliases: [{changes}], fallback: {fallback}),\n"
+    result += "    ]\n    // HeightmapRenamingFix.fix; a name can split into several maps.\n"
+    result += "    static let heightmapNames: [String: [String]] = [\n"
+    for name, targets in sorted(facts["heightmapNames"].items()):
+        result += f"        {quoted(name)}: [" + ", ".join(map(quoted, targets)) + "],\n"
+    return result + "    ]\n}\n"
+
+
+def legacy_chunk_proofs(facts, notice):
+    result = notice + "// Whole synthetic chunks passed through Minecraft's complete CHUNK fix chain.\n"
+    result += "enum GeneratedLegacyChunkProofs {\n"
+    result += "    struct Record: Sendable { let name: String; let version: Int; let input: String; let output: String }\n"
+    result += "    static let records: [Record] = [\n"
+    for row in facts["records"]:
+        source = quoted(json.dumps(row["input"], separators=(",", ":"), sort_keys=True))
+        output = quoted(json.dumps(row["output"], separators=(",", ":"), sort_keys=True))
+        result += f"        .init(name: {quoted(row['name'])}, version: {row['version']}, input: {source}, output: {output}),\n"
+    return result + "    ]\n}\n"
+
+
 def save_renames_source(facts, notice):
     steps = facts["steps"]
     if not steps:
@@ -514,6 +561,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
             "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice),
             "Sources/ChunkseeKit/GeneratedSaveRenames.swift": save_renames_source(facts["saveRenames"], notice),
+            "Sources/ChunkseeKit/GeneratedLegacyChunkFacts.swift": legacy_chunk_source(facts["legacyChunks"], notice),
+            "Tests/ChunkseeKitTests/GeneratedLegacyChunkProofs.swift": legacy_chunk_proofs(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedSaveRenameProofs.swift": save_rename_proofs_source(facts["saveRenames"], notice)}
 
 
@@ -545,10 +594,10 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

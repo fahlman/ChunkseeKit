@@ -20,12 +20,20 @@ enum SaveDataUpgrade {
     }
 
     static func chunk(_ nbt: NBT) -> NBT {
-        upgrade(nbt, as: .chunk, dataVersion: nbt["DataVersion"]?.int)
+        upgrade(legacyChunkLayout(nbt), as: .chunk, dataVersion: nbt["DataVersion"]?.int)
     }
 
     static func blockEntities(inChunk nbt: NBT) -> [NBT] {
-        let entities = nbt["block_entities"] ?? .list([])
+        let entities = nbt["block_entities"] ?? nbt["Level"]?["TileEntities"] ?? .list([])
         return upgrade(entities, as: .blockEntities, dataVersion: nbt["DataVersion"]?.int).list ?? []
+    }
+
+    /// The pre-separate-file entity container, preserving its own saved version for readers.
+    static func terrainEntityChunk(_ nbt: NBT) -> NBT? {
+        guard let entities = nbt["Level"]?["Entities"] ?? nbt["entities"] else { return nil }
+        var fields: [String: NBT] = ["Entities": entities]
+        fields["DataVersion"] = nbt["DataVersion"]
+        return .compound(fields)
     }
 
     static func entity(_ nbt: NBT, dataVersion: Int?) -> NBT {
