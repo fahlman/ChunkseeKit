@@ -1198,6 +1198,14 @@ an unknown value leaves only that fact unavailable. Current/legacy equipment par
 owner in EntityEquipment. Existing collar defaults and sitting-order policy stay intact. Saved ChestedHorse creates a
 descriptive storage item only when a readable saved storage slot is absent.
 
+The #278 additive `CreatureAppearance.colorSource(for:)` supplies a renderer RGB multiplier or
+adult texture ID for a known saved variant. The single release tool extracts the sheep wool
+multiplier and axolotl texture choices from their actual renderer code, with method-output proofs;
+there is no hand-kept presentation palette or version gate. Unknown species/variants retain their
+appearance but have no color source. Texture bytes remain in the installed game; image decoding,
+representative sampling, contrast, names and live UI state belong to the app. This is a saved-color
+source, not full entity rendering or a live jeb_ animation. No saved-data or RegionFacts change.
+
 The unreleased #228 equipment row removes legacy saddle/decor/armor species inventories and
 the pet-only empty-equipment default. Saved fields identify these formats on any type, including
 custom IDs. LivingEntity omits empty equipment and defaults missing equipment to new EntityEquipment;

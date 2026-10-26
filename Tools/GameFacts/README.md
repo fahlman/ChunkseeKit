@@ -22,10 +22,10 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
-writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
+writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColors.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
-and `Tools/GameFacts/source.json`.
+plus test-only `GeneratedCreatureColorProofs.swift` and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -33,6 +33,14 @@ No world or installed game file is written. Run this only when the shared Mac is
 
 Sources and interpretation:
 
+- `ColorLerper.Type.SHEEP.getColor` supplies the wool multiplier for each actual DyeColor,
+  independently checked through `SheepRenderState.getWoolColor` with live animation disabled.
+  It is not the raw dye texture multiplier. `AxolotlRenderer.TEXTURE_BY_TYPE` supplies adult
+  variant texture IDs, checked through the real renderer's `getTextureLocation` with a baked
+  vanilla model set and no world/window/GPU. The extracted entity ancestry assigns these code
+  rules to their species. These facts identify color sources, not a complete entity picture;
+  PNG bytes remain runtime resources, and clients own representative color sampling and UI contrast.
+  Every mapping has a generated Swift test case from the game's actual method output.
 - `DataFixers` supplies its ordered `LegacyBlockRenameFix`, `ItemRenameFix` and biome
   `NamespacedTypeRenameFix` instances. Captured equality maps/strings and the class's literal
   string pool supply inputs; the real rename functions supply outputs and DataFix version keys
