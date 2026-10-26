@@ -22,13 +22,17 @@ public struct DimensionType: Sendable, Equatable {
     /// The separate gameplay sky-light attribute before timelines and final 0...15 clamping.
     /// Malformed values do not invalidate visual lighting.
     public let baseSkyLightLevel: Float?
+    /// Static natural-spawn candidates before biome overlays and dynamic environment layers.
+    /// Unreadable spawn metadata is independent of build bounds, time and lighting.
+    public let baseMobSpawnSettings: MobSpawnSettings?
 
     public var maxY: Int { minY + height - 1 }
     public var buildRange: ClosedRange<Int> { minY...maxY }
 
     private init?(minY: Int, height: Int, logicalHeight: Int, hasCeiling: Bool,
                   monsterSpawnBlockLightLimit: Int?, monsterSpawnLightLevel: ClosedRange<Int>?,
-                  time: DimensionTime?, baseSkyLighting: SkyLighting?, baseSkyLightLevel: Float?) {
+                  time: DimensionTime?, baseSkyLighting: SkyLighting?, baseSkyLightLevel: Float?,
+                  baseMobSpawnSettings: MobSpawnSettings?) {
         guard height > 0, Self.validYBounds(minY: minY, height: height),
               (0...height).contains(logicalHeight) else { return nil }
         self.minY = minY; self.height = height; self.logicalHeight = logicalHeight; self.hasCeiling = hasCeiling
@@ -37,6 +41,7 @@ public struct DimensionType: Sendable, Equatable {
         self.time = time
         self.baseSkyLighting = baseSkyLighting
         self.baseSkyLightLevel = baseSkyLightLevel
+        self.baseMobSpawnSettings = baseMobSpawnSettings
     }
 
     // DimensionType and NoiseSettings share the packed-Y bounds. Noise alone permits
@@ -54,7 +59,8 @@ public struct DimensionType: Sendable, Equatable {
                   monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
                   time: DimensionTime(nbt: nbt),
                   baseSkyLighting: (try? DimensionBaseLighting(nbt: nbt))?.value,
-                  baseSkyLightLevel: (try? DimensionMonsterLighting(nbt: nbt))?.value)
+                  baseSkyLightLevel: (try? DimensionMonsterLighting(nbt: nbt))?.value,
+                  baseMobSpawnSettings: MobSpawnSettings.dimension(nbt))
     }
 
     init?(json: Data) {
@@ -64,7 +70,8 @@ public struct DimensionType: Sendable, Equatable {
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
                   monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
                   time: value.time, baseSkyLighting: value.baseSkyLighting,
-                  baseSkyLightLevel: value.baseSkyLightLevel)
+                  baseSkyLightLevel: value.baseSkyLightLevel,
+                  baseMobSpawnSettings: MobSpawnSettings.dimension(json: json))
     }
 
     private struct Definition: Decodable {

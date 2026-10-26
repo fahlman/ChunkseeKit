@@ -1165,11 +1165,27 @@ for omitted defaults; explicit relevant saved values win. These additive queries
 existing scans, serialized facts, rendering or cache interpretation. App #443 adoption follows
 release and owns its water-surface presentation and required paired renderer timing.
 
+`MobSpawnSettings` owns static dimension-plus-biome natural-spawn candidates. DimensionType exposes
+its independent `baseMobSpawnSettings`; World.biomeSpawnSettings(for:base:assets:) and the standalone
+GameAssets query apply runtime biome attributes to that explicit base. Direct overrides and overlay
+category replacement follow EnvironmentAttributes.NATURAL_MOB_SPAWNS and MobSpawnSettingsModifier;
+an empty named category replaces rather than inherits. Unknown bases do not hide readable overlay
+categories. Type IDs and weights remain independently available, and positive evidence survives an
+unrelated unreadable entry. Shared pack priority, containment, cancellation and ResourceReadBudget
+apply; colors/climate do not control these facts. BiomeResources is the single jar/World lookup
+owner for both color and spawn projections, with shared ID normalization, 4,096-biome and resource
+byte limits, including all-biome color discovery. GameAssets.resource owns both assets/data paths.
+GeneratedMobSpawnFacts supplies only the code's
+attribute default and omitted-weight rule through the one release tool. No biome list, dimension-name
+gate or actual-spawn probability is inferred. Counts, costs, light, height, structures and dynamic
+environment layers remain separate. These additive APIs are unreleased for #232 item 4; no chunk
+reader, serialized/cache data or slime-chunk arithmetic changes. App adoption follows release.
+
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities, upper-face support, air flags and profession trade-set associations. It verifies the installed stable
+models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot

@@ -1576,6 +1576,34 @@ removed. Pass the world and the caller-selected game assets to
 clients can use `?? []` when displaying an unavailable list. This intentional breaking API
 change requires a minor release before app adoption. No snapshot-specific catalog remains.
 
+### Static biome spawn candidates (unreleased)
+
+`DimensionType.baseMobSpawnSettings` reads the dimension's natural-spawn environment attribute.
+Pass that base to `World.biomeSpawnSettings(for:base:assets:)` for the requested biome IDs, or
+`GameAssets.biomeSpawnSettings(_:base:)` for one biome without world pack overrides. These
+queries read the selected game's resources and enabled packs without a save-version gate.
+
+`MobSpawnSettings.candidatesByCategory` retains the declared type IDs and independently readable
+weights. `contains(_:in:)` answers whether a category declares a type with positive weight:
+true for known positive evidence, false for a known empty/zero selection, and nil when the
+needed data is unreadable. Unknown type IDs remain available. Colors and climate fields do not
+control whether spawn data is readable.
+
+The `natural_mob_spawns` attribute accepts a direct override and `override`/`overlay` envelopes.
+An overlay replaces each category it names, including an explicitly empty category, and inherits
+the others. Pass nil for an unavailable dimension base; an overlay still settles its named
+categories. The attribute's code default and omitted-weight rule come from the single release
+tool; biome membership is never bundled. A malformed higher-priority resource does not reveal
+a lower one. Reads are bounded to 4,096 requested biomes, 16 MiB per resource, 64 MiB total,
+256 categories and 4,096 candidates per category (65,536 per definition). Color and spawn queries
+share one biome-resource lookup and the same resource limits; the all-colors query also returns
+no definitions when its discovered catalog exceeds 4,096 IDs.
+
+These are declared static candidates, not a prediction that a mob can actually spawn. Counts,
+spawn costs, light, height, structures, timelines, weather and entity-specific rules are separate.
+Readable candidate fields remain useful even when those unrelated fields are missing. No chunk
+scan, saved record, cache format or slime-chunk arithmetic changes. App adoption follows release.
+
 ### Biome color definitions (v0.52.0)
 
 Biome colors come from the supplied game jar and the world's enabled data packs:
