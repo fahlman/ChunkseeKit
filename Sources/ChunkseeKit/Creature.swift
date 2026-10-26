@@ -103,16 +103,16 @@ public struct Villager: Sendable, Equatable, Codable {
         professionID.map { $0.namespace == "minecraft" && $0.path == "none" }
     }
     /// Whether saved offers or the profession's runtime definitions establish potential trading.
-    /// Saved offers win, including custom/edited villagers. Known code with no trade-set links
-    /// returns false; missing code or unresolved definitions return nil. The caller retains one
-    /// resource snapshot. This does not roll offers or evaluate merchant conditions, age, sleep,
-    /// current level or sold-out status. It replaces the old no-context property.
+    /// Saved offers win, including custom/edited villagers. Otherwise the saved level selects
+    /// its code-linked trade set, with the game's minimum level of one. No link returns false;
+    /// missing code, level or definitions returns nil. The caller retains one resource snapshot.
+    /// This does not roll offers or evaluate merchant conditions, age, sleep or sold-out status.
     public func supportsTrading(using definitions: TradingDefinitions?) -> Bool? {
         if !trades.isEmpty { return true }
         guard let id = professionID?.description,
-              let sets = GeneratedTradingFacts.professions[id] else { return nil }
-        if sets.isEmpty { return false }
-        return definitions?.professions[id]
+              let sets = GeneratedTradingFacts.professions[id], let level else { return nil }
+        guard let set = sets[max(GeneratedTradingFacts.minimumLevel, level)] else { return false }
+        return definitions?.tradeSets[set]
     }
     /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
     public var level: Int?

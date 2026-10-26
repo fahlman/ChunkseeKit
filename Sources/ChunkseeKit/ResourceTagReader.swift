@@ -4,12 +4,19 @@ enum ResourceRead<Value> { case missing, unavailable, value(Value) }
 
 /// One query budget spans tag expansion and any definitions its consumer validates.
 struct ResourceReadBudget {
-    var bytes = 64 * 1024 * 1024
+    private var bytes = 64 * 1024 * 1024
     private var work = 65_536
 
     mutating func consume(_ amount: Int) -> Bool {
         guard amount <= work else { return false }
         work -= amount
+        return true
+    }
+
+    /// Charge each selected resource once, whether it is a tag layer or a typed definition.
+    mutating func charge(_ data: Data) -> Bool {
+        guard data.count <= ZipResources.maximumResourceSize, data.count <= bytes else { return false }
+        bytes -= data.count
         return true
     }
 }
@@ -67,9 +74,7 @@ struct ResourceTagReader {
 
     private mutating func build(_ id: String, budget: inout ResourceReadBudget,
                                element: (String, inout ResourceReadBudget) throws -> ResourceRead<Void>) throws -> ResourceRead<GameTag> {
-        let maximumBytes = budget.bytes
-        guard let stack = try resources.stack(id, maximumBytes: maximumBytes, decode: { data -> (value: [Entry], replace: Bool)? in
-            budget.bytes -= data.count
+        guard let stack = try resources.stack(id, budget: &budget, decode: { data, budget -> (value: [Entry], replace: Bool)? in
             do {
                 let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
                 let values = try AssetJSON.array(root["values"])

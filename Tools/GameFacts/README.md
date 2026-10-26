@@ -152,7 +152,8 @@ if the game adds a color. Check the committed Swift output with the repository's
 and test commands before publishing it.
 
 - BuiltInRegistries.VILLAGER_PROFESSION exposes each profession's `tradeSetsByLevel` map.
-  Every registered link is checked against `getTrades`, which Villager.updateTrades calls.
+  Every registered link is checked against `getTrades`, which Villager.updateTrades calls for
+  the current level. VillagerData supplies its minimum-level clamp, checked at integer boundaries.
   Only this code association (including empty maps) is generated. Trade sets, their candidate
   tags and trade definitions are read at runtime, not inferred from folder names or copied
   from the jar. The public query describes potential trading, not rolled or currently usable offers.
