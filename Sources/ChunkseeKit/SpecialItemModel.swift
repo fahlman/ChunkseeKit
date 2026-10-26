@@ -17,18 +17,18 @@ enum SpecialItemModel: String {
             return try AssetPatternMaterial.shield(selection?.bannerDesign, assets: assets, budget: &budget)
         }
         if self == .banner {
-            guard let raw = definition["color"] as? String, let color = DyeColor(rawValue: raw) else { throw Invalid.asset }
+            guard let raw = definition["color"] as? String, let color = DyeColor(rawValue: raw) else { throw AssetReadError.invalidData }
             return try AssetPatternMaterial.banner(color: color, design: selection?.bannerDesign, assets: assets, budget: &budget)
         }
         if self == .playerHead { return try Head.playerMaterial(selection?.headSkin ?? .defaultSkin) }
         if self == .conduit || self == .decoratedPot {
-            guard let texture = GeneratedSpecialItemModels.textures[modelKey] else { throw Invalid.asset }
+            guard let texture = GeneratedSpecialItemModels.textures[modelKey] else { throw AssetReadError.unsupportedFeature }
             return .init(texture: try AssetJSON.identifier(texture), forceTranslucent: false)
         }
         if self == .copperStatue {
             // This renderer takes a full image resource, unlike Sheets' sprite identifiers.
             let image = try AssetJSON.identifier(definition["texture"])
-            guard image.path.hasPrefix("textures/"), image.path.hasSuffix(".png") else { throw Invalid.asset }
+            guard image.path.hasPrefix("textures/"), image.path.hasSuffix(".png") else { throw AssetReadError.invalidData }
             let path = image.path.dropFirst("textures/".count).dropLast(".png".count)
             return .init(texture: try AssetJSON.identifier("\(image.namespace):\(path)"), forceTranslucent: false)
         }
@@ -48,21 +48,21 @@ enum SpecialItemModel: String {
         let key: String
         switch self {
         case .head:
-            guard let head else { throw Invalid.asset }
+            guard let head else { throw AssetReadError.invalidData }
             key = head.key
         case .copperStatue:
-            guard let pose = definition["pose"] as? String else { throw Invalid.asset }
+            guard let pose = definition["pose"] as? String else { throw AssetReadError.invalidData }
             key = modelKey + "/" + pose
         case .banner:
             let attachment: String
             if let raw = definition["attachment"] {
-                guard let name = raw as? String else { throw Invalid.asset }
+                guard let name = raw as? String else { throw AssetReadError.invalidData }
                 attachment = name
             } else { attachment = "ground" }
             key = modelKey + "/" + attachment
         default: key = modelKey
         }
-        guard let parts = GeneratedSpecialItemModels.models[key] else { throw Invalid.asset }
+        guard let parts = GeneratedSpecialItemModels.models[key] else { throw AssetReadError.unsupportedFeature }
         let decorations = selection?.potDecorations ?? .empty
         return try parts.map { part in
             let surface: AssetModel.Material
@@ -78,5 +78,4 @@ enum SpecialItemModel: String {
         }
     }
 
-    private enum Invalid: Error { case asset }
 }

@@ -1377,7 +1377,7 @@ dependency release. No save or region-cache interpretation changes.
 
 `GameAssets` reads a supplied Minecraft game jar through the same validated ZIP reader as data
 packs. It never extracts files. The jar must contain a readable `version.json` with an ID and
-world data version. The client chooses an installed jar matching its world and caches results
+world data version. The client supplies its selected installed jar and caches results
 for that jar; no Minecraft artwork is bundled in this package.
 
 The unreleased file-reader update (#156) keeps a read-only handle and the validated entry index,
@@ -1407,6 +1407,22 @@ Cuboid positions and UVs retain the 16-unit model coordinate system; GUI transla
 to block units and clamped as in the game. Generated items expose ordered layer0...layer4, stopping
 at the first absent layer. Texture reads return the original PNG bytes; image decoding, compositing,
 projection, tint application and color averaging belong to the client.
+
+The additive `readModel`, `readDefaultItemModel`, `readItemModel(for:)`,
+`readBlockModel(for:)`, `readTexture` and `readPalettedTexture(_:in:)` methods throw
+`AssetReadError` with the reason a selected resource failed. The existing optional methods
+delegate to these same readers. Only confirmed absent model/item/blockstate or plain PNG entries
+report `missingModel(path)` or `missingTexture(path)`. Unsupported selected features/transforms,
+incomplete saved state, malformed definitions, changed/unreadable resources and reader limits
+have separate cases; unresolved helper failures remain `unresolved`. A model can resolve before
+its texture is read, and a successful PNG-byte read does not prove the image decodes.
+
+An atlas-generated sprite need not have its own PNG. Resolve its palette recipe first, then read
+the recipe's PNGs. The throwing atlas query returns nil for no palette recipe, but reports
+unsupported sources or plain-sprite aliases separately, so callers cannot mistake an unhandled
+mapping for a missing picture. An absent atlas is unavailable context. With no `GameAssets`,
+optional chaining remains unknown. These diagnostics require a minor release; the app owns its
+missing-picture pattern and fallback presentation on fahlman/Chunksee#430.
 
 Parents and texture references have cycle detection and a 64-step limit. Each resource and the
 combined model JSON have a 16 MiB limit, and a model may have at most 4,096 elements. Missing or

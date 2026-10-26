@@ -5,10 +5,10 @@ struct AssetItemReader {
     let selection: ItemModelSelection?
 
     func read(_ identifier: String) throws -> AssetItem {
-        guard let data = assets.resource(identifier, directory: "items", extension: "json") else { throw Invalid.asset }
+        let data = try assets.requiredResource(identifier, directory: "items", extension: "json", missing: AssetReadError.missingModel)
         var budget = AssetReadBudget()
         try budget.consume(bytes: data.count)
-        let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
+        let root = try AssetJSON.object(from: data)
         var parts = [AssetItem.Part](), nodes = 0
         try visit(root["model"], inheritedTransform: .identity, parts: &parts, nodes: &nodes, budget: &budget)
         return .init(parts: parts)
@@ -17,31 +17,31 @@ struct AssetItemReader {
     private func visit(_ raw: Any?, inheritedTransform: AssetItemTransform,
                        parts: inout [AssetItem.Part], nodes: inout Int,
                        budget: inout AssetReadBudget) throws {
-        guard nodes < 64 else { throw Invalid.asset }
+        guard nodes < 64 else { throw AssetReadError.limitExceeded }
         nodes += 1
         let node = try AssetJSON.object(raw), type = try AssetJSON.identifier(node["type"])
         let transform = try inheritedTransform.appending(node["transformation"])
         switch type.description {
         case "minecraft:model":
-            guard parts.count < 32 else { throw Invalid.asset }
+            guard parts.count < 32 else { throw AssetReadError.limitExceeded }
             let modelID = try AssetJSON.identifier(node["model"])
             let rawTints = try node["tints"].map(AssetJSON.array) ?? []
-            guard rawTints.count <= 32 else { throw Invalid.asset }
+            guard rawTints.count <= 32 else { throw AssetReadError.limitExceeded }
             let tints = try rawTints.map(tint)
             let model = try AssetModelReader(assets: assets).read(modelID.description, budget: &budget)
             parts.append(.init(model: try transform.applying(to: model), tints: tints))
         case "minecraft:special":
-            guard parts.count < 32 else { throw Invalid.asset }
+            guard parts.count < 32 else { throw AssetReadError.limitExceeded }
             parts.append(.init(model: try special(node, transform: transform, budget: &budget), tints: []))
         case "minecraft:composite":
             let children = try AssetJSON.array(node["models"])
-            guard children.count <= 64 else { throw Invalid.asset }
+            guard children.count <= 64 else { throw AssetReadError.limitExceeded }
             for child in children { try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget) }
         case "minecraft:condition", "minecraft:select", "minecraft:range_dispatch":
             let child = try selectedChild(node, type: type.description)
             try visit(child, inheritedTransform: transform, parts: &parts, nodes: &nodes, budget: &budget)
         case "minecraft:empty": break
-        default: throw Invalid.asset
+        default: throw AssetReadError.unsupportedFeature
         }
     }
 
@@ -58,11 +58,11 @@ struct AssetItemReader {
                 let id = try AssetJSON.identifier(node["component"])
                 let ignoreDefault = try node["ignore_default"].map(AssetJSON.boolean) ?? false
                 guard let value = selection.savedProperties.hasComponent(id.description, ignoringDefault: ignoreDefault) else {
-                    throw Invalid.asset
+                    throw AssetReadError.incompleteState
                 }
                 flag = value
             } else if property.description == "minecraft:broken", let selection {
-                guard let value = selection.savedProperties.broken else { throw Invalid.asset }
+                guard let value = selection.savedProperties.broken else { throw AssetReadError.incompleteState }
                 flag = value
             }
             return node[flag ? "on_true" : "on_false"]
@@ -71,12 +71,12 @@ struct AssetItemReader {
             let child: Any?
             if property.description == "minecraft:display_context" {
                 child = try selectedCase(node, value: "gui") { value in
-                    guard !value.isEmpty else { throw Invalid.asset }
+                    guard !value.isEmpty else { throw AssetReadError.invalidData }
                     return value
                 }
             } else if property.description == "minecraft:trim_material", let selection {
                 child = try selectedCase(node, value: selection.trimMaterialID?.description) { value in
-                    guard let identifier = Identifier(value) else { throw Invalid.asset }
+                    guard let identifier = Identifier(value) else { throw AssetReadError.invalidData }
                     return identifier.description
                 }
             } else if property.description == "minecraft:custom_model_data", selection != nil {
@@ -84,12 +84,12 @@ struct AssetItemReader {
                 let value = data.strings.indices.contains(index) ? data.strings[index] : nil
                 child = try selectedCase(node, value: value.map { Array($0.utf8) }) { Array($0.utf8) }
             } else if property.description == "minecraft:block_state", let selection {
-                guard let propertyName = node["block_state_property"] as? String,
-                      let properties = selection.savedProperties.blockState,
-                      !selection.savedProperties.unreadableBlockProperties.contains(Array(propertyName.utf8)) else { throw Invalid.asset }
+                guard let propertyName = node["block_state_property"] as? String else { throw AssetReadError.invalidData }
+                guard let properties = selection.savedProperties.blockState,
+                      !selection.savedProperties.unreadableBlockProperties.contains(Array(propertyName.utf8)) else { throw AssetReadError.incompleteState }
                 child = try selectedCase(node, value: properties[Array(propertyName.utf8)]) { Array($0.utf8) }
             } else if property.description == "minecraft:charge_type", let selection {
-                guard let value = selection.savedProperties.charge else { throw Invalid.asset }
+                guard let value = selection.savedProperties.charge else { throw AssetReadError.incompleteState }
                 child = try selectedCase(node, value: Array(value.utf8)) { Array($0.utf8) }
             } else { child = node["fallback"] }
             return child
@@ -103,26 +103,27 @@ struct AssetItemReader {
                 return fallback
             } else {
                 let entries = try AssetJSON.array(node["entries"])
-                guard !entries.isEmpty, entries.count <= 4096 else { throw Invalid.asset }
+                guard !entries.isEmpty else { throw AssetReadError.invalidData }
+                guard entries.count <= 4096 else { throw AssetReadError.limitExceeded }
                 var first: (threshold: Float, model: Any)?
                 for rawEntry in entries {
                     let entry = try AssetJSON.object(rawEntry), threshold = try AssetJSON.number(entry["threshold"])
-                    guard let model = entry["model"] else { throw Invalid.asset }
+                    guard let model = entry["model"] else { throw AssetReadError.invalidData }
                     if first == nil || threshold < first!.threshold { first = (threshold, model) }
                 }
                 return first?.model
             }
-        default: throw Invalid.asset
+        default: throw AssetReadError.unsupportedFeature
         }
     }
 
     private func special(_ node: [String: Any], transform: AssetItemTransform,
                          budget: inout AssetReadBudget) throws -> AssetModel {
         let model = try AssetJSON.object(node["model"]), type = try AssetJSON.identifier(model["type"])
-        guard let shape = SpecialItemModel(rawValue: type.description) else { throw Invalid.asset }
+        guard let shape = SpecialItemModel(rawValue: type.description) else { throw AssetReadError.unsupportedFeature }
         if shape == .chest || shape == .shulker,
-           (try model["openness"].map(AssetJSON.number) ?? 0) != 0 { throw Invalid.asset }
-        if shape == .chest, let type = model["chest_type"], type as? String != "single" { throw Invalid.asset }
+           (try model["openness"].map(AssetJSON.number) ?? 0) != 0 { throw AssetReadError.unsupportedFeature }
+        if shape == .chest, let type = model["chest_type"], type as? String != "single" { throw AssetReadError.unsupportedFeature }
         let elements = try shape.elements(transform: transform, definition: model, selection: selection,
                                           assets: assets, budget: &budget)
         try budget.consume(elements: elements.count)
@@ -136,18 +137,20 @@ struct AssetItemReader {
     private func selectedCase<Key: Hashable>(_ node: [String: Any], value selectedValue: Key?,
                                             normalize: (String) throws -> Key) throws -> Any? {
         let cases = try AssetJSON.array(node["cases"])
-        guard !cases.isEmpty, cases.count <= 4096 else { throw Invalid.asset }
+        guard !cases.isEmpty else { throw AssetReadError.invalidData }
+        guard cases.count <= 4096 else { throw AssetReadError.limitExceeded }
         var selected = node["fallback"], seen = Set<Key>()
         for raw in cases {
             let entry = try AssetJSON.object(raw)
             let values: [String]
             if let value = entry["when"] as? String { values = [value] }
             else if let list = entry["when"] as? [String] { values = list }
-            else { throw Invalid.asset }
-            guard !values.isEmpty, values.count <= 4096 - seen.count else { throw Invalid.asset }
+            else { throw AssetReadError.invalidData }
+            guard !values.isEmpty else { throw AssetReadError.invalidData }
+            guard values.count <= 4096 - seen.count else { throw AssetReadError.limitExceeded }
             for rawValue in values {
                 let value = try normalize(rawValue)
-                guard seen.insert(value).inserted else { throw Invalid.asset }
+                guard seen.insert(value).inserted else { throw AssetReadError.invalidData }
                 if value == selectedValue { selected = entry["model"] }
             }
         }
@@ -155,13 +158,13 @@ struct AssetItemReader {
     }
 
     private func customModelData() throws -> ItemCustomModelData {
-        guard let selection else { throw Invalid.asset }
+        guard let selection else { throw AssetReadError.incompleteState }
         return selection.customModelData
     }
 
     private func customIndex(_ node: [String: Any]) throws -> Int {
         let index = try node["index"].map(AssetJSON.integer) ?? 0
-        guard index >= 0 else { throw Invalid.asset }
+        guard index >= 0 else { throw AssetReadError.invalidData }
         return index
     }
 
@@ -170,10 +173,10 @@ struct AssetItemReader {
     private func customRange(_ node: [String: Any], value: Float) throws -> Any? {
         let scale = try node["scale"].map(AssetJSON.number) ?? 1
         let rawEntries = try AssetJSON.array(node["entries"])
-        guard rawEntries.count <= 4096 else { throw Invalid.asset }
+        guard rawEntries.count <= 4096 else { throw AssetReadError.limitExceeded }
         let entries = try rawEntries.enumerated().map { index, raw in
             let entry = try AssetJSON.object(raw)
-            guard let model = entry["model"] else { throw Invalid.asset }
+            guard let model = entry["model"] else { throw AssetReadError.invalidData }
             return (threshold: try AssetJSON.number(entry["threshold"]), model: model, order: index)
         }.sorted {
             if Self.floatLess($0.threshold, $1.threshold) { return true }
@@ -217,11 +220,9 @@ struct AssetItemReader {
         case "minecraft:grass":
             let temperature = try AssetJSON.number(value["temperature"]), downfall = try AssetJSON.number(value["downfall"])
             guard (0...1).contains(temperature), (0...1).contains(downfall),
-                  let texture = GameAssets.resourceID("minecraft:colormap/grass") else { throw Invalid.asset }
+                  let texture = GameAssets.resourceID("minecraft:colormap/grass") else { throw AssetReadError.invalidData }
             return .colorMap(texture: texture, pixel: ClimateColorMap.pixel(temperature: temperature, downfall: downfall))
-        default: throw Invalid.asset
+        default: throw AssetReadError.unsupportedFeature
         }
     }
 }
-
-private enum Invalid: Error { case asset }

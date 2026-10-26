@@ -14,13 +14,14 @@ struct AssetModelReader {
         var elements: [RawElement]?, gui: AssetModel.Transform?, light: AssetModel.GuiLight?, ambient: Bool?
         var generated = false
         while let name = next {
-            guard let id = GameAssets.resourceID(name), seen.count < 64, seen.insert(id).inserted else { throw Invalid.asset }
+            guard let id = GameAssets.resourceID(name), seen.insert(id).inserted else { throw AssetReadError.invalidData }
+            guard seen.count <= 64 else { throw AssetReadError.limitExceeded }
             if id.description == "minecraft:builtin/generated" {
                 generated = true
                 light = light ?? .front
                 break
             }
-            guard let data = assets.resource(id.description, directory: "models", extension: "json") else { throw Invalid.asset }
+            let data = try assets.requiredResource(id.description, directory: "models", extension: "json", missing: AssetReadError.missingModel)
             try budget.consume(bytes: data.count)
             let model = try JSONDecoder().decode(RawModel.self, from: data)
             textures.merge(model.textures) { child, _ in child }
@@ -50,7 +51,6 @@ struct AssetModelReader {
     }
 }
 
-private enum Invalid: Error { case asset }
 
 /// Missing optional fields inherit/default. Explicit null or the wrong type is not absence.
 private extension KeyedDecodingContainer {
@@ -81,7 +81,7 @@ private struct RawModel: Decodable {
         parent = try c.optional(String.self, forKey: .parent)
         textures = try c.optional([String: TextureSlot].self, forKey: .textures) ?? [:]
         elements = try c.optional([RawElement].self, forKey: .elements)
-        guard (elements?.count ?? 0) <= 4096 else { throw Invalid.asset }
+        guard (elements?.count ?? 0) <= 4096 else { throw AssetReadError.limitExceeded }
         gui = try c.optional(Display.self, forKey: .display)?.gui?.value
         light = try c.optional(AssetModel.GuiLight.self, forKey: .gui_light)
         ambient = try c.optional(Bool.self, forKey: .ambientocclusion)
@@ -98,7 +98,7 @@ private enum TextureSlot: Decodable {
         let sprite: String, translucent: Bool
         if let string = try? c.decode(String.self) {
             if string.hasPrefix("#") {
-                guard string.count > 1 else { throw Invalid.asset }
+                guard string.count > 1 else { throw AssetReadError.invalidData }
                 self = .reference(String(string.dropFirst()))
                 return
             }
@@ -109,7 +109,7 @@ private enum TextureSlot: Decodable {
             sprite = try object.decode(String.self, forKey: .sprite)
             translucent = try object.optional(Bool.self, forKey: .force_translucent) ?? false
         }
-        guard let id = GameAssets.resourceID(sprite) else { throw Invalid.asset }
+        guard let id = GameAssets.resourceID(sprite) else { throw AssetReadError.invalidData }
         self = .value(.init(texture: id, forceTranslucent: translucent))
     }
 }
@@ -118,20 +118,22 @@ private func material(_ reference: String, in textures: [String: TextureSlot]) t
     // Face references are slot names, optionally prefixed with '#', not literal texture IDs.
     var name = reference.hasPrefix("#") ? String(reference.dropFirst()) : reference
     var seen = Set<String>()
-    while seen.count < 64, seen.insert(name).inserted, let slot = textures[name] {
+    while true {
+        guard seen.insert(name).inserted else { throw AssetReadError.invalidData }
+        guard seen.count <= 64 else { throw AssetReadError.limitExceeded }
+        guard let slot = textures[name] else { throw AssetReadError.invalidData }
         switch slot {
         case .value(let value): return value
         case .reference(let next): name = next
         }
     }
-    throw Invalid.asset
 }
 
 private struct Vector3: Decodable {
     let value: SIMD3<Float>
     init(from decoder: any Decoder) throws {
         let a = try decoder.singleValueContainer().decode([Float].self)
-        guard a.count == 3, a.allSatisfy(\.isFinite) else { throw Invalid.asset }
+        guard a.count == 3, a.allSatisfy(\.isFinite) else { throw AssetReadError.invalidData }
         value = SIMD3(a[0], a[1], a[2])
     }
 }
@@ -140,7 +142,7 @@ private struct Vector4: Decodable {
     let value: SIMD4<Float>
     init(from decoder: any Decoder) throws {
         let a = try decoder.singleValueContainer().decode([Float].self)
-        guard a.count == 4, a.allSatisfy(\.isFinite) else { throw Invalid.asset }
+        guard a.count == 4, a.allSatisfy(\.isFinite) else { throw AssetReadError.invalidData }
         value = SIMD4(a[0], a[1], a[2], a[3])
     }
 }
@@ -172,16 +174,16 @@ private struct RawRotation: Decodable {
         let angles: AssetModel.Rotation.Angles
         if c.contains(.axis) || c.contains(.angle) {
             let rawAxis = try c.decode(String.self, forKey: .axis)
-            guard let axis = AssetModel.Rotation.Axis(rawValue: rawAxis.lowercased()) else { throw Invalid.asset }
+            guard let axis = AssetModel.Rotation.Axis(rawValue: rawAxis.lowercased()) else { throw AssetReadError.invalidData }
             let angle = try c.decode(Float.self, forKey: .angle)
-            guard angle.isFinite else { throw Invalid.asset }
+            guard angle.isFinite else { throw AssetReadError.invalidData }
             angles = .axis(axis, angle)
         } else {
-            guard c.contains(.x) || c.contains(.y) || c.contains(.z) else { throw Invalid.asset }
+            guard c.contains(.x) || c.contains(.y) || c.contains(.z) else { throw AssetReadError.invalidData }
             let x = try c.optional(Float.self, forKey: .x) ?? 0
             let y = try c.optional(Float.self, forKey: .y) ?? 0
             let z = try c.optional(Float.self, forKey: .z) ?? 0
-            guard x.isFinite, y.isFinite, z.isFinite else { throw Invalid.asset }
+            guard x.isFinite, y.isFinite, z.isFinite else { throw AssetReadError.invalidData }
             angles = .eulerXYZ(SIMD3(x, y, z))
         }
         value = .init(origin: origin, angles: angles, rescale: try c.optional(Bool.self, forKey: .rescale) ?? false)
@@ -200,18 +202,18 @@ private struct RawElement: Decodable {
         let c = try decoder.container(keyedBy: Keys.self)
         from = try c.decode(Vector3.self, forKey: .from).value
         to = try c.decode(Vector3.self, forKey: .to).value
-        guard from == clamp(from, to: -16...32), to == clamp(to, to: -16...32) else { throw Invalid.asset }
+        guard from == clamp(from, to: -16...32), to == clamp(to, to: -16...32) else { throw AssetReadError.invalidData }
         var faces = [AssetModel.Direction: RawFace]()
         for (name, face) in try c.decode([String: RawFace?].self, forKey: .faces) {
-            guard let direction = AssetModel.Direction(rawValue: name) else { throw Invalid.asset }
+            guard let direction = AssetModel.Direction(rawValue: name) else { throw AssetReadError.invalidData }
             if let face { faces[direction] = face }
         }
-        guard !faces.isEmpty else { throw Invalid.asset }
+        guard !faces.isEmpty else { throw AssetReadError.invalidData }
         self.faces = faces
         rotation = try c.optional(RawRotation.self, forKey: .rotation)?.value
         shadeDirection = try c.optional(AssetModel.Direction.self, forKey: .shade_direction_override)
         lightEmission = Int(try c.optional(Int32.self, forKey: .light_emission) ?? 0)
-        guard (0...15).contains(lightEmission) else { throw Invalid.asset }
+        guard (0...15).contains(lightEmission) else { throw AssetReadError.invalidData }
     }
 
     func resolved(in textures: [String: TextureSlot]) throws -> AssetModel.Element {
@@ -248,10 +250,10 @@ private struct RawFace: Decodable {
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         texture = try c.decode(String.self, forKey: .texture)
-        guard !texture.isEmpty else { throw Invalid.asset }
+        guard !texture.isEmpty else { throw AssetReadError.invalidData }
         uv = try c.optional(Vector4.self, forKey: .uv)?.value
         let angle = Int(try c.optional(Int32.self, forKey: .rotation) ?? 0)
-        guard angle.isMultiple(of: 90) else { throw Invalid.asset }
+        guard angle.isMultiple(of: 90) else { throw AssetReadError.invalidData }
         rotation = (angle % 360 + 360) % 360
         let tint = try c.optional(Int32.self, forKey: .tintindex) ?? -1
         tintIndex = tint >= 0 ? Int(tint) : nil

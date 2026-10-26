@@ -19,7 +19,7 @@ enum SpecialItemGeometry {
             let a = transform.applying(to: from), b = transform.applying(to: to)
             let low = SIMD3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z))
             let high = SIMD3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z))
-            guard (0..<3).allSatisfy({ (-16...32).contains(low[$0]) && (-16...32).contains(high[$0]) }) else { throw Invalid.asset }
+            guard (0..<3).allSatisfy({ (-16...32).contains(low[$0]) && (-16...32).contains(high[$0]) }) else { throw AssetReadError.unsupportedFeature }
             let surface = AssetModel.Material(texture: material.texture, forceTranslucent: material.forceTranslucent,
                 overlays: material.overlays, staticTextureAspectRatio: textureAspectRatio)
             let mappedFaces = Dictionary(uniqueKeysWithValues: faces.map { direction, source in
@@ -32,5 +32,4 @@ enum SpecialItemGeometry {
         }
     }
 
-    private enum Invalid: Error { case asset }
 }

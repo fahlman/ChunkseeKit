@@ -14,7 +14,7 @@ struct AssetItemTransform: Equatable {
     func applying(to model: AssetModel) throws -> AssetModel {
         if self == .identity { return model }
         guard (0..<3).allSatisfy({ abs(scale[$0]) == 1 }),
-              case .elements(let source) = model.geometry else { throw Invalid.asset }
+              case .elements(let source) = model.geometry else { throw AssetReadError.unsupportedFeature }
         let elements = try source.map { element in
             let a = applying(to: element.from), b = applying(to: element.to)
             var from = a, to = b
@@ -22,7 +22,7 @@ struct AssetItemTransform: Equatable {
             let rotation = try element.rotation.map { try applying(to: $0) }
             guard [from, to, rotation?.origin ?? .zero].allSatisfy({ point in
                 (0..<3).allSatisfy { point[$0].isFinite }
-            }) else { throw Invalid.asset }
+            }) else { throw AssetReadError.unsupportedFeature }
             // Conjugating an element's rotation preserves its original order before the node
             // transform. Remap faces without resampling UVs from the moved corner coordinates.
             let faces = Dictionary(uniqueKeysWithValues: element.faces.map { direction, face in
@@ -67,10 +67,10 @@ struct AssetItemTransform: Equatable {
             }
             // Unequal perpendicular scaling would shear the rotated box. The model's rotation
             // cannot represent that, so leave such selected special transforms unavailable.
-            guard abs(first) == abs(second) else { throw Invalid.asset }
+            guard abs(first) == abs(second) else { throw AssetReadError.unsupportedFeature }
             angles = .axis(axis, angle * sign)
         case .eulerXYZ(let value):
-            guard abs(scale.x) == abs(scale.y), abs(scale.y) == abs(scale.z) else { throw Invalid.asset }
+            guard abs(scale.x) == abs(scale.y), abs(scale.y) == abs(scale.z) else { throw AssetReadError.unsupportedFeature }
             angles = .eulerXYZ(value * signs)
         }
         return .init(origin: applying(to: rotation.origin), angles: angles, rescale: rotation.rescale)
@@ -84,13 +84,13 @@ struct AssetItemTransform: Equatable {
         let s = try AssetJSON.numbers(value["scale"], count: 3)
         let t = try AssetJSON.numbers(value["translation"], count: 3)
         guard right[0...2].allSatisfy({ $0 == 0 }), abs(right[3]) == 1,
-              s[0] > 0, s[1] != 0, s[2] != 0, (s[1] < 0) == (s[2] < 0) else { throw Invalid.asset }
+              s[0] > 0, s[1] != 0, s[2] != 0, (s[1] < 0) == (s[2] < 0) else { throw AssetReadError.unsupportedFeature }
         let turn: SIMD3<Float>
         if left[0...2].allSatisfy({ $0 == 0 }), abs(left[3]) == 1 { turn = .one }
         else if abs(left[0]) == 1, left[1] == 0, left[2] == 0, left[3] == 0 { turn = SIMD3(1, -1, -1) }
         else if left[0] == 0, abs(left[1]) == 1, left[2] == 0, left[3] == 0 { turn = SIMD3(-1, 1, -1) }
         else if left[0] == 0, left[1] == 0, abs(left[2]) == 1, left[3] == 0 { turn = SIMD3(-1, -1, 1) }
-        else { throw Invalid.asset }
+        else { throw AssetReadError.unsupportedFeature }
         return try appending(Self(scale: SIMD3(s[0], s[1], s[2]) * turn,
                                   translation: SIMD3(t[0], t[1], t[2])))
     }
@@ -100,9 +100,8 @@ struct AssetItemTransform: Equatable {
     func appending(_ child: Self) throws -> Self {
         let result = Self(scale: scale * child.scale, translation: translation + scale * child.translation)
         guard (0..<3).allSatisfy({ result.scale[$0].isFinite && result.scale[$0] != 0
-            && result.translation[$0].isFinite }) else { throw Invalid.asset }
+            && result.translation[$0].isFinite }) else { throw AssetReadError.unsupportedFeature }
         return result
     }
 
-    private enum Invalid: Error { case asset }
 }
