@@ -32,6 +32,7 @@ public final class ExtractGameFacts {
             dyes.add(entry);
         }
         facts.add("dyes", dyes);
+        facts.add("creatureColors", ExtractCreatureColors.extract());
         var variants = new JsonObject();
         for (var name : List.of(
                 "net.minecraft.world.entity.animal.axolotl.Axolotl$Variant",

@@ -22,7 +22,7 @@ import net.minecraft.util.datafix.fixes.LegacyBlockRenameFix;
 import net.minecraft.util.datafix.fixes.NamespacedTypeRenameFix;
 import net.minecraft.util.datafix.fixes.References;
 
-/** Only rename facts; numeric flattening and save-layout conversions are separate adapters. */
+/** Identifier conversion facts; save-layout conversions have separate adapters. */
 final class ExtractSaveRenames {
     @SuppressWarnings("unchecked")
     static JsonObject extract(int currentVersion) throws Exception {
@@ -117,6 +117,7 @@ final class ExtractSaveRenames {
         var entities = ExtractEntityRenames.extract(currentVersion);
         var effects = ExtractEffectRenames.extract(currentVersion);
         var progress = ExtractProgressRenames.extract(currentVersion);
+        var numericItems = ExtractNumericItemIds.extract(currentVersion);
         result.addAll(entities.getAsJsonArray("steps"));
         result.addAll(effects.getAsJsonArray("enchantments"));
         result.addAll(progress.getAsJsonArray("steps"));
@@ -129,8 +130,10 @@ final class ExtractSaveRenames {
         records.addAll(ExtractEntityRenames.records(currentVersion));
         records.addAll(effects.getAsJsonArray("records"));
         records.addAll(progress.getAsJsonArray("records"));
+        records.addAll(numericItems.getAsJsonArray("records"));
         facts.add("records", records);
         facts.add("itemNames", legacyItemNames(currentVersion));
+        facts.add("numericItems", numericItems);
         facts.add("itemDamageChanges", legacyDamageChanges());
         facts.add("entityIntroductions", entities.get("introductions"));
         facts.add("attributeSteps", effects.get("attributes"));

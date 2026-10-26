@@ -22,17 +22,26 @@ python3 Tools/GameFacts/regenerate.py "$MINECRAFT_DIR" "$MINECRAFT_JAVA" "$EVIDE
 
 The tool checks the client SHA-1 against the launcher's download metadata and rejects snapshots.
 It compiles the extractor, bootstraps the official registries without creating a world, and
-writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
+writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColors.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
-plus `GeneratedLegacyChunkFacts.swift`, test-only `GeneratedLegacyChunkProofs.swift`
-and `Tools/GameFacts/source.json`.
+plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
+`GeneratedLegacyChunkProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
 No world or installed game file is written. Run this only when the shared Mac is not reserved.
 
 Sources and interpretation:
+
+- `ColorLerper.Type.SHEEP.getColor` supplies the wool multiplier for each actual DyeColor,
+  independently checked through `SheepRenderState.getWoolColor` with live animation disabled.
+  It is not the raw dye texture multiplier. `AxolotlRenderer.TEXTURE_BY_TYPE` supplies adult
+  variant texture IDs, checked through the real renderer's `getTextureLocation` with a baked
+  vanilla model set and no world/window/GPU. The extracted entity ancestry assigns these code
+  rules to their species. These facts identify color sources, not a complete entity picture;
+  PNG bytes remain runtime resources, and clients own representative color sampling and UI contrast.
+  Every mapping has a generated Swift test case from the game's actual method output.
 
 - `ChunkHeightAndBiomeFix` supplies numeric biome-code meanings, geometry and omitted defaults;
   the default block is read from actual output. `ChunkStatusFix`/`ChunkStatusFix2` and
@@ -59,8 +68,14 @@ Sources and interpretation:
   `BedItemColorFix` is sampled for its original default variant; its identity comes from its
   class constants. All table entries and version boundaries have independent complete-game
   ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
-  Nothing writes a world. This slice does not implement numeric
-  flattening, other identifier/field formats, or every other data-fixer class;
+  `ItemIdFix` supplies its complete numeric-to-named item map, unknown-number fallback and
+  applicability boundary. Every entry and absent-number probes run through the real ITEM_STACK
+  boundary upgrade; the test suite composes that result with the existing named-item pipeline.
+  Additional ordinary variant and player-inventory records compare the complete remaining
+  game upgrade. Numeric tags use the same Java Number.intValue codec as the game. This only
+  restores numeric identities: field-sensitive potion/spawn-egg/banner conversions, numeric
+  blocks and other identifier/field formats remain separate adapters. Nothing writes a world.
+  This does not implement every data-fixer class;
   those remain on #255. These rename facts are not registry membership lists.
 
 - `SimplestEntityRenameFix` and `BlockEntityRenameFix` supply namespaced record aliases.

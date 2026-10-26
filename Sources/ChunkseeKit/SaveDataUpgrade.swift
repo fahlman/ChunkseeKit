@@ -92,11 +92,13 @@ enum SaveDataUpgrade {
         var itemBeforeFlattening: [String: String] = [:]
         var itemAfterFlattening: [String: String] = [:]
         let flattensItems: Bool
+        let convertsNumericItems: Bool
         let damageChanges: [String: [Int: Int]]
 
         init(after version: Int) {
             attributeSteps = GeneratedSaveRenames.attributeSteps.filter { $0.version > version }
             flattensItems = version < GeneratedSaveRenames.itemNameBoundary
+            convertsNumericItems = version < GeneratedSaveRenames.numericItemBoundary
             damageChanges = Dictionary(uniqueKeysWithValues: GeneratedSaveRenames.itemDamageChanges
                 .filter { $0.version > version }.map { ($0.id, $0.changes) })
             for step in GeneratedSaveRenames.steps where step.version > version {
@@ -169,7 +171,10 @@ enum SaveDataUpgrade {
         }
 
         func itemName(in fields: [String: NBT]) -> NBT? {
-            guard let value = fields["id"] else { return nil }
+            guard var value = fields["id"] else { return nil }
+            if convertsNumericItems, let number = value.javaInt {
+                value = .string(GeneratedSaveRenames.numericItems[number] ?? GeneratedSaveRenames.numericItemFallback)
+            }
             guard flattensItems, let raw = value.string else { return renamed(value, kind: .item) }
             let identifier = Identifier(raw)?.description ?? raw
             let before = itemBeforeFlattening[identifier] ?? identifier
@@ -207,7 +212,7 @@ enum SaveDataUpgrade {
             + Array(GeneratedSaveRenames.entityIntroductions.values)
             + Array(GeneratedSaveRenames.blockEntityIntroductions.values)
             + GeneratedSaveRenames.attributeSteps.map(\.version)
-            + [GeneratedSaveRenames.itemNameBoundary])
+            + [GeneratedSaveRenames.itemNameBoundary, GeneratedSaveRenames.numericItemBoundary])
         return boundaries.sorted().map { Plan(boundary: $0, names: Names(after: $0 - 1)) }
     }()
 

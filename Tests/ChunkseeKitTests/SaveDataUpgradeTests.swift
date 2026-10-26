@@ -42,6 +42,41 @@ import ChunkseeKitTestSupport
         #expect(ItemStack(input, dataVersion: sample.version)?.id == sample.expected)
     }
 
+    @Test(arguments: GeneratedSaveRenameProofs.numericItems)
+    func numericItemsComposeWithTheExistingNamedPipeline(_ sample: GeneratedSaveRenameProofs.NumericItem) {
+        let input = NBT.compound(["id": .int(sample.input), "Count": .byte(2), "Damage": .short(0)])
+        let actual = SaveDataUpgrade.item(input, dataVersion: sample.version)
+        if let name = sample.expected {
+            // Minecraft supplied this name at its numeric-codec boundary. Run the same
+            // existing later pipeline on it, isolating this change from older field work.
+            let named = item(name, extra: ["Count": .byte(2), "Damage": .short(0)])
+            #expect(actual == SaveDataUpgrade.item(named, dataVersion: sample.version))
+            #expect(ItemStack(input, dataVersion: sample.version) == ItemStack(named, dataVersion: sample.version))
+        } else {
+            #expect(actual == input)
+            #expect(ItemStack(input, dataVersion: sample.version) == nil)
+        }
+    }
+
+    @Test func numericItemCodecsPreserveOtherFieldsAndMalformedIDs() throws {
+        for id in [NBT.byte(35), .short(35), .int(35), .long(4_294_967_331), .float(35.9), .double(35.9)] {
+            let input = NBT.compound(["id": id, "Count": .byte(2), "Damage": .short(14), "Slot": .byte(3),
+                                      "custom": .compound(["id": .int(35)])])
+            let result = try #require(ItemStack(input, dataVersion: nil))
+            #expect(result.id == "minecraft:red_wool" && result.count == 2 && result.slot == 3)
+            let upgraded = SaveDataUpgrade.item(input, dataVersion: nil)
+            #expect(upgraded["custom"] == input["custom"] && upgraded["Damage"] == input["Damage"])
+        }
+        for value in [NBT.string("1"), .list([.int(35)]), .compound(["value": .int(35)])] {
+            let input = NBT.compound(["id": value, "Count": .byte(2)])
+            #expect(SaveDataUpgrade.item(input, dataVersion: nil) == input)
+        }
+        for value in [NBT.int(-1), .int(.max), .double(.nan)] {
+            #expect(ItemStack(.compound(["id": value, "Count": .byte(2)]), dataVersion: nil) == nil)
+        }
+        #expect(ItemStack(.compound(["id": .int(35), "Count": .byte(2)])) == nil)
+    }
+
     @Test(arguments: GeneratedSaveRenameProofs.entitySamples)
     func matchesMinecraftEntityNamesAcrossEverySchemaInterval(_ sample: GeneratedSaveRenameProofs.EntitySample) {
         for version in sample.versions {
@@ -520,6 +555,37 @@ import ChunkseeKitTestSupport
         #expect(try dimension.creatures(regionX: 0, regionZ: 0) == facts.creatures)
         #expect(try RegionFile(contentsOf: terrainURL).chunkNBT(localX: 0, localZ: 0) == .compound(terrain))
         #expect(try before == [Data(contentsOf: terrainURL), Data(contentsOf: entityURL)])
+    }
+
+    @Test func numericItemsSurviveLegacyTerrainAndNestedContainersWithoutWriting() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        let region = RegionPosition(x: 0, z: 0)
+        let wool = NBT.compound(["id": .short(35), "Damage": .short(14), "Count": .byte(2), "Slot": .byte(0)])
+        let granite = NBT.compound(["id": .short(1), "Damage": .short(1), "Count": .byte(3)])
+        let nested = item("example:container", extra: ["tag": .compound([
+            "BlockEntityTag": .compound(["Items": .list([granite])]),
+        ])])
+        let terrain = NBT.compound(["Level": .compound([
+            "xPos": .int(0), "zPos": .int(0), "Sections": .list([
+                .compound(["Y": .byte(0), "Blocks": .byteArray([Int8](repeating: 0, count: 4096))]),
+            ]), "TileEntities": .list([.compound([
+                "id": .string("Chest"), "x": .int(0), "y": .int(64), "z": .int(0),
+                "Items": .list([wool, nested]),
+            ])]),
+        ])])
+        let url = dimension.regionURL(.terrain, at: region)
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: terrain)]), to: url)
+        let before = try Data(contentsOf: url)
+        let facts = try dimension.scan(region: region)
+        let container = try #require(facts.containers.first)
+        #expect(facts.formats.legacy == 1 && facts.containers.count == 1)
+        #expect(container.items.flatMap(\.allItems).map(\.id) == ["minecraft:red_wool", "example:container", "minecraft:granite"])
+        #expect(container.items.flatMap(\.allItems).map(\.count) == [2, 1, 3])
+        #expect(try dimension.containers(regionX: 0, regionZ: 0) == facts.containers)
+        #expect(try RegionFile(contentsOf: url).chunkNBT(localX: 0, localZ: 0) == terrain)
+        #expect(try Data(contentsOf: url) == before)
     }
 
     @Test func deeplyNestedUpgradeUsesAnExplicitTraversalStack() {

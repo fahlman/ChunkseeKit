@@ -1140,7 +1140,13 @@ Minecraft fixers extracted by Tools/GameFacts. Chunk palettes, block/entity cont
 creature equipment/trades and player inventories use the same owner before typed interpretation.
 Nested item contents and pot decorations retain their formats while their item names change.
 Named legacy items first use the game's saved-Damage identity conversion and original bed
-default, so earlier meanings are resolved before later aliases. Numeric item IDs remain separate.
+default, so earlier meanings are resolved before later aliases. Numeric item tags first use
+ItemIdFix's generated meanings and unknown-number fallback, with the shared Java numeric codec.
+Its generated boundary controls the rewrite without excluding any readable records. All item
+entry points share it, including nested stacks; malformed nonnumeric IDs stay unchanged.
+RegionFacts interpretation 25 invalidates cached omissions of these items. Complete-game
+ordinary-item/player proofs supplement every numeric table entry's actual boundary proof.
+Field-sensitive potion/spawn-egg/banner conversions and numeric blocks remain on #255.
 Raw NBT, RegionFile and World.playerData remain unchanged, and no save is written. Standalone
 item callers can supply their containing file's version through ItemStack.init(_:dataVersion:);
 the existing initializer consumes an already interpreted value. Missing DataVersion means -1;
@@ -1246,6 +1252,14 @@ owner or type inventory. Numeric appearances use the generated schemas in Genera
 an unknown value leaves only that fact unavailable. Current/legacy equipment parsing has one
 owner in EntityEquipment. Existing collar defaults and sitting-order policy stay intact. Saved ChestedHorse creates a
 descriptive storage item only when a readable saved storage slot is absent.
+
+The #278 additive `CreatureAppearance.colorSource(for:)` supplies a renderer RGB multiplier or
+adult texture ID for a known saved variant. The single release tool extracts the sheep wool
+multiplier and axolotl texture choices from their actual renderer code, with method-output proofs;
+there is no hand-kept presentation palette or version gate. Unknown species/variants retain their
+appearance but have no color source. Texture bytes remain in the installed game; image decoding,
+representative sampling, contrast, names and live UI state belong to the app. This is a saved-color
+source, not full entity rendering or a live jeb_ animation. No saved-data or RegionFacts change.
 
 The unreleased #228 equipment row removes legacy saddle/decor/armor species inventories and
 the pet-only empty-equipment default. Saved fields identify these formats on any type, including
