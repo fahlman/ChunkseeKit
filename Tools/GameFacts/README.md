@@ -7,7 +7,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
-and block seed methods, tints, fluid states, upper-face support, static special-item models
+and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
 and profession trade-set associations.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
@@ -24,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -116,6 +116,12 @@ Sources and interpretation:
   unknown block code; neither is used to decide existence or picture availability. Raw samples
   retain official method results for public-API verification. No color formulas or block IDs
   are maintained by hand, and the generated facts have no runtime version gate.
+
+- BlockState.isAir supplies the code flag initialized from BlockBehaviour.Properties.isAir.
+  Every registered state is checked against Heightmap.NOT_AIR and its block's default flag;
+  a changed predicate or new state-dependent format fails generation for inspection. The air
+  tag stays runtime data for consumers that need tag membership, but cannot replace this
+  surface-height rule. Missing code flags remain unknown; there is no manually maintained list.
 
 - BlockState.getFluidState supplies every registered state's contained fluid identity or known
   emptiness. Membership in the water tag is not generated; the caller supplies that composed

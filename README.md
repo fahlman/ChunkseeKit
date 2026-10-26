@@ -669,9 +669,13 @@ same traversal, with single-column queries reading only their requested column. 
 roof-hiding policy, cache format or region-fact interpretation changes are introduced here.
 
 Region scans now use this surface owner instead of sampling a section's top when a heightmap
-is absent. Air classification uses Identifier's default namespace, so `air` and `:air` are
-equivalent to `minecraft:air`; foreign-namespace names are not treated as vanilla air. Raw block
-IDs remain unchanged. Item reads use the same namespace rule for the empty `minecraft:air` item,
+is absent. `BlockState.isAir` now returns an optional code flag generated from the game's actual
+method and checked against Heightmap.NOT_AIR. The air tag is a separate runtime declaration;
+changing that tag does not change Minecraft's surface predicate. Identifier's default namespace
+still makes `air` and `:air` equivalent to `minecraft:air`. Unknown block code returns nil, and
+surface traversal/CLI keep those readable states visible rather than skip them. Raw block IDs
+remain unchanged. This intentional breaking API change requires a minor release; callers use
+`isAir == true` when only known air should be skipped. Item reads use the same namespace rule for the empty `minecraft:air` item,
 including nested contents; the CLI chunk listing uses the shared block-air classification.
 RegionFacts interpretation version 6 invalidates older cached biome samples and empty-item
 interpretations; rebuild them after adopting this change. Explicit sampling Y and the used-biome

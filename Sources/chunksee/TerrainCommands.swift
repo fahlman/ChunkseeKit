@@ -10,7 +10,7 @@ func chunkCommand(_ world: World, _ arguments: Arguments) throws {
         print("Block entities: \(chunk.blockEntities.count)")
         for s in chunk.sections {
             guard let states = s.blockStates else { continue }
-            if states.palette.allSatisfy(\.isAir) { continue }
+            if states.palette.allSatisfy({ $0.isAir == true }) { continue }
             let names = states.palette.map(\.description)
             let biomes = s.biomes?.palette.joined(separator: ", ") ?? "-"
             print("  section y=\(s.y): \(names.count) states (\(states.bitsPerEntry) bits), biomes [\(biomes)]")
