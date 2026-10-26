@@ -48,7 +48,8 @@ import Testing
     @Test func actualRegionScanAndCacheKeepEveryOfferStateAndReadableRecipe() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let dimension = Dimension(id: "example:market", url: root)
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["DataVersion": .int(.max)])]),
+                                     to: root.appendingPathComponent("level.dat"))
         let position = RegionPosition(x: 0, z: 0)
         let entities = cases.enumerated().map { offset, value in
             Fixtures.mob(record(offers: value.offers).compound!.merging([
@@ -56,11 +57,12 @@ import Testing
                 "Pos": .list([.double(Double(offset)), .double(64), .double(0)])
             ]) { _, new in new })
         }
-        let path = dimension.regionURL(.entities, at: position)
+        let path = root.appendingPathComponent("dimensions/example/market/entities/r.0.0.mca")
         let input = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
             "DataVersion": .int(.max), "Entities": .list(entities)
         ]))])
         try Fixtures.write(input, to: path)
+        let dimension = try #require(World(contentsOf: root).dimension("example:market"))
         let scanned = try dimension.scan(region: position)
         let cached = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(scanned))
         #expect(cached.creatures == scanned.creatures)
@@ -68,7 +70,8 @@ import Testing
         let definitions = try definitions()
         for (creature, value) in zip(cached.creatures, cases) {
             let villager = try #require(creature.villager)
-            #expect(villager.offerState == value.state && villager.trades.count == value.recipes)
+            #expect(villager.offerState == value.state)
+            #expect(villager.trades.count == value.recipes)
             #expect(villager.supportsTrading(using: definitions) == value.trading)
         }
         #expect(try Data(contentsOf: path) == Data(input))
