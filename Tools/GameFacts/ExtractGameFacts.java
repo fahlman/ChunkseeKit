@@ -67,6 +67,7 @@ public final class ExtractGameFacts {
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
         facts.add("equipment", ExtractEquipmentFacts.extract());
         facts.add("trading", ExtractTradingFacts.extract());
+        facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 
