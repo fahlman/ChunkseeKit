@@ -1135,7 +1135,13 @@ Minecraft fixers extracted by Tools/GameFacts. Chunk palettes, block/entity cont
 creature equipment/trades and player inventories use the same owner before typed interpretation.
 Nested item contents and pot decorations retain their formats while their item names change.
 Named legacy items first use the game's saved-Damage identity conversion and original bed
-default, so earlier meanings are resolved before later aliases. Numeric item IDs remain separate.
+default, so earlier meanings are resolved before later aliases. Numeric item tags first use
+ItemIdFix's generated meanings and unknown-number fallback, with the shared Java numeric codec.
+Its generated boundary controls the rewrite without excluding any readable records. All item
+entry points share it, including nested stacks; malformed nonnumeric IDs stay unchanged.
+RegionFacts interpretation 25 invalidates cached omissions of these items. Complete-game
+ordinary-item/player proofs supplement every numeric table entry's actual boundary proof.
+Field-sensitive potion/spawn-egg/banner conversions and numeric blocks remain on #255.
 Raw NBT, RegionFile and World.playerData remain unchanged, and no save is written. Standalone
 item callers can supply their containing file's version through ItemStack.init(_:dataVersion:);
 the existing initializer consumes an already interpreted value. Missing DataVersion means -1;

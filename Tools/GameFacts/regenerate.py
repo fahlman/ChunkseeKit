@@ -129,6 +129,16 @@ def save_renames_source(facts, notice):
                 raise ValueError("Invalid entity rename applicability")
             result += f"        {quoted(name)}: {version},\n"
         result += "    ]\n"
+    numeric = facts["numericItems"]
+    result += "    // " + numeric["source"] + ". Historical numeric item codec, not current membership.\n"
+    result += f"    static let numericItemBoundary = {numeric['boundary']}\n"
+    result += f"    static let numericItemFallback = {quoted(numeric['fallback'])}\n"
+    result += "    static let numericItems: [Int32: String] = [\n"
+    for number, name in sorted(numeric["mappings"].items(), key=lambda entry: int(entry[0])):
+        if not -(2**31) <= int(number) < 2**31 or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", name):
+            raise ValueError("Invalid numeric item meaning")
+        result += f"        {int(number)}: {quoted(name)},\n"
+    result += "    ]\n"
     item_names = facts["itemNames"]
     result += "    // " + item_names["source"] + ". Saved string identity and variant, not numeric item IDs.\n"
     result += f"    static let itemNameBoundary = {item_names['boundary']}\n"
@@ -177,6 +187,13 @@ def save_rename_proofs_source(facts, notice):
     result += "    static let legacyItems: [LegacyItem] = [\n"
     for row in facts["itemNames"]["proofs"]:
         result += f"        .init(version: {row['version']}, input: {quoted(row['input'])}, damage: {row['damage']}, expected: {quoted(row['expected'])}),\n"
+    result += "    ]\n"
+    result += "    // Actual ITEM_STACK IDs at the numeric codec boundary; later field conversions are separate.\n"
+    result += "    struct NumericItem: Sendable { let version: Int; let input: Int32; let expected: String? }\n"
+    result += "    static let numericItems: [NumericItem] = [\n"
+    for row in facts["numericItems"]["proofs"]:
+        expected = quoted(row["expected"]) if isinstance(row["expected"], str) else "nil"
+        result += f"        .init(version: {row['version']}, input: {row['input']}, expected: {expected}),\n"
     return result + "    ]\n}\n"
 
 
@@ -594,7 +611,7 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
                   "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}

@@ -59,8 +59,14 @@ Sources and interpretation:
   `BedItemColorFix` is sampled for its original default variant; its identity comes from its
   class constants. All table entries and version boundaries have independent complete-game
   ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
-  Nothing writes a world. This slice does not implement numeric
-  flattening, other identifier/field formats, or every other data-fixer class;
+  `ItemIdFix` supplies its complete numeric-to-named item map, unknown-number fallback and
+  applicability boundary. Every entry and absent-number probes run through the real ITEM_STACK
+  boundary upgrade; the test suite composes that result with the existing named-item pipeline.
+  Additional ordinary variant and player-inventory records compare the complete remaining
+  game upgrade. Numeric tags use the same Java Number.intValue codec as the game. This only
+  restores numeric identities: field-sensitive potion/spawn-egg/banner conversions, numeric
+  blocks and other identifier/field formats remain separate adapters. Nothing writes a world.
+  This does not implement every data-fixer class;
   those remain on #255. These rename facts are not registry membership lists.
 
 - `SimplestEntityRenameFix` and `BlockEntityRenameFix` supply namespaced record aliases.
