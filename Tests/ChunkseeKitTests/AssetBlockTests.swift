@@ -34,8 +34,9 @@ import Testing
         #expect(reader.blockModel(for: state()) == nil)
     }
 
-    @Test func multipartKeepsEveryMatchingPartAndUsesPerTermNegation() throws {
-        let reader = try assets(##"{"multipart":[{"apply":{"model":"block/a"}},{"when":{"AND":[{"OR":[{"facing":"north|south"},{"powered":true}]},{"level":2}]},"apply":{"model":"block/b","y":180}},{"when":{"facing":"!north|south"},"apply":{"model":"block/b","x":90}},{"when":{"OR":[]},"apply":{"model":"missing"}}]}"##)
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func multipartKeepsEveryMatchingPartAndUsesPerTermNegation(version: Int) throws {
+        let reader = try assets(##"{"multipart":[{"apply":{"model":"block/a"}},{"when":{"AND":[{"OR":[{"facing":"north|south"},{"powered":true}]},{"level":2}]},"apply":{"model":"block/b","y":180}},{"when":{"facing":"!north|south"},"apply":{"model":"block/b","x":90}},{"when":{"OR":[]},"apply":{"model":"missing"}}]}"##, version: version)
         let south = try #require(reader.blockModel(for: state(["facing": "south", "powered": "false", "level": "2"])))
         #expect(south.parts.map { $0.alternatives[0].rotation } == [.zero, SIMD3(0, 180, 0), SIMD3(90, 0, 0)])
         let north = try #require(reader.blockModel(for: state(["facing": "north", "powered": "false", "level": "2"])))
@@ -49,7 +50,7 @@ import Testing
         let bothNegated = try assets(##"{"multipart":[{"when":{"facing":"!north|!south"},"apply":{"model":"block/a"}}]}"##)
         #expect(bothNegated.blockModel(for: state(["facing": "north"]))?.parts.count == 1)
         let older = try assets(##"{"multipart":[{"when":{"facing":"!north"},"apply":{"model":"block/a"}}]}"##, version: 4903)
-        #expect(older.blockModel(for: state(["facing": "south"])) == nil)
+        #expect(older.blockModel(for: state(["facing": "south"]))?.parts.count == 1)
     }
 
     @Test func weightedAlternativesKeepTheirOrderAndSingleVariantsIgnoreWeight() throws {

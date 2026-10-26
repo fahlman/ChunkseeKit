@@ -77,7 +77,7 @@ public struct GameAssets: Sendable {
     /// Missing/unsupported/malformed selected resources and overlapping variants also return nil.
     /// Reads share a 16 MiB JSON / 4096-element budget across at most 256 selected models, with
     /// at most 4096 selectors/condition terms and 64 nested conditions. Images and caching stay
-    /// client-owned. Multipart per-term negation is verified only for 26.3 (data version 5023).
+    /// client-owned. Multipart per-term negation follows the resource format without a version gate.
     public func blockModel(for state: BlockState) -> AssetBlock? {
         try? AssetBlockReader(assets: self).read(state)
     }

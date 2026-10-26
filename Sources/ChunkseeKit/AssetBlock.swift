@@ -5,11 +5,15 @@ public struct AssetBlock: Sendable, Equatable {
     let seedOffset: SIMD3<Int32>?
     let isMultipart: Bool
 
-    /// One model per part, in drawing order, using the position's verified vanilla 26.3 seed.
-    /// Unverified versions/namespaces, missing seed-driving properties and coordinates outside
-    /// signed 32-bit bounds return nil. No resources are reread; `parts` remains unchanged.
+    /// One model per part, in drawing order, using generated facts about the game's seed method.
+    /// An unknown method or missing seed-driving property still allows deterministic pictures.
+    /// Random choices need a known seed and signed 32-bit coordinates. No resources are reread.
     public func selectedAlternatives(at position: BlockPosition) -> [Alternative]? {
-        guard let seedOffset, let seed = BlockModelSeed.seed(at: position, offset: seedOffset) else { return nil }
+        guard let seedOffset else {
+            guard parts.allSatisfy({ $0.alternatives.count == 1 }) else { return nil }
+            return parts.map { $0.alternatives[0] }
+        }
+        guard let seed = BlockModelSeed.seed(at: position, offset: seedOffset) else { return nil }
         var random = LegacyRandom(seed: seed)
         let partSeed = isMultipart ? random.nextLong() : seed
         return parts.map { part in

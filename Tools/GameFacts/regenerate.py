@@ -187,11 +187,48 @@ def generated_sources(facts, entities):
     equipment_source += f"    static let legacySaddleCount = {equipment['legacySaddleCount']}\n"
     equipment_source += "    // AbstractChestedHorse.mobInteract tests Items.CHEST before setting ChestedHorse.\n"
     equipment_source += f"    static let attachedChestItem = {quoted(equipment['attachedChestItem'])}\n}}\n"
+    seeds = facts["blockModelSeeds"]
+    def vector(value):
+        if len(value) != 3 or any(type(n) is not int or not -2147483648 <= n <= 2147483647 for n in value):
+            raise ValueError("Invalid extracted seed offset")
+        return "SIMD3<Int32>(" + ", ".join(str(n) for n in value) + ")"
+    seed_source = notice + "// Code-only seed behavior, not a block-existence catalog.\n"
+    seed_source += "// Sources: " + ", ".join(seeds["sources"]) + ".\n"
+    seed_source += "enum GeneratedBlockModelSeeds {\n"
+    seed_source += "    enum Format: Sendable { case ordinary, bed, doubleBlock }\n"
+    seed_source += "    static let formats: [String: Format] = {\n        var result = [String: Format]()\n"
+    seed_source += "        func add(_ names: String, _ format: Format) {\n"
+    seed_source += "            for name in names.split(whereSeparator: \\.isWhitespace) { result[String(name)] = format }\n        }\n"
+    groups = {}
+    for identifier, block in sorted(seeds["blocks"].items()):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+            raise ValueError("Unsupported seed-rule identifier")
+        if block["format"] not in {"ordinary", "bed", "doubleBlock"}:
+            raise ValueError("Unsupported seed-rule format")
+        groups.setdefault((block["format"], block["seedMethod"]), []).append(identifier)
+    for (format_name, seed_method), names in sorted(groups.items()):
+        seed_source += f"        // {seed_method}; every registered state checked by the extractor.\n        add(\"\"\"\n"
+        seed_source += textwrap.indent(textwrap.fill(" ".join(names), width=100, break_long_words=False,
+            break_on_hyphens=False), "        ") + "\n"
+        seed_source += f"        \"\"\", .{format_name})\n"
+    seed_source += "        return result\n    }()\n"
+    seed_source += f"    static let ordinaryOffset = {vector(seeds['ordinaryOffset'])}\n"
+    seed_source += "    static let doubleBlockOffsets: [String: SIMD3<Int32>] = [\n"
+    for value, offset in sorted(seeds["doubleBlockOffsets"].items()):
+        seed_source += f"        {quoted(value)}: {vector(offset)},\n"
+    seed_source += "    ]\n    static let bedOffsets: [String: [String: SIMD3<Int32>]] = [\n"
+    for part, values in sorted(seeds["bedOffsets"].items()):
+        seed_source += f"        {quoted(part)}: [\n"
+        for facing, offset in sorted(values.items()):
+            seed_source += f"            {quoted(facing)}: {vector(offset)},\n"
+        seed_source += "        ],\n"
+    seed_source += "    ]\n}\n"
     return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
             "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
             "Sources/ChunkseeKit/GeneratedItemModelFacts.swift": item_source,
             "Sources/ChunkseeKit/GeneratedBlockDefaults.swift": block_defaults_source(facts["blockDefaults"], notice),
+            "Sources/ChunkseeKit/GeneratedBlockModelSeeds.swift": seed_source,
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
             "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source}
 
@@ -222,10 +259,11 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "spawn_egg_relationships", "equipment_attachments"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "spawn_egg_relationships", "equipment_attachments"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

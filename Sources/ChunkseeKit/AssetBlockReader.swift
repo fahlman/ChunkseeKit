@@ -11,7 +11,7 @@ struct AssetBlockReader {
         let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
         guard root["variants"] != nil || root["multipart"] != nil else { throw Invalid.asset }
         let properties = BlockProperties(state)
-        let seedOffset = BlockModelSeed.offset(for: properties, gameDataVersion: assets.version.dataVersion)
+        let seedOffset = BlockModelSeed.offset(for: properties)
         if let raw = root["variants"] {
             let variants = try AssetJSON.object(raw)
             guard variants.count <= 4096 else { throw Invalid.asset }
@@ -89,9 +89,6 @@ struct AssetBlockReader {
                 let negated = term.hasPrefix("!")
                 let expected = negated ? term.dropFirst() : term
                 guard !expected.isEmpty else { throw Invalid.asset }
-                // This per-term negation is verified in 26.3. Older clients used a different
-                // grammar; unknown versions must not silently acquire its interpretation.
-                if negated, assets.version.dataVersion != SaveVersion.java26_3 { throw Invalid.asset }
                 return properties[key].map { ($0 == expected) != negated }
             }
             matches.append(any(alternatives))
