@@ -13,7 +13,7 @@ import Testing
             "test:single": definition(["timelines": .string("day")]),
             "test:list": definition(["timelines": .list(.string, [.string("day"), .string("custom:moon"), .string("day")])])
         ], packs: ["file/Unavailable"])
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         let sky = try #require(types["test:sky"]?.time)
         #expect(sky.hasSkylight && !sky.hasFixedTime)
         #expect(sky.defaultClock == "custom:moon" && sky.timelines == .tag("custom:night"))
@@ -23,7 +23,7 @@ import Testing
         #expect(types["test:list"]?.time?.timelines == .list(["minecraft:day", "custom:moon", "minecraft:day"]))
     }
 
-    @Test func matchingJarSuppliesDefinitionsWithoutChangingNoJarFallback() throws {
+    @Test func selectedJarSuppliesDefinitionsAndAbsentResourcesStayUnknown() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["test:sky": .string("overworld"), "test:moon": .string("test:moon")])
@@ -31,8 +31,8 @@ import Testing
                                  entry("test:moon", json(["has_fixed_time": true, "default_clock": "test:moon"]))])
         let paths = ["level.dat", "data/minecraft/world_gen_settings.dat"].map { root.appendingPathComponent($0) }
         let before = try paths.map { try Data(contentsOf: $0) }
-        #expect(try world.dimensionTypes()["test:sky"]?.time == nil)
-        #expect(try world.dimensionTypes()["test:sky"]?.buildRange == -64...319)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"] == nil)
         let types = try world.dimensionTypes(assets: assets)
         #expect(types["test:sky"]?.time?.defaultClock == "test:sun")
         #expect(types["test:sky"]?.time?.timelines == .tag("minecraft:day"))
@@ -41,23 +41,24 @@ import Testing
         #expect(try paths.map { try Data(contentsOf: $0) } == before)
     }
 
-    @Test func mismatchedOrMissingJarsDoNotInventTimeMetadata() throws {
+    @Test(arguments: [nil, 1, 5023, Int32.max] as [Int32?])
+    func readableTypesIgnoreWorldAndJarVersionLabels(version: Int32?) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let world = try world(root, types: ["overworld": .string("overworld"), "custom:sky": .string("custom:sky")])
-        let wrong = try assets([entry("minecraft:overworld", json())], version: 9999)
-        for jar in [nil, wrong] {
+        let world = try world(root, types: ["overworld": .string("overworld"), "custom:sky": .string("custom:sky"),
+                                            "test:inline": definition()], version: version)
+        #expect(try world.dimensionTypes(assets: nil)["minecraft:overworld"] == nil)
+        for jarVersion: Int32 in [1, 5023, .max] {
+            let jar = try assets([entry("minecraft:overworld", json())], version: jarVersion)
             let types = try world.dimensionTypes(assets: jar)
-            #expect(types["minecraft:overworld"]?.time == nil)
+            #expect(types["minecraft:overworld"]?.time?.hasSkylight == true)
             #expect(types["minecraft:overworld"]?.buildRange == -64...319)
             #expect(types["custom:sky"] == nil)
+            #expect(types["test:inline"]?.time?.hasSkylight == true)
+            #expect(try world.dimensionSettings(assets: jar).compactMapValues(\.type) == types)
         }
         let missing = try assets([])
-        #expect(try world.dimensionTypes(assets: missing).isEmpty) // No fallback behind a supplied matching jar.
-        let unknown = try self.world(root, types: ["test:inline": definition(), "overworld": .string("overworld")], version: 9999)
-        #expect(try unknown.dimensionTypes(assets: wrong)["test:inline"]?.time == nil)
-        #expect(try unknown.dimensionTypes(assets: wrong)["test:inline"]?.buildRange == -64...319)
-        #expect(try unknown.dimensionTypes(assets: wrong)["minecraft:overworld"] == nil)
+        #expect(try world.dimensionTypes(assets: missing).keys.sorted() == ["test:inline"])
     }
 
     @Test func folderAndZipOverridesKeepOnePriorityAndInvalidOverridesBlockFallbacks() throws {
@@ -93,7 +94,7 @@ import Testing
         ]
         let types = Dictionary(uniqueKeysWithValues: bad.enumerated().map { ("test:bad\($0.offset)", definition($0.element)) })
         let world = try world(root, types: types)
-        let read = try world.dimensionTypes()
+        let read = try world.dimensionTypes(assets: nil)
         #expect(read.count == bad.count)
         #expect(read.values.allSatisfy { $0.time == nil && $0.buildRange == -64...319 })
     }
@@ -161,16 +162,32 @@ import Testing
         }
     }
 
-    @Test func savedSettingsVersionControlsTimeInterpretationAndLegacyLayoutStillResolves() throws {
+    @Test func savedSettingsTakePrecedenceWithoutVersionGatingAndLegacyLayoutStillResolves() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["test:sky": definition(["default_clock": .string(":sun")])], modern: false)
-        #expect(try world.dimensionTypes()["test:sky"]?.time?.defaultClock == "minecraft:sun")
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.defaultClock == "minecraft:sun")
         try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(9999), "data": .compound([
             "dimensions": .compound(["test:sky": .compound(["type": definition()])])
         ])]), to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
-        #expect(try world.dimensionTypes()["test:sky"]?.time == nil)
-        #expect(try world.dimensionTypes()["test:sky"]?.buildRange == -64...319)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.hasSkylight == true)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.time?.defaultClock == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:sky"]?.buildRange == -64...319)
+    }
+
+    @Test func resourceBoundsPreserveInlineFactsAndCancellationStopsInlineOnlyQueries() async throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(root, types: ["test:inline": definition(), "test:reference": .string("overworld")],
+                              packs: Array(repeating: "vanilla", count: 65))
+        let jar = try assets([entry("minecraft:overworld", json())])
+        #expect(try world.dimensionTypes(assets: jar).keys.sorted() == ["test:inline"])
+        let inline = try self.world(root, types: ["test:inline": definition()])
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try inline.dimensionSettings(assets: nil)
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
     }
 
     private let metadata = #"{"pack":{"min_format":121,"max_format":121,"description":"Synthetic time metadata"}}"#
@@ -198,12 +215,15 @@ import Testing
     }
 
     private func world(_ root: URL, types: [String: NBT], packs: [String] = ["vanilla"],
-                       version: Int32 = 5023, modern: Bool = true) throws -> World {
+                       version: Int32? = 5023, modern: Bool = true) throws -> World {
         let settings = NBT.compound(["dimensions": .compound(types.mapValues { .compound(["type": $0]) })])
-        var fields: [String: NBT] = ["LevelName": .string("Dimension Time"), "DataVersion": .int(version),
+        var fields: [String: NBT] = ["LevelName": .string("Dimension Time"),
             "DataPacks": .compound(["Enabled": .list(.string, packs.map(NBT.string))])]
+        fields["DataVersion"] = version.map(NBT.int)
         if modern {
-            try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(version), "data": settings]),
+            var record = ["data": settings]
+            record["DataVersion"] = version.map(NBT.int)
+            try Fixtures.writeGzippedNBT(.compound(record),
                                          to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
         } else { fields["WorldGenSettings"] = settings }
         try Fixtures.writeGzippedNBT(.compound(["Data": .compound(fields)]), to: root.appendingPathComponent("level.dat"))

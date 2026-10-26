@@ -78,7 +78,7 @@ extension World {
     /// Keys are canonical namespaced IDs. Save/jar version labels do not hide readable resources.
     /// A missing jar leaves vanilla unavailable,
     /// while higher-priority pack definitions can still resolve. No default pack list is invented.
-    /// Uses dimensionSettings()'s priority, safe paths and unsupported-pack rules: a malformed
+    /// Uses dimensionSettings(assets:)'s priority, safe paths and unsupported-pack rules: a malformed
     /// present override or an unresolved higher pack blocks lower fallbacks. File errors propagate.
     /// Only resources registered by folder/ZIP listing participate, even for a subset of IDs.
     /// Linked category folders and descendants are skipped; contained namespace aliases are allowed.
@@ -106,7 +106,7 @@ extension World {
         var result: [String: BiomeDefinition] = [:]
         for id in ids.sorted() {
             try Task.checkCancellation()
-            result[id] = try registry.read(id, vanilla: { _ in nil }, json: BiomeDefinition.init(json:))
+            result[id] = try registry.read(id, json: BiomeDefinition.init(json:))
         }
         return result
     }

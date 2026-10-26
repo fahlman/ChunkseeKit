@@ -11,7 +11,7 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
     /// The noise settings' own range. A zero height is valid and produces an empty range.
     public var range: Range<Int> { minY ..< minY + height }
 
-    /// The 26.3 WorldGenerationContext range used by surface-rule vertical anchors.
+    /// The WorldGenerationContext range used by surface-rule vertical anchors.
     /// Its start is the larger minimum and its count is the smaller height; this is not a
     /// general intersection of ranges and does not establish that a physical roof exists.
     public func surfaceRuleRange(in type: DimensionType) -> Range<Int> {
@@ -56,16 +56,4 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
         }
     }
 
-    static func vanilla(_ id: String, version: Int?) -> Self? {
-        guard version == SaveVersion.java26_3 else { return nil }
-        switch id {
-        case "minecraft:overworld", "minecraft:amplified", "minecraft:large_biomes":
-            return Self(minY: -64, height: 384, seaLevel: 63)
-        case "minecraft:nether": return Self(minY: 0, height: 128, seaLevel: 32)
-        case "minecraft:end": return Self(minY: 0, height: 128, seaLevel: 0)
-        case "minecraft:caves": return Self(minY: -64, height: 192, seaLevel: 32)
-        case "minecraft:floating_islands": return Self(minY: 0, height: 256, seaLevel: -64)
-        default: return nil
-        }
-    }
 }

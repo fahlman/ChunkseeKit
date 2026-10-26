@@ -49,7 +49,7 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
         let result: ResourceRead<Projection>
         switch try timelineResources.resource(id) {
         case .absent: result = .missing
-        case .vanilla, .unavailable: result = .unavailable
+        case .unavailable: result = .unavailable
         case .data(let data):
             if data.count <= budget.bytes, data.count <= ZipResources.maximumResourceSize {
                 budget.bytes -= data.count

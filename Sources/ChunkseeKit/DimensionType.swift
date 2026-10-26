@@ -13,16 +13,14 @@ public struct DimensionType: Sendable, Equatable {
     /// Inclusive bounds of the randomly sampled light threshold, for constant/uniform providers.
     /// Other providers stay nil. This is neither a spawn probability nor complete spawn eligibility.
     public let monsterSpawnLightLevel: ClosedRange<Int>?
-    /// Time/sky metadata from a readable 26.3 definition. Nil for unverified versions,
-    /// malformed metadata or the built-in build-limit fallback without a supplied game jar.
+    /// Time/sky metadata from a readable definition. Nil for missing or malformed metadata.
     public let time: DimensionTime?
     /// Registered defaults with this dimension's supported environment-attribute modifiers applied.
-    /// Verified only for readable 26.3 definitions; nil for unsupported/malformed relevant entries,
-    /// other versions or the no-jar build-limit fallback. Independent of build and time metadata.
+    /// Nil for unsupported/malformed relevant entries. Independent of build and time metadata.
     /// These intermediate values precede timelines, weather, spatial layers and final clamping.
     public let baseSkyLighting: SkyLighting?
     /// The separate gameplay sky-light attribute before timelines and final 0...15 clamping.
-    /// Verified 26.3 definitions only; malformed values do not invalidate visual lighting.
+    /// Malformed values do not invalidate visual lighting.
     public let baseSkyLightLevel: Float?
 
     public var maxY: Int { minY + height - 1 }
@@ -41,33 +39,32 @@ public struct DimensionType: Sendable, Equatable {
         self.baseSkyLightLevel = baseSkyLightLevel
     }
 
-    // DimensionType and NoiseSettings share the 26.3 packed-Y bounds. Noise alone permits
+    // DimensionType and NoiseSettings share the packed-Y bounds. Noise alone permits
     // an empty height; a dimension's constructor above requires at least one section.
     static func validYBounds(minY: Int, height: Int) -> Bool {
         (-2032...2031).contains(minY) && (0...4064).contains(height)
             && minY.isMultiple(of: 16) && height.isMultiple(of: 16) && minY + height <= 2032
     }
 
-    init?(_ nbt: NBT, version: Int?) {
+    init?(_ nbt: NBT) {
         guard let minY = nbt["min_y"]?.int, let height = nbt["height"]?.int,
               let logical = nbt["logical_height"]?.int, let ceiling = nbt["has_ceiling"]?.bool else { return nil }
         self.init(minY: minY, height: height, logicalHeight: logical, hasCeiling: ceiling,
                   monsterSpawnBlockLightLimit: nbt["monster_spawn_block_light_limit"]?.int,
                   monsterSpawnLightLevel: SpawnLightRange(nbt: nbt["monster_spawn_light_level"])?.value,
-                  time: version == SaveVersion.java26_3 ? DimensionTime(nbt: nbt) : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? (try? DimensionBaseLighting(nbt: nbt))?.value : nil,
-                  baseSkyLightLevel: version == SaveVersion.java26_3 ? (try? DimensionMonsterLighting(nbt: nbt))?.value : nil)
+                  time: DimensionTime(nbt: nbt),
+                  baseSkyLighting: (try? DimensionBaseLighting(nbt: nbt))?.value,
+                  baseSkyLightLevel: (try? DimensionMonsterLighting(nbt: nbt))?.value)
     }
 
-    init?(json: Data, version: Int?) {
+    init?(json: Data) {
         guard json.count <= ZipResources.maximumResourceSize,
               let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
         self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
                   monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
-                  time: version == SaveVersion.java26_3 ? value.time : nil,
-                  baseSkyLighting: version == SaveVersion.java26_3 ? value.baseSkyLighting : nil,
-                  baseSkyLightLevel: version == SaveVersion.java26_3 ? value.baseSkyLightLevel : nil)
+                  time: value.time, baseSkyLighting: value.baseSkyLighting,
+                  baseSkyLightLevel: value.baseSkyLightLevel)
     }
 
     private struct Definition: Decodable {
@@ -98,21 +95,6 @@ public struct DimensionType: Sendable, Equatable {
         }
     }
 
-    static func vanilla(_ id: String, version: Int?) -> Self? {
-        guard version == SaveVersion.java26_3 else { return nil }
-        switch id {
-        case "minecraft:overworld", "minecraft:overworld_caves":
-            return Self(minY: -64, height: 384, logicalHeight: 384, hasCeiling: id == "minecraft:overworld_caves",
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 0...7, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
-        case "minecraft:the_nether":
-            return Self(minY: 0, height: 256, logicalHeight: 128, hasCeiling: true,
-                        monsterSpawnBlockLightLimit: 15, monsterSpawnLightLevel: 7...7, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
-        case "minecraft:the_end":
-            return Self(minY: 0, height: 256, logicalHeight: 256, hasCeiling: false,
-                        monsterSpawnBlockLightLimit: 0, monsterSpawnLightLevel: 15...15, time: nil, baseSkyLighting: nil, baseSkyLightLevel: nil)
-        default: return nil
-        }
-    }
 }
 
 /// The verified constant/uniform IntProvider shapes, with DimensionType's 0...15 bounds.

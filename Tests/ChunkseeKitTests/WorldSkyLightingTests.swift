@@ -145,7 +145,7 @@ import Testing
         #expect(try world.savedSkyLighting(assets: jar)["test:map"]?.sunAngle == 92)
     }
 
-    @Test func folderDefinitionsWorkWithoutAJarButUnverifiedVersionsRemainUnavailable() throws {
+    @Test func folderDefinitionsWorkWithoutAJarIndependentlyOfVersionLabels() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         try folder(root, name: "Only", entries: operations() + [tag("test:root", ["test:a"])])
@@ -155,7 +155,8 @@ import Testing
         let wrong = try assets([], version: 9999)
         #expect(try world.savedSkyLighting(assets: wrong)["custom:map"]?.sunAngle == 1)
         let unknown = try self.world(root, types: types, packs: ["file/Only"], version: 9999)
-        #expect(try unknown.savedSkyLighting(assets: nil).isEmpty)
+        #expect(try unknown.savedSkyLighting(assets: nil) == world.savedSkyLighting(assets: nil))
+        #expect(unknown.level.dataVersion == 9999)
     }
 
     @Test func oversizedListsAndDeepTagsRemainBoundedWhileStaticDimensionsStayReadable() throws {

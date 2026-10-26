@@ -1,6 +1,6 @@
 import Foundation
 
-/// A dimension type's verified 26.3 time/sky facts, not a running clock or evaluated lighting.
+/// A dimension type's time/sky facts, not a running clock or evaluated lighting.
 public struct DimensionTime: Sendable, Equatable {
     public let hasFixedTime: Bool
     public let hasSkylight: Bool

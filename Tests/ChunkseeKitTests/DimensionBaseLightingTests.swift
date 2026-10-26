@@ -17,7 +17,7 @@ import Testing
                 "minecraft:visual/moon_phase": .string("new_moon")
             ])])
         ])
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         #expect(types["custom:sky"]?.baseSkyLighting == defaults)
         #expect(types["minecraft:the_nether"]?.baseSkyLighting == defaults)
         let dark = try #require(types["custom:dark"]?.baseSkyLighting)
@@ -36,7 +36,7 @@ import Testing
             "visual/moon_phase": operation("override", .string("waxing_crescent"))
         ]
         let world = try world(root, types: ["test:map": definition(["attributes": .compound(attributes)])])
-        let base = try #require(try world.dimensionTypes()["test:map"]?.baseSkyLighting)
+        let base = try #require(try world.dimensionTypes(assets: nil)["test:map"]?.baseSkyLighting)
         #expect(base.sunAngle == -25 && base.moonAngle == 450 && base.skyLightFactor == 2)
         #expect(base.skyLightColor == SIMD3(0.5, -0.25, 1.5) && base.moonPhase == .waxingCrescent)
         let jar = try assets([.init(path: "data/test/timeline/day.json", text: #"{"clock":"test:clock","tracks":{"visual/sky_light_factor":{"modifier":"multiply","keyframes":[{"ticks":0,"value":0.25}]}}}"#)])
@@ -81,7 +81,7 @@ import Testing
         let types = Dictionary(uniqueKeysWithValues: colors.enumerated().map {
             ("test:color\($0.offset)", definition(["attributes": .compound(["visual/sky_light_color": $0.element.0])]))
         })
-        let read = try world(root, types: types).dimensionTypes()
+        let read = try world(root, types: types).dimensionTypes(assets: nil)
         for (index, color) in colors.enumerated() { #expect(read["test:color\(index)"]?.baseSkyLighting?.skyLightColor == color.1) }
     }
 
@@ -111,7 +111,7 @@ import Testing
         let types = Dictionary(uniqueKeysWithValues: bad.enumerated().map {
             ("test:bad\($0.offset)", definition(["attributes": $0.element]))
         })
-        let read = try world(root, types: types).dimensionTypes()
+        let read = try world(root, types: types).dimensionTypes(assets: nil)
         #expect(read.count == bad.count)
         #expect(read.values.allSatisfy { $0.baseSkyLighting == nil && $0.buildRange == -64...319 && $0.time?.hasSkylight == true })
     }
@@ -135,14 +135,15 @@ import Testing
         #expect(read.values.allSatisfy { $0.baseSkyLighting == nil && $0.buildRange == -64...319 && $0.time?.hasSkylight == true })
     }
 
-    @Test func versionAndMatchingJarAvailabilityStayIndependentOfBuildFallbacks() throws {
+    @Test func readableDefinitionsSupplyLightingIndependentlyOfVersionLabels() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["overworld": .string("overworld"), "test:inline": definition()])
         let wrong = try assets([entry("minecraft:overworld", json())], version: 9999)
-        for jar in [nil, wrong] {
+        #expect(try world.dimensionTypes(assets: nil)["minecraft:overworld"] == nil)
+        for jar in [wrong, try assets([entry("minecraft:overworld", json())])] {
             let types = try world.dimensionTypes(assets: jar)
-            #expect(types["minecraft:overworld"]?.baseSkyLighting == nil)
+            #expect(types["minecraft:overworld"]?.baseSkyLighting == defaults)
             #expect(types["minecraft:overworld"]?.buildRange == -64...319)
             #expect(types["test:inline"]?.baseSkyLighting == defaults)
         }
@@ -155,8 +156,8 @@ import Testing
         try Fixtures.write(Array(json().utf8), to: pack.appendingPathComponent("data/test/dimension_type/json.json"))
         let unknown = try self.world(root, types: ["test:inline": definition(), "test:json": .string("test:json")],
                                     packs: ["file/Unknown"], version: 9999)
-        let unknownTypes = try unknown.dimensionTypes()
-        #expect(unknownTypes.count == 2 && unknownTypes.values.allSatisfy { $0.baseSkyLighting == nil && $0.buildRange == -64...319 })
+        let unknownTypes = try unknown.dimensionTypes(assets: nil)
+        #expect(unknownTypes.count == 2 && unknownTypes.values.allSatisfy { $0.baseSkyLighting == defaults && $0.buildRange == -64...319 })
     }
 
     @Test func folderAndZipPriorityNeverFallsBackBehindBadAttributesOrMissingPacks() throws {
@@ -188,8 +189,8 @@ import Testing
         let excessive = attributes.merging(["visual/sun_angle": .float(5)]) { _, new in new }
         let world = try world(root, types: ["test:limit": definition(["attributes": .compound(attributes)]),
                                           "test:excessive": definition(["attributes": .compound(excessive)])])
-        #expect(try world.dimensionTypes()["test:limit"]?.baseSkyLighting == defaults)
-        #expect(try world.dimensionTypes()["test:excessive"]?.baseSkyLighting == nil)
+        #expect(try world.dimensionTypes(assets: nil)["test:limit"]?.baseSkyLighting == defaults)
+        #expect(try world.dimensionTypes(assets: nil)["test:excessive"]?.baseSkyLighting == nil)
     }
 
     private var defaults: SkyLighting {

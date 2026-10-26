@@ -33,6 +33,18 @@ import Testing
         return folder
     }
 
+    private func assets(_ types: [String: (Int, Int, Int, Bool)] = [:]) throws -> GameAssets {
+        let resources = try types.map { id, fields in
+            let definition: [String: Any] = ["min_y": fields.0, "height": fields.1,
+                                             "logical_height": fields.2, "has_ceiling": fields.3]
+            return TestZIP.Entry(path: "data/minecraft/dimension_type/\(id).json", text: "",
+                                 data: try JSONSerialization.data(withJSONObject: definition))
+        }
+        return try #require(GameAssets(data: Data(TestZIP.zip([
+            .init(path: "version.json", text: #"{"id":"test","world_version":1}"#)
+        ] + resources))))
+    }
+
     @Test func savedTypesControlLimitsRegardlessOfDimensionName() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -41,7 +53,10 @@ import Testing
             "example:empty": .string("the_end"), "example:unknown": .string("example:missing")])
         let files = ["level.dat", "data/minecraft/world_gen_settings.dat"].map { root.appendingPathComponent($0) }
         let before = try files.map { try Data(contentsOf: $0) }
-        let types = try world.dimensionTypes()
+        let assets = try assets(["the_nether": (0, 256, 128, true), "overworld": (-64, 384, 384, false),
+                                 "overworld_caves": (-64, 384, 384, true), "the_end": (0, 256, 256, false)])
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
+        let types = try world.dimensionTypes(assets: assets)
         #expect(types.count == 4)
         #expect(types["minecraft:overworld"]?.buildRange == 0...255)
         #expect(types["minecraft:overworld"]?.logicalHeight == 128)
@@ -61,7 +76,7 @@ import Testing
         let world = try world(at: root, types: ["example:deep": definition(minY: -2032, height: 4064, logical: 0),
             "example:high": definition(minY: 2016, height: 16, logical: 16, ceiling: true),
             "example:unverified": .string("minecraft:overworld")], packs: ["unavailable"], version: 9999, modern: false)
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         #expect(types.count == 2)
         #expect(types["example:deep"]?.buildRange == -2032...2031)
         #expect(types["example:deep"]?.logicalHeight == 0)
@@ -79,7 +94,7 @@ import Testing
             .compound(["min_y": .int(-64), "height": .int(384), "logical_height": .int(384)]),
             .string("Not A Type"), .string("")]
         let world = try world(at: root, types: Dictionary(uniqueKeysWithValues: bad.enumerated().map { ("example:bad\($0.offset)", $0.element) }))
-        #expect(try world.dimensionTypes().isEmpty)
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
     }
 
     @Test func folderOverridesFollowEnabledPriorityAndRefreshWithoutWriting() throws {
@@ -90,11 +105,11 @@ import Testing
         _ = try pack("Disabled", at: root, json: "invalid")
         let world = try world(at: root, types: ["example:sky": .string("minecraft:overworld")],
                               packs: ["vanilla", "file/Lower", "file/Upper"])
-        #expect(try world.dimensionTypes()["example:sky"]?.buildRange == 0...127)
+        #expect(try world.dimensionTypes(assets: nil)["example:sky"]?.buildRange == 0...127)
         try FileManager.default.removeItem(at: upper.appendingPathComponent("data/minecraft/dimension_type/overworld.json"))
-        #expect(try world.dimensionTypes()["example:sky"]?.buildRange == -128...383)
+        #expect(try world.dimensionTypes(assets: nil)["example:sky"]?.buildRange == -128...383)
         try Fixtures.write(Array("{}".utf8), to: upper.appendingPathComponent("data/minecraft/dimension_type/overworld.json"))
-        #expect(try world.dimensionTypes().isEmpty) // An invalid override must not expose a lower definition.
+        #expect(try world.dimensionTypes(assets: nil).isEmpty) // An invalid override must not expose a lower definition.
     }
 
     @Test func nestedCustomTypeCanResolveBelowVanilla() throws {
@@ -103,7 +118,8 @@ import Testing
         _ = try pack("Custom", at: root, id: "example:deep/caves")
         let world = try world(at: root, types: ["example:mine": .string("example:deep/caves")],
                               packs: ["file/Custom", "vanilla"])
-        let type = try #require(try world.dimensionTypes()["example:mine"])
+        // A supplied empty registry establishes that the higher-priority game has no override.
+        let type = try #require(try world.dimensionTypes(assets: assets())["example:mine"])
         #expect(type.minY == -128 && type.height == 512 && type.maxY == 383)
         #expect(type.logicalHeight == 256 && type.hasCeiling)
     }
@@ -116,7 +132,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         _ = try pack("Invalid", at: root, json: json)
         let world = try world(at: root, types: ["overworld": .string("overworld")], packs: ["vanilla", "file/Invalid"])
-        #expect(try world.dimensionTypes().isEmpty)
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
     }
 
     @Test(arguments: ["file/Missing", "file/Archive.zip", "minecart_improvements", "file/../Outside",
@@ -130,17 +146,18 @@ import Testing
         _ = try pack("BadMetadata", at: root, metadata: "invalid")
         let world = try world(at: root, types: ["minecraft:overworld": .string("minecraft:overworld"),
                                                "example:inline": definition()], packs: ["vanilla", packID])
-        let types = try world.dimensionTypes()
+        let types = try world.dimensionTypes(assets: nil)
         #expect(types.count == 1 && types["example:inline"]?.buildRange == -64...319)
     }
 
-    @Test func unverifiedVanillaAndMissingPackListStayUnknown() throws {
+    @Test(arguments: [1, 5023, Int32.max])
+    func missingResourcesAndMissingPackListStayUnknown(version: Int32) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let unknown = try world(at: root, types: ["overworld": .string("overworld")], version: 9999)
-        #expect(try unknown.dimensionTypes().isEmpty)
+        let unknown = try world(at: root, types: ["overworld": .string("overworld")], version: version)
+        #expect(try unknown.dimensionTypes(assets: nil).isEmpty)
         let noPacks = try world(at: root, types: ["overworld": .string("overworld")], packs: [])
-        #expect(try noPacks.dimensionTypes().isEmpty)
+        #expect(try noPacks.dimensionTypes(assets: nil).isEmpty)
     }
 
     @Test func modernRecordDoesNotResurrectLegacyTypesAndAliasesStayAmbiguous() throws {
@@ -149,10 +166,10 @@ import Testing
         let legacy = try world(at: root, types: ["overworld": definition()], modern: false)
         try Fixtures.writeGzippedNBT(.compound(["DataVersion": .int(5023), "data": .compound([:])]),
                                      to: root.appendingPathComponent("data/minecraft/world_gen_settings.dat"))
-        #expect(try legacy.dimensionTypes().isEmpty)
+        #expect(try legacy.dimensionTypes(assets: nil).isEmpty)
         let aliases = try world(at: root, types: ["overworld": definition(), "minecraft:overworld": definition(),
                                                   "example:valid": definition(), "invalid ID": definition()])
-        #expect(try aliases.dimensionTypes().keys.sorted() == ["example:valid"])
+        #expect(try aliases.dimensionTypes(assets: nil).keys.sorted() == ["example:valid"])
     }
 
     @Test func typePathsDoNotEscapePackAndFileReadErrorsPropagate() throws {
@@ -166,14 +183,14 @@ import Testing
         let outside = root.appendingPathComponent("outside.json")
         try FileManager.default.copyItem(at: definitions.appendingPathComponent("valid.json"), to: outside)
         try FileManager.default.createSymbolicLink(at: definitions.appendingPathComponent("escape.json"), withDestinationURL: outside)
-        #expect(try world.dimensionTypes().isEmpty)
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
         let unreadable = definitions.appendingPathComponent("directory.json")
         try FileManager.default.createDirectory(at: unreadable, withIntermediateDirectories: false)
-        #expect(try world.dimensionTypes().isEmpty)
+        #expect(try world.dimensionTypes(assets: nil).isEmpty)
         try FileManager.default.removeItem(at: unreadable)
         try FileManager.default.copyItem(at: definitions.appendingPathComponent("valid.json"), to: unreadable)
         try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: unreadable.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: unreadable.path) }
-        #expect(throws: (any Error).self) { try world.dimensionTypes() }
+        #expect(throws: (any Error).self) { try world.dimensionTypes(assets: nil) }
     }
 }
