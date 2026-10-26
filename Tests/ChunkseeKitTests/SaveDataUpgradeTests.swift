@@ -192,9 +192,11 @@ import ChunkseeKitTestSupport
         }
         let before = try [Data(contentsOf: levelURL), Data(contentsOf: statsURL), Data(contentsOf: progressURL)]
         let world = try World(contentsOf: root)
-        let stats = try #require(world.statistics(for: uuid))
+        let savedStatistics = try world.statistics(for: uuid)
+        let stats = try #require(savedStatistics)
         #expect(stats.dataVersion == 2709 && stats.values["minecraft:custom"] == ["minecraft:play_time": 17])
-        let progress = try #require(world.advancements(for: uuid)?.first)
+        let savedProgress = try world.advancements(for: uuid)
+        let progress = try #require(savedProgress?.first)
         #expect(progress.id == "minecraft:recipes/misc/sugar_from_sugar_cane" && progress.isDone)
         #expect(progress.completed == ISO8601DateFormatter().date(from: "2020-01-01T00:00:00Z"))
         #expect(try before == [Data(contentsOf: levelURL), Data(contentsOf: statsURL), Data(contentsOf: progressURL)])
