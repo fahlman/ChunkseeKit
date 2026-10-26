@@ -1622,6 +1622,22 @@ caches and tile invalidation remain client-owned.
 
 ### Terrain tint sources (unreleased)
 
+`BlockState.containsFluid(in:)` answers whether a saved state holds a member of a composed fluid
+tag. For water, resolve `minecraft:water` from the world's `fluid` tags once and pass that tag to
+each query. Minecraft's actual `getFluidState` methods supply generated fluid identities and known
+empty states; tag membership stays runtime data. This includes kelp, seagrass and bubble columns,
+and uses the shared default properties for omitted waterlogging on corals, conduits and sea pickles.
+Saved relevant properties override those defaults. Known empty states return false even without a
+tag; missing code facts, invalid relevant properties or a missing tag for nonempty fluid return nil.
+
+`BlockState.hasSolidUpperFace` independently supplies Minecraft's full-support test used by its
+map fluid rule. A top stair or slab has a solid upper face even when waterlogged. This does not
+measure texture coverage or opacity. Rules needing world/block-entity context, such as a shulker
+box's moving shape, remain nil. An unknown face does not hide a known fluid answer, and irrelevant
+malformed properties do not hide independent facts. Both queries apply without version gates,
+perform no I/O and add no persisted state. These additive APIs require a minor release before the
+app adopts them for fahlman/Chunksee#443.
+
 `BlockState.tintSource(at:)` interprets a block model face's tint index using code-only facts
 extracted by the single release tool. Its `BlockTint` is either a fixed 24-bit RGB color or a `BiomeColor`
 (`grass`, `foliage`, `dryFoliage`, `water`) with a vertical biome-sampling offset. For example,
