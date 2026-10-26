@@ -31,28 +31,32 @@ import Testing
         "{\"type\":\"range_dispatch\",\"property\":\"custom_model_data\",\"scale\":\(scale),\"entries\":[\(entries)]\(fallback ? ",\"fallback\":\(leaf("fallback"))" : "")}"
     }
 
-    @Test func savedFlagsSelectTheTrueBranchAndMissingIndicesSelectFalse() throws {
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func savedFlagsSelectTheTrueBranchAndMissingIndicesSelectFalse(dataVersion: Int) throws {
         for index in [0, 1, Int(Int32.max)] {
             let definition = "{\"type\":\"condition\",\"property\":\"custom_model_data\",\"index\":\(index),\"on_true\":\(leaf("true")),\"on_false\":\(leaf("false"))}"
-            let reader = try assets(definition)
+            let reader = try assets(definition, version: "format-fixture", dataVersion: dataVersion)
             #expect(try chosen(reader, ["flags": .byteArray([0, 1])]) == "minecraft:item/\(index == 1 ? "true" : "false")")
             #expect(try chosen(reader) == "minecraft:item/false")
             #expect(reader.defaultItemModel("sample") == reader.itemModel(for: try item()))
         }
     }
 
-    @Test func stringCasesAreExactIncludingEmptyAndDistinctUnicodeSpellings() throws {
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func stringCasesAreExactIncludingEmptyAndDistinctUnicodeSpellings(dataVersion: Int) throws {
         let cases = "{\"when\":\"\",\"model\":\(leaf("empty"))},{\"when\":[\"Rare\",\"other\"],\"model\":\(leaf("rare"))},{\"when\":\"é\",\"model\":\(leaf("composed"))},{\"when\":\"e\u{301}\",\"model\":\(leaf("decomposed"))}"
-        let reader = try assets("{\"type\":\"select\",\"property\":\"custom_model_data\",\"cases\":[\(cases)],\"fallback\":\(leaf("fallback"))}")
+        let reader = try assets("{\"type\":\"select\",\"property\":\"custom_model_data\",\"cases\":[\(cases)],\"fallback\":\(leaf("fallback"))}",
+                                version: "format-fixture", dataVersion: dataVersion)
         for (value, expected) in [("", "empty"), ("Rare", "rare"), ("rare", "fallback"), ("é", "composed"), ("e\u{301}", "decomposed")] {
             #expect(try chosen(reader, ["strings": .list(.string, [.string(value)])]) == "minecraft:item/\(expected)")
         }
         #expect(try chosen(reader) == "minecraft:item/fallback")
     }
 
-    @Test func rangesUseFloatScaleSortedThresholdsAndZeroForMissingValues() throws {
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func rangesUseFloatScaleSortedThresholdsAndZeroForMissingValues(dataVersion: Int) throws {
         let entries = "{\"threshold\":2,\"model\":\(leaf("branch2"))},{\"threshold\":0,\"model\":\(leaf("branch0"))},{\"threshold\":1,\"model\":\(leaf("branch1"))}"
-        let reader = try assets(range(entries, scale: "2"))
+        let reader = try assets(range(entries, scale: "2"), version: "format-fixture", dataVersion: dataVersion)
         for (value, expected) in [(Float(-1), "fallback"), (0, "branch0"), (0.5, "branch1"), (1, "branch2"), (.infinity, "branch2"), (-.infinity, "fallback"), (.nan, "fallback")] {
             #expect(try chosen(reader, ["floats": .list(.float, [.float(value)])]) == "minecraft:item/\(expected)")
         }
@@ -82,9 +86,10 @@ import Testing
         }
     }
 
-    @Test func savedColorsBecomeConstantTintsWithDefinitionDefaultsForMissingEntries() throws {
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func savedColorsBecomeConstantTintsWithDefinitionDefaultsForMissingEntries(dataVersion: Int) throws {
         let definition = "{\"type\":\"model\",\"model\":\"item/true\",\"tints\":[{\"type\":\"custom_model_data\",\"default\":[1,0.5,0]},{\"type\":\"custom_model_data\",\"index\":1,\"default\":123}]}"
-        let reader = try assets(definition)
+        let reader = try assets(definition, version: "format-fixture", dataVersion: dataVersion)
         #expect(reader.itemModel(for: try item(["colors": .intArray([0x123456])]))?.parts.first?.tints == [.constant(0x123456), .constant(123)])
         #expect(reader.itemModel(for: try item())?.parts.first?.tints == [.constant(0xff7f00), .constant(123)])
         #expect(reader.defaultItemModel("sample") == nil)
@@ -99,15 +104,10 @@ import Testing
         #expect(try chosen(live, ["flags": .byteArray([1])]) == "minecraft:item/false")
     }
 
-    @Test func malformedAndOverBudgetPropertiesAndUnverifiedVersionsStayUnavailable() throws {
+    @Test func malformedAndOverBudgetPropertiesStayUnavailable() throws {
         let definition = "{\"type\":\"condition\",\"property\":\"custom_model_data\",\"index\":INDEX,\"on_true\":\(leaf("true")),\"on_false\":\(leaf("false"))}"
         for index in ["-1", "0.5", "true", "2147483648", "\"0\""] {
             #expect(try chosen(assets(definition.replacingOccurrences(of: "INDEX", with: index))) == nil)
-        }
-        for (name, version) in [("1.21.5", 4325), ("26.3", 5000)] {
-            let reader = try assets(definition.replacingOccurrences(of: "INDEX", with: "0"), version: name, dataVersion: version)
-            #expect(try chosen(reader) == nil)
-            #expect(reader.defaultItemModel("sample") != nil)
         }
         let entry = "{\"threshold\":0,\"model\":\(leaf("true"))}"
         #expect(try chosen(assets(range(Array(repeating: entry, count: 4097).joined(separator: ",")))) == nil)
