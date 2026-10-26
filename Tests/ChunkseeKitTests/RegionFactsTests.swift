@@ -99,7 +99,8 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
         let legacy = NBT.compound(["DataVersion": .int(1343), "Level": .compound([
-            "Sections": .list(.compound, []), "InhabitedTime": .long(7200),
+            "Sections": .list([.compound(["Y": .byte(0), "Blocks": .byteArray([Int8](repeating: 1, count: 4096))])]),
+            "InhabitedTime": .long(7200),
         ])])
         try Fixtures.write(Fixtures.region([
             .init(localX: 0, localZ: 0, nbt: terrain(full: false)),

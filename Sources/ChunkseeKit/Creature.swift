@@ -197,15 +197,26 @@ public struct Trade: Sendable, Equatable, Codable {
 }
 
 extension Dimension {
-    /// Living mobs in one entity chunk, preserving its saved version for omitted attributes.
+    /// Living mobs in one chunk's terrain and separate entity file, preserving each saved version.
     /// Unlike constructing creatures from raw `entities`, this retains the DataVersion context.
     public func creatures(chunkX: Int, chunkZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
-        guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
-        return Creature.creatures(inEntityChunk: nbt, enchantments: enchantments)
+        try entityChunks(x: chunkX, z: chunkZ).flatMap {
+            Creature.creatures(inEntityChunk: $0, enchantments: enchantments)
+        }
     }
 
-    /// Living mobs in one region's entity file.
+    /// Living mobs in one region's older embedded records and separate entity file.
     public func creatures(regionX: Int, regionZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
-        try chunks(.entities, regionX: regionX, regionZ: regionZ).flatMap { Creature.creatures(inEntityChunk: $0.nbt, enchantments: enchantments) }
+        var result: [Creature] = []
+        try forEachChunk(.terrain, regionX: regionX, regionZ: regionZ,
+                         skipping: Chunk.keysNotNeededForEmbeddedEntities) { _, _, nbt in
+            if let entities = SaveDataUpgrade.terrainEntityChunk(nbt) {
+                result += Creature.creatures(inEntityChunk: entities, enchantments: enchantments)
+            }
+        }
+        try forEachChunk(.entities, regionX: regionX, regionZ: regionZ) { _, _, nbt in
+            result += Creature.creatures(inEntityChunk: nbt, enchantments: enchantments)
+        }
+        return result
     }
 }

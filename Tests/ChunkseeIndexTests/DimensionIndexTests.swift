@@ -145,7 +145,9 @@ import Testing
         let legacyRegion = RegionPosition(x: 2, z: 0)
         let dimension = try world.dimension()
         try Fixtures.write(try Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound([
-            "Level": .compound(["xPos": .int(64), "zPos": .int(0), "Sections": .list([])])
+            "Level": .compound(["xPos": .int(64), "zPos": .int(0), "Sections": .list([
+                .compound(["Y": .byte(0), "Blocks": .byteArray([Int8](repeating: 1, count: 4096))]),
+            ])])
         ]))]), to: dimension.regionURL(at: legacyRegion))
         let legacy = try world.scan(legacyRegion, caves: caves)
         let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)

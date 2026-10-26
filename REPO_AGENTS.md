@@ -253,7 +253,7 @@ Predictions do not know later border movement, live portal-block validity or cre
 Typed terrain facts expose used biome IDs, an explicitly chosen middle-column biome sample,
 per-ID block counts/section bounds, heightmaps and generation metadata. UI categories, cave-area
 joining and search stay outside the core. Incomplete generation contributes metadata, not terrain
-search facts; legacy chunks still contribute inhabited time and format counts. Missing files are
+search facts; unsupported numeric chunks still contribute inhabited time and format counts. Missing files are
 empty, unreadable chunks are counted, and file-open failures/cancellation throw instead of
 returning a cacheable partial value. No cache storage or task scheduling is introduced here.
 `RegionFacts.interpretationVersion` must increase whenever any reader changes a fact's meaning.
@@ -1130,12 +1130,18 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
-`SaveDataUpgrade` owns in-memory block, item and biome identifier renames from the ordered
+`SaveDataUpgrade` owns in-memory block, item, biome and namespaced entity/block-entity identifier renames from the ordered
 Minecraft fixers extracted by Tools/GameFacts. Chunk palettes, block/entity containers,
 creature equipment/trades and player inventories use the same owner before typed interpretation.
 Nested item contents and pot decorations retain their formats while their item names change.
 Named legacy items first use the game's saved-Damage identity conversion and original bed
-default, so earlier meanings are resolved before later aliases. Numeric item IDs remain separate.
+default, so earlier meanings are resolved before later aliases. Numeric item tags first use
+ItemIdFix's generated meanings and unknown-number fallback, with the shared Java numeric codec.
+Its generated boundary controls the rewrite without excluding any readable records. All item
+entry points share it, including nested stacks; malformed nonnumeric IDs stay unchanged.
+RegionFacts interpretation 25 invalidates cached omissions of these items. Complete-game
+ordinary-item/player proofs supplement every numeric table entry's actual boundary proof.
+Field-sensitive potion/spawn-egg/banner conversions and numeric blocks remain on #255.
 Raw NBT, RegionFile and World.playerData remain unchanged, and no save is written. Standalone
 item callers can supply their containing file's version through ItemStack.init(_:dataVersion:);
 the existing initializer consumes an already interpreted value. Missing DataVersion means -1;
@@ -1145,9 +1151,52 @@ generated change boundaries; arbitrary saved versions do not grow a cache or reb
 Unrelated text, custom tags, malformed fields,
 unknown names and properties are preserved. Traversal uses an explicit stack for nested contents.
 Embedded level players use their own version, as LevelDatToSavedDataFileFix does, rather than
-inheriting the surrounding level's version. RegionFacts interpretation 21 invalidates earlier names.
-This additive API is unreleased for #255; remaining identifier/field changes, numeric flattening
-and pre-existing unsupported old chunk layouts remain separate work on that issue.
+inheriting the surrounding level's version. Entity aliases retain the game's first applicable
+input-schema boundary; this limits individual rewrites without filtering readable records.
+Entity containers, mobs and spawners share those aliases, including nested item entity data,
+spawner potentials and beehive occupants. Player shoulder and root-vehicle creatures keep the
+player-file version and each receive one upgrade. The tool compares every input-schema interval
+and whole entity-tree/player/item/spawner records against the game's complete fix chain.
+Saved attribute and enchantment identities also use this owner. AttributesRenameLegacy and
+AttributesRenameFix supply ordered exact aliases; AttributeIdPrefixFix supplies its prefix
+rewrites, which work for unfamiliar attribute names without a type inventory. Item modifier
+identities, labels, amounts and operations remain intact while their attribute type changes.
+Legacy enchantment names follow RenameEnchantmentsFix without changing their levels.
+The tool records full PLAYER and ITEM_STACK upgrades before/at each boundary and at the current
+release; nested inventories/equipment use their containing file's version once.
+RegionFacts interpretation 23 invalidates earlier effect identities, including unpublished 21–22.
+Player recipe-book references, advancement IDs and custom-statistic IDs use generated
+NamespacedTypeRenameFix, AdvancementsRenameFix (including AdvancementsFix) and StatsRenameFix
+rules. Literal advancement-key handling comes from the actual function, including whether it
+accepts an omitted namespace. Full PLAYER/ADVANCEMENTS/STATS proofs cover every alias boundary;
+recipe order, counts, completion flags/dates, unrelated fields and original files are retained.
+Malformed key collisions keep the complete original progress map instead of losing entries or
+throwing as the game's advancement fixer can. Furnace recipe-use layouts, other statistics
+formats/units and scoreboard criteria remain separate #255/#222 work. This player-only slice
+does not change regional facts or their interpretation version.
+This additive API is unreleased for #255; remaining identifier/field changes and numeric flattening
+remain separate work on that issue. Pre-namespace
+entity IDs stay with their required earlier type splits in the older-entity-format slice.
+
+`SaveDataUpgrade.legacyChunkLayout` normalizes older Level-wrapped named palettes before the
+ordinary Chunk reader. Structural word counts identify spanning/padded block indices and
+heightmaps. Numeric horizontal/volume biomes use generated ChunkHeightAndBiomeFix meanings and
+defaults; status and heightmap aliases come from the actual earlier fixers. ChunkDeleteLightFix
+instances supply the later light reset. Full CHUNK proofs cover each supported layout and saved
+packing boundary; raw NBT/files remain untouched. Embedded terrain entities share all normal
+container/creature/dimension/region queries and retain their file's DataVersion. Modern reads
+return from the layout adapter without traversing sections. RegionFacts interpretation 24
+invalidates earlier omissions. The additive Dimension.entities(in: Chunk) overload lets the CLI
+reuse decoded terrain instead of reading it again; existing callers remain source-compatible.
+Standalone entity queries use RegionFile's bounded header-entry/payload read rather than copying
+the entire region per chunk. Bulk readers retain their existing region snapshot. Both paths share
+payload bounds, external-file handling and compression interpretation; neither introduces a cache
+or assumes that a world's current version identifies every chunk's format. Terrain inspection is
+still required to discover embedded entities when the caller has not supplied complete terrain.
+The adapter interprets the saved build range using the actual fixer's no-context path. It does
+not invent loader-only dimension/generator context or simulate below-zero terrain generation.
+That contextual regeneration metadata, numeric block/item flattening and older field formats
+remain on #255. Paired copied-current-world timing is required before publishing this reader change.
 
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the
@@ -1188,7 +1237,8 @@ to existing container fields. The shared equipment reader retains arbitrary save
 current-over-legacy precedence. Those source methods were checked in the official game jar;
 no new type list is added. Dropped-item/player container exclusions remain unchanged. Numeric
 legacy statistic keys retain their raw counts without invented IDs or units. Chunk decoding uses
-the saved structure rather than the version label; Level.Sections remains unsupported. Chunk
+the saved structure rather than the version label; named Level.Sections now uses the shared
+legacy layout adapter, while numeric block storage remains unsupported. Chunk
 and TerrainChunkFacts dataVersion are optional, an intentional breaking API requiring a minor
 release. The CLI prints missing versions as unknown. Saved item-model branches remain on #229.
 

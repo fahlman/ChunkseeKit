@@ -96,18 +96,49 @@ public struct Dimension: Sendable {
         try chunk(at: position.chunk)?.block(x: position.x & 15, y: position.y, z: position.z & 15)
     }
 
-    /// Entities saved in the given chunk (stored separately from terrain since 1.17).
+    /// Entities saved in the given chunk, including older terrain-embedded records.
     /// Includes nested passengers, parent before children in saved order. Each raw compound
     /// retains its Passengers field; do not traverse it again when consuming this flat list.
     public func entities(chunkX: Int, chunkZ: Int) throws -> [NBT] {
-        guard let nbt = try entityChunk(x: chunkX, z: chunkZ) else { return [] }
-        return EntityTraversal.flatten(nbt["Entities"]?.list ?? [])
+        try entityChunks(x: chunkX, z: chunkZ).flatMap { EntityTraversal.flatten($0["Entities"]?.list ?? []) }
+    }
+
+    /// The same query using terrain from this dimension with entity fields retained, avoiding a second
+    /// region read. The separate entity file is read normally; raw entity fields stay intact.
+    public func entities(in chunk: Chunk) throws -> [NBT] {
+        var result = EntityTraversal.flatten(SaveDataUpgrade.terrainEntityChunk(chunk.nbt)?["Entities"]?.list ?? [])
+        if let separate = try entityChunk(x: chunk.x, z: chunk.z) {
+            result += EntityTraversal.flatten(separate["Entities"]?.list ?? [])
+        }
+        return result
+    }
+
+    /// Each source keeps its own DataVersion. Reading both also retains mixed-format regions.
+    func entityChunks(x: Int, z: Int) throws -> [NBT] {
+        let position = ChunkPosition(x: x, z: z)
+        var result: [NBT] = []
+        if let terrain = try rawChunk(.terrain, at: position, skipping: Chunk.keysNotNeededForEmbeddedEntities),
+           let entities = SaveDataUpgrade.terrainEntityChunk(terrain) { result.append(entities) }
+        if let separate = try entityChunk(x: x, z: z) { result.append(separate) }
+        return result
     }
 
     /// Shared raw read so creature decoding retains the entity chunk's DataVersion.
     func entityChunk(x: Int, z: Int) throws -> NBT? {
-        let position = ChunkPosition(x: x, z: z)
-        guard let region = try region(.entities, x: position.region.x, z: position.region.z) else { return nil }
-        return try region.chunkNBT(localX: position.localX, localZ: position.localZ)
+        try rawChunk(.entities, at: ChunkPosition(x: x, z: z))
     }
+
+    private func rawChunk(_ folder: Folder, at position: ChunkPosition,
+                          skipping: Set<String> = []) throws -> NBT? {
+        let url = regionURL(folder, at: position.region)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try RegionFile.chunkNBT(contentsOf: url, localX: position.localX,
+                                       localZ: position.localZ, skipping: skipping)
+    }
+}
+
+extension Chunk {
+    static let keysNotNeededForEmbeddedEntities: Set<String> = keysNotNeededForTerrain
+        .subtracting(["entities", "Entities"])
+        .union(["sections", "Sections", "Heightmaps", "Structures", "TileEntities", "Biomes"])
 }
