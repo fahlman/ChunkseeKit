@@ -60,16 +60,18 @@ import ChunkseeKitTestSupport
     @Test func cliUsesTheSelectedTimelineClockAndPackPeriod() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        _ = try world(root)
         let jar = root.appendingPathComponent("game.jar")
         try writeJar(jar, body: #"{"clock":"test:clock","period_ticks":100}"#)
-        let result = try Fixtures.runCLI(root, command: "summary", arguments: [jar.path])
-        #expect(result.status == 0 && result.output.contains("Day:             3, time of day 51"))
+        for (ticks, day, time): (Int64, Int, Int) in [(0, 0, 0), (251, 2, 51)] {
+            _ = try world(root, ticks: ticks)
+            let result = try Fixtures.runCLI(root, command: "summary", arguments: [jar.path])
+            #expect(result.status == 0 && result.output.contains("Day:             \(day), time of day \(time)"))
+        }
         try folder(root, body: #"{"clock":"test:clock","period_ticks":40}"#)
         _ = try world(root, packs: ["vanilla", "file/override"])
         for arguments in [[], [jar.path]] {
             let overridden = try Fixtures.runCLI(root, command: "summary", arguments: arguments)
-            #expect(overridden.status == 0 && overridden.output.contains("Day:             7, time of day 11"))
+            #expect(overridden.status == 0 && overridden.output.contains("Day:             6, time of day 11"))
         }
     }
 
@@ -93,8 +95,7 @@ import ChunkseeKitTestSupport
         try writeJar(jar, body: #"{"clock":"test:clock","period_ticks":1}"#)
         _ = try world(root, ticks: .max)
         let extreme = try Fixtures.runCLI(root, command: "summary", arguments: [jar.path])
-        #expect(extreme.status == 0 && extreme.output.contains("test:clock, 9223372036854775807 ticks"))
-        #expect(!extreme.output.contains("Day:"))
+        #expect(extreme.status == 0 && extreme.output.contains("Day:             9223372036854775807, time of day 0"))
     }
 
     private var metadata: TestZIP.Entry { .init(path: "pack.mcmeta", text: #"{"pack":{"description":"Fixture"}}"#) }

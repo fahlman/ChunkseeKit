@@ -30,10 +30,8 @@ func summaryCommand(_ world: World, assets: GameAssets? = nil) {
         if let time = l.time { print("World age:       \(time / 72_000) hours (\(time) ticks)") }
         if let timing = try? world.timelineTiming("minecraft:day", assets: assets),
            let ticks = try? world.clockTimes()[timing.clockID] {
-            let position = timing.position(at: ticks)
-            let day = position?.cycle.addingReportingOverflow(1)
-            if let position, let day, !day.overflow {
-                print("Day:             \(day.partialValue), time of day \(position.tick)")
+            if let position = timing.position(at: ticks) {
+                print("Day:             \(position.cycle), time of day \(position.tick)")
             } else {
                 print("Clock:           \(timing.clockID), \(ticks) ticks")
             }

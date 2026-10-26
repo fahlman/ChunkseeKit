@@ -312,9 +312,9 @@ Use `clockTimes()[timing.clockID]` for its saved time. `timing.position(at:)` gi
 cycle and signed tick remainder using Minecraft's division toward zero, preserving the saved
 integer's full range rather than narrowing a command result; nonperiodic timelines return nil.
 No day length, default clock, time simulation or registry membership is inferred.
-The CLI's summary uses the `minecraft:day` timeline and its named clock, with one-based day
-numbers for display. If the needed definition/clock is unavailable it keeps the raw saved
-Overworld ticks; nonperiodic timelines keep their own raw clock ticks. These additive APIs
+The CLI's summary uses the `minecraft:day` timeline and its named clock, with zero-based day
+numbers matching Minecraft's F3 counter. If the needed definition/clock is unavailable it keeps
+the raw saved Overworld ticks; nonperiodic timelines keep their own raw clock ticks. These additive APIs
 require a minor release; app day-length adoption is tracked on fahlman/ChunkseeKit#232 item 5.
 
 ### Dimensions, chunks and blocks

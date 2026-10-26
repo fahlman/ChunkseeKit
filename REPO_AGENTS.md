@@ -872,8 +872,8 @@ position(at:) uses Timeline.getPeriodCount/getCurrentTicks signed division and r
 simulating time or narrowing the saved integer to a command result. Negative remainders and
 signed extremes remain readable. Nonperiodic timelines have no cycle. CLI summary reads the
 day timeline's own named saved clock; `summary [game.jar]` supplies optional game resources,
-and absent timing retains raw ticks instead of assuming a day length. One-based day numbering
-is CLI presentation, with overflow preserving raw ticks. Public additive APIs require a minor
+and absent timing retains raw ticks instead of assuming a day length. Zero-based day numbering
+matches Minecraft's DebugEntryDayCount/F3 counter. Public additive APIs require a minor
 release; app adoption remains #232 item 5. No serialized facts or RegionFacts version changes.
 
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
