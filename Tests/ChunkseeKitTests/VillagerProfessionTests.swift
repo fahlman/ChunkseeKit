@@ -51,7 +51,7 @@ import ChunkseeKit
         #expect(villager.isUnemployed == nil)
     }
 
-    @Test func tradingProfessionsDoNotNeedOffersToHaveBeenSaved() throws {
+    @Test func currentDefinitionsApplyOnlyBeforeOffersHaveBeenSaved() throws {
         let trading = ["armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
                        "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
                        "weaponsmith"]
@@ -63,7 +63,8 @@ import ChunkseeKit
                 for offersSaved in [false, true] {
                     if offersSaved { nbt["Offers"] = .compound(["Recipes": .list([])]) }
                     let villager = try #require(Villager(.compound(nbt)))
-                    #expect(villager.supportsTrading(using: definitions) == trading.contains(profession), "Saved profession: \(saved)")
+                    let expected = !offersSaved && trading.contains(profession)
+                    #expect(villager.supportsTrading(using: definitions) == expected, "Saved profession: \(saved)")
                     #expect(villager.level == 1 && villager.trades.isEmpty)
                 }
             }
