@@ -71,6 +71,7 @@ public final class ExtractGameFacts {
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));
+        facts.add("legacyChunks", ExtractLegacyChunkFacts.extract(Integer.parseInt(args[2])));
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 

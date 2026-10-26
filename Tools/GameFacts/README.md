@@ -25,6 +25,7 @@ It compiles the extractor, bootstraps the official registries without creating a
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
+plus `GeneratedLegacyChunkFacts.swift`, test-only `GeneratedLegacyChunkProofs.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -32,6 +33,17 @@ raw extracted JSON and generated copies stay in each evidence directory, includi
 No world or installed game file is written. Run this only when the shared Mac is not reserved.
 
 Sources and interpretation:
+
+- `ChunkHeightAndBiomeFix` supplies numeric biome-code meanings, geometry and omitted defaults;
+  the default block is read from actual output. `ChunkStatusFix`/`ChunkStatusFix2` and
+  `HeightmapRenamingFix` supply historical metadata rewrites. Repeated `ChunkDeleteLightFix`
+  instances establish when light must be recomputed. Actual whole CHUNK upgrades prove spanning
+  and aligned block/heightmap storage, horizontal/volume numeric biomes (including unknown and
+  negative codes), omitted biome storage, uniform and wider palettes, embedded entities and
+  block containers. The reader compares decoded saved blocks/biomes/heights and metadata rather
+  than requiring identical serialized palette padding. These proofs omit loader-only generation
+  context and describe the original saved build range; contextual below-zero regeneration remains
+  separate #255 work. Runtime decoding has no Java dependency and never rewrites a save.
 
 - `DataFixers` supplies its ordered `LegacyBlockRenameFix`, `ItemRenameFix` and biome
   `NamespacedTypeRenameFix` instances. Captured equality maps/strings and the class's literal
@@ -48,8 +60,36 @@ Sources and interpretation:
   class constants. All table entries and version boundaries have independent complete-game
   ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
   Nothing writes a world. This slice does not implement numeric
-  flattening, older chunk layouts, entity/attribute renames, or every other data-fixer class;
+  flattening, other identifier/field formats, or every other data-fixer class;
   those remain on #255. These rename facts are not registry membership lists.
+
+- `SimplestEntityRenameFix` and `BlockEntityRenameFix` supply namespaced record aliases.
+  The extractor calls their actual name functions over input-schema choices, verifies the real
+  boundary upgrade, then records complete-chain results at every schema interval. Only changed
+  names and their first applicable schema boundaries are emitted; these are rewrite facts, not
+  a list of types the reader admits. Unknown records remain readable and unchanged. Whole-record
+  proofs use ENTITY_TREE for passengers and PLAYER for shoulder/root-vehicle snapshots, plus
+  spawn-egg and spawner records. Pre-namespace aliases need the earlier field-dependent entity
+  splits and remain in the older-format slice; type-changing fixes are not inferred from an ID.
+
+- `AttributesRenameLegacy` and `AttributesRenameFix` provide ordered attribute-name functions.
+  Their captured maps/strings and class constants supply finite aliases. `AttributeIdPrefixFix`
+  supplies its actual PREFIXES and replacement results, preserving its namespace handling and
+  operation order for arbitrary names. `RenameEnchantmentsFix` supplies its alias map. Whole
+  PLAYER and ITEM_STACK records are passed through the full game chain before/at each boundary
+  and at the selected release, covering legacy attributes and both item-component layouts.
+  These are identity rewrites, not attribute or enchantment membership lists. Modifier IDs,
+  labels, numbers and unrelated fields stay unchanged; field/layout conversions remain separate.
+
+- Recipe `NamespacedTypeRenameFix`, `AdvancementsRenameFix`/`AdvancementsFix` and
+  `StatsRenameFix` supply player-progress identities. Captured maps/strings and both the
+  registration and concrete fix classes' constants supply their inputs. Advancement aliases
+  retain literal versus default-namespace behavior from the actual function. Every alias has
+  full PLAYER/ADVANCEMENTS/STATS proofs before/at its boundary and at the selected release,
+  including omitted-namespace spellings. Namespaced recipe/statistic identities compare by
+  their resource IDs; an otherwise untouched spelling is retained by the reader. Criteria,
+  dates, counts and recipe order remain data. Furnace recipe-use field conversions, older
+  statistics formats and scoreboard criteria are separate #255 work.
 
 - `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
   Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor

@@ -74,6 +74,10 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1483, changes: [
             "minecraft:puffer_fish_spawn_egg": "minecraft:pufferfish_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityPufferfishRenameFix: EntityPufferfishRenameFix.
+        .init(kind: .entity, version: 1483, changes: [
+            "minecraft:puffer_fish": "minecraft:pufferfish",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename seagrass items.
         .init(kind: .item, version: 1484, changes: [
             "minecraft:sea_grass": "minecraft:seagrass",
@@ -88,6 +92,11 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1486, changes: [
             "minecraft:cod_mob_spawn_egg": "minecraft:cod_spawn_egg",
             "minecraft:salmon_mob_spawn_egg": "minecraft:salmon_spawn_egg",
+        ]),
+        // net.minecraft.util.datafix.fixes.EntityCodSalmonFix: EntityCodSalmonFix.
+        .init(kind: .entity, version: 1486, changes: [
+            "minecraft:cod_mob": "minecraft:cod",
+            "minecraft:salmon_mob": "minecraft:salmon",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename prismarine_brick(s)_* blocks.
         .init(kind: .item, version: 1487, changes: [
@@ -117,6 +126,121 @@ enum GeneratedSaveRenames {
             "minecraft:melon": "minecraft:melon_slice",
             "minecraft:melon_block": "minecraft:melon",
             "minecraft:speckled_melon": "minecraft:glistering_melon_slice",
+        ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsFix: AdvancementsFix.
+        .init(kind: .advancement, version: 1501, changes: [
+            "minecraft:recipes/brewing/speckled_melon": "minecraft:recipes/brewing/glistering_melon_slice",
+            "minecraft:recipes/building_blocks/acacia_wooden_slab": "minecraft:recipes/building_blocks/acacia_slab",
+            "minecraft:recipes/building_blocks/birch_wooden_slab": "minecraft:recipes/building_blocks/birch_slab",
+            "minecraft:recipes/building_blocks/black_stained_hardened_clay": "minecraft:recipes/building_blocks/black_terracotta",
+            "minecraft:recipes/building_blocks/blue_stained_hardened_clay": "minecraft:recipes/building_blocks/blue_terracotta",
+            "minecraft:recipes/building_blocks/brick_block": "minecraft:recipes/building_blocks/bricks",
+            "minecraft:recipes/building_blocks/brown_stained_hardened_clay": "minecraft:recipes/building_blocks/brown_terracotta",
+            "minecraft:recipes/building_blocks/chiseled_stonebrick": "minecraft:recipes/building_blocks/chiseled_stone_bricks",
+            "minecraft:recipes/building_blocks/cyan_stained_hardened_clay": "minecraft:recipes/building_blocks/cyan_terracotta",
+            "minecraft:recipes/building_blocks/dark_oak_wooden_slab": "minecraft:recipes/building_blocks/dark_oak_slab",
+            "minecraft:recipes/building_blocks/end_bricks": "minecraft:recipes/building_blocks/end_stone_bricks",
+            "minecraft:recipes/building_blocks/gray_stained_hardened_clay": "minecraft:recipes/building_blocks/gray_terracotta",
+            "minecraft:recipes/building_blocks/green_stained_hardened_clay": "minecraft:recipes/building_blocks/green_terracotta",
+            "minecraft:recipes/building_blocks/jungle_wooden_slab": "minecraft:recipes/building_blocks/jungle_slab",
+            "minecraft:recipes/building_blocks/light_blue_stained_hardened_clay": "minecraft:recipes/building_blocks/light_blue_terracotta",
+            "minecraft:recipes/building_blocks/light_gray_stained_hardened_clay": "minecraft:recipes/building_blocks/light_gray_terracotta",
+            "minecraft:recipes/building_blocks/lime_stained_hardened_clay": "minecraft:recipes/building_blocks/lime_terracotta",
+            "minecraft:recipes/building_blocks/lit_pumpkin": "minecraft:recipes/building_blocks/jack_o_lantern",
+            "minecraft:recipes/building_blocks/magenta_stained_hardened_clay": "minecraft:recipes/building_blocks/magenta_terracotta",
+            "minecraft:recipes/building_blocks/magma": "minecraft:recipes/building_blocks/magma_block",
+            "minecraft:recipes/building_blocks/melon_block": "minecraft:recipes/building_blocks/melon",
+            "minecraft:recipes/building_blocks/mossy_stonebrick": "minecraft:recipes/building_blocks/mossy_stone_bricks",
+            "minecraft:recipes/building_blocks/nether_brick": "minecraft:recipes/building_blocks/nether_bricks",
+            "minecraft:recipes/building_blocks/oak_wooden_slab": "minecraft:recipes/building_blocks/oak_slab",
+            "minecraft:recipes/building_blocks/orange_stained_hardened_clay": "minecraft:recipes/building_blocks/orange_terracotta",
+            "minecraft:recipes/building_blocks/pillar_quartz_block": "minecraft:recipes/building_blocks/quartz_pillar",
+            "minecraft:recipes/building_blocks/pink_stained_hardened_clay": "minecraft:recipes/building_blocks/pink_terracotta",
+            "minecraft:recipes/building_blocks/purple_stained_hardened_clay": "minecraft:recipes/building_blocks/purple_terracotta",
+            "minecraft:recipes/building_blocks/red_nether_brick": "minecraft:recipes/building_blocks/red_nether_bricks",
+            "minecraft:recipes/building_blocks/red_stained_hardened_clay": "minecraft:recipes/building_blocks/red_terracotta",
+            "minecraft:recipes/building_blocks/smooth_red_sandstone": "minecraft:recipes/building_blocks/cut_red_sandstone",
+            "minecraft:recipes/building_blocks/smooth_sandstone": "minecraft:recipes/building_blocks/cut_sandstone",
+            "minecraft:recipes/building_blocks/snow": "minecraft:recipes/building_blocks/snow_block",
+            "minecraft:recipes/building_blocks/spruce_wooden_slab": "minecraft:recipes/building_blocks/spruce_slab",
+            "minecraft:recipes/building_blocks/stone_stairs": "minecraft:recipes/building_blocks/cobblestone_stairs",
+            "minecraft:recipes/building_blocks/stonebrick": "minecraft:recipes/building_blocks/stone_bricks",
+            "minecraft:recipes/building_blocks/string_to_wool": "minecraft:recipes/building_blocks/white_wool_from_string",
+            "minecraft:recipes/building_blocks/white_stained_hardened_clay": "minecraft:recipes/building_blocks/white_terracotta",
+            "minecraft:recipes/building_blocks/yellow_stained_hardened_clay": "minecraft:recipes/building_blocks/yellow_terracotta",
+            "minecraft:recipes/decorations/fence": "minecraft:recipes/decorations/oak_fence",
+            "minecraft:recipes/decorations/purple_shulker_box": "minecraft:recipes/decorations/shulker_box",
+            "minecraft:recipes/decorations/slime": "minecraft:recipes/decorations/slime_block",
+            "minecraft:recipes/decorations/snow_layer": "minecraft:recipes/decorations/snow",
+            "minecraft:recipes/misc/bone_meal_from_block": "minecraft:recipes/misc/bone_meal_from_bone_block",
+            "minecraft:recipes/misc/bone_meal_from_bone": "minecraft:recipes/misc/bone_meal",
+            "minecraft:recipes/misc/gold_ingot_from_block": "minecraft:recipes/misc/gold_ingot_from_gold_block",
+            "minecraft:recipes/misc/iron_ingot_from_block": "minecraft:recipes/misc/iron_ingot_from_iron_block",
+            "minecraft:recipes/redstone/fence_gate": "minecraft:recipes/redstone/oak_fence_gate",
+            "minecraft:recipes/redstone/noteblock": "minecraft:recipes/redstone/note_block",
+            "minecraft:recipes/redstone/trapdoor": "minecraft:recipes/redstone/oak_trapdoor",
+            "minecraft:recipes/redstone/wooden_button": "minecraft:recipes/redstone/oak_button",
+            "minecraft:recipes/redstone/wooden_door": "minecraft:recipes/redstone/oak_door",
+            "minecraft:recipes/redstone/wooden_pressure_plate": "minecraft:recipes/redstone/oak_pressure_plate",
+            "minecraft:recipes/transportation/boat": "minecraft:recipes/transportation/oak_boat",
+            "minecraft:recipes/transportation/golden_rail": "minecraft:recipes/transportation/powered_rail",
+        ]),
+        // net.minecraft.util.datafix.fixes.NamespacedTypeRenameFix: Recipes fix.
+        .init(kind: .recipe, version: 1502, changes: [
+            "minecraft:acacia_wooden_slab": "minecraft:acacia_slab",
+            "minecraft:birch_wooden_slab": "minecraft:birch_slab",
+            "minecraft:black_stained_hardened_clay": "minecraft:black_terracotta",
+            "minecraft:blue_stained_hardened_clay": "minecraft:blue_terracotta",
+            "minecraft:boat": "minecraft:oak_boat",
+            "minecraft:bone_meal_from_block": "minecraft:bone_meal_from_bone_block",
+            "minecraft:bone_meal_from_bone": "minecraft:bone_meal",
+            "minecraft:brick_block": "minecraft:bricks",
+            "minecraft:brown_stained_hardened_clay": "minecraft:brown_terracotta",
+            "minecraft:chiseled_stonebrick": "minecraft:chiseled_stone_bricks",
+            "minecraft:cyan_stained_hardened_clay": "minecraft:cyan_terracotta",
+            "minecraft:dark_oak_wooden_slab": "minecraft:dark_oak_slab",
+            "minecraft:end_bricks": "minecraft:end_stone_bricks",
+            "minecraft:fence": "minecraft:oak_fence",
+            "minecraft:fence_gate": "minecraft:oak_fence_gate",
+            "minecraft:gold_ingot_from_block": "minecraft:gold_ingot_from_gold_block",
+            "minecraft:golden_rail": "minecraft:powered_rail",
+            "minecraft:gray_stained_hardened_clay": "minecraft:gray_terracotta",
+            "minecraft:green_stained_hardened_clay": "minecraft:green_terracotta",
+            "minecraft:iron_ingot_from_block": "minecraft:iron_ingot_from_iron_block",
+            "minecraft:jungle_wooden_slab": "minecraft:jungle_slab",
+            "minecraft:light_blue_stained_hardened_clay": "minecraft:light_blue_terracotta",
+            "minecraft:light_gray_stained_hardened_clay": "minecraft:light_gray_terracotta",
+            "minecraft:lime_stained_hardened_clay": "minecraft:lime_terracotta",
+            "minecraft:lit_pumpkin": "minecraft:jack_o_lantern",
+            "minecraft:magenta_stained_hardened_clay": "minecraft:magenta_terracotta",
+            "minecraft:magma": "minecraft:magma_block",
+            "minecraft:melon_block": "minecraft:melon",
+            "minecraft:mossy_stonebrick": "minecraft:mossy_stone_bricks",
+            "minecraft:noteblock": "minecraft:note_block",
+            "minecraft:oak_wooden_slab": "minecraft:oak_slab",
+            "minecraft:orange_stained_hardened_clay": "minecraft:orange_terracotta",
+            "minecraft:pillar_quartz_block": "minecraft:quartz_pillar",
+            "minecraft:pink_stained_hardened_clay": "minecraft:pink_terracotta",
+            "minecraft:purple_shulker_box": "minecraft:shulker_box",
+            "minecraft:purple_stained_hardened_clay": "minecraft:purple_terracotta",
+            "minecraft:red_nether_brick": "minecraft:red_nether_bricks",
+            "minecraft:red_stained_hardened_clay": "minecraft:red_terracotta",
+            "minecraft:slime": "minecraft:slime_block",
+            "minecraft:smooth_red_sandstone": "minecraft:cut_red_sandstone",
+            "minecraft:smooth_sandstone": "minecraft:cut_sandstone",
+            "minecraft:snow": "minecraft:snow_block",
+            "minecraft:snow_layer": "minecraft:snow",
+            "minecraft:speckled_melon": "minecraft:glistering_melon_slice",
+            "minecraft:spruce_wooden_slab": "minecraft:spruce_slab",
+            "minecraft:stone_stairs": "minecraft:cobblestone_stairs",
+            "minecraft:stonebrick": "minecraft:stone_bricks",
+            "minecraft:string_to_wool": "minecraft:white_wool_from_string",
+            "minecraft:trapdoor": "minecraft:oak_trapdoor",
+            "minecraft:white_stained_hardened_clay": "minecraft:white_terracotta",
+            "minecraft:wooden_button": "minecraft:oak_button",
+            "minecraft:wooden_door": "minecraft:oak_door",
+            "minecraft:wooden_pressure_plate": "minecraft:oak_pressure_plate",
+            "minecraft:yellow_stained_hardened_clay": "minecraft:yellow_terracotta",
         ]),
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Block renamening fix.
         .init(kind: .block, version: 1510, changes: [
@@ -156,6 +280,35 @@ enum GeneratedSaveRenames {
             "minecraft:stripped_spruce_bark": "minecraft:stripped_spruce_wood",
             "minecraft:vindication_illager_spawn_egg": "minecraft:vindicator_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityTheRenameningFix: EntityTheRenameningBlock.
+        .init(kind: .entity, version: 1510, changes: [
+            "minecraft:commandblock_minecart": "minecraft:command_block_minecart",
+            "minecraft:ender_crystal": "minecraft:end_crystal",
+            "minecraft:evocation_fangs": "minecraft:evoker_fangs",
+            "minecraft:evocation_illager": "minecraft:evoker",
+            "minecraft:eye_of_ender_signal": "minecraft:eye_of_ender",
+            "minecraft:fireworks_rocket": "minecraft:firework_rocket",
+            "minecraft:illusion_illager": "minecraft:illusioner",
+            "minecraft:snowman": "minecraft:snow_golem",
+            "minecraft:villager_golem": "minecraft:iron_golem",
+            "minecraft:vindication_illager": "minecraft:vindicator",
+            "minecraft:xp_bottle": "minecraft:experience_bottle",
+            "minecraft:xp_orb": "minecraft:experience_orb",
+        ]),
+        // net.minecraft.util.datafix.fixes.NamespacedTypeRenameFix: Recipes renamening fix.
+        .init(kind: .recipe, version: 1510, changes: [
+            "minecraft:acacia_bark": "minecraft:acacia_wood",
+            "minecraft:birch_bark": "minecraft:birch_wood",
+            "minecraft:dark_oak_bark": "minecraft:dark_oak_wood",
+            "minecraft:jungle_bark": "minecraft:jungle_wood",
+            "minecraft:oak_bark": "minecraft:oak_wood",
+            "minecraft:spruce_bark": "minecraft:spruce_wood",
+        ]),
+        // net.minecraft.util.datafix.fixes.StatsRenameFix: SwimStatsRenameFix.
+        .init(kind: .stat, version: 1510, changes: [
+            "minecraft:dive_one_cm": "minecraft:walk_under_water_one_cm",
+            "minecraft:swim_one_cm": "minecraft:walk_on_water_one_cm",
+        ]),
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Rename coral fan blocks.
         .init(kind: .block, version: 1515, changes: [
             "minecraft:brain_coral_fan": "minecraft:brain_coral_wall_fan",
@@ -185,6 +338,20 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1928, changes: [
             "minecraft:illager_beast_spawn_egg": "minecraft:ravager_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityRavagerRenameFix: EntityRavagerRenameFix.
+        .init(kind: .entity, version: 1928, changes: [
+            "minecraft:illager_beast": "minecraft:ravager",
+        ]),
+        // net.minecraft.util.datafix.fixes.NamespacedTypeRenameFix: Rename sugar recipe.
+        .init(kind: .recipe, version: 2100, changes: [
+            "minecraft:sugar": "minecraft:sugar_from_sugar_cane",
+        ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsRenameFix: Rename sugar recipe advancement.
+        .init(kind: .advancement, version: 2100, changes: [
+            ":recipes/misc/sugar": "minecraft:recipes/misc/sugar_from_sugar_cane",
+            "minecraft:recipes/misc/sugar": "minecraft:recipes/misc/sugar_from_sugar_cane",
+            "recipes/misc/sugar": "minecraft:recipes/misc/sugar_from_sugar_cane",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename bee_hive item to beehive.
         .init(kind: .item, version: 2209, changes: [
             "minecraft:bee_hive": "minecraft:beehive",
@@ -192,6 +359,12 @@ enum GeneratedSaveRenames {
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Rename bee_hive block to beehive.
         .init(kind: .block, version: 2209, changes: [
             "minecraft:bee_hive": "minecraft:beehive",
+        ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsRenameFix: Composter category change.
+        .init(kind: .advancement, version: 2503, changes: [
+            ":recipes/misc/composter": "minecraft:recipes/decorations/composter",
+            "minecraft:recipes/misc/composter": "minecraft:recipes/decorations/composter",
+            "recipes/misc/composter": "minecraft:recipes/decorations/composter",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Renamed fungi items to fungus.
         .init(kind: .item, version: 2508, changes: [
@@ -206,6 +379,10 @@ enum GeneratedSaveRenames {
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename zombie pigman egg item.
         .init(kind: .item, version: 2509, changes: [
             "minecraft:zombie_pigman_spawn_egg": "minecraft:zombified_piglin_spawn_egg",
+        ]),
+        // net.minecraft.util.datafix.fixes.EntityZombifiedPiglinRenameFix: EntityZombifiedPiglinRenameFix.
+        .init(kind: .entity, version: 2509, changes: [
+            "minecraft:zombie_pigman": "minecraft:zombified_piglin",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename soul fire torch and soul fire lantern.
         .init(kind: .item, version: 2528, changes: [
@@ -391,6 +568,10 @@ enum GeneratedSaveRenames {
             "minecraft:cave_vines_body": "minecraft:cave_vines_plant",
             "minecraft:cave_vines_head": "minecraft:cave_vines",
         ]),
+        // net.minecraft.util.datafix.fixes.StatsRenameFix: Renamed play_one_minute stat to play_time.
+        .init(kind: .stat, version: 2710, changes: [
+            "minecraft:play_one_minute": "minecraft:play_time",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename azalea_leaves_flowers.
         .init(kind: .item, version: 2717, changes: [
             "minecraft:azalea_leaves_flowers": "minecraft:flowering_azalea_leaves",
@@ -444,12 +625,28 @@ enum GeneratedSaveRenames {
         .init(kind: .biome, version: 2843, changes: [
             "minecraft:deep_warm_ocean": "minecraft:warm_ocean",
         ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsRenameFix: Rename some C&C part 2 advancements.
+        .init(kind: .advancement, version: 2846, changes: [
+            ":adventure/caves_and_cliff": "minecraft:adventure/fall_from_world_height",
+            ":adventure/ride_strider_in_overworld_lava": "minecraft:nether/ride_strider_in_overworld_lava",
+            ":husbandry/play_jukebox_in_meadows": "minecraft:adventure/play_jukebox_in_meadows",
+            "adventure/caves_and_cliff": "minecraft:adventure/fall_from_world_height",
+            "adventure/ride_strider_in_overworld_lava": "minecraft:nether/ride_strider_in_overworld_lava",
+            "husbandry/play_jukebox_in_meadows": "minecraft:adventure/play_jukebox_in_meadows",
+            "minecraft:adventure/caves_and_cliff": "minecraft:adventure/fall_from_world_height",
+            "minecraft:adventure/ride_strider_in_overworld_lava": "minecraft:nether/ride_strider_in_overworld_lava",
+            "minecraft:husbandry/play_jukebox_in_meadows": "minecraft:adventure/play_jukebox_in_meadows",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Pottery shard renaming.
         .init(kind: .item, version: 3438, changes: [
             "minecraft:pottery_shard_archer": "minecraft:archer_pottery_shard",
             "minecraft:pottery_shard_arms_up": "minecraft:arms_up_pottery_shard",
             "minecraft:pottery_shard_prize": "minecraft:prize_pottery_shard",
             "minecraft:pottery_shard_skull": "minecraft:skull_pottery_shard",
+        ]),
+        // net.minecraft.util.datafix.fixes.BlockEntityRenameFix: Rename Suspicious Sand to Brushable Block.
+        .init(kind: .blockEntity, version: 3438, changes: [
+            "minecraft:suspicious_sand": "minecraft:brushable_block",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Pottery shard item renaming to Pottery sherd.
         .init(kind: .item, version: 3447, changes: [
@@ -486,6 +683,16 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 3800, changes: [
             "minecraft:scute": "minecraft:turtle_scute",
         ]),
+        // net.minecraft.util.datafix.fixes.RenameEnchantmentsFix: Rename sweeping enchant to sweeping_edge.
+        .init(kind: .enchantment, version: 3803, changes: [
+            "minecraft:sweeping": "minecraft:sweeping_edge",
+        ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsRenameFix: Use lodestone category change.
+        .init(kind: .advancement, version: 4311, changes: [
+            ":nether/use_lodestone": "minecraft:adventure/use_lodestone",
+            "minecraft:nether/use_lodestone": "minecraft:adventure/use_lodestone",
+            "nether/use_lodestone": "minecraft:adventure/use_lodestone",
+        ]),
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Rename chain to iron_chain.
         .init(kind: .block, version: 4541, changes: [
             "minecraft:chain": "minecraft:iron_chain",
@@ -493,6 +700,56 @@ enum GeneratedSaveRenames {
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename chain to iron_chain.
         .init(kind: .item, version: 4541, changes: [
             "minecraft:chain": "minecraft:iron_chain",
+        ]),
+        // net.minecraft.util.datafix.fixes.NamespacedTypeRenameFix: Rename stonecutter recipes.
+        .init(kind: .recipe, version: 4769, changes: [
+            "minecraft:chiseled_stone_bricks_stone_from_stonecutting": "minecraft:chiseled_stone_bricks_from_stone_stonecutting",
+            "minecraft:end_stone_brick_slab_from_end_stone_brick_stonecutting": "minecraft:end_stone_brick_slab_from_end_stone_bricks_stonecutting",
+            "minecraft:end_stone_brick_stairs_from_end_stone_brick_stonecutting": "minecraft:end_stone_brick_stairs_from_end_stone_bricks_stonecutting",
+            "minecraft:end_stone_brick_wall_from_end_stone_brick_stonecutting": "minecraft:end_stone_brick_wall_from_end_stone_bricks_stonecutting",
+            "minecraft:mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting": "minecraft:mossy_stone_brick_slab_from_mossy_stone_bricks_stonecutting",
+            "minecraft:mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting": "minecraft:mossy_stone_brick_stairs_from_mossy_stone_bricks_stonecutting",
+            "minecraft:mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting": "minecraft:mossy_stone_brick_wall_from_mossy_stone_bricks_stonecutting",
+            "minecraft:prismarine_brick_slab_from_prismarine_stonecutting": "minecraft:prismarine_brick_slab_from_prismarine_bricks_stonecutting",
+            "minecraft:prismarine_brick_stairs_from_prismarine_stonecutting": "minecraft:prismarine_brick_stairs_from_prismarine_bricks_stonecutting",
+            "minecraft:quartz_slab_from_stonecutting": "minecraft:quartz_slab_from_quartz_block_stonecutting",
+            "minecraft:stone_brick_walls_from_stone_stonecutting": "minecraft:stone_brick_wall_from_stone_stonecutting",
+        ]),
+        // net.minecraft.util.datafix.fixes.AdvancementsRenameFix: Rename stonecutter recipe advancements.
+        .init(kind: .advancement, version: 4769, changes: [
+            ":recipes/building_blocks/chiseled_stone_bricks_stone_from_stonecutting": "minecraft:recipes/building_blocks/chiseled_stone_bricks_from_stone_stonecutting",
+            ":recipes/building_blocks/end_stone_brick_slab_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_slab_from_end_stone_bricks_stonecutting",
+            ":recipes/building_blocks/end_stone_brick_stairs_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_stairs_from_end_stone_bricks_stonecutting",
+            ":recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_bricks_stonecutting",
+            ":recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_bricks_stonecutting",
+            ":recipes/building_blocks/mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting": "minecraft:recipes/decorations/mossy_stone_brick_wall_from_mossy_stone_bricks_stonecutting",
+            ":recipes/building_blocks/prismarine_brick_slab_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_slab_from_prismarine_bricks_stonecutting",
+            ":recipes/building_blocks/prismarine_brick_stairs_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_stairs_from_prismarine_bricks_stonecutting",
+            ":recipes/building_blocks/quartz_slab_from_stonecutting": "minecraft:recipes/building_blocks/quartz_slab_from_quartz_block_stonecutting",
+            ":recipes/decorations/end_stone_brick_wall_from_end_stone_brick_stonecutting": "minecraft:recipes/decorations/end_stone_brick_wall_from_end_stone_bricks_stonecutting",
+            ":recipes/decorations/stone_brick_walls_from_stone_stonecutting": "minecraft:recipes/decorations/stone_brick_wall_from_stone_stonecutting",
+            "minecraft:recipes/building_blocks/chiseled_stone_bricks_stone_from_stonecutting": "minecraft:recipes/building_blocks/chiseled_stone_bricks_from_stone_stonecutting",
+            "minecraft:recipes/building_blocks/end_stone_brick_slab_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_slab_from_end_stone_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/end_stone_brick_stairs_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_stairs_from_end_stone_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting": "minecraft:recipes/decorations/mossy_stone_brick_wall_from_mossy_stone_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/prismarine_brick_slab_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_slab_from_prismarine_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/prismarine_brick_stairs_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_stairs_from_prismarine_bricks_stonecutting",
+            "minecraft:recipes/building_blocks/quartz_slab_from_stonecutting": "minecraft:recipes/building_blocks/quartz_slab_from_quartz_block_stonecutting",
+            "minecraft:recipes/decorations/end_stone_brick_wall_from_end_stone_brick_stonecutting": "minecraft:recipes/decorations/end_stone_brick_wall_from_end_stone_bricks_stonecutting",
+            "minecraft:recipes/decorations/stone_brick_walls_from_stone_stonecutting": "minecraft:recipes/decorations/stone_brick_wall_from_stone_stonecutting",
+            "recipes/building_blocks/chiseled_stone_bricks_stone_from_stonecutting": "minecraft:recipes/building_blocks/chiseled_stone_bricks_from_stone_stonecutting",
+            "recipes/building_blocks/end_stone_brick_slab_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_slab_from_end_stone_bricks_stonecutting",
+            "recipes/building_blocks/end_stone_brick_stairs_from_end_stone_brick_stonecutting": "minecraft:recipes/building_blocks/end_stone_brick_stairs_from_end_stone_bricks_stonecutting",
+            "recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_slab_from_mossy_stone_bricks_stonecutting",
+            "recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting": "minecraft:recipes/building_blocks/mossy_stone_brick_stairs_from_mossy_stone_bricks_stonecutting",
+            "recipes/building_blocks/mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting": "minecraft:recipes/decorations/mossy_stone_brick_wall_from_mossy_stone_bricks_stonecutting",
+            "recipes/building_blocks/prismarine_brick_slab_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_slab_from_prismarine_bricks_stonecutting",
+            "recipes/building_blocks/prismarine_brick_stairs_from_prismarine_stonecutting": "minecraft:recipes/building_blocks/prismarine_brick_stairs_from_prismarine_bricks_stonecutting",
+            "recipes/building_blocks/quartz_slab_from_stonecutting": "minecraft:recipes/building_blocks/quartz_slab_from_quartz_block_stonecutting",
+            "recipes/decorations/end_stone_brick_wall_from_end_stone_brick_stonecutting": "minecraft:recipes/decorations/end_stone_brick_wall_from_end_stone_bricks_stonecutting",
+            "recipes/decorations/stone_brick_walls_from_stone_stonecutting": "minecraft:recipes/decorations/stone_brick_wall_from_stone_stonecutting",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename explorer map items.
         .init(kind: .item, version: 5012, changes: [
@@ -502,6 +759,40 @@ enum GeneratedSaveRenames {
             "minecraft:trial_explorer_map": "minecraft:buried_trial_chambers_map",
             "minecraft:woodland_explorer_map": "minecraft:woodland_mansion_map",
         ]),
+    ]
+    static let attributeSteps: [SaveDataUpgrade.AttributeRename] = [
+        // net.minecraft.util.datafix.fixes.AttributesRenameLegacy: Attribute renames.
+        .init(version: 2523, changes: ["Flying Speed": "minecraft:generic.flying_speed", "Follow Range": "minecraft:generic.follow_range", "Jump Strength": "minecraft:horse.jump_strength", "Knockback Resistance": "minecraft:generic.knockback_resistance", "Max Health": "minecraft:generic.max_health", "Movement Speed": "minecraft:generic.movement_speed", "Spawn Reinforcements Chance": "minecraft:zombie.spawn_reinforcements", "generic.armorToughness": "minecraft:generic.armor_toughness", "generic.attackDamage": "minecraft:generic.attack_damage", "generic.attackKnockback": "minecraft:generic.attack_knockback", "generic.attackSpeed": "minecraft:generic.attack_speed", "generic.flyingSpeed": "minecraft:generic.flying_speed", "generic.followRange": "minecraft:generic.follow_range", "generic.knockbackResistance": "minecraft:generic.knockback_resistance", "generic.maxHealth": "minecraft:generic.max_health", "generic.movementSpeed": "minecraft:generic.movement_speed", "horse.jumpStrength": "minecraft:horse.jump_strength", "zombie.spawnReinforcements": "minecraft:zombie.spawn_reinforcements"], prefixes: []),
+        // net.minecraft.util.datafix.fixes.AttributesRenameLegacy: Rename jump strength attribute.
+        .init(version: 3814, changes: [":horse.jump_strength": "minecraft:generic.jump_strength", "horse.jump_strength": "minecraft:generic.jump_strength", "minecraft:horse.jump_strength": "minecraft:generic.jump_strength"], prefixes: []),
+        // net.minecraft.util.datafix.fixes.AttributeIdPrefixFix: AttributeIdPrefixFix.
+        .init(version: 4055, changes: [:], prefixes: [.init(from: "minecraft:generic.", to: "minecraft:"), .init(from: "minecraft:horse.", to: "minecraft:"), .init(from: "minecraft:player.", to: "minecraft:"), .init(from: "minecraft:zombie.", to: "minecraft:")]),
+        // net.minecraft.util.datafix.fixes.RenameNameplateToNameTagFix: RenameNameplateToNameTag.
+        .init(version: 4888, changes: ["minecraft:nameplate_distance": "minecraft:name_tag_distance"], prefixes: []),
+    ]
+    // First input schema accepting each renamed blockEntity ID; not a membership catalog.
+    static let blockEntityIntroductions: [String: Int] = [
+        "minecraft:suspicious_sand": 3327,
+    ]
+    // First input schema accepting each renamed entity ID; not a membership catalog.
+    static let entityIntroductions: [String: Int] = [
+        "minecraft:cod_mob": 1470,
+        "minecraft:commandblock_minecart": 705,
+        "minecraft:ender_crystal": 705,
+        "minecraft:evocation_fangs": 705,
+        "minecraft:evocation_illager": 705,
+        "minecraft:eye_of_ender_signal": 705,
+        "minecraft:fireworks_rocket": 705,
+        "minecraft:illager_beast": 1801,
+        "minecraft:illusion_illager": 705,
+        "minecraft:puffer_fish": 1470,
+        "minecraft:salmon_mob": 1470,
+        "minecraft:snowman": 705,
+        "minecraft:villager_golem": 705,
+        "minecraft:vindication_illager": 705,
+        "minecraft:xp_bottle": 705,
+        "minecraft:xp_orb": 705,
+        "minecraft:zombie_pigman": 705,
     ]
     // ItemStackTheFlatteningFix.MAP / updateItem. Saved string identity and variant, not numeric item IDs.
     static let itemNameBoundary = 1452

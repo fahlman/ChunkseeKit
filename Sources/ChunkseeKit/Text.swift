@@ -162,6 +162,9 @@ extension Dimension {
             found.containers += ItemContainer.containers(inChunk: chunk.nbt)
             found.signs += Sign.signs(inChunk: chunk.nbt)
             found.spawners += Spawner.spawners(inChunk: chunk.nbt)
+            if let entities = SaveDataUpgrade.terrainEntityChunk(chunk.nbt) {
+                found.namedCreatures += Creature.creatures(inEntityChunk: entities).filter { $0.customName != nil }
+            }
         }
         for chunk in try chunks(.entities, regionX: regionX, regionZ: regionZ) {
             found.containers += ItemContainer.containers(inEntityChunk: chunk.nbt)

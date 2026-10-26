@@ -69,8 +69,8 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
             let shoulder = carrier.map { " on shoulder of \($0.uuidString.lowercased())" } ?? ""
             print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at \(position)\(owner)\(shoulder)")
         }
-        for (rx, rz, _) in dim.regionFiles(.entities) {
-            for creature in (try? dim.creatures(regionX: rx, regionZ: rz)) ?? [] {
+        for region in searchRegions(in: dim) {
+            for creature in (try? dim.creatures(regionX: region.x, regionZ: region.z)) ?? [] {
                 show(creature, at: BlockPosition(x: creature.x, y: creature.y, z: creature.z), carrier: nil)
             }
         }

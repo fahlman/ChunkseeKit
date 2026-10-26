@@ -41,27 +41,94 @@ def non_block_definitions_source(identifiers, notice):
     return result
 
 
+def legacy_chunk_source(facts, notice):
+    result = notice + "// ChunkHeightAndBiomeFix and the preceding format fixers; not a biome catalog.\n"
+    result += "enum GeneratedLegacyChunkFacts {\n"
+    for name, source in {"heightmapNameBoundary": "HeightmapRenamingFix",
+                         "sectionBoundary": "ChunkHeightAndBiomeFix"}.items():
+        result += f"    static let {name} = {int(facts['boundaries'][source])}\n"
+    result += "    // Repeated ChunkDeleteLightFix instances; any later reset invalidates saved light.\n"
+    result += f"    static let lightResetBoundary = {max(map(int, facts['lightResets']))}\n"
+    for name, source in {"oldSectionCount": "OLD_SECTION_COUNT", "newSectionCount": "NEW_SECTION_COUNT",
+                         "newMinSectionY": "NEW_MIN_SECTION_Y", "heightmapBits": "HEIGHTMAP_BITS",
+                         "biomeContainerSize": "BIOME_CONTAINER_SIZE"}.items():
+        result += f"    static let {name} = {int(facts['geometry'][source])}\n"
+    for name in ["emptyBlock", "defaultBiome"]:
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", facts[name]):
+            raise ValueError("Invalid legacy chunk default")
+        result += f"    static let {name} = {quoted(facts[name])}\n"
+    result += "    // ChunkHeightAndBiomeFix.BIOMES_BY_ID; only numeric save-code meanings.\n"
+    result += "    static let biomes: [Int: String] = [\n"
+    for number, identifier in sorted(facts["biomes"].items(), key=lambda row: int(row[0])):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+            raise ValueError("Invalid legacy biome identity")
+        result += f"        {int(number)}: {quoted(identifier)},\n"
+    result += "    ]\n    static let statusSteps: [SaveDataUpgrade.ChunkStatusRename] = [\n"
+    for step in facts["statusSteps"]:
+        result += "        // " + step["source"] + ".\n"
+        changes = ", ".join(quoted(k) + ": " + quoted(v) for k, v in sorted(step["aliases"].items())) or ":"
+        fallback = quoted(step["fallback"]) if "fallback" in step else "nil"
+        result += f"        .init(version: {step['version']}, aliases: [{changes}], fallback: {fallback}),\n"
+    result += "    ]\n    // HeightmapRenamingFix.fix; a name can split into several maps.\n"
+    result += "    static let heightmapNames: [String: [String]] = [\n"
+    for name, targets in sorted(facts["heightmapNames"].items()):
+        result += f"        {quoted(name)}: [" + ", ".join(map(quoted, targets)) + "],\n"
+    return result + "    ]\n}\n"
+
+
+def legacy_chunk_proofs(facts, notice):
+    result = notice + "// Whole synthetic chunks passed through Minecraft's complete CHUNK fix chain.\n"
+    result += "enum GeneratedLegacyChunkProofs {\n"
+    result += "    struct Record: Sendable { let name: String; let version: Int; let input: String; let output: String }\n"
+    result += "    static let records: [Record] = [\n"
+    for row in facts["records"]:
+        source = quoted(json.dumps(row["input"], separators=(",", ":"), sort_keys=True))
+        output = quoted(json.dumps(row["output"], separators=(",", ":"), sort_keys=True))
+        result += f"        .init(name: {quoted(row['name'])}, version: {row['version']}, input: {source}, output: {output}),\n"
+    return result + "    ]\n}\n"
+
+
 def save_renames_source(facts, notice):
     steps = facts["steps"]
     if not steps:
         raise ValueError("No save rename steps")
     result = notice + "// DataFixers' actual rename instances, in application order. Not an ID catalog.\n"
     result += "enum GeneratedSaveRenames {\n"
-    result += f"    static let lastVersion = {max(step['version'] for step in steps)}\n"
+    result += f"    static let lastVersion = {max(step['version'] for step in steps + facts['attributeSteps'])}\n"
     result += "    static let steps: [SaveDataUpgrade.Rename] = [\n"
     previous = -1
     for step in steps:
-        if step["kind"] not in {"block", "item", "biome"} or type(step["version"]) is not int or step["version"] < previous:
+        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity", "enchantment", "recipe", "advancement", "stat"} or type(step["version"]) is not int or step["version"] < previous:
             raise ValueError("Invalid or unordered save rename step")
         previous = step["version"]
         result += "        // " + step["source"] + ": " + step["name"] + ".\n"
         result += f"        .init(kind: .{step['kind']}, version: {step['version']}, changes: [\n"
         for old, new in sorted(step["changes"].items()):
-            if any(not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", x) for x in [old, new]) or old == new:
+            input_pattern = r"(?:[a-z0-9_.-]*:)?[a-z0-9_./-]+" if step["kind"] == "advancement" else r"[a-z0-9_.-]+:[a-z0-9_./-]+"
+            if not re.fullmatch(input_pattern, old) or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", new) or old == new:
                 raise ValueError("Invalid save rename")
             result += f"            {quoted(old)}: {quoted(new)},\n"
         result += "        ]),\n"
     result += "    ]\n"
+    result += "    static let attributeSteps: [SaveDataUpgrade.AttributeRename] = [\n"
+    previous = -1
+    for step in facts["attributeSteps"]:
+        if type(step["version"]) is not int or step["version"] < previous:
+            raise ValueError("Invalid attribute rename order")
+        previous = step["version"]
+        result += "        // " + step["source"] + ": " + step["name"] + ".\n"
+        changes = ", ".join(quoted(k) + ": " + quoted(v) for k, v in sorted(step["changes"].items())) or ":"
+        prefixes = ", ".join(f".init(from: {quoted(p['from'])}, to: {quoted(p['to'])})" for p in step["prefixes"])
+        result += f"        .init(version: {step['version']}, changes: [{changes}], prefixes: [{prefixes}]),\n"
+    result += "    ]\n"
+    for kind, versions in sorted(facts["entityIntroductions"].items()):
+        result += f"    // First input schema accepting each renamed {kind} ID; not a membership catalog.\n"
+        result += f"    static let {kind}Introductions: [String: Int] = [\n"
+        for name, version in sorted(versions.items()):
+            if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", name) or type(version) is not int:
+                raise ValueError("Invalid entity rename applicability")
+            result += f"        {quoted(name)}: {version},\n"
+        result += "    ]\n"
     item_names = facts["itemNames"]
     result += "    // " + item_names["source"] + ". Saved string identity and variant, not numeric item IDs.\n"
     result += f"    static let itemNameBoundary = {item_names['boundary']}\n"
@@ -84,7 +151,20 @@ def save_rename_proofs_source(facts, notice):
     result += "    struct Sample: Sendable { let kind: String; let version: Int; let input: String; let expected: String }\n"
     result += "    static let samples: [Sample] = [\n"
     for row in facts["proofs"]:
+        if row["kind"] in {"entity", "blockEntity"}:
+            continue
         result += f"        .init(kind: {quoted(row['kind'])}, version: {row['version']}, input: {quoted(row['input'])}, expected: {quoted(row['expected'])}),\n"
+    result += "    ]\n"
+    result += "    struct EntitySample: Sendable { let kind: String; let input: String; let expected: String; let versions: [Int] }\n"
+    result += "    static let entitySamples: [EntitySample] = [\n"
+    groups = {}
+    for row in facts["proofs"]:
+        if row["kind"] in {"entity", "blockEntity"}:
+            groups.setdefault((row["kind"], row["input"], row["expected"]), set()).add(row["version"])
+    for (kind, name, expected), versions in sorted(groups.items()):
+        result += f"        .init(kind: {quoted(kind)}, input: {quoted(name)}, expected: {quoted(expected)}, versions: [\n"
+        result += textwrap.indent(textwrap.fill(", ".join(map(str, sorted(versions))), width=100), "            ") + "\n"
+        result += "        ]),\n"
     result += "    ]\n"
     result += "    struct Record: Sendable { let kind: String; let version: Int; let input: String; let output: String }\n"
     result += "    static let records: [Record] = [\n"
@@ -481,6 +561,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
             "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice),
             "Sources/ChunkseeKit/GeneratedSaveRenames.swift": save_renames_source(facts["saveRenames"], notice),
+            "Sources/ChunkseeKit/GeneratedLegacyChunkFacts.swift": legacy_chunk_source(facts["legacyChunks"], notice),
+            "Tests/ChunkseeKitTests/GeneratedLegacyChunkProofs.swift": legacy_chunk_proofs(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedSaveRenameProofs.swift": save_rename_proofs_source(facts["saveRenames"], notice)}
 
 
@@ -512,10 +594,10 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
