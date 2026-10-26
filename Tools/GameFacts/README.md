@@ -8,7 +8,7 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
-and profession trade-set associations.
+and profession trade-set associations and natural-spawn defaults.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -24,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -33,6 +33,12 @@ No world or installed game file is written. Run this only when the shared Mac is
 
 Sources and interpretation:
 
+- `EnvironmentAttributes.NATURAL_MOB_SPAWNS.defaultValue` supplies the static default candidates,
+  including known empty defaults. `Weighted.codec(MapCodec)` is probed for an omitted weight;
+  if the game requires one, the reader leaves an unreadable/missing weight unknown. The tool
+  records only these code facts. Dimension and biome contents are always read at runtime.
+  `MobSpawnSettingsModifier.overlay` establishes replacement of named categories, including
+  empty ones, and inheritance of unmentioned categories; it is not a list append operation.
 - `DyeColor.getId`, `getSerializedName` and `getTextureDiffuseColor` supply dye identities and
   the texture multiplier used by banners/shields, collars and sheep.
 - Axolotl, Parrot and Llama `Variant`, and equine `Variant`, supply `getId`/`getSerializedName`.
