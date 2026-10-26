@@ -522,6 +522,10 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 3800, changes: [
             "minecraft:scute": "minecraft:turtle_scute",
         ]),
+        // net.minecraft.util.datafix.fixes.RenameEnchantmentsFix: Rename sweeping enchant to sweeping_edge.
+        .init(kind: .enchantment, version: 3803, changes: [
+            "minecraft:sweeping": "minecraft:sweeping_edge",
+        ]),
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Rename chain to iron_chain.
         .init(kind: .block, version: 4541, changes: [
             "minecraft:chain": "minecraft:iron_chain",
@@ -538,6 +542,16 @@ enum GeneratedSaveRenames {
             "minecraft:trial_explorer_map": "minecraft:buried_trial_chambers_map",
             "minecraft:woodland_explorer_map": "minecraft:woodland_mansion_map",
         ]),
+    ]
+    static let attributeSteps: [SaveDataUpgrade.AttributeRename] = [
+        // net.minecraft.util.datafix.fixes.AttributesRenameLegacy: Attribute renames.
+        .init(version: 2523, changes: ["Flying Speed": "minecraft:generic.flying_speed", "Follow Range": "minecraft:generic.follow_range", "Jump Strength": "minecraft:horse.jump_strength", "Knockback Resistance": "minecraft:generic.knockback_resistance", "Max Health": "minecraft:generic.max_health", "Movement Speed": "minecraft:generic.movement_speed", "Spawn Reinforcements Chance": "minecraft:zombie.spawn_reinforcements", "generic.armorToughness": "minecraft:generic.armor_toughness", "generic.attackDamage": "minecraft:generic.attack_damage", "generic.attackKnockback": "minecraft:generic.attack_knockback", "generic.attackSpeed": "minecraft:generic.attack_speed", "generic.flyingSpeed": "minecraft:generic.flying_speed", "generic.followRange": "minecraft:generic.follow_range", "generic.knockbackResistance": "minecraft:generic.knockback_resistance", "generic.maxHealth": "minecraft:generic.max_health", "generic.movementSpeed": "minecraft:generic.movement_speed", "horse.jumpStrength": "minecraft:horse.jump_strength", "zombie.spawnReinforcements": "minecraft:zombie.spawn_reinforcements"], prefixes: []),
+        // net.minecraft.util.datafix.fixes.AttributesRenameLegacy: Rename jump strength attribute.
+        .init(version: 3814, changes: [":horse.jump_strength": "minecraft:generic.jump_strength", "horse.jump_strength": "minecraft:generic.jump_strength", "minecraft:horse.jump_strength": "minecraft:generic.jump_strength"], prefixes: []),
+        // net.minecraft.util.datafix.fixes.AttributeIdPrefixFix: AttributeIdPrefixFix.
+        .init(version: 4055, changes: [:], prefixes: [.init(from: "minecraft:generic.", to: "minecraft:"), .init(from: "minecraft:horse.", to: "minecraft:"), .init(from: "minecraft:player.", to: "minecraft:"), .init(from: "minecraft:zombie.", to: "minecraft:")]),
+        // net.minecraft.util.datafix.fixes.RenameNameplateToNameTagFix: RenameNameplateToNameTag.
+        .init(version: 4888, changes: ["minecraft:nameplate_distance": "minecraft:name_tag_distance"], prefixes: []),
     ]
     // First input schema accepting each renamed blockEntity ID; not a membership catalog.
     static let blockEntityIntroductions: [String: Int] = [

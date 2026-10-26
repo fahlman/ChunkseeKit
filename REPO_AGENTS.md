@@ -1151,7 +1151,14 @@ Entity containers, mobs and spawners share those aliases, including nested item 
 spawner potentials and beehive occupants. Player shoulder and root-vehicle creatures keep the
 player-file version and each receive one upgrade. The tool compares every input-schema interval
 and whole entity-tree/player/item/spawner records against the game's complete fix chain.
-RegionFacts interpretation 22 invalidates earlier entity names, including unpublished 21.
+Saved attribute and enchantment identities also use this owner. AttributesRenameLegacy and
+AttributesRenameFix supply ordered exact aliases; AttributeIdPrefixFix supplies its prefix
+rewrites, which work for unfamiliar attribute names without a type inventory. Item modifier
+identities, labels, amounts and operations remain intact while their attribute type changes.
+Legacy enchantment names follow RenameEnchantmentsFix without changing their levels.
+The tool records full PLAYER and ITEM_STACK upgrades before/at each boundary and at the current
+release; nested inventories/equipment use their containing file's version once.
+RegionFacts interpretation 23 invalidates earlier effect identities, including unpublished 21–22.
 This additive API is unreleased for #255; remaining identifier/field changes, numeric flattening
 and pre-existing unsupported old chunk layouts remain separate work on that issue. Pre-namespace
 entity IDs stay with their required earlier type splits in the older-entity-format slice.
