@@ -103,12 +103,18 @@ public struct Villager: Sendable, Equatable, Codable {
         professionID.map { $0.namespace == "minecraft" && $0.path == "none" }
     }
     /// Whether saved offers or the profession's runtime definitions establish potential trading.
-    /// Saved offers win, including custom/edited villagers. Otherwise the saved level selects
-    /// its code-linked trade set, with the game's minimum level of one. No link returns false;
+    /// Readable offers win, including custom/edited villagers. Saved empty offers return false;
+    /// unreadable recipes or older cached offer state remain unknown. Only uninitialized offers let the saved
+    /// level select its code-linked trade set, with the game's minimum level of one. No link returns false;
     /// missing code, level or definitions returns nil. The caller retains one resource snapshot.
     /// This does not roll offers or evaluate merchant conditions, age, sleep or sold-out status.
     public func supportsTrading(using definitions: TradingDefinitions?) -> Bool? {
         if !trades.isEmpty { return true }
+        switch offerState {
+        case .complete: return false
+        case .uninitialized: break
+        case .incomplete, nil: return nil
+        }
         guard let id = professionID?.description,
               let sets = GeneratedTradingFacts.professions[id], let level else { return nil }
         guard let set = sets[max(GeneratedTradingFacts.minimumLevel, level)] else { return false }
@@ -118,7 +124,20 @@ public struct Villager: Sendable, Equatable, Codable {
     public var level: Int?
     /// The biome style, e.g. `minecraft:desert`.
     public var type: String?
+    /// Readable saved recipes, including the readable portion of an incomplete list.
     public var trades: [Trade]
+    /// The game's initialized-list state and Kit's recipe readability. Nil in older standalone
+    /// Codable records, which cannot establish whether an empty array was saved or uninitialized.
+    public var offerState: OfferState?
+
+    public enum OfferState: String, Sendable, Codable {
+        /// Offers was absent or not a compound; the game may initialize current definitions.
+        case uninitialized
+        /// Every retained recipe supplied readable trade items, including a known empty list.
+        case complete
+        /// At least one list entry could not be read by Kit; other recipes are retained.
+        case incomplete
+    }
 
     private var professionID: Identifier? {
         guard let profession, let id = Identifier(profession), !id.path.isEmpty else { return nil }
@@ -127,8 +146,19 @@ public struct Villager: Sendable, Equatable, Codable {
 
     public init?(_ nbt: NBT) {
         let data = nbt["VillagerData"]
-        let trades = (nbt["Offers"]?["Recipes"]?.list ?? []).compactMap(Trade.init)
-        guard data != nil || !trades.isEmpty else { return nil }
+        let offers = nbt["Offers"]
+        guard data != nil || offers != nil else { return nil }
+        let recipes = offers?["Recipes"]?.list
+        let trades = (recipes ?? []).compactMap(Trade.init)
+        if offers?.compound == nil {
+            // TagValueInput.read uses codec partial values. A non-compound Offers has
+            // no partial value, so AbstractVillager initializes it just like an absent field.
+            offerState = .uninitialized
+        } else {
+            // Missing Recipes defaults to empty; a non-list Recipes decodes to an empty
+            // partial list. Unreadable individual entries stay unknown to Kit's Trade reader.
+            offerState = recipes == nil || recipes?.count == trades.count ? .complete : .incomplete
+        }
         profession = data?["profession"]?.string
         // The VillagerData codec defaults an absent field, not a malformed one, to novice.
         if let fields = data?.compound, fields["level"] == nil {
