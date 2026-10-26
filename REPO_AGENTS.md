@@ -1130,7 +1130,7 @@ with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
 
 ## Format sources
 
-`SaveDataUpgrade` owns in-memory block, item and biome identifier renames from the ordered
+`SaveDataUpgrade` owns in-memory block, item, biome and namespaced entity/block-entity identifier renames from the ordered
 Minecraft fixers extracted by Tools/GameFacts. Chunk palettes, block/entity containers,
 creature equipment/trades and player inventories use the same owner before typed interpretation.
 Nested item contents and pot decorations retain their formats while their item names change.
@@ -1145,9 +1145,16 @@ generated change boundaries; arbitrary saved versions do not grow a cache or reb
 Unrelated text, custom tags, malformed fields,
 unknown names and properties are preserved. Traversal uses an explicit stack for nested contents.
 Embedded level players use their own version, as LevelDatToSavedDataFileFix does, rather than
-inheriting the surrounding level's version. RegionFacts interpretation 21 invalidates earlier names.
+inheriting the surrounding level's version. Entity aliases retain the game's first applicable
+input-schema boundary; this limits individual rewrites without filtering readable records.
+Entity containers, mobs and spawners share those aliases, including nested item entity data,
+spawner potentials and beehive occupants. Player shoulder and root-vehicle creatures keep the
+player-file version and each receive one upgrade. The tool compares every input-schema interval
+and whole entity-tree/player/item/spawner records against the game's complete fix chain.
+RegionFacts interpretation 22 invalidates earlier entity names, including unpublished 21.
 This additive API is unreleased for #255; remaining identifier/field changes, numeric flattening
-and pre-existing unsupported old chunk layouts remain separate work on that issue.
+and pre-existing unsupported old chunk layouts remain separate work on that issue. Pre-namespace
+entity IDs stay with their required earlier type splits in the older-entity-format slice.
 
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the

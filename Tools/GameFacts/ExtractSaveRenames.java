@@ -114,12 +114,19 @@ final class ExtractSaveRenames {
             result.add(row);
         }
         require(!result.isEmpty(), "No save renames found");
+        var entities = ExtractEntityRenames.extract(currentVersion);
+        result.addAll(entities.getAsJsonArray("steps"));
+        result.asList().sort(java.util.Comparator.comparingInt(row -> row.getAsJsonObject().get("version").getAsInt()));
+        proofs.addAll(entities.getAsJsonArray("proofs"));
         var facts = new JsonObject();
         facts.add("steps", result);
         facts.add("proofs", proofs);
-        facts.add("records", recordProofs(currentVersion));
+        var records = recordProofs(currentVersion);
+        records.addAll(ExtractEntityRenames.records(currentVersion));
+        facts.add("records", records);
         facts.add("itemNames", legacyItemNames(currentVersion));
         facts.add("itemDamageChanges", legacyDamageChanges());
+        facts.add("entityIntroductions", entities.get("introductions"));
         return facts;
     }
 

@@ -1,7 +1,7 @@
 /// In-memory save interpretation. Raw NBT/file APIs retain exactly what was saved.
 /// Content aliases come only from the game's generated fix chain; these adapters know fields.
 enum SaveDataUpgrade {
-    enum Kind: Sendable { case block, item, biome }
+    enum Kind: Sendable { case block, item, biome, entity, blockEntity }
     struct Rename: Sendable {
         let kind: Kind
         let version: Int
@@ -26,6 +26,10 @@ enum SaveDataUpgrade {
         upgrade(nbt, as: .entity, dataVersion: dataVersion)
     }
 
+    static func blockEntity(_ nbt: NBT, dataVersion: Int?) -> NBT {
+        upgrade(nbt, as: .blockEntity, dataVersion: dataVersion)
+    }
+
     static func player(_ nbt: NBT, dataVersion: Int?) -> NBT {
         upgrade(nbt, as: .player, dataVersion: dataVersion)
     }
@@ -38,6 +42,8 @@ enum SaveDataUpgrade {
         var block: [String: String] = [:]
         var item: [String: String] = [:]
         var biome: [String: String] = [:]
+        var entity: [String: String] = [:]
+        var blockEntity: [String: String] = [:]
         var itemBeforeFlattening: [String: String] = [:]
         var itemAfterFlattening: [String: String] = [:]
         let flattensItems: Bool
@@ -60,8 +66,14 @@ enum SaveDataUpgrade {
                         }
                     }
                 case .biome: Self.append(step.changes, to: &biome)
+                case .entity: Self.append(step.changes, to: &entity)
+                case .blockEntity: Self.append(step.changes, to: &blockEntity)
                 }
             }
+            // DFU cannot apply a rename to a record whose name did not exist in its input
+            // schema. This bounds individual aliases; it never decides which records we read.
+            entity = entity.filter { version >= GeneratedSaveRenames.entityIntroductions[$0.key, default: -1] }
+            blockEntity = blockEntity.filter { version >= GeneratedSaveRenames.blockEntityIntroductions[$0.key, default: -1] }
         }
 
         private static func append(_ changes: [String: String], to names: inout [String: String]) {
@@ -81,6 +93,8 @@ enum SaveDataUpgrade {
             case .block: changed = block[key]
             case .item: changed = item[key]
             case .biome: changed = biome[key]
+            case .entity: changed = entity[key]
+            case .blockEntity: changed = blockEntity[key]
             }
             return changed.map(NBT.string) ?? value
         }
@@ -121,6 +135,8 @@ enum SaveDataUpgrade {
     private static let plans: [Plan] = {
         let boundaries = Set(GeneratedSaveRenames.steps.map(\.version)
             + GeneratedSaveRenames.itemDamageChanges.map(\.version)
+            + Array(GeneratedSaveRenames.entityIntroductions.values)
+            + Array(GeneratedSaveRenames.blockEntityIntroductions.values)
             + [GeneratedSaveRenames.itemNameBoundary])
         return boundaries.sorted().map { Plan(boundary: $0, names: Names(after: $0 - 1)) }
     }()
@@ -141,6 +157,7 @@ enum SaveDataUpgrade {
         case blockState, biome, item, items, itemTag, components, componentContainers, componentContainer
         case equipment, entity, player, blockEntity, blockEntities, offers, trades, trade
         case potDecorations, potSide, itemNames
+        case entityTree, entityTrees, spawnData, spawnPotentials, spawnPotential, bees, bee
     }
 
     private enum Work {
@@ -188,6 +205,14 @@ enum SaveDataUpgrade {
                 }
                 guard var fields = value.compound else { results.append(value); continue }
                 switch shape {
+                case .entity, .entityTree:
+                    if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .entity) }
+                case .spawnData:
+                    if fields["entity"] == nil, let id = fields["id"] {
+                        fields["id"] = names.renamed(id, kind: .entity)
+                    }
+                case .blockEntity:
+                    if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .blockEntity) }
                 case .item:
                     fields["id"] = names.itemName(in: fields)
                 case .potSide:
@@ -225,6 +250,9 @@ enum SaveDataUpgrade {
         case .componentContainers: .componentContainer
         case .trades: .trade
         case .potDecorations, .itemNames: .potSide
+        case .entityTrees: .entityTree
+        case .spawnPotentials: .spawnPotential
+        case .bees: .bee
         default: nil
         }
     }
@@ -237,15 +265,18 @@ enum SaveDataUpgrade {
         case .biomePalette: [("palette", .biomes)]
         case .item, .potSide: [("tag", .itemTag), ("components", .components)]
         case .itemTag:
-            [("BlockEntityTag", .blockEntity), ("Items", .items), ("ChargedProjectiles", .items)]
+            [("BlockEntityTag", .blockEntity), ("EntityTag", .entityTree),
+             ("Items", .items), ("ChargedProjectiles", .items)]
         case .components:
             [("minecraft:container", .componentContainers), ("minecraft:bundle_contents", .items),
              ("minecraft:charged_projectiles", .items), ("minecraft:use_remainder", .item),
-             ("minecraft:pot_decorations", .potDecorations)]
+             ("minecraft:pot_decorations", .potDecorations), ("minecraft:entity_data", .entityTree),
+             ("minecraft:block_entity_data", .blockEntity), ("minecraft:bees", .bees)]
         case .componentContainer: [("item", .item)]
         case .blockEntity:
             [("Items", .items), ("item", .item), ("Book", .item), ("RecordItem", .item),
-             ("sherds", .itemNames), ("shards", .itemNames)]
+             ("sherds", .itemNames), ("shards", .itemNames), ("SpawnData", .spawnData),
+             ("SpawnPotentials", .spawnPotentials), ("Bees", .bees), ("bees", .bees)]
         case .entity, .player:
             // These saved formats are shared by vanilla and custom entities. Type catalogs do
             // not decide which readable inventory/equipment fields the existing readers retain.
@@ -254,6 +285,10 @@ enum SaveDataUpgrade {
              ("Item", .item), ("item", .item), ("body_armor_item", .item), ("ArmorItem", .item),
              ("DecorItem", .item), ("saddle", .item), ("SaddleItem", .item),
              ("SelectedItem", .item), ("Offers", .offers)]
+        case .entityTree: childFields(.entity) + [("Passengers", .entityTrees)]
+        case .spawnData: childFields(.entityTree) + [("entity", .entityTree)]
+        case .spawnPotential: [("Entity", .entityTree), ("data", .spawnData)]
+        case .bee: [("EntityData", .entityTree), ("entity_data", .entityTree)]
         case .offers: [("Recipes", .trades)]
         case .trade: [("buy", .item), ("buyB", .item), ("sell", .item)]
         case .potDecorations: [("back", .potSide), ("left", .potSide), ("right", .potSide), ("front", .potSide)]
