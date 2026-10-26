@@ -7,7 +7,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
-and block seed methods.
+and block seed methods and tints.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -23,7 +23,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -104,6 +104,17 @@ Sources and interpretation:
   choices. No block IDs or offsets are hand-kept. These facts do not establish block existence.
   Resource selectors cannot replace them: changing a bed picture's selectors leaves its code's
   seed behavior unchanged. Unknown methods still allow deterministic models and overview parts.
+
+- BlockColors.createDefault supplies each block's actual tint-source registrations. The extractor
+  calls BlockTintSource.colorInWorld for every registered state. A recording BlockAndTintGetter
+  proxy identifies the actual BiomeColors resolver and vertical offset; two marker colors must
+  pass through unchanged, while fixed colors must make no world query. Other operations fail
+  generation. The tool checks the source's relevantProperties against every state, then removes
+  particle-only dependencies that do not affect in-world colors. ModelBlockRenderer.computeTintColor
+  supplies the result for an index without a source. Known empty registrations are distinct from
+  unknown block code; neither is used to decide existence or picture availability. Raw samples
+  retain official method results for public-API verification. No color formulas or block IDs
+  are maintained by hand, and the generated facts have no runtime version gate.
 
 Generated entries name these sources, and `source.json` records the release, client/tool hashes
 and extracted-output hashes. Missing/ambiguous classes or mappings fail generation visibly.

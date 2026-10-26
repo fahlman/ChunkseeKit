@@ -94,7 +94,7 @@ import Testing
 
     @Test func registeredPlantSourcesKeepFixedAndBiomeColorsDistinct() {
         func tint(_ id: String, _ index: Int = 0) -> BlockTint? {
-            BlockState(id).tintSource(at: index, gameDataVersion: 5023)
+            BlockState(id).tintSource(at: index)
         }
         for id in ["grass_block", "short_grass", "fern", "potted_fern", "bush", "sugar_cane"] {
             #expect(tint(id) == .biome(.grass, yOffset: 0))
@@ -119,52 +119,55 @@ import Testing
 
     @Test func tallPlantsUseTheLowerHalfBiomeAndVerifiedCompactDefault() {
         for id in ["large_fern", "tall_grass"] {
-            #expect(BlockState(id).tintSource(at: 0, gameDataVersion: 5023) == .biome(.grass, yOffset: 0))
-            #expect(BlockState(id, properties: ["half": "upper"]).tintSource(at: 0, gameDataVersion: 5023) == .biome(.grass, yOffset: -1))
-            #expect(BlockState(id, properties: ["half": "sideways"]).tintSource(at: 0, gameDataVersion: 5023) == nil)
+            #expect(BlockState(id).tintSource(at: 0) == .biome(.grass, yOffset: 0))
+            #expect(BlockState(id, properties: ["half": "upper"]).tintSource(at: 0) == .biome(.grass, yOffset: -1))
+            #expect(BlockState(id, properties: ["half": "sideways"]).tintSource(at: 0) == nil)
         }
     }
 
     @Test func stateDrivenColorsKeepAgeAndPowerAndRejectMalformedValues() {
-        #expect(BlockState("redstone_wire").tintSource(at: 0, gameDataVersion: 5023) == .constant(0x4c0000))
-        #expect(BlockState("redstone_wire", properties: ["power": "15"]).tintSource(at: 0, gameDataVersion: 5023) == .constant(0xff3200))
+        #expect(BlockState("redstone_wire").tintSource(at: 0) == .constant(0x4c0000))
+        #expect(BlockState("redstone_wire", properties: ["power": "15"]).tintSource(at: 0) == .constant(0xff3200))
         for id in ["melon_stem", "pumpkin_stem"] {
-            #expect(BlockState(id).tintSource(at: 0, gameDataVersion: 5023) == .constant(0x00ff00))
-            #expect(BlockState(id, properties: ["age": "7"]).tintSource(at: 0, gameDataVersion: 5023) == .constant(0xe0c71c))
+            #expect(BlockState(id).tintSource(at: 0) == .constant(0x00ff00))
+            #expect(BlockState(id, properties: ["age": "7"]).tintSource(at: 0) == .constant(0xe0c71c))
         }
         for id in ["attached_melon_stem", "attached_pumpkin_stem"] {
-            #expect(BlockState(id).tintSource(at: 0, gameDataVersion: 5023) == .constant(0xe0c71c))
+            #expect(BlockState(id).tintSource(at: 0) == .constant(0xe0c71c))
         }
         for raw in ["-1", "16", "01", "0.0", "NaN", "999999999999999999999999"] {
-            #expect(BlockState("redstone_wire", properties: ["power": raw]).tintSource(at: 0, gameDataVersion: 5023) == nil)
-            #expect(BlockState("melon_stem", properties: ["age": raw]).tintSource(at: 0, gameDataVersion: 5023) == nil)
+            #expect(BlockState("redstone_wire", properties: ["power": raw]).tintSource(at: 0) == nil)
+            #expect(BlockState("melon_stem", properties: ["age": raw]).tintSource(at: 0) == nil)
         }
     }
 
     @Test func missingRegisteredSourcesLeaveTheTextureUntinted() {
         for id in ["cherry_leaves", "pale_oak_leaves", "bamboo", "bamboo_sapling", "stonecutter",
-                   "lava_cauldron", "powder_snow_cauldron", "stone", "minecraft:no_registered_source"] {
+                   "lava_cauldron", "powder_snow_cauldron", "stone"] {
             for index in [0, 1, Int.max] {
-                #expect(BlockState(id).tintSource(at: index, gameDataVersion: 5023) == .constant(0xffffff))
+                #expect(BlockState(id).tintSource(at: index) == .constant(0xffffff))
             }
         }
         for id in ["oak_leaves", "redstone_wire", "tall_grass"] {
-            #expect(BlockState(id).tintSource(at: 1, gameDataVersion: 5023) == .constant(0xffffff))
+            #expect(BlockState(id).tintSource(at: 1) == .constant(0xffffff))
         }
     }
 
-    @Test func unavailableNamespacesVersionsAndInvalidIndexesStayUnavailable() {
-        for id in ["example:oak_leaves", "example:grass_block", "example:cherry_leaves", "invalid ID"] {
-            #expect(BlockState(id).tintSource(at: 0, gameDataVersion: 5023) == nil)
-        }
-        for version: Int32 in [0, 4000, 5022, 5024, .max] {
-            for id in ["oak_leaves", "cherry_leaves"] {
-                #expect(BlockState(id).tintSource(at: 0, gameDataVersion: version) == nil)
-            }
+    @Test func unrelatedMalformedPropertiesDoNotHideKnownTints() {
+        #expect(BlockState("grass_block", properties: ["snowy": "invalid"]).tintSource(at: 0) == .biome(.grass, yOffset: 0))
+        #expect(BlockState("redstone_wire", properties: ["north": "invalid", "power": "15"]).tintSource(at: 0) == .constant(0xff3200))
+        #expect(BlockState("redstone_wire", properties: ["power": "invalid"]).tintSource(at: 1) == .constant(0xffffff))
+        #expect(BlockState("cherry_leaves", properties: ["distance": "invalid"]).tintSource(at: 0) == .constant(0xffffff))
+    }
+
+    @Test func unknownCodeFactsAndInvalidIndexesStayUnavailable() {
+        for id in ["example:oak_leaves", "example:grass_block", "example:cherry_leaves",
+                   "minecraft:no_registered_source", "invalid ID"] {
+            #expect(BlockState(id).tintSource(at: 0) == nil)
         }
         for index in [-1, Int.min] {
-            #expect(BlockState("oak_leaves").tintSource(at: index, gameDataVersion: 5023) == nil)
-            #expect(BlockState("cherry_leaves").tintSource(at: index, gameDataVersion: 5023) == nil)
+            #expect(BlockState("oak_leaves").tintSource(at: index) == nil)
+            #expect(BlockState("cherry_leaves").tintSource(at: index) == nil)
         }
     }
 }

@@ -6,13 +6,14 @@
     "item_model_prototypes",
     "block_default_properties",
     "block_model_seeds",
+    "block_tints",
     "spawn_egg_relationships",
     "equipment_attachments"
   ],
   "clientSHA1": "e877b6a07acd633fb3bb475002175cec036e7b87",
   "extractedSHA256": {
     "entity-types.json": "66fdfdd99fdd7b73fffefe97ad6a52e29ef740d96216ccfd869d51432ce2ed34",
-    "facts.json": "15e05a688159615a62f8134d8c409abc45cd5e9a2d7c84f13528b3b256a20781"
+    "facts.json": "8fc1dff0bea97f444ff1def2564fbec3f58ab9abe7c24b0cb669c63210efe749"
   },
   "minecraft": {
     "build_time": "2026-09-15T11:20:48+00:00",
@@ -36,11 +37,12 @@
     "Tools/EntityTypes/ExtractEntityTypes.java": "034ef2aa06a3d896a8a5d400f43931808f84a2651e3c1767f6ae8827312d320e",
     "Tools/GameFacts/ExtractBlockDefaults.java": "aeaf59aeed1cd8f0fdd041d4342a1e42c58f0e9696094a0057650957e8250272",
     "Tools/GameFacts/ExtractBlockModelSeeds.java": "fb19695b5ea82ac2d7f419a0aacea3f58e34dbc6adee28d89560f7bc30b61e2d",
+    "Tools/GameFacts/ExtractBlockTints.java": "02b37cc4742b19543939ac683d1c733ecd5bb21640794082d23780c7dcbb1cad",
     "Tools/GameFacts/ExtractEnchantmentEffects.java": "ffaa5e1d13bf377b7b9864f212d92c29d4ef986f944881a840b2e2e111a8d6f8",
     "Tools/GameFacts/ExtractEquipmentFacts.java": "d606927f602618942d6e0d6f6874f0679f2b3338f957529ec27512876bda5a86",
-    "Tools/GameFacts/ExtractGameFacts.java": "a204d7d63e8f1c8de937819daf0f0744e6d7e8f415024f8f42dd1b4b5f2141ba",
+    "Tools/GameFacts/ExtractGameFacts.java": "708a3d78889d324fa096e21a02d211aa83a19f66b8d7cac294d5485d9584b821",
     "Tools/GameFacts/ExtractItemModelFacts.java": "eb89922e3e4600f2b950357eea289a23a46053f603d7e683628bfb50d3192d61",
     "Tools/GameFacts/ExtractSpawnEggs.java": "7f7b6f24175c42ec56f024c806f91ca4184e4997be56768aae6f4f84565a4eba",
-    "Tools/GameFacts/regenerate.py": "c51de64302c2a705da79b8534b15961e1f8021ab83a23779071d3e508c8d3b84"
+    "Tools/GameFacts/regenerate.py": "63cb61772c2f91762a3c208bc0dff1fb7d5802fc841f5e5ce41f937be749f861"
   }
 }
