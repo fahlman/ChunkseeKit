@@ -1985,8 +1985,16 @@ Callers that already have complete terrain should reuse `entities(in: Chunk)`.
 
 The adapter does not supply Minecraft's loader-only `__context` or simulate future terrain
 generation below the original build range. Its proofs compare the game's no-context upgrade;
-dimension/generator-dependent regeneration metadata and the still older numeric block/item
-formats remain on #255. This is format interpretation, not a save converter.
+dimension/generator-dependent regeneration metadata and numeric block storage remain on #255.
+This is format interpretation, not a save converter.
+
+Older numeric item IDs use Minecraft's generated ItemIdFix table before the existing named-item
+variant and rename pipeline. This applies to inventories, containers, equipment and nested
+contents through their shared reader, using the containing file's saved version. Missing versions
+have Minecraft's oldest-save meaning. Unknown numbers follow the game's empty-item fallback;
+malformed nonnumeric values and raw NBT are preserved. RegionFacts interpretation 25 requires
+older cached item omissions to be reread. This does not yet implement the separate historical
+potion, spawn-egg and banner field conversions; those remain on #255.
 
 Saved sign text (`front_text`, `back_text`, or `Text1`–`Text4`) and spawner `SpawnData` are read
 independently of the type's name. Known empty spawners remain available when their nullable
