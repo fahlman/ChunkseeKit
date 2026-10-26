@@ -528,15 +528,16 @@ correction is unreleased, tracked on #163. Public-path regressions cover categor
 links, namespace aliases, lower real-resource fallback, malformed overrides and unreadable regular
 files. Directories named with a .json suffix are not registered files.
 
-`BlockState.tintSource(at:gameDataVersion:)` owns the 26.3 registered in-world block-model tint
-sources, including fixed spruce/birch/lily colors, flower tint indexes, upper-plant biome offsets,
-stem age and redstone power. Color-driving properties use the same verified 26.3 registry
-defaults as block models. Vanilla identifiers and nonnegative indexes without a registered
-source return white (no tint), matching BlockColors.getTintSources and
-ModelBlockRenderer.computeTintColor in the official 26.3 jar. This is a tint answer, not proof
-of block registry membership. Malformed color-driving values, negative indexes, other namespaces
-and unverified versions remain unavailable. The source registration table's regeneration is
-tracked on #222; the no-source rule adds no block inventory.
+`BlockState.tintSource(at:)` owns in-world block-model tint interpretation. The single release
+tool extracts actual BlockColors registrations and BlockTintSource.colorInWorld results for
+every registered state, including constants, flower indexes, upper-plant biome offsets, stem age
+and redstone power. It retains only properties that affect this method; unrelated malformed
+fields do not hide known colors. Omitted values use the same generated defaults as block models.
+Known blocks with no source at a nonnegative index return the game's ModelBlockRenderer
+missing-source result (white, preserving cherry/pale-oak texture colors). Unknown code behavior,
+malformed color-driving values and negative indexes remain unavailable. These facts apply across
+versions; they do not establish block existence or picture availability. The former game-version
+argument is removed, an intentional breaking API change for fahlman/Chunksee#431's adoption.
 Particle and item colors are distinct. Water/bubble block-model tints are white; fluid water
 uses the biome's water color directly. `BiomeDefinition.color` resolves the four biome color
 kinds, including overrides, climate clamping, dark-forest adjustment and position-dependent
@@ -1141,7 +1142,7 @@ adopts the release, tracked on fahlman/Chunksee#432/#438. The held app checkout 
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
-relationships, saved equipment attachment identities and block seed methods. It verifies the installed stable
+relationships, saved equipment attachment identities, block seed methods and block tints. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
