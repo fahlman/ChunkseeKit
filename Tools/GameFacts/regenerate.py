@@ -19,6 +19,45 @@ def quoted(value):
     return json.dumps(value, ensure_ascii=False)
 
 
+def creature_color_sources(facts, entities, notice):
+    source = notice + "// Sources: SheepRenderState.getWoolColor/ColorLerper.Type.SHEEP and AxolotlRenderer.TEXTURE_BY_TYPE.\n"
+    source += "enum GeneratedCreatureColors {\n"
+    proofs = notice + "import ChunkseeKit\n\nenum GeneratedCreatureColorProofs {\n"
+    proofs += "    struct Case: Sendable {\n        let species: String\n        let variant: String\n        let expected: CreatureAppearance.ColorSource\n    }\n\n"
+    proof_rows, mappings = [], []
+
+    def identifier(value):
+        if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", value):
+            raise ValueError("Invalid creature color identifier: " + str(value))
+        return quoted(value)
+
+    def value(kind, raw):
+        if kind == "tint" and type(raw) is int and 0 <= raw <= 0xffffff:
+            return f".tint(0x{raw:06x})"
+        if kind == "texture": return ".texture(" + identifier(raw) + ")"
+        raise ValueError("Invalid creature color source")
+
+    for index, entry in enumerate(facts):
+        if not entry["values"] or entry["values"].keys() != entry["proofs"].keys():
+            raise ValueError("Missing creature color proofs")
+        members = [name for name, entity in sorted(entities.items()) if entry["entityClass"] in entity["ancestry"]]
+        if not members: raise ValueError("Unregistered creature color class: " + entry["entityClass"])
+        source += f"    // {entry['entityClass']}\n"
+        source += f"    private static let values{index}: [String: CreatureAppearance.ColorSource] = [\n"
+        for variant, raw in sorted(entry["values"].items()):
+            source += f"        {identifier(variant)}: {value(entry['kind'], raw)},\n"
+        source += "    ]\n\n"
+        for species in members:
+            mappings.append(f"        {identifier(species)}: values{index},\n")
+            for variant, expected in sorted(entry["proofs"].items()):
+                proof_rows.append(f"        Case(species: {identifier(species)}, variant: {identifier(variant)}, expected: {value(entry['kind'], expected)}),\n")
+    source += "    static let sources: [String: [String: CreatureAppearance.ColorSource]] = [\n" + "".join(mappings) + "    ]\n}\n"
+    proofs += "    // Results from the game's render-state and texture-selection methods.\n"
+    proofs += "    static let cases: [Case] = [\n" + "".join(proof_rows) + "    ]\n}\n"
+    return {"Sources/ChunkseeKit/GeneratedCreatureColors.swift": source,
+            "Tests/ChunkseeKitTests/GeneratedCreatureColorProofs.swift": proofs}
+
+
 def keyed_values(values, prefix="minecraft:"):
     entries = []
     for key, value in sorted(values.items(), key=lambda item: int(item[0])):
@@ -561,7 +600,8 @@ def generated_sources(facts, entities):
             seed_source += f"            {quoted(facing)}: {vector(offset)},\n"
         seed_source += "        ],\n"
     seed_source += "    ]\n}\n"
-    return {"Sources/ChunkseeKit/DyeColor.swift": dye_source,
+    return {**creature_color_sources(facts["creatureColors"], entities, notice),
+            "Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
             "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
             "Sources/ChunkseeKit/GeneratedItemModelFacts.swift": item_source,
@@ -611,10 +651,10 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
