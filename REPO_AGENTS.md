@@ -331,7 +331,7 @@ item reads with the old literal-only rule. No public API or serialized shape cha
 
 `DimensionType` owns validated build bounds, logical height and the ceiling flag.
 The no-argument dimension queries are removed: callers must explicitly supply selected assets
-or `nil`. This source-breaking change requires a minor release and app adoption on #431.
+or `nil`. This source-breaking change requires a minor release and app adoption on fahlman/Chunksee#431.
 
 `World.dimensionTypes(assets:)` follows saved dimension-to-type links in modern world-generation data
 or legacy inline settings. Enabled folder packs resolve in reverse priority order; game
