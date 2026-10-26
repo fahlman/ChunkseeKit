@@ -563,6 +563,15 @@ All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,8
 and 40,401 swamp positions match an independent official-26.3 probe. These tint APIs are unreleased
 for #361; app adoption, biome selection/blending, rendering/cache identity and timing remain there.
 
+`GameAssets.containsBlockDefinition(_:)` owns selected-jar blockstate-file evidence, excluding
+GeneratedNonBlockDefinitions from BlockStateDefinitions.STATIC_DEFINITIONS after registered-block
+precedence. No registered-block list is bundled. The shared validated resource path and ZIP directory
+supply presence without decoding model payloads; a changed archive stays unknown. The existing
+ZIP override-presence API treats that unknown as shadowing, so invalid higher resources never
+expose lower ones. File presence is not proof of live/modded registry membership or drawable
+resources. This additive #234 part-1 API needs a minor release; picture diagnostics remain part 2.
+No region/chunk decoding, renderer or RegionFacts interpretation changes.
+
 `GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
 that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
 resolved materials, tint indices, default/explicit UVs, rotations and GUI settings. It retains the
@@ -1199,7 +1208,7 @@ Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for 
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults. It verifies the installed stable
+models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot

@@ -797,6 +797,15 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+`GameAssets.containsBlockDefinition(_:)` reports blockstate-file presence in the selected jar,
+excluding code-generated rendering-only definitions. No game jar or an unreadable archive snapshot
+leaves the answer unknown; a valid absent path is false. Custom identifiers and parseable version
+labels use the same lookup. This is resource evidence, not proof of membership in a running or
+modded game's registry, nor a claim that the definition/model/texture can be rendered. Minecraft's
+BlockStateDefinitions combines synthetic rendering definitions with the live block registry;
+only its non-block exceptions are generated. Missing-picture diagnostics remain separate #234 work.
+This additive API needs a minor release; no world scan or cache interpretation changes.
+
 `ItemStack.itemModelID` identifies the item definition used for its picture. It reads the saved
 `minecraft:item_model` reference with the shared Identifier codec; absent overrides use the item's
 ID, the standard prototype default verified in 26.3. Removed or malformed components return nil,
