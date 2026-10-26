@@ -63,18 +63,23 @@ import Testing
     @Test func mirroredDragonSkinsAndPhaseZeroRotationsComposeWithTheItem() throws {
         let dragon = try boxes(#require(assets(node("dragon")).defaultItemModel("pack:sample")))
         let horn = dragon[2]
-        #expect(horn.faces[.east]?.uv == SIMD4(0.375, 0.375, 0, 0.625))
-        #expect(horn.faces[.west]?.uv == SIMD4(0.875, 0.375, 0.5, 0.625))
-        #expect(horn.faces[.up]?.uv == SIMD4(0.5, 0, 0.375, 0.375))
-        #expect(horn.faces[.east]?.rotation == 0)
+        #expect(horn.faces[.east]?.textureCoordinates == [SIMD2<Float>(0.375, 0.375), SIMD2(0.375, 0.625),
+            SIMD2(0, 0.625), SIMD2(0, 0.375)].map { $0 / 16 })
+        #expect(horn.faces[.west]?.textureCoordinates == [SIMD2<Float>(0.875, 0.375), SIMD2(0.875, 0.625),
+            SIMD2(0.5, 0.625), SIMD2(0.5, 0.375)].map { $0 / 16 })
+        #expect(horn.faces[.up]?.textureCoordinates == [SIMD2<Float>(0.5, 0), SIMD2(0.5, 0.375),
+            SIMD2(0.375, 0.375), SIMD2(0.375, 0)].map { $0 / 16 })
         #expect(dragon[4].faces[.west]?.uv == SIMD4(0, 0.375, 0.375, 0.625))
         let jaw = try #require(dragon.last?.rotation)
-        #expect(jaw.angles == .axis(.x, 0.2 * 180 / .pi) && !jaw.rescale)
+        guard case .axis(.x, let jawAngle) = jaw.angles else { throw Invalid.model }
+        #expect(abs(jawAngle - 0.2 * 180 / .pi) < 0.00001 && !jaw.rescale)
         #expect(abs(jaw.origin.y - 2.99) < 0.00001 && jaw.origin.x == 8 && jaw.origin.z == 14)
         let piglin = try boxes(#require(assets(node("piglin")).defaultItemModel("pack:sample")))
-        #expect(piglin[4].rotation?.origin == SIMD3(3.5, 6, 8))
-        #expect(piglin[4].rotation?.angles == .axis(.z, -0.7 * 180 / .pi))
-        #expect(piglin[5].rotation?.angles == .axis(.z, 0.7 * 180 / .pi))
+        for (originX, expectedAngle): (Float, Float) in [(3.5, -0.7 * 180 / .pi), (12.5, 0.7 * 180 / .pi)] {
+            let ear = try #require(piglin.first { $0.rotation?.origin == SIMD3(originX, 6, 8) }?.rotation)
+            guard case .axis(.z, let angle) = ear.angles else { throw Invalid.model }
+            #expect(abs(angle - expectedAngle) < 0.00001)
+        }
     }
 
     @Test func textureOverridesKeepTheirNamespaceAndInvalidDefinitionsStayUnavailable() throws {
@@ -99,7 +104,7 @@ import Testing
 
     @Test func versionsTransformsAndWholeItemBudgetsUseTheExistingLimits() throws {
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("pack:sample") == nil)
+            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("pack:sample") != nil)
         }
         var changed = node("piglin"), unsupported = transform
         unsupported["scale"] = [2, 1, 1]; changed["transformation"] = unsupported

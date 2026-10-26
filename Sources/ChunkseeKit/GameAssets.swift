@@ -45,9 +45,9 @@ public struct GameAssets: Sendable {
     /// This explicitly chooses a default variant, not live property evaluation or a saved override.
     /// Selected unsupported/malformed resources return nil. Resolution shares a 16 MiB JSON
     /// and 4096-element budget across at most 64 selected nodes and 32 model parts.
-    /// Closed single chests, shulker boxes and plain shields use verified 26.3 geometry as
-    /// ordinary elements. Supported ancestor transforms compose before the base GUI transform;
-    /// other transforms and unverified versions remain unsupported. Textures come from the jar.
+    /// Supported static special renderers use geometry generated from Minecraft's baked models,
+    /// independently of version labels. Supported ancestor transforms compose before the base
+    /// GUI transform; unrepresentable transforms remain unavailable. Textures come from the jar.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
         try? AssetItemReader(assets: self, selection: nil).read(identifier)
     }

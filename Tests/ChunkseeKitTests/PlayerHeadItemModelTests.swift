@@ -127,9 +127,9 @@ import Testing
         }
     }
 
-    @Test func playerHeadsKeepVersionTransformAndItemLimits() throws {
+    @Test func playerHeadsIgnoreVersionLabelsAndKeepTransformAndItemLimits() throws {
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(version: name, dataVersion: version).defaultItemModel("pack:sample") == nil)
+            #expect(try assets(version: name, dataVersion: version).defaultItemModel("pack:sample") != nil)
         }
         var changed = node(), unsupported = transform
         unsupported["translation"] = [100, 0, 0]; changed["transformation"] = unsupported

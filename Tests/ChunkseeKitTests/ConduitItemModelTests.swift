@@ -73,9 +73,9 @@ import Testing
         #expect(scaled.faces == ordinary.faces)
     }
 
-    @Test func unverifiedVersionsInvalidDefinitionsAndCommonLimitsStayUnavailable() throws {
+    @Test func versionsRenderWhileInvalidDefinitionsAndCommonLimitsStayUnavailable() throws {
         for (name, version) in [("26.2", 4903), ("26.4", 5023), ("26.3", 9999)] {
-            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("pack:sample") == nil)
+            #expect(try assets(node(), version: name, dataVersion: version).defaultItemModel("pack:sample") != nil)
         }
         for type in ["different:conduit", "unknown", "../conduit"] {
             #expect(try assets(node(type: type)).defaultItemModel("pack:sample") == nil)

@@ -118,7 +118,6 @@ struct AssetItemReader {
 
     private func special(_ node: [String: Any], transform: AssetItemTransform,
                          budget: inout AssetReadBudget) throws -> AssetModel {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3 else { throw Invalid.asset }
         let model = try AssetJSON.object(node["model"]), type = try AssetJSON.identifier(model["type"])
         guard let shape = SpecialItemModel(rawValue: type.description) else { throw Invalid.asset }
         if shape == .chest || shape == .shulker,
