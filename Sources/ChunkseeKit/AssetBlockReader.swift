@@ -5,23 +5,23 @@ struct AssetBlockReader {
     let assets: GameAssets
 
     func read(_ state: BlockState) throws -> AssetBlock {
-        guard let data = assets.resource(state.id, directory: "blockstates", extension: "json") else { throw Invalid.asset }
+        let data = try assets.requiredResource(state.id, directory: "blockstates", extension: "json", missing: AssetReadError.missingModel)
         var budget = AssetReadBudget(), nodes = 0, models = 0
         try budget.consume(bytes: data.count)
-        let root = try AssetJSON.object(JSONSerialization.jsonObject(with: data))
-        guard root["variants"] != nil || root["multipart"] != nil else { throw Invalid.asset }
+        let root = try AssetJSON.object(from: data)
+        guard root["variants"] != nil || root["multipart"] != nil else { throw AssetReadError.invalidData }
         let properties = BlockProperties(state)
         let seedOffset = BlockModelSeed.offset(for: properties)
         if let raw = root["variants"] {
             let variants = try AssetJSON.object(raw)
-            guard variants.count <= 4096 else { throw Invalid.asset }
+            guard variants.count <= 4096 else { throw AssetReadError.limitExceeded }
             var selected: Any?
             for (selector, model) in variants {
-                guard let matches = try variantMatches(selector, properties: properties) else { throw Invalid.asset }
+                guard let matches = try variantMatches(selector, properties: properties) else { throw AssetReadError.incompleteState }
                 if matches {
                     // The game reports overlapping selectors. Our unordered dictionary cannot
                     // reproduce its partial replacement order, so leave the result unavailable.
-                    guard selected == nil else { throw Invalid.asset }
+                    guard selected == nil else { throw AssetReadError.invalidData }
                     selected = model
                 }
             }
@@ -31,18 +31,18 @@ struct AssetBlockReader {
             }
         }
         // Explicit variants take precedence; multipart fills the remaining states.
-        guard let raw = root["multipart"] else { throw Invalid.asset }
+        guard let raw = root["multipart"] else { throw AssetReadError.invalidData }
         let selectors = try AssetJSON.array(raw)
-        guard selectors.count <= 4096 else { throw Invalid.asset }
+        guard selectors.count <= 4096 else { throw AssetReadError.limitExceeded }
         var parts = [AssetBlock.Part]()
         for raw in selectors {
             let selector = try AssetJSON.object(raw)
-            guard let apply = selector["apply"] else { throw Invalid.asset }
+            guard let apply = selector["apply"] else { throw AssetReadError.invalidData }
             let matches: Bool?
             if let condition = selector["when"] {
                 matches = try conditionMatches(condition, properties: properties, depth: 0, nodes: &nodes)
             } else { matches = true }
-            guard let matches else { throw Invalid.asset }
+            guard let matches else { throw AssetReadError.incompleteState }
             if matches { parts.append(try part(apply, budget: &budget, models: &models)) }
         }
         return .init(parts: parts, seedOffset: seedOffset, isMultipart: true)
@@ -51,44 +51,45 @@ struct AssetBlockReader {
     private func variantMatches(_ selector: String, properties: BlockProperties) throws -> Bool? {
         if selector.isEmpty { return true }
         let pairs = selector.split(separator: ",", omittingEmptySubsequences: false)
-        guard pairs.count <= 4096 else { throw Invalid.asset }
+        guard pairs.count <= 4096 else { throw AssetReadError.limitExceeded }
         var values = [String: String]()
         for pair in pairs {
             let fields = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             guard fields.count == 2, !fields[0].isEmpty, !fields[1].isEmpty,
-                  values.updateValue(String(fields[1]), forKey: String(fields[0])) == nil else { throw Invalid.asset }
+                  values.updateValue(String(fields[1]), forKey: String(fields[0])) == nil else { throw AssetReadError.invalidData }
         }
         return all(values.map { key, value in properties[key].map { $0 == value } })
     }
 
     private func conditionMatches(_ raw: Any, properties: BlockProperties, depth: Int, nodes: inout Int) throws -> Bool? {
-        guard depth < 64, nodes < 4096 else { throw Invalid.asset }
+        guard depth < 64, nodes < 4096 else { throw AssetReadError.limitExceeded }
         nodes += 1
         let condition = try AssetJSON.object(raw)
-        guard !condition.isEmpty, condition.count <= 4096 - nodes else { throw Invalid.asset }
+        guard !condition.isEmpty else { throw AssetReadError.invalidData }
+        guard condition.count <= 4096 - nodes else { throw AssetReadError.limitExceeded }
         if condition["OR"] != nil || condition["AND"] != nil {
-            guard condition.count == 1 else { throw Invalid.asset }
+            guard condition.count == 1 else { throw AssetReadError.invalidData }
             let isOr = condition["OR"] != nil
             let terms = try AssetJSON.array(condition[isOr ? "OR" : "AND"])
-            guard terms.count <= 4096 - nodes else { throw Invalid.asset }
+            guard terms.count <= 4096 - nodes else { throw AssetReadError.limitExceeded }
             let matches = try terms.map { try conditionMatches($0, properties: properties, depth: depth + 1, nodes: &nodes) }
             return isOr ? any(matches) : all(matches)
         }
         var matches = [Bool?]()
         for (key, raw) in condition {
-            guard !key.isEmpty else { throw Invalid.asset }
+            guard !key.isEmpty else { throw AssetReadError.invalidData }
             let value: String
             if let string = raw as? String { value = string }
             else if let number = raw as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() {
                 value = number.boolValue ? "true" : "false"
             } else { value = String(try AssetJSON.integer(raw)) }
             let terms = value.split(separator: "|", omittingEmptySubsequences: false)
-            guard terms.count <= 4096 - nodes else { throw Invalid.asset }
+            guard terms.count <= 4096 - nodes else { throw AssetReadError.limitExceeded }
             nodes += terms.count
             let alternatives: [Bool?] = try terms.map { term in
                 let negated = term.hasPrefix("!")
                 let expected = negated ? term.dropFirst() : term
-                guard !expected.isEmpty else { throw Invalid.asset }
+                guard !expected.isEmpty else { throw AssetReadError.invalidData }
                 return properties[key].map { ($0 == expected) != negated }
             }
             matches.append(any(alternatives))
@@ -99,14 +100,15 @@ struct AssetBlockReader {
     private func part(_ raw: Any, budget: inout AssetReadBudget, models: inout Int) throws -> AssetBlock.Part {
         let weighted = raw is [Any]
         let entries = weighted ? try AssetJSON.array(raw) : [raw]
-        guard !entries.isEmpty, entries.count <= 256 - models else { throw Invalid.asset }
+        guard !entries.isEmpty else { throw AssetReadError.invalidData }
+        guard entries.count <= 256 - models else { throw AssetReadError.limitExceeded }
         models += entries.count
         var total = 0
         let alternatives: [AssetBlock.Alternative] = try entries.map { raw in
             let entry = try AssetJSON.object(raw), id = try AssetJSON.identifier(entry["model"])
             // A standalone variant has no weight field in the game's codec.
             let weight = weighted ? try entry["weight"].map(AssetJSON.integer) ?? 1 : 1
-            guard weight > 0, weight <= Int(Int32.max) - total else { throw Invalid.asset }
+            guard weight > 0, weight <= Int(Int32.max) - total else { throw AssetReadError.invalidData }
             total += weight
             let rotation = try SIMD3(angle(entry["x"]), angle(entry["y"]), angle(entry["z"]))
             let uvLock = try entry["uvlock"].map(AssetJSON.boolean) ?? false
@@ -119,12 +121,11 @@ struct AssetBlockReader {
     private func angle(_ raw: Any?) throws -> Int {
         guard let raw else { return 0 }
         let value = try AssetJSON.integer(raw)
-        guard value.isMultiple(of: 90) else { throw Invalid.asset }
+        guard value.isMultiple(of: 90) else { throw AssetReadError.invalidData }
         return (value % 360 + 360) % 360
     }
 }
 
-private enum Invalid: Error { case asset }
 
 /// Unknown properties remain unknown unless another term settles the whole predicate.
 private func all(_ values: [Bool?]) -> Bool? {

@@ -618,6 +618,19 @@ and owns images and caching. Potion color calculation uses ItemStack.potionColor
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
 is added here.
 
+The unreleased #234 diagnostics add typed-throwing model, default/saved item, block, plain-texture
+and palette-recipe reads. Existing optional APIs delegate to those same paths. AssetReadError
+reports missingModel/missingTexture only after the unchanged ZIP directory confirms absence;
+successful reads keep their existing I/O path. Changed/unreadable entries, malformed definitions,
+unsupported selected features/transforms, incomplete saved state, limits and unresolved helper
+failures remain distinct. Model success does not establish texture availability or PNG validity.
+The atlas reader retains source order and treats plain-sprite aliases as unsupported context;
+later supported palette recipes can replace them. Missing atlas context never becomes a missing
+model/texture verdict. Tests cover public readers, inherited failures, selected versus unselected
+branches, saved selections, heads, CRC/source changes, aliases and resource limits. This additive
+API needs a minor release and app adoption on fahlman/Chunksee#430; no save/region/cache
+interpretation or renderer traversal changes.
+
 The unreleased #236 `GameAssets.spawnEggItemID(for:)` query exposes the game's entity-to-egg
 relationship when the jar's item definition is readable. Tools/GameFacts invokes the official
 SpawnEggItem.byId after item components are bound; its ENTITY_DATA/TypedEntityData lookup is

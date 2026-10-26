@@ -37,7 +37,13 @@ public struct GameAssets: Sendable {
     /// Missing, cyclic, unsupported or malformed models return nil. Resolution is bounded to 64
     /// parents/references and 16 MiB of model JSON in total; no shared mutable cache is introduced.
     public func model(_ identifier: String) -> AssetModel? {
-        try? AssetModelReader(assets: self).read(identifier)
+        try? readModel(identifier)
+    }
+
+    /// The throwing form of model(_:), preserving the reason a selected model failed.
+    /// Texture payloads are read separately; a valid model may reference an absent PNG.
+    public func readModel(_ identifier: String) throws(AssetReadError) -> AssetModel {
+        try AssetReadError.resolving { try AssetModelReader(assets: self).read(identifier) }
     }
 
     /// Resolves a static inventory illustration using display-context GUI cases, other select/range
@@ -49,7 +55,12 @@ public struct GameAssets: Sendable {
     /// independently of version labels. Supported ancestor transforms compose before the base
     /// GUI transform; unrepresentable transforms remain unavailable. Textures come from the jar.
     public func defaultItemModel(_ identifier: String) -> AssetItem? {
-        try? AssetItemReader(assets: self, selection: nil).read(identifier)
+        try? readDefaultItemModel(identifier)
+    }
+
+    /// The throwing form of defaultItemModel(_:), with the same static selection policy.
+    public func readDefaultItemModel(_ identifier: String) throws(AssetReadError) -> AssetItem {
+        try AssetReadError.resolving { try AssetItemReader(assets: self, selection: nil).read(identifier) }
     }
 
     /// Resolves an inventory illustration with the stack's saved model reference, trim material
@@ -65,7 +76,14 @@ public struct GameAssets: Sendable {
     /// unreadable saved values remain unavailable. Live properties retain the static choices.
     /// Unsupported selected models return nil; they never silently recover the untrimmed picture.
     public func itemModel(for selection: ItemModelSelection) -> AssetItem? {
-        try? AssetItemReader(assets: self, selection: selection).read(selection.modelID.description)
+        try? readItemModel(for: selection)
+    }
+
+    /// The throwing form of itemModel(for:), preserving selected-branch failures.
+    public func readItemModel(for selection: ItemModelSelection) throws(AssetReadError) -> AssetItem {
+        try AssetReadError.resolving {
+            try AssetItemReader(assets: self, selection: selection).read(selection.modelID.description)
+        }
     }
 
     /// Matches supplied block properties and resolves the selected variant or multipart models.
@@ -79,7 +97,13 @@ public struct GameAssets: Sendable {
     /// at most 4096 selectors/condition terms and 64 nested conditions. Images and caching stay
     /// client-owned. Multipart per-term negation follows the resource format without a version gate.
     public func blockModel(for state: BlockState) -> AssetBlock? {
-        try? AssetBlockReader(assets: self).read(state)
+        try? readBlockModel(for: state)
+    }
+
+    /// The throwing form of blockModel(for:). An unresolved saved property is distinct from
+    /// an absent resource and must not be presented as Minecraft's missing-texture pattern.
+    public func readBlockModel(for state: BlockState) throws(AssetReadError) -> AssetBlock {
+        try AssetReadError.resolving { try AssetBlockReader(assets: self).read(state) }
     }
 
     /// Whether this selected jar contains a blockstate definition, excluding code-generated
@@ -96,7 +120,15 @@ public struct GameAssets: Sendable {
 
     /// Original PNG bytes, CRC-checked and bounded to 16 MiB. Decoding and animation are client work.
     public func texture(_ identifier: String) -> Data? {
-        resource(identifier, directory: "textures", extension: "png")
+        try? readTexture(identifier)
+    }
+
+    /// Reads a plain PNG entry with failure details. Image decoding/animation stay client-owned;
+    /// generated atlas sprites still use palettedTexture and its referenced PNGs.
+    public func readTexture(_ identifier: String) throws(AssetReadError) -> Data {
+        try AssetReadError.resolving {
+            try requiredResource(identifier, directory: "textures", extension: "png", missing: AssetReadError.missingTexture)
+        }
     }
 
     /// Resolves a generated palette sprite in one atlas, without reading its PNG payloads.
@@ -108,7 +140,14 @@ public struct GameAssets: Sendable {
     /// Work is bounded to 16 MiB JSON, 256 sources and 4,096 generated sprite entries.
     /// Resource-pack layering, animation, image decoding and caching are not performed here.
     public func palettedTexture(_ identifier: String, in atlas: String) -> AssetPalettedTexture? {
-        try? AssetPalettedTextureReader(assets: self).read(identifier, atlas: atlas)
+        try? readPalettedTexture(identifier, in: atlas)
+    }
+
+    /// The throwing form of palettedTexture(_:in:). Nil means no generated palette recipe;
+    /// unsupported atlas sources or plain-sprite aliases remain distinct from absent PNGs.
+    /// An absent atlas is unavailable context, not a missing model or texture.
+    public func readPalettedTexture(_ identifier: String, in atlas: String) throws(AssetReadError) -> AssetPalettedTexture? {
+        try AssetReadError.resolving { try AssetPalettedTextureReader(assets: self).read(identifier, atlas: atlas) }
     }
 
     enum ResourceDomain: String { case assets, data }
@@ -117,6 +156,17 @@ public struct GameAssets: Sendable {
                   domain: ResourceDomain = .assets) -> Data? {
         guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix, domain: domain) else { return nil }
         return resources.read(path)
+    }
+
+    func requiredResource(_ identifier: String, directory: String, extension suffix: String,
+                          missing: (String) -> AssetReadError) throws -> Data {
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else {
+            throw AssetReadError.invalidData
+        }
+        if let data = resources.read(path) { return data }
+        // Successful reads keep their existing I/O path; only a failure needs a presence check.
+        if resources.presence(of: path) == false { throw missing(path) }
+        throw AssetReadError.unavailableResource(path)
     }
 
     func containsResource(_ identifier: String, directory: String, extension suffix: String) -> Bool {
@@ -128,6 +178,14 @@ public struct GameAssets: Sendable {
     func resourcePresence(_ identifier: String, directory: String, extension suffix: String) -> Bool? {
         guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else { return nil }
         return resources.presence(of: path)
+    }
+
+    func requiredResourcePresence(_ identifier: String, directory: String, extension suffix: String) throws -> Bool {
+        guard let path = Self.resourcePath(identifier, directory: directory, extension: suffix) else {
+            throw AssetReadError.invalidData
+        }
+        guard let present = resources.presence(of: path) else { throw AssetReadError.unavailableResource(path) }
+        return present
     }
 
     private static func resourcePath(_ identifier: String, directory: String, extension suffix: String,
