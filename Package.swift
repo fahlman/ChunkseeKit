@@ -14,7 +14,7 @@ let package = Package(
         .systemLibrary(name: "CZlib", path: "Sources/CZlib"),
         .target(name: "ChunkseeKit", dependencies: ["CZlib"]),
         .target(name: "ChunkseeIndex", dependencies: ["ChunkseeKit"]),
-        .target(name: "ChunkseeKitTestSupport", dependencies: ["ChunkseeKit"]),
+        .target(name: "ChunkseeKitTestSupport", dependencies: ["ChunkseeKit", "CZlib"]),
         .executableTarget(name: "chunksee", dependencies: ["ChunkseeKit", "ChunkseeIndex"]),
         .testTarget(name: "ChunkseeKitTests", dependencies: ["ChunkseeKit", "ChunkseeKitTestSupport", "CZlib"]),
         .testTarget(name: "ChunkseeIndexTests", dependencies: ["ChunkseeIndex", "ChunkseeKit", "ChunkseeKitTestSupport"]),

@@ -69,6 +69,7 @@ public final class ExtractGameFacts {
         facts.add("trading", ExtractTradingFacts.extract());
         facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
         facts.add("portals", ExtractPortalFacts.extract());
+        facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
 

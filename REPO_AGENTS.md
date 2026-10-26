@@ -72,7 +72,7 @@ repository and depends on this package, the way Euchre depends on EuchreKit. Dep
 | `ChunkseeKit` | `NBT` (read/write, modified UTF-8), `Compression` (zlib/gzip, bounded raw deflate, LZ4 block streams), `RegionFile`, `Chunk`/`ChunkSection`/`PalettedContainer`/`BlockState`, `World`/`Dimension`/`LevelInfo`, `BiomeSampler` | Foundation, CryptoKit, `CZlib` |
 | `ChunkseeIndex` | World catalog and dimension-labelled enumeration, compact retained region inputs and dimension reconciliation/aggregation; matching-item and storage totals, connected biome areas, point-region lookup, grouped deposits, creature membership/identity and query interpretation/matching. No display names, localization, UI state or file decoding | Foundation, `ChunkseeKit` |
 | `chunksee` | Command-line presentation only | `ChunkseeKit`, `ChunkseeIndex` |
-| `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`); packing stays independent of the decoder | Foundation, `ChunkseeKit` |
+| `ChunkseeKitTestSupport` | Shared synthetic section, chunk, region, UUID and file builders (`Fixtures.swift`), plus independent synthetic ZIP framing (`TestZIP.swift`) | Foundation, `ChunkseeKit`, `CZlib` |
 | `ChunkseeKitTests` | Tests built with the public fixture builders; `CLIFixtures.swift` locates and launches the CLI built beside the test bundle | `ChunkseeKit`, `ChunkseeKitTestSupport`, `CZlib` |
 | `ChunkseeIndexTests` | Public aggregation behavior over synthetic typed inputs and shared save fixtures | Foundation, `ChunkseeIndex`, `ChunkseeKit`, `ChunkseeKitTestSupport` |
 
@@ -99,14 +99,20 @@ that owner; app names, prompts, symbols, category membership and result formatti
 the library. This additive API is available in v0.44.0 and adopted by fahlman/Chunksee#385.
 Retained world-index state and typed result aggregation remain separate work on fahlman/Chunksee#214.
 
-`ChunkseeIndex.NotableBlock` owns the app's existing nine block-search groups and exact ID catalog.
-Its nested Deposit groups the core reader's per-ID counts and enclosing section-height bounds,
-combining ore variants and ordering by the group's raw value. Unknown IDs and common blocks outside
-the catalog remain excluded. These are indexed section ranges, not exact block locations. Core
-scan options and file interpretation are unchanged; client names and search-result wording stay
-outside the module. This additive API is available in v0.45.0; app adoption is fahlman/Chunksee#386.
-It prepares compact typed region contributions without retaining unused heightmaps or repeating
-group aggregation in the app. Tests exercise public scans with shared synthetic fixtures.
+`ChunkseeIndex.NotableBlock` owns the app's nine product search groups. Its immutable Catalog
+consumes the shared block-tag reader's diamond_ores, emerald_ores, gold_ores and lapis_ores;
+there is no copied ore-member list. Nether gold remains its explicitly separate product group,
+removed from gold, and the other individual block groups remain product choices. Missing tags
+stay distinct from known empty tags. Saved members of overlapping tags count in every relevant
+group, including optional declarations whose IDs occur in the save. Deposit groups per-ID counts
+and enclosing section-height bounds in stable group order. Labels and symbols remain client work.
+The same catalog supplies scan blockIDs and RegionIndex/DimensionIndex policy; mismatched
+replacement catalogs are rejected. A resource change requires a fresh dimension index and scans
+for the current IDs. This unreleased #228 change intentionally removes static ids/byID and
+requires catalog parameters on grouped/RegionIndex/DimensionIndex, so it needs a minor release
+and app adoption. Core decoding, serialized RegionFacts and its interpretation version do not
+change. Public tests compose jar/folder/ZIP tags, scan selected IDs, aggregate across groups,
+retain raw palette IDs, and reject contributions from another resource snapshot.
 
 `ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
 failed-read retention, selected deletion and complete cross-region aggregates. Its public
@@ -114,7 +120,7 @@ regionsToRead method supplies the read set for both the client scheduler and upd
 pass always covers all available regions; a completed empty/failed pass is distinct from never-read.
 A broad pass removes
 all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
-the dimension, selected/available coordinates and explicit cave-membership set. Empty successful
+the dimension, selected/available coordinates, explicit cave-membership set and block catalog. Empty successful
 reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
 native marker sort/presentation remains a client concern. Portal and biome joins happen after all
 retained contributions are combined. Heightmaps, inhabited-time grids and ordinary unnamed mobs
@@ -562,6 +568,15 @@ chunks share LegacyRandom's existing 48-bit generator rule; the slime predicate 
 All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,864 biome colors
 and 40,401 swamp positions match an independent official-26.3 probe. These tint APIs are unreleased
 for #361; app adoption, biome selection/blending, rendering/cache identity and timing remain there.
+
+`GameAssets.containsBlockDefinition(_:)` owns selected-jar blockstate-file evidence, excluding
+GeneratedNonBlockDefinitions from BlockStateDefinitions.STATIC_DEFINITIONS after registered-block
+precedence. No registered-block list is bundled. The shared validated resource path and ZIP directory
+supply presence without decoding model payloads; a changed archive stays unknown. The existing
+ZIP override-presence API treats that unknown as shadowing, so invalid higher resources never
+expose lower ones. File presence is not proof of live/modded registry membership or drawable
+resources. This additive #234 part-1 API needs a minor release; picture diagnostics remain part 2.
+No region/chunk decoding, renderer or RegionFacts interpretation changes.
 
 `GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
 that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
@@ -1199,7 +1214,7 @@ Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for 
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults. It verifies the installed stable
+models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot

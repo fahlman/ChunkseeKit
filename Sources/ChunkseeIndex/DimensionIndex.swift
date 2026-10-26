@@ -24,6 +24,7 @@ public struct DimensionIndex: Sendable {
 
     public let dimension: String
     public let caveBiomeIDs: Set<String>
+    public let notableBlocks: NotableBlock.Catalog
     private var hasCompletedPass = false
     public private(set) var regions: [RegionPosition: RegionIndex] = [:]
     public private(set) var containers: [ItemContainer] = []
@@ -43,8 +44,9 @@ public struct DimensionIndex: Sendable {
     public private(set) var paletteBlockIDs: Set<String> = []
     public private(set) var formats = Formats()
 
-    public init(dimension: String, caveBiomeIDs: Set<String>) {
+    public init(dimension: String, caveBiomeIDs: Set<String>, notableBlocks: NotableBlock.Catalog) {
         self.dimension = dimension; self.caveBiomeIDs = caveBiomeIDs
+        self.notableBlocks = notableBlocks
     }
 
     /// The single read-set rule used by callers and reconciliation. A never-read index needs a
@@ -62,12 +64,12 @@ public struct DimensionIndex: Sendable {
     /// is a full pass; later subsets leave unselected contributions untouched, even if unavailable.
     /// A missing replacement for an available region means its read failed, so its old value stays.
     /// A selected region absent from `available` is deleted. Successful empty replacements clear it.
-    /// Only available, selected replacements with this dimension and cave policy are accepted;
+    /// Only available, selected replacements with this dimension, cave policy and block catalog are accepted;
     /// repeated replacements for one coordinate use the last value. Cancellation must be handled
     /// by the caller before it publishes the returned snapshot.
     public func updating(available: Set<RegionPosition>, selected: Set<RegionPosition>?,
                          replacements: [RegionIndex]) -> Self {
-        var next = Self(dimension: dimension, caveBiomeIDs: caveBiomeIDs)
+        var next = Self(dimension: dimension, caveBiomeIDs: caveBiomeIDs, notableBlocks: notableBlocks)
         next.hasCompletedPass = true
         let selection = effectiveSelection(selected)
         next.regions = regions.filter { coordinate, _ in
@@ -76,7 +78,7 @@ public struct DimensionIndex: Sendable {
         }
         let changed = regionsToRead(available: available, selected: selected)
         for region in replacements where changed.contains(region.region) && region.dimension == dimension
-            && region.caveBiomeIDs == caveBiomeIDs {
+            && region.caveBiomeIDs == caveBiomeIDs && region.notableBlocks == notableBlocks {
             next.regions[region.region] = region
         }
         for coordinate in next.regions.keys.sorted(by: { ($0.x, $0.z) < ($1.x, $1.z) }) {
