@@ -3,7 +3,20 @@ import ChunkseeKit
 
 /// Commands about the world as a whole and its players.
 
-func summaryCommand(_ world: World) {
+func summaryAssetsCommand(_ world: World, _ arguments: Arguments) throws {
+    guard arguments.words.count <= 2 else { fail(usage) }
+    let assets: GameAssets?
+    if arguments.words.count == 2 {
+        let path = arguments.words[1]
+        guard let supplied = try GameAssets(contentsOf: URL(fileURLWithPath: path)) else {
+            fail("could not read game files: \(path)")
+        }
+        assets = supplied
+    } else { assets = nil }
+    summaryCommand(world, assets: assets)
+}
+
+func summaryCommand(_ world: World, assets: GameAssets? = nil) {
         let l = world.level
         print("Name:            \(l.name ?? "?")")
         print("Version:         \(l.versionName ?? "?") (data version \(l.dataVersion.map(String.init) ?? "?"))")
@@ -15,7 +28,16 @@ func summaryCommand(_ world: World) {
         if let uuid = l.singleplayerUUID { print("Player:          \(uuid.uuidString.lowercased())") }
         if let date = l.lastPlayed { print("Last played:     \(date)") }
         if let time = l.time { print("World age:       \(time / 72_000) hours (\(time) ticks)") }
-        if let day = try? world.dayTime() { print("Day:             \(day / 24_000 + 1), time of day \(day % 24_000)") }
+        if let timing = try? world.timelineTiming("minecraft:day", assets: assets),
+           let ticks = try? world.clockTimes()[timing.clockID] {
+            if let position = timing.position(at: ticks) {
+                print("Day:             \(position.cycle), time of day \(position.tick)")
+            } else {
+                print("Clock:           \(timing.clockID), \(ticks) ticks")
+            }
+        } else if let ticks = try? world.dayTime() {
+            print("Overworld clock: \(ticks) ticks")
+        }
         if let trader = try? world.wanderingTrader() {
             print("Trader:          next try in \(trader.spawnDelay / 1200) min of play, \(trader.spawnChance)% chance")
         }

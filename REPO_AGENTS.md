@@ -460,7 +460,7 @@ tag/enchantment queries. It accepts any supplied game jar, including one older t
 one used with an unlabeled save, matching Minecraft's use of its running game's resources.
 The caller chooses the game; missing/unreadable resources remain unavailable. This implements
 Ryan's settled WWMD correction on #217. Its 64-pack bound also supplies lighting's preflight; over-budget biome
-queries return no definitions. The remaining dimension and timeline version-specific source
+queries return no definitions. The remaining dimension version-specific source
 selection moves to this owner with #217/#218's data-reader gate removal, preserving its separate
 verified code-fact fallback until then.
 `GameTag`, `GameAssets.tag(_:in:)` and `World.tags(for:in:assets:)` read tag declarations for any
@@ -864,6 +864,20 @@ while other malformed records do not discard unrelated clocks. File errors propa
 ClockState/PackedClockStates codecs establish the saved field and named-map shape. This API does
 not simulate time, evaluate timelines, validate registry membership or infer a dimension's clock.
 The additive reader is unreleased for #173 and fahlman/Chunksee#357; no serialized cache changes.
+
+TimelineTiming adds a clock/period projection through the existing TimelineInput decoder for
+#228 and #232's day-length rows. GameAssets and World read any parseable timeline header; World
+uses enabled folder/ZIP pack priority through WorldTimelineReader, now sharing resourcePacks
+instead of owning a separate jar-version gate. Other lighting/dimension format gates remain
+separate migration work. The official Timeline codec supplies required clock and optional
+positive-Int32 period_ticks; track contents and time markers are not interpreted by this query.
+position(at:) uses Timeline.getPeriodCount/getCurrentTicks signed division and remainder without
+simulating time or narrowing the saved integer to a command result. Negative remainders and
+signed extremes remain readable. Nonperiodic timelines have no cycle. CLI summary reads the
+day timeline's own named saved clock; `summary [game.jar]` supplies optional game resources,
+and absent timing retains raw ticks instead of assuming a day length. Zero-based day numbering
+matches Minecraft's DebugEntryDayCount/F3 counter. Public additive APIs require a minor
+release; app adoption remains #232 item 5. No serialized facts or RegionFacts version changes.
 
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
