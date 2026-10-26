@@ -17,8 +17,7 @@ public struct TradingDefinitions: Sendable, Equatable {
             try Task.checkCancellation()
             guard budget.consume(1), case .data(let data) = try sets.resource(id),
                   let json = object(data, budget: &budget),
-                  json["amount"] != nil, json["trades"] != nil else { continue }
-            let amount = try? AssetJSON.integer(json["amount"])
+                  let amount = Amount(json["amount"]), json["trades"] != nil else { continue }
             let members: [String]?
             if let reference = json["trades"] as? String, reference.hasPrefix("#"),
                let tagID = GameAssets.resourceID(String(reference.dropFirst())) {
@@ -44,7 +43,7 @@ public struct TradingDefinitions: Sendable, Equatable {
             // only a known constant amount establishes selection; no random/context roll is made.
             if let members {
                 if members.isEmpty { answers[id] = false }
-                else if let amount { answers[id] = amount > 0 }
+                else if case .constant(let count) = amount { answers[id] = count > 0 }
             }
         }
         var professions: [String: Bool] = [:]
@@ -77,6 +76,25 @@ public struct TradingDefinitions: Sendable, Equatable {
         guard data.count <= ZipResources.maximumResourceSize, data.count <= budget.bytes else { return nil }
         budget.bytes -= data.count
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+
+    /// ContextIntProviders accepts a bare integer, a typed provider or a registry reference.
+    /// Only the constant form can be evaluated without the merchant's runtime loot context.
+    private enum Amount {
+        case constant(Int), dynamic
+
+        init?(_ raw: Any?) {
+            if let value = try? AssetJSON.integer(raw) { self = .constant(value); return }
+            if let reference = raw as? String, GameAssets.resourceID(reference) != nil {
+                self = .dynamic; return
+            }
+            guard let fields = raw as? [String: Any],
+                  let type = try? AssetJSON.identifier(fields["type"]) else { return nil }
+            if type.description == "minecraft:constant" {
+                guard let value = try? AssetJSON.integer(fields["value"]) else { return nil }
+                self = .constant(value)
+            } else { self = .dynamic }
+        }
     }
 }
 

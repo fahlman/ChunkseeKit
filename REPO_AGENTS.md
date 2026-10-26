@@ -1169,7 +1169,7 @@ Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for 
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities, upper-face support and air flags. It verifies the installed stable
+models, fluid identities, upper-face support, air flags and profession trade-set associations. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot

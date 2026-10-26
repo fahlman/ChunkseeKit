@@ -27,11 +27,14 @@ import Testing
     @Test func emptyMissingDynamicAndMalformedResourcesStayDistinct() throws {
         let cases: [(Any, Any, Bool?)] = [
             (["test:offer"], 2, true), ("test:offer", 2, true),
+            (["test:offer"], ["type": "constant", "value": 2], true),
+            (["test:offer"], ["type": "minecraft:constant", "value": 0], false),
             ([String](), 2, false), (["test:offer"], 0, false),
             (["test:offer"], ["type": "example:dynamic"], nil),
             ([String](), ["type": "example:dynamic"], false),
             (["test:missing"], 2, nil), (["invalid id"], 2, nil),
-            (["test:offer"], true, nil), (["test:offer"], 2.5, nil)
+            (["test:offer"], true, nil), (["test:offer"], 2.5, nil),
+            ([String](), true, nil), ([String](), ["type": "constant", "value": true], nil)
         ]
         for (members, amount, expected) in cases {
             let definitions = try jar(sets(trades: members, amount: amount) + [offer]).tradingDefinitions()
