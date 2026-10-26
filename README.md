@@ -797,6 +797,12 @@ for (x, z, _) in overworld.regionFiles() {
 let pockets = player.inventory + player.enderChest   // PlayerInfo
 ```
 
+`GameAssets.Version.isStable` and `buildTime` preserve the jar's own release flag and ISO-8601
+build instant from `version.json`. Missing or malformed optional metadata stays unknown without
+discarding other readable resources. Clients choose installed game files using these runtime
+facts; neither Kit nor the client needs to classify a release by its name. This additive API
+requires a minor release and does not change scan caches.
+
 `GameAssets.containsBlockDefinition(_:)` reports blockstate-file presence in the selected jar,
 excluding code-generated rendering-only definitions. No game jar or an unreadable archive snapshot
 leaves the answer unknown; a valid absent path is false. Custom identifiers and parseable version

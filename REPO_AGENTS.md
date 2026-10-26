@@ -579,7 +579,13 @@ resources. This additive #234 part-1 API needs a minor release; picture diagnost
 No region/chunk decoding, renderer or RegionFacts interpretation changes.
 
 `GameAssets` owns read-only game-jar metadata, model inheritance and texture-resource access through
-that same `ZipResources` owner. `AssetModel` exposes generated item layers or cuboid elements,
+that same `ZipResources` owner. `Version.isStable` and `buildTime` read the optional `stable` and
+ISO-8601 `build_time` fields independently from `version.json`; missing/malformed values do not
+discard the jar or its other metadata. The client owns selection, using the newest installed
+release and then the newest installed version of any kind if no release exists, as recorded on
+fahlman/Chunksee#431. No name heuristic, content inventory or version gate is introduced. These
+additive fields require a minor release and do not change RegionFacts interpretation.
+`AssetModel` exposes generated item layers or cuboid elements,
 resolved materials, tint indices, default/explicit UVs, rotations and GUI settings. It retains the
 26.3 translucent-material and element-shading facts. The reader is immutable and Sendable; it has
 no UI imports, image decoder, background-task owner or mutable cache. Parent/reference traversal,
@@ -588,7 +594,7 @@ fields reject Boolean, nonfinite and nonintegral integer values rather than appl
 The official 26.3 JSON, CuboidModel/Element/Face deserializers, TextureSlots, ResolvedModel,
 ItemModelGenerator, FaceBakery and ItemTransform establish the format/defaults. Synthetic tests
 share the existing independent TestZIP writer; no game artwork is checked in. These additive APIs
-are unreleased, tracked on #143. Chunksee chooses a matching installed jar, caches decoded images/colors, and owns
+are unreleased, tracked on #143. Chunksee chooses the installed jar, caches decoded images/colors, and owns
 projection, compositing and display policy for fahlman/Chunksee#390 and #363.
 
 The unreleased #156 change uses ZipBytes for both in-memory archives and file-backed game jars
