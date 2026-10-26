@@ -331,8 +331,8 @@ item reads with the old literal-only rule. No public API or serialized shape cha
 
 `DimensionType` owns validated build bounds, logical height and the ceiling flag.
 `World.dimensionTypes()` follows saved dimension-to-type links in modern world-generation data
-or legacy inline settings. Enabled folder packs resolve in reverse priority order; the four vanilla
-definitions are verified for 26.3/5023. Missing, malformed or unresolved values remain absent.
+or legacy inline settings. Enabled folder packs resolve in reverse priority order; game
+definitions come from the supplied jar. Missing, malformed or unresolved values remain absent.
 Experimental packs, overlays and filters are not resolved, so an unsupported higher-priority
 pack blocks lower fallbacks. This narrow reader does not infer types from dimension IDs, infer roof
 Y from logical height, load a complete game registry, or cache metadata. Path checks keep reads
@@ -342,18 +342,19 @@ mapping was checked in the committed ChunkseeTestWorld 26.3 metadata. This addit
 introduced for v0.33.0, with app adoption on fahlman/Chunksee#248 and shared ownership on #51.
 
 The unreleased #175 extension adds optional `DimensionType.time` (DimensionTime), with the
-verified 26.3 fixed-time/skylight flags, optional default clock and unresolved timeline tag/list.
+fixed-time/skylight flags, optional default clock and unresolved timeline tag/list.
 Identifier owns normalization. Missing optional fields use only the codec's verified defaults;
 malformed time metadata remains unavailable without discarding independent build limits.
-Other versions have no time value. The dimensionTypes/dimensionSettings overloads accepting
-GameAssets use a matching 26.3 jar for vanilla definitions through the same WorldResourcePack
-registry as enabled folder/ZIP packs. A supplied matching jar never falls back behind a missing
-or malformed definition. No matching jar preserves the original build/spawn-light fallback,
-without adding a clock/timeline table. This metadata query adds no tag expansion, registry
+The dimensionTypes/dimensionSettings overloads accepting GameAssets use the caller-selected
+jar through the shared World.resourcePacks owner and WorldResourcePack registry, independently
+of version labels. A missing or malformed definition remains unavailable; copied dimension and
+noise defaults have been removed. Inline facts remain readable without game resources, including
+when the source list exceeds the shared 64-pack bound. Cancellation also stops inline-only queries.
+This metadata query adds no tag expansion, registry
 validation, timeline evaluation, cache or presentation owner. App lighting remains on fahlman/Chunksee#357.
 
 `LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
-fahlman/Chunksee#357. GameAssets reads verified 26.3 definitions; the same immutable sampler
+fahlman/Chunksee#357. GameAssets reads definitions independently of version labels; the same immutable sampler
 handles scalar, RGB and discrete tracks, preserving clock identity, periodic wrap and ordered
 duplicate-tick jumps. Linear/constant/cubic-Bezier easing and the documented simple modifiers
 are supported; other relevant forms stay unavailable. Float colors retain full precision.
@@ -366,7 +367,7 @@ attributes; app drawing remains separate. No chunks, serialized facts, cache
 version or image decoder changes.
 
 The unreleased #179 extension adds independently optional `DimensionType.baseSkyLighting` for
-26.3 definitions. It applies supported dimension environment-attribute entries to the registered
+readable definitions. It applies supported dimension environment-attribute entries to the registered
 sun/moon/sky-light defaults before timeline layers. JSON and NBT adapt only supported primitive
 forms into the shared LightingValue codecs and modifier arithmetic. NBT owns the exact single
 empty-key mixed-list wrapper interpretation, without changing raw NBT or serialization. Both static and timeline
@@ -374,8 +375,8 @@ attributes use one normalized identity/alias/entry-bound owner. The existing typ
 JSON once. EnvironmentAttributeMap, its Entry codec, EnvironmentAttributes and the four installed
 dimension definitions establish defaults, shorthand/expanded entries and per-attribute override
 bounds. Unsupported relevant entries make the base unavailable while build/time facts remain
-independently readable. Folder/ZIP/jar priority and version gating are unchanged; no-jar build
-fallbacks add no guessed lighting. Unrelated attributes, complete registry validation, final
+independently readable. Folder/ZIP/jar priority is shared with the other resource queries;
+version labels do not gate these facts. Unrelated attributes, complete registry validation, final
 clamping, weather/spatial layers, cache ownership and app rendering remain outside this reader.
 
 The unreleased #181 extension adds `World.savedSkyLighting(assets:)`: base and timeline layers at
@@ -414,7 +415,7 @@ each other. EnvironmentAttributeMap owns their shared JSON/NBT entry codecs, nor
 alias rejection and bounds. TimelineInput owns the common header and periodic sampling, while
 the existing WorldTimelineReader is generic over the projection so tag/pack semantics remain
 single-owned. Its query guard and world/assets initializer also own the enabled-pack bound
-and verified vanilla-jar selection; both projections keep lazy resource reads. Existing visual
+and caller-selected game resources; both projections keep lazy resource reads. Existing visual
 lighting still ignores gameplay tracks and time markers.
 
 MonsterLightTimeline evaluates selected gameplay tracks at the first declared midnight on one
@@ -452,17 +453,15 @@ new dependency is added. Layout follows PKWARE APPNOTE 6.3.10, sections 4.3–4.
 is available in v0.40.0, with separate app adoption on #51.
 
 `WorldResourcePack` owns enabled data-pack priority and safe paths for both dimension settings
-and biome definitions. Dimension defaults retain their existing verified-version rule; biome
-vanilla resources use the caller's game archive through the same ZIP path, so a
+and biome definitions. Vanilla resources use the caller's game archive through the same ZIP path, so a
 malformed vanilla entry also shadows a lower-priority pack.
-`World.resourcePacks` is the shared game-archive and saved enabled-pack owner for biome and
-tag/enchantment queries. It accepts any supplied game jar, including one older than the save or
+`World.resourcePacks` is the shared game-archive and saved enabled-pack owner for dimension,
+biome, timeline, tag and enchantment queries. It accepts any supplied game jar, including one older than the save or
 one used with an unlabeled save, matching Minecraft's use of its running game's resources.
 The caller chooses the game; missing/unreadable resources remain unavailable. This implements
 Ryan's settled WWMD correction on #217. Its 64-pack bound also supplies lighting's preflight; over-budget biome
-queries return no definitions. The remaining dimension version-specific source
-selection moves to this owner with #217/#218's data-reader gate removal, preserving its separate
-verified code-fact fallback until then.
+queries return no definitions. The dimension readers use the same owner and preserve independently
+readable inline facts without substituting copied game data for missing resources.
 `GameTag`, `GameAssets.tag(_:in:)` and `World.tags(for:in:assets:)` read tag declarations for any
 registry from the supplied jar and enabled folder/ZIP packs. Registries.tagsDirPath uses the
 registry ID's path; member and tag namespaces are preserved. TagLoader/TagFile/TagEntry establish
@@ -769,7 +768,7 @@ the app's drawing-path adoption follows a reviewed release.
 
 The companion `World.dimensionSettings()` reads that same mapping once for independently
 available dimension types and noise-generation facts. `NoiseGenerationSettings` reads inline
-or referenced `minecraft:noise` settings; its seven vanilla bounds and sea levels are verified for 26.3.
+or referenced `minecraft:noise` settings; vanilla bounds and sea levels come from the supplied game resources.
 Its optional `seaLevel` reads the root `sea_level` signed 32-bit integer independently of the bounds.
 Absent or malformed sea levels stay nil without discarding readable bounds or taking another
 pack's value. Values outside the generation/build range remain unchanged, matching the game's

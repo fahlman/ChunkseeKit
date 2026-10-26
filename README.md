@@ -409,13 +409,13 @@ cache-version changes.
 
 `World.dimensionTypes()` reads each saved dimension's type from modern world-generation data
 or the older inline `WorldGenSettings`. It resolves inline definitions and references in enabled
-folder data packs, with later packs taking priority. The four vanilla definitions are verified
-for 26.3 / data version 5023. A dimension can use a different type from its own ID; neither its
+folder data packs, with later packs taking priority. Supply game assets to resolve the game's
+definitions. A dimension can use a different type from its own ID; neither its
 folder name nor its occupied chunk sections determine the result.
 
 ```swift
-if let type = try world.dimensionTypes()["minecraft:the_nether"] {
-    print(type.buildRange)     // 0...255 for the verified vanilla Nether type
+if let type = try world.dimensionTypes(assets: assets)["minecraft:the_nether"] {
+    print(type.buildRange)     // 0...255 for the game's Nether type
     print(type.logicalHeight) // 128, distinct from its 256-block build height
     print(type.hasCeiling)     // true; this does not identify the generated roof's Y
 }
@@ -431,8 +431,8 @@ The unreleased file-reader update (#156) also bounds compressed entry reads to 3
 A malformed present override never permits a lower definition to take over.
 ZIP support is available starting in v0.40.0. Built-in experimental packs, pack overlays and
 resource filters are not resolved yet: an unsupported higher-priority pack
-prevents guessing a lower definition, including vanilla. Vanilla defaults are unavailable for
-unverified save versions. Explicit definitions must have valid aligned bounds and logical height;
+prevents guessing a lower definition, including vanilla. Missing game resources remain unavailable;
+no built-in dimension table substitutes for them. Definitions must have valid aligned bounds and logical height;
 file lookup rejects paths or symlinks escaping the pack. File-read errors propagate. This API
 reads metadata only, has no cache and never writes a world. It does not change terrain decoding,
 `RegionFacts`, or the app's height controls until separate app adoption.
@@ -445,27 +445,27 @@ declarations, archive-writing API or external package is added.
 `World.dimensionSettings()` is the companion query when both the type and generator context
 are needed. Each value has independently optional `type` and `noiseGeneration` fields. Noise
 settings resolve through the same saved mapping and enabled-pack rules; they are available only
-for a saved `minecraft:noise` generator. The seven vanilla noise definitions are verified for
-26.3, and inline/custom bounds are validated without assuming a complete game registry.
+for a saved `minecraft:noise` generator. Game definitions come from the supplied jar;
+inline/custom bounds are validated without assuming a complete game registry.
 `dimensionTypes()` remains a type-only read and never opens generator resources.
 
 The additive `dimensionTypes(assets:)` and `dimensionSettings(assets:)` overloads can read vanilla
-definitions from a matching supplied `GameAssets` jar. Enabled data-pack priority is unchanged.
-A matching jar is authoritative: a missing or malformed definition does not use the built-in
-fallback. Without a matching jar, the original verified build/spawn-light fallback remains, with
-no time/base-lighting metadata or clock/timeline table.
+definitions from the caller-selected `GameAssets` jar, independently of save or jar version labels.
+Enabled data-pack priority is unchanged. A missing or malformed definition remains unknown;
+there is no built-in fallback. Inline definitions remain readable without a jar. Resource queries
+share the 64-pack bound; an over-budget source list cannot resolve references, while inline facts remain readable.
 
-For readable 26.3 definitions, `DimensionType.time` exposes `hasFixedTime`, `hasSkylight`,
+For readable definitions, `DimensionType.time` exposes `hasFixedTime`, `hasSkylight`,
 `defaultClock` and `timelines`. References are normalized through `Identifier`; timelines preserve
 either a tag or an ordered list (including a single-reference shorthand). As the verified codec
 specifies, an absent or JSON-null fixed-time field means false, an absent or null clock means no
-default clock, and absent or null timelines mean an empty list. A missing skylight flag, malformed time field or unverified
-version leaves the entire time value nil while independently valid build limits remain readable.
+default clock, and absent or null timelines mean an empty list. A missing skylight flag or malformed
+time field leaves the entire time value nil while independently valid build limits remain readable.
 This metadata query does not expand timeline tags, validate clock/timeline registry membership,
 evaluate lighting or simulate elapsed time. The savedSkyLighting query below resolves its lighting projection. These unreleased APIs are the metadata prerequisite for
 fahlman/Chunksee#357, tracked in fahlman/ChunkseeKit#175.
 
-`GameAssets.lightingTimeline(_:)` reads a supplied 26.3/5023 jar's five lighting tracks:
+`GameAssets.lightingTimeline(_:)` reads a supplied jar's five lighting tracks:
 sun/moon angle, sky-light factor/color and moon phase. The immutable `LightingTimeline` retains
 its own `clockID` and optional `periodTicks`. Pass that clock's saved whole ticks and an explicit
 `SkyLighting` base to `applying(at:to:)`; absent tracks preserve the base. Angles use degrees and
@@ -490,7 +490,7 @@ a complete timeline-registry validator. Numeric JSON remains strict as in the ot
 These additive APIs are unreleased on fahlman/ChunkseeKit#177 for fahlman/Chunksee#357. They read
 no chunks, write no worlds, simulate no clocks and introduce no mutable cache or dependency.
 
-`DimensionType.baseSkyLighting` supplies the static layer for readable 26.3 definitions. It applies
+`DimensionType.baseSkyLighting` supplies the static layer for readable definitions. It applies
 that definition's `attributes` entries to the registered defaults: sun/moon angle 0 degrees,
 sky-light factor 1, white sky-light color and full moon. Absent or JSON-null `attributes` uses
 those defaults. Both shorthand values and expanded `modifier`/`argument` entries use the same
@@ -498,11 +498,11 @@ value codecs and simple modifier arithmetic as timelines. The sky-light-factor o
 be 0...1; other modifiers can produce values outside that range until later layer composition.
 No dimension name, fixed-time flag or skylight flag substitutes a lighting value.
 
-Inline NBT, enabled folder/ZIP overrides and matching-jar definitions share the existing type
+Inline NBT, enabled folder/ZIP overrides and selected-jar definitions share the existing type
 reader and resource priority. Unsupported/malformed relevant entries, ambiguous aliases or more
 than 256 attribute entries leave the whole base nil without discarding independently valid build
-or time metadata. Other attributes are ignored, so this is not full registry validation. Other
-save versions and the no-jar build-limit fallback provide no base. No weather, biome/spatial
+or time metadata. Other attributes are ignored, so this is not full registry validation.
+Version labels do not gate these facts. No weather, biome/spatial
 layers, timeline application, final range clamping or rendering happens in this query. This
 additive API is unreleased on fahlman/ChunkseeKit#179 for fahlman/Chunksee#357.
 
@@ -512,7 +512,7 @@ readers rather than an app-owned vanilla table. Fixed-time flags do not bypass t
 dimension's default clock never substitutes for a track's clock. Empty lighting tracks require
 no unrelated clock; dimensions with no timelines need no timeline-resource or clock read.
 
-Enabled folder/ZIP packs and a matching supplied 26.3 jar share normal definition priority.
+Enabled folder/ZIP packs and the selected game jar share normal definition priority.
 Timeline tags combine resource stacks from low to high priority: `replace` clears earlier entries,
 nested tags preserve first occurrence, and missing optional references are skipped. Missing
 required members invalidate their tag; a direct list retains duplicate timelines. Malformed or
@@ -553,8 +553,8 @@ a caller that selectively skips `BlockLight` but retains `isLightOn` has discard
 No sky-light fallback or light propagation is added. The monster-light convenience query uses
 this shared interpretation. This additive API is tracked on fahlman/ChunkseeKit#187.
 
-`World.nightMonsterLighting(assets:)` supplies a clear-night planning snapshot for each supported
-26.3 dimension. It reads the separate gameplay sky-light attribute and applies the dimension's
+`World.nightMonsterLighting(assets:)` supplies a clear-night planning snapshot for each readable
+dimension. It reads the separate gameplay sky-light attribute and applies the dimension's
 selected timelines at their first declared `minecraft:midnight`, then uses the game's final
 clamping and integer sky darkening. All relevant tracks must share that midnight's clock and period;
 missing or conflicting markers and other relevant clocks remain unavailable. Static sky levels

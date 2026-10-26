@@ -135,14 +135,15 @@ import Testing
         #expect(read.values.allSatisfy { $0.baseSkyLighting == nil && $0.buildRange == -64...319 && $0.time?.hasSkylight == true })
     }
 
-    @Test func versionAndMatchingJarAvailabilityStayIndependentOfBuildFallbacks() throws {
+    @Test func readableDefinitionsSupplyLightingIndependentlyOfVersionLabels() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(root, types: ["overworld": .string("overworld"), "test:inline": definition()])
         let wrong = try assets([entry("minecraft:overworld", json())], version: 9999)
-        for jar in [nil, wrong] {
+        #expect(try world.dimensionTypes()["minecraft:overworld"] == nil)
+        for jar in [wrong, try assets([entry("minecraft:overworld", json())])] {
             let types = try world.dimensionTypes(assets: jar)
-            #expect(types["minecraft:overworld"]?.baseSkyLighting == nil)
+            #expect(types["minecraft:overworld"]?.baseSkyLighting == defaults)
             #expect(types["minecraft:overworld"]?.buildRange == -64...319)
             #expect(types["test:inline"]?.baseSkyLighting == defaults)
         }
@@ -156,7 +157,7 @@ import Testing
         let unknown = try self.world(root, types: ["test:inline": definition(), "test:json": .string("test:json")],
                                     packs: ["file/Unknown"], version: 9999)
         let unknownTypes = try unknown.dimensionTypes()
-        #expect(unknownTypes.count == 2 && unknownTypes.values.allSatisfy { $0.baseSkyLighting == nil && $0.buildRange == -64...319 })
+        #expect(unknownTypes.count == 2 && unknownTypes.values.allSatisfy { $0.baseSkyLighting == defaults && $0.buildRange == -64...319 })
     }
 
     @Test func folderAndZipPriorityNeverFallsBackBehindBadAttributesOrMissingPacks() throws {

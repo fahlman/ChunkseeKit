@@ -18,13 +18,12 @@ extension World {
 
 /// One enabled data-pack order and safe-path policy for dimension, biome and lighting resources.
 enum WorldResourcePack {
-    case vanilla
     case folder(URL, listed: Set<String>? = nil)
     case zip(ZipResources)
     case unavailable
 
     enum Resource {
-        case absent, unavailable, vanilla
+        case absent, unavailable
         case data(Data)
     }
 
@@ -44,7 +43,6 @@ enum WorldResourcePack {
     // read-error rules. A present but unreadable resource is distinct from an absent resource.
     private func resource(at location: Location) throws -> Resource {
         switch self {
-        case .vanilla: return .vanilla
         case .unavailable: return .unavailable
         case .folder(let root, let listed):
             if let listed, !listed.contains(location.identifier) { return .absent }
@@ -59,13 +57,11 @@ enum WorldResourcePack {
     }
 
     private static func read<Value>(_ reference: String, directory: String, in packs: [Self],
-                                    vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
+                                    json: (Data) -> Value?) throws -> Value? {
         guard let location = Location(reference, directory: directory) else { return nil }
         for pack in packs {
             switch try pack.resource(at: location) {
             case .absent: continue
-            case .vanilla:
-                if let value = vanilla(location.identifier) { return value }
             case .unavailable: return nil
             case .data(let data): return json(data)
             }
@@ -89,9 +85,6 @@ enum WorldResourcePack {
             var ids = Set<String>(), sources: [WorldResourcePack] = []
             for pack in packs {
                 try Task.checkCancellation()
-                // Dimension readers supply verified vanilla facts by ID instead of a jar.
-                // They are still available, but do not contribute IDs to a complete catalog.
-                if case .vanilla = pack { sources.append(pack); continue }
                 guard let found = try pack.identifiers(in: directory) else {
                     sources.append(.unavailable)
                     break
@@ -104,16 +97,16 @@ enum WorldResourcePack {
             identifiers = ids
         }
 
-        func read<Value>(_ saved: NBT?, vanilla: (String) -> Value?, inline: (NBT) -> Value?,
+        func read<Value>(_ saved: NBT?, inline: (NBT) -> Value?,
                          json: (Data) -> Value?) throws -> Value? {
             guard let saved else { return nil }
             guard let reference = saved.string else { return inline(saved) }
-            return try read(reference, vanilla: vanilla, json: json)
+            return try read(reference, json: json)
         }
 
-        func read<Value>(_ reference: String, vanilla: (String) -> Value?, json: (Data) -> Value?) throws -> Value? {
+        func read<Value>(_ reference: String, json: (Data) -> Value?) throws -> Value? {
             try Task.checkCancellation()
-            return try WorldResourcePack.read(reference, directory: directory, in: sources, vanilla: vanilla, json: json)
+            return try WorldResourcePack.read(reference, directory: directory, in: sources, json: json)
         }
 
         /// First present resource in normal pack priority, retaining absence versus unreadability.
@@ -138,7 +131,7 @@ enum WorldResourcePack {
                 try Task.checkCancellation()
                 switch try source.resource(at: location) {
                 case .absent: continue
-                case .unavailable, .vanilla: return nil
+                case .unavailable: return nil
                 case .data(let data):
                     guard data.count <= ZipResources.maximumResourceSize, data.count <= remaining else { return nil }
                     remaining -= data.count
@@ -154,7 +147,7 @@ enum WorldResourcePack {
             if let maximumCount, identifiers.count > maximumCount { return [:] }
             var result: [String: Value] = [:]
             for id in identifiers.sorted() {
-                result[id] = try read(id, vanilla: { _ in nil }, json: json)
+                result[id] = try read(id, json: json)
             }
             return result
         }
@@ -165,7 +158,7 @@ enum WorldResourcePack {
     /// Nil means this source has unknown contents, so lower sources cannot add candidates.
     func identifiers(in directory: String) throws -> Set<String>? {
         switch self {
-        case .vanilla, .unavailable: return nil
+        case .unavailable: return nil
         case .zip(let resources):
             guard let paths = resources.paths(under: "data/") else { return nil }
             return Set(paths.compactMap {

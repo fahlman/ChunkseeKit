@@ -1,7 +1,7 @@
 import Foundation
 
 extension World {
-    /// Composes each readable 26.3 dimension's base lighting and resolved timeline tracks at
+    /// Composes each readable dimension's base lighting and resolved timeline tracks at
     /// their own named saved clock times. No simulation, weather/spatial layers or final range
     /// clamping is applied. Missing/unsupported inputs omit that dimension; read errors propagate.
     ///

@@ -72,13 +72,28 @@ import Testing
         return try World(contentsOf: root)
     }
 
-    @Test func verifiedVanillaSpawnLightFollowsTheSavedTypeRatherThanTheFolderName() throws {
+    @Test func resourceSpawnLightFollowsTheSavedTypeRatherThanTheFolderName() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let world = try world(at: root, types: ["minecraft:overworld": .string("the_nether"),
             "example:sky": .string("overworld"), "example:caves": .string("overworld_caves"), "example:void": .string("the_end")])
         let before = try Data(contentsOf: root.appendingPathComponent("level.dat"))
-        let types = try world.dimensionTypes()
+        let values: [(String, Int, ClosedRange<Int>)] = [
+            ("the_nether", 15, 7...7), ("overworld", 0, 0...7),
+            ("overworld_caves", 0, 0...7), ("the_end", 0, 15...15)
+        ]
+        let entries = try values.map { id, limit, range in
+            let json: [String: Any] = ["min_y": -64, "height": 384, "logical_height": 384, "has_ceiling": false,
+                "monster_spawn_block_light_limit": limit, "monster_spawn_light_level": ["type": "uniform",
+                    "min_inclusive": range.lowerBound, "max_inclusive": range.upperBound]]
+            return TestZIP.Entry(path: "data/minecraft/dimension_type/\(id).json", text: "",
+                                 data: try JSONSerialization.data(withJSONObject: json))
+        }
+        let assets = try #require(GameAssets(data: Data(TestZIP.zip([
+            .init(path: "version.json", text: #"{"id":"fixture","world_version":1}"#)
+        ] + entries))))
+        #expect(try world.dimensionTypes().isEmpty)
+        let types = try world.dimensionTypes(assets: assets)
         #expect(types["minecraft:overworld"]?.monsterSpawnBlockLightLimit == 15)
         #expect(types["minecraft:overworld"]?.monsterSpawnLightLevel == 7...7)
         for id in ["example:sky", "example:caves"] {

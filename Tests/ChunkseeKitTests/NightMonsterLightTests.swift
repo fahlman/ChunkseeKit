@@ -201,11 +201,11 @@ import Testing
         }
     }
 
-    @Test func unverifiedVersionAndMissingSkyMetadataNeverAcquireVanillaAssumptions() async throws {
+    @Test func readableInlineLightingIgnoresVersionLabelsAndHonorsCancellation() async throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let old = try world(root, types: ["test:a": definition()], version: 5024)
-        #expect(try old.nightMonsterLighting(assets: nil).isEmpty)
+        #expect(try old.nightMonsterLighting(assets: nil)["test:a"]?.skyDarkening == 11)
         let modern = try world(root, types: ["test:a": definition()])
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
