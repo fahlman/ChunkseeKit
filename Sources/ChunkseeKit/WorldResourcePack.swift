@@ -123,19 +123,17 @@ enum WorldResourcePack {
 
         /// Low-to-high selected tag layers. A replacing layer makes lower resources irrelevant;
         /// otherwise unknown sources or unreadable entries invalidate the stack.
-        func stack<Value>(_ reference: String, maximumBytes: Int,
-                          decode: (Data) -> (value: Value, replace: Bool)?) throws -> [Value]? {
+        func stack<Value>(_ reference: String, budget: inout ResourceReadBudget,
+                          decode: (Data, inout ResourceReadBudget) -> (value: Value, replace: Bool)?) throws -> [Value]? {
             guard let location = Location(reference, directory: directory) else { return nil }
-            var result: [Value] = [], remaining = maximumBytes
+            var result: [Value] = []
             for source in sources {
                 try Task.checkCancellation()
                 switch try source.resource(at: location) {
                 case .absent: continue
                 case .unavailable: return nil
                 case .data(let data):
-                    guard data.count <= ZipResources.maximumResourceSize, data.count <= remaining else { return nil }
-                    remaining -= data.count
-                    guard let decoded = decode(data) else { return nil }
+                    guard budget.charge(data), let decoded = decode(data, &budget) else { return nil }
                     result.append(decoded.value)
                     if decoded.replace { return Array(result.reversed()) }
                 }

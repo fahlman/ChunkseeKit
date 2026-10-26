@@ -55,6 +55,7 @@ import ChunkseeKit
         let trading = ["armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
                        "fletcher", "leatherworker", "librarian", "mason", "shepherd", "toolsmith",
                        "weaponsmith"]
+        let definitions = try tradingDefinitions(for: trading)
         for profession in trading + ["none", "nitwit"] {
             for prefix in ["minecraft:", "", ":"] {
                 let saved = prefix + profession
@@ -62,7 +63,7 @@ import ChunkseeKit
                 for offersSaved in [false, true] {
                     if offersSaved { nbt["Offers"] = .compound(["Recipes": .list([])]) }
                     let villager = try #require(Villager(.compound(nbt)))
-                    #expect(villager.supportsTrading == trading.contains(profession), "Saved profession: \(saved)")
+                    #expect(villager.supportsTrading(using: definitions) == trading.contains(profession), "Saved profession: \(saved)")
                     #expect(villager.level == 1 && villager.trades.isEmpty)
                 }
             }
@@ -81,7 +82,7 @@ import ChunkseeKit
                 "VillagerData": .compound(data),
                 "Offers": .compound(["Recipes": .list([.compound(["buy": .int(0)])])]),
             ])))
-            #expect(villager.supportsTrading == nil)
+            #expect(villager.supportsTrading(using: nil) == nil)
             #expect(villager.trades.isEmpty)
         }
     }
@@ -97,7 +98,7 @@ import ChunkseeKit
             ])])]
             if let profession { nbt["VillagerData"] = .compound(["profession": .string(profession)]) }
             let villager = try #require(Villager(.compound(nbt)))
-            #expect(villager.supportsTrading == true)
+            #expect(villager.supportsTrading(using: nil) == true)
             #expect(villager.trades.first?.isSoldOut == true)
             #expect(villager.profession == profession)
             #expect(villager.level == (profession == nil ? nil : 1))
@@ -105,13 +106,14 @@ import ChunkseeKit
     }
 
     @Test func cachedTradingFactsFollowTheExistingMutableFields() throws {
+        let definitions = try tradingDefinitions(for: ["farmer"])
         let old = Data(#"{"profession":"minecraft:nitwit","level":1,"trades":[]}"#.utf8)
         var villager = try JSONDecoder().decode(Villager.self, from: old)
-        #expect(villager.supportsTrading == false && villager.level == 1)
+        #expect(villager.supportsTrading(using: definitions) == false && villager.level == 1)
         villager.profession = "minecraft:farmer"
-        #expect(villager.supportsTrading == true)
+        #expect(villager.supportsTrading(using: definitions) == true)
         villager.profession = "example:farmer"
-        #expect(villager.supportsTrading == nil)
+        #expect(villager.supportsTrading(using: definitions) == nil)
         let trade = try #require(Trade(.compound([
             "buy": .compound(["id": .string("minecraft:emerald"), "count": .int(1)]),
             "sell": .compound(["id": .string("minecraft:cactus"), "count": .int(1)]),
@@ -119,11 +121,22 @@ import ChunkseeKit
         villager.trades = [trade]
         let encoded = try JSONEncoder().encode(villager)
         let decoded = try JSONDecoder().decode(Villager.self, from: encoded)
-        #expect(villager.supportsTrading == true && decoded.supportsTrading == true)
+        #expect(villager.supportsTrading(using: definitions) == true && decoded.supportsTrading(using: definitions) == true)
         #expect(decoded == villager)
         let fields = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         #expect(Set(fields.keys) == ["profession", "level", "trades"])
         villager.trades = []
-        #expect(villager.supportsTrading == nil)
+        #expect(villager.supportsTrading(using: definitions) == nil)
     }
+    private func tradingDefinitions(for professions: [String]) throws -> TradingDefinitions {
+        let entries: [TestZIP.Entry] = [
+            .init(path: "version.json", text: #"{"id":"any","world_version":1}"#),
+            .init(path: "data/test/villager_trade/offer.json", text: #"{"wants":{"id":"wheat"},"gives":{"id":"emerald"}}"#)
+        ] + professions.map {
+            .init(path: "data/minecraft/trade_set/\($0)/level_1.json", text: #"{"amount":2,"trades":["test:offer"]}"#)
+        }
+        let assets = try #require(GameAssets(data: Data(TestZIP.zip(entries))))
+        return try assets.tradingDefinitions()
+    }
+
 }

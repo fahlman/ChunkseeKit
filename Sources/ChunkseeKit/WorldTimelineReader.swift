@@ -51,8 +51,7 @@ struct WorldTimelineReader<Projection: WorldTimelineProjection> {
         case .absent: result = .missing
         case .unavailable: result = .unavailable
         case .data(let data):
-            if data.count <= budget.bytes, data.count <= ZipResources.maximumResourceSize {
-                budget.bytes -= data.count
+            if budget.charge(data) {
                 result = Projection(json: data).map(ResourceRead.value) ?? .unavailable
             } else { result = .unavailable }
         }

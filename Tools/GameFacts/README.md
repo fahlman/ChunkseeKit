@@ -7,7 +7,8 @@ into the reader. Saved variant strings are read directly, without consulting thi
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg relationships, saved equipment attachment identities
-and block seed methods, tints, fluid states, upper-face support, air flags and static special-item models.
+and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
+and profession trade-set associations.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -23,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -149,3 +150,10 @@ Inspect the diff before committing; a real save-format change may need an adapte
 new enum values flow through the tool. The public `DyeColor` enum also requires normal API review
 if the game adds a color. Check the committed Swift output with the repository's required build
 and test commands before publishing it.
+
+- BuiltInRegistries.VILLAGER_PROFESSION exposes each profession's `tradeSetsByLevel` map.
+  Every registered link is checked against `getTrades`, which Villager.updateTrades calls for
+  the current level. VillagerData supplies its minimum-level clamp, checked at integer boundaries.
+  Only this code association (including empty maps) is generated. Trade sets, their candidate
+  tags and trade definitions are read at runtime, not inferred from folder names or copied
+  from the jar. The public query describes potential trading, not rolled or currently usable offers.
