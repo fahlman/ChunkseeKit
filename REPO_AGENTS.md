@@ -1055,10 +1055,11 @@ sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use sh
 a malformed override never reveals the lower definition. There is no version gate.
 This intentionally replaces the old no-argument property, requiring a minor release. The app must
 retain the world's resource snapshot and pass it when adopting the release.
-`Villager.offerState` owns saved Offers presence and recipe readability. AbstractVillager stores
+`Villager.offerState` owns initialized-offer state and recipe readability. AbstractVillager stores
 every initialized offer list; MerchantOffers.CODEC omits Recipes when empty. Saved empty Offers
-therefore returns false without consulting resources. Only absent Offers uses current-level
-definitions. Incomplete lists retain their readable recipes and otherwise stay unknown, including
+therefore returns false without consulting resources. TagValueInput.read keeps codec partial
+values: non-compound Offers is uninitialized, while non-list Recipes is initialized empty. Only
+uninitialized offers use current-level definitions. Incomplete lists retain their readable recipes and otherwise stay unknown, including
 Offers-only records without VillagerData. The optional Codable state leaves older standalone
 records' presence unknown without discarding trades. RegionFacts interpretation 20 invalidates
 the former absence/empty/unreadable conflation. This additive API is the #228 follow-up to #267;

@@ -114,7 +114,7 @@ import ChunkseeKit
         #expect(villager.offerState == nil)
         villager.profession = "minecraft:farmer"
         #expect(villager.supportsTrading(using: definitions) == nil)
-        villager.offerState = .absent
+        villager.offerState = .uninitialized
         #expect(villager.supportsTrading(using: definitions) == true)
         villager.profession = "example:farmer"
         #expect(villager.supportsTrading(using: definitions) == nil)

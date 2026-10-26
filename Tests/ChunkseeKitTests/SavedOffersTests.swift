@@ -13,25 +13,25 @@ import Testing
 
     private var cases: [(offers: NBT?, state: Villager.OfferState, trading: Bool?, recipes: Int)] {
         [
-            (nil, .absent, true, 0),
+            (nil, .uninitialized, true, 0),
             (.compound([:]), .complete, false, 0),
             (.compound(["Recipes": .list(.compound, [])]), .complete, false, 0),
-            (.string("unreadable"), .incomplete, nil, 0),
-            (.compound(["Recipes": .string("unreadable")]), .incomplete, nil, 0),
+            (.string("unreadable"), .uninitialized, true, 0),
+            (.compound(["Recipes": .string("unreadable")]), .complete, false, 0),
             (.compound(["Recipes": .list([.compound([:])])]), .incomplete, nil, 0),
             (.compound(["Recipes": .list([recipe])]), .complete, true, 1),
             (.compound(["Recipes": .list([recipe, .compound([:])])]), .incomplete, true, 1)
         ]
     }
 
-    @Test func onlyAbsentOffersConsultCurrentDefinitions() throws {
+    @Test func onlyUninitializedOffersConsultCurrentDefinitions() throws {
         let definitions = try definitions()
         for value in cases {
             let villager = try #require(Villager(record(offers: value.offers)))
             #expect(villager.offerState == value.state)
             #expect(villager.trades.count == value.recipes)
             #expect(villager.supportsTrading(using: definitions) == value.trading)
-            if value.state == .absent { #expect(villager.supportsTrading(using: nil) == nil) }
+            if value.state == .uninitialized { #expect(villager.supportsTrading(using: nil) == nil) }
             else { #expect(villager.supportsTrading(using: nil) == value.trading) }
         }
     }

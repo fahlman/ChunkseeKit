@@ -1081,10 +1081,11 @@ a malformed override never reveals the lower definition. There is no version gat
 This intentionally replaces the old no-argument property, requiring a minor release. The app must
 retain the world's resource snapshot and pass it when adopting the release.
 
-`Villager.offerState` separately retains whether Offers was absent, completely readable or
-incomplete. Minecraft saves an initialized empty list as `Offers: {}` (Recipes is optional), so
-both that compound and an empty Recipes list establish no saved trades. Only absent Offers
-allows the current-level definition query. Incomplete saved recipes preserve every readable trade;
+`Villager.offerState` retains whether the game has an uninitialized list, a complete readable
+list or recipes Kit could not fully read. Minecraft saves an initialized empty list as `Offers: {}` (Recipes is optional), so
+both that compound and an empty Recipes list establish no saved trades. TagValueInput keeps codec partial values: a non-compound Offers is uninitialized and uses
+current definitions, while a non-list Recipes becomes an initialized empty list. Only
+uninitialized offers allow the current-level definition query. Incomplete saved recipes preserve every readable trade;
 without a readable trade the answer stays unknown. Offers without VillagerData still retain
 these facts. Older standalone Codable values decode with unknown offerState, preserving readable
 trades without guessing whether an empty list was saved. RegionFacts interpretation 20 requires
