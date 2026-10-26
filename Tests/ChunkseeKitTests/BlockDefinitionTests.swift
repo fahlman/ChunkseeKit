@@ -22,7 +22,7 @@ import Testing
         }
         // Presence is not model readability. The picture-failure API is separate work.
         #expect(jar.containsBlockDefinition("broken") == true)
-        #expect(jar.blockModel(for: .init(id: "broken")) == nil)
+        #expect(jar.blockModel(for: .init("broken")) == nil)
     }
 
     @Test func noJarAndUnqueryablePathsRemainUnknown() throws {
@@ -43,7 +43,7 @@ import Testing
             .init(path: "version.json", text: #"{"id":"fixture","world_version":1}"#),
             .init(path: "assets/minecraft/blockstates/stone.json", text: "{}")
         ]), to: path)
-        let jar = try #require(GameAssets(contentsOf: path))
+        let jar = try #require(try GameAssets(contentsOf: path))
         #expect(jar.containsBlockDefinition("stone") == true)
         let writer = try FileHandle(forWritingTo: path)
         try writer.truncate(atOffset: 0)
