@@ -6,7 +6,8 @@ into the reader. Saved variant strings are read directly, without consulting thi
 
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
-registered block default properties, spawn-egg relationships and saved equipment attachment identities.
+registered block default properties, spawn-egg relationships, saved equipment attachment identities
+and block seed methods.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -22,7 +23,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`,
-`GeneratedEquipmentFacts.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`
 and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -92,6 +93,17 @@ Sources and interpretation:
   attached `ChestedHorse` item. These identities are extracted rather than copied into the reader;
   saved item compounds still supply their own IDs. A changed saddle shape fails generation for
   inspection. No species capability catalog is generated or needed for these saved fields.
+
+
+- BlockState.getSeed supplies the position offset for every registered state. The adapter names
+  BlockBehaviour, AbstractBedBlock, DoorBlock and DoublePlantBlock method formats; new method
+  implementations fail generation for inspection. Actual inherited method ownership supplies
+  each block's format, and direct calls determine its offsets. Four positions include opposite
+  signed-coordinate boundaries; every candidate must have a unique matching adjacent offset.
+  The raw evidence includes all checked blocks/states and official LegacyRandomSource weighted
+  choices. No block IDs or offsets are hand-kept. These facts do not establish block existence.
+  Resource selectors cannot replace them: changing a bed picture's selectors leaves its code's
+  seed behavior unchanged. Unknown methods still allow deterministic models and overview parts.
 
 Generated entries name these sources, and `source.json` records the release, client/tool hashes
 and extracted-output hashes. Missing/ambiguous classes or mappings fail generation visibly.

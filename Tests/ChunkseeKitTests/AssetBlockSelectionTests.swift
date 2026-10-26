@@ -36,8 +36,9 @@ import Testing
         try #require(model.selectedAlternatives(at: position)).map(\.modelID.path)
     }
 
-    @Test func directWeightedChoicesMatchOfficialPositionVectorsAndRetainGeometry() throws {
-        let model = try model("{\"variants\":{\"\":\(choices)}}")
+    @Test(arguments: [1, 5023, Int(Int32.max)])
+    func directWeightedChoicesMatchOfficialPositionVectorsAndRetainGeometry(version: Int) throws {
+        let model = try model("{\"variants\":{\"\":\(choices)}}", version: version)
         let expected = ["a", "c", "c", "b", "b", "c", "c", "c", "b", "b", "b", "b", "c", "c", "b", "b"]
         for (position, name) in zip(positions, expected) {
             let selected = try #require(model.selectedAlternatives(at: position))
@@ -110,20 +111,39 @@ import Testing
             #expect(resolved.parts.first?.alternatives.count == 3)
             #expect(resolved.selectedAlternatives(at: positions[0]) == nil)
         }
-        for version in [4903, 5024] {
-            let resolved = try model(definition, version: version)
-            #expect(resolved.parts.first?.alternatives.count == 3)
-            #expect(resolved.selectedAlternatives(at: positions[0]) == nil)
-        }
         #expect(try names(model(definition, state: .init("stone")), at: positions[0]) == ["block/a"])
     }
 
-    @Test func ordinaryDefinitionsComeFromResourcesWithoutASecondBlockCatalogOrSuffixGuess() throws {
+    @Test func unknownSeedMethodsRetainPicturesWithoutGuessingFromNamesOrSelectors() throws {
         let definition = "{\"variants\":{\"\":\(choices)}}"
-        let ordinary = try model(definition)
-        for id in ["minecraft:new_block", "minecraft:fake_door", "minecraft:fake_bed"] {
+        for id in ["minecraft:new_block", "minecraft:fake_door", "example:bed"] {
             let supplied = try model(definition, state: .init(id, properties: ["half": "upper", "part": "foot", "facing": "north"]))
-            for position in positions { #expect(try names(supplied, at: position) == names(ordinary, at: position)) }
+            #expect(supplied.parts.first?.alternatives.count == 3)
+            #expect(supplied.selectedAlternatives(at: positions[0]) == nil)
+            let selectors = try model("{\"variants\":{\"part=foot\":\(choices),\"part=head\":\(choices)}}",
+                                      state: .init(id, properties: ["part": "foot", "facing": "north"]))
+            #expect(selectors.selectedAlternatives(at: positions[0]) == nil)
+            let direct = try model(#"{"variants":{"":{"model":"block/a"}}}"#, state: .init(id))
+            let multipart = try model(#"{"multipart":[{"apply":{"model":"block/a"}},{"apply":{"model":"block/b"}}]}"#,
+                                      state: .init(id))
+            for position in positions {
+                #expect(try names(direct, at: position) == ["block/a"])
+                #expect(try names(multipart, at: position) == ["block/a", "block/b"])
+            }
+        }
+    }
+
+    @Test func pictureSelectorsDoNotChangeKnownSeedMethodsAndOmittedValuesUseActualDefaults() throws {
+        let definition = "{\"variants\":{\"\":\(choices)}}"
+        let defaultBed = try model(definition, state: .init("minecraft:red_bed"))
+        let foot = try model(definition, state: .init("minecraft:red_bed", properties: ["part": "foot", "facing": "north"]))
+        let ordinary = try model(definition)
+        // An ordinary block's picture can use these selectors without acquiring bed code.
+        let retextured = try model("{\"variants\":{\"part=foot\":\(choices),\"part=head\":\(choices)}}",
+                                   state: .init("minecraft:stone", properties: ["part": "foot", "facing": "north"]))
+        for position in positions {
+            #expect(try names(defaultBed, at: position) == names(foot, at: position))
+            #expect(try names(retextured, at: position) == names(ordinary, at: position))
         }
     }
 

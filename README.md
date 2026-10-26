@@ -1652,15 +1652,18 @@ alternatives, with its model ID, inherited `AssetModel`, X/Y/Z quarter turns and
 The rotations remain separate from the model's inventory transform. The resolved value preserves
 all choices for overview colors. Its `selectedAlternatives(at:)` (v0.66.0) returns one
 alternative per part for a whole `BlockPosition`, without rereading resources or projecting faces.
-Selection is verified for vanilla 26.3/5023 only. It uses the game's position seed, weighted draw,
-and multipart reseeding; beds share their head position, and doors/double plants share the lower
-position. The shared legacy random generator preserves Java's signed overflow and rejection rules.
-All three input coordinates must fit Int32. Unverified versions/namespaces and unresolved or invalid
-seed-driving properties return nil while the existing `parts` remain available. Ordinary Minecraft-namespace
-blocks come from the supplied jar's definitions, without a second name catalog; the 49 verified
-seed overrides stay in Kit because those rules exist only in game code. Item-frame entity render
-states have no block seed and remain unavailable. Modified block behavior is not resolved.
-The special seed-rule sets obtain omitted properties from the same registry owner as model predicates.
+Selection uses generated code facts for the game's position seed, weighted draw and multipart
+reseeding, independently of jar version labels. Beds share their head position, and doors/double
+plants share the lower position. The single release tool extracts each registered seed method
+and checks every state against the official method, including signed-coordinate boundaries.
+Picture selectors cannot establish a seed method: changing a bed's resource definition does not
+change its block code. These generated facts are not used to decide which blocks exist or which
+pictures may be read. Unknown methods retain all overview alternatives and can still select
+pictures with one alternative per part; random choices remain unavailable until their code
+behavior is known. Unresolved seed-driving properties also leave random selection unavailable.
+Known seeds require Int32 coordinates, and the shared legacy random generator preserves Java's
+signed overflow and rejection rules. Omitted properties use the same generated defaults as model
+predicates. No resources are reread during position selection.
 
 `AssetModel.Face.textureCoordinates` returns the four normalized UV coordinates in original
 face-vertex order after the face's own rotation. The additive, unreleased
