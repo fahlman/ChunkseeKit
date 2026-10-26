@@ -16,6 +16,11 @@ import ChunkseeKit
         let root = try Fixtures.tempDirectory()
         try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
             "LevelName": .string("Portal round trips"), "DataVersion": .int(5023),
+            "BorderSize": .double(59_999_968),
+            "WorldGenSettings": .compound(["dimensions": .compound([
+                NetherPortal.overworld: .compound(["type": PortalFixtures.definition(scale: 1)]),
+                NetherPortal.nether: .compound(["type": PortalFixtures.definition(scale: 8)]),
+            ])]),
         ])]), to: root.appendingPathComponent("level.dat"))
         for (folder, portals) in [(root, overworld), (root.appendingPathComponent("DIM-1"), nether)] {
             try FileManager.default.createDirectory(at: folder.appendingPathComponent("region"), withIntermediateDirectories: true)
@@ -41,8 +46,8 @@ import ChunkseeKit
     @Test func anExistingDestinationWhoseDefaultReturnCreatesAPortalIsFlaggedOneWay() throws {
         let source = frame(NetherPortal.overworld, x: 7)
         let destination = frame(NetherPortal.nether, x: -16)
-        #expect(source.link(into: [destination]) == .portal(destination, block: .init(x: -15, y: 64, z: 0)))
-        #expect(destination.link(into: [source]) == .wouldCreateNewPortal(destination: .init(x: -128, y: 64, z: 0)))
+        #expect(source.link(into: [destination], dimensionTypes: PortalFixtures.types, borders: PortalFixtures.borders) == .portal(destination, block: .init(x: -15, y: 64, z: 0)))
+        #expect(destination.link(into: [source], dimensionTypes: PortalFixtures.types, borders: PortalFixtures.borders) == .wouldCreateNewPortal(destination: .init(x: -128, y: 64, z: 0)))
         let root = try world(overworld: [source], nether: [destination])
         defer { try? FileManager.default.removeItem(at: root) }
         let result = try Fixtures.runCLI(root, command: "portals")
@@ -76,5 +81,15 @@ import ChunkseeKit
         let result = try Fixtures.runCLI(root, command: "portals")
         #expect(result.status == 0)
         #expect(result.output == "Overworld: 1 portals\n  (8, 64, 0) -> no portal in range; would create one near (0, 64, 0)\nNether: 0 portals\n")
+    }
+
+    @Test func missingContextPreservesThePortalWithoutGuessingADestination() throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 800)], nether: [])
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["DataVersion": .int(5023)])]),
+            to: root.appendingPathComponent("level.dat"))
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 0)
+        #expect(result.output == "Overworld: 1 portals\n  (801, 64, 0) -> ?\nNether: 0 portals\n")
     }
 }

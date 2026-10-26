@@ -52,6 +52,23 @@ def mob_spawn_source(facts, notice):
     return result
 
 
+def portal_source(facts, notice):
+    result = notice + "// NetherPortalBlock, PortalForcer, DimensionType codec and WorldBorder methods.\n"
+    result += "// Runtime dimension scales and saved borders are never bundled.\n"
+    result += "enum GeneratedPortalFacts {\n"
+    for name, value in facts.items():
+        if isinstance(value, str):
+            if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", value):
+                raise ValueError("Invalid portal dimension identifier")
+            literal = quoted(value)
+        elif type(value) in (int, float) and value > 0:
+            literal = repr(value)
+        else:
+            raise ValueError("Invalid portal fact: " + name)
+        result += f"    static let {name} = {literal}\n"
+    return result + "}\n"
+
+
 def trading_source(facts, notice):
     result = notice + "// " + facts["source"] + ". Trade contents are never bundled.\n"
     if type(facts["minimumLevel"]) is not int:
@@ -389,7 +406,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
             "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source,
             "Sources/ChunkseeKit/GeneratedTradingFacts.swift": trading_source(facts["trading"], notice),
-            "Sources/ChunkseeKit/GeneratedMobSpawnFacts.swift": mob_spawn_source(facts["mobSpawns"], notice)}
+            "Sources/ChunkseeKit/GeneratedMobSpawnFacts.swift": mob_spawn_source(facts["mobSpawns"], notice),
+            "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice)}
 
 
 def main():
@@ -418,12 +436,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults"]}
+                  "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "portal_rules"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

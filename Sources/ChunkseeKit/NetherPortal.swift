@@ -76,42 +76,42 @@ public struct NetherPortal: Sendable, Equatable {
         case twoWay(target: NetherPortal, block: Block)
         /// The return goes to another existing portal or would create a new one.
         case oneWay(target: NetherPortal, block: Block, returning: Link)
+        /// The outward link is known, but return dimension or border facts are unavailable.
+        case returnUnknown(target: NetherPortal, block: Block)
         /// There is no outbound portal in range, so there is no return link to inspect yet.
         case wouldCreateNewPortal(destination: Block)
     }
 
-    public static let overworld = "minecraft:overworld"
-    public static let nether = "minecraft:the_nether"
+    public static let overworld = GeneratedPortalFacts.otherDimension
+    public static let nether = GeneratedPortalFacts.specialDimension
 
-    /// The other dimension a portal leads to, or `nil` for dimensions without Nether portal travel.
+    /// Minecraft routes Nether portals to the Overworld, and portals in every other valid
+    /// dimension to the Nether. This does not establish that a destination exists in the world.
     public static func targetDimension(from dimension: String) -> String? {
-        switch dimension {
-        case overworld: nether
-        case nether: overworld
-        default: nil
-        }
+        guard let id = Identifier(dimension) else { return nil }
+        return id.description == nether ? overworld : nether
     }
 
-    /// The matching coordinates in the target dimension: X and Z ÷ 8 (rounded down) into the
-    /// Nether, × 8 into the Overworld, kept inside the world border; Y unchanged.
-    public static func destination(of block: Block, from dimension: String) -> Block? {
-        let scale: Double
-        switch dimension {
-        case overworld: scale = 1.0 / 8
-        case nether: scale = 8
-        default: return nil
-        }
-        // Clamp before converting: public coordinates can exceed the game's border or Int / 8.
-        func scaled(_ value: Int) -> Int {
-            Int(min(max((Double(value) * scale).rounded(.down), -29_999_984), 29_999_983))
-        }
-        return Block(x: scaled(block.x), y: block.y, z: scaled(block.z))
+    /// Scales X/Z by source coordinate_scale / target coordinate_scale, clamps against the
+    /// destination's saved border, then floors to blocks; Y is unchanged. Missing/invalid facts
+    /// stay unavailable. This uses the saved border size, not its future interpolation target.
+    public static func destination(of block: Block, from dimension: String,
+                                   dimensionTypes: [String: DimensionType], destinationBorder: WorldBorder?) -> Block? {
+        guard let source = Identifier(dimension)?.description, let target = targetDimension(from: source),
+              let fromScale = dimensionTypes[source]?.coordinateScale,
+              let toScale = dimensionTypes[target]?.coordinateScale,
+              let bounds = BorderBounds(destinationBorder) else { return nil }
+        let scale = fromScale / toScale
+        guard let x = bounds.clamped(Double(block.x) * scale, within: bounds.x),
+              let z = bounds.clamped(Double(block.z) * scale, within: bounds.z) else { return nil }
+        return Block(x: x, y: block.y, z: z)
     }
 
     /// How far, in blocks along X and Z, the game looks for an existing portal around the
-    /// destination: 128 arriving in the Overworld, 16 arriving in the Nether (since 1.16.2).
+    /// destination. The radii and dimension branch are extracted from PortalForcer's code.
     public static func searchRadius(arrivingIn dimension: String) -> Int {
-        dimension == nether ? 16 : 128
+        Identifier(dimension)?.description == nether
+            ? GeneratedPortalFacts.specialSearchRadius : GeneratedPortalFacts.otherSearchRadius
     }
 
     /// Predicts where this portal leads, entering at `entry` (by default the bottom-center block),
@@ -119,13 +119,18 @@ public struct NetherPortal: Sendable, Equatable {
     /// destination by straight-line distance, Y included, within the search square; ties go to
     /// the lower block. This is a prediction: players can enter at any block, and the game only
     /// finds portals whose chunks it can load.
-    public func link(into candidates: [NetherPortal], entering entry: Block? = nil) -> Link? {
+    public func link(into candidates: [NetherPortal], dimensionTypes: [String: DimensionType],
+                     borders: [String: WorldBorder], entering entry: Block? = nil) -> Link? {
         guard let target = Self.targetDimension(from: dimension),
-              let destination = Self.destination(of: entry ?? self.entry, from: dimension) else { return nil }
+              let entry = entry ?? blocks.first.map({ _ in self.entry }),
+              let destination = Self.destination(of: entry, from: dimension,
+                  dimensionTypes: dimensionTypes, destinationBorder: borders[target]),
+              let bounds = BorderBounds(borders[target]) else { return nil }
         let radius = Self.searchRadius(arrivingIn: target)
         var best: (portal: NetherPortal, block: Block, distance: Double)?
-        for portal in candidates where portal.dimension == target {
+        for portal in candidates where Identifier(portal.dimension)?.description == target {
             for block in portal.blocks {
+                guard bounds.contains(block) else { continue }
                 // Minecraft's Vec3i.distSqr converts before subtracting and squaring. Saved
                 // Int32 heights can overflow an Int square even with X/Z inside the radius.
                 let dx = Double(block.x) - Double(destination.x), dy = Double(block.y) - Double(destination.y)
@@ -141,24 +146,58 @@ public struct NetherPortal: Sendable, Equatable {
         return .wouldCreateNewPortal(destination: destination)
     }
 
-    /// Classifies both legs using `link(into:entering:)` and complete portal lists from each
+    /// Classifies both legs using `link` and complete portal lists from each
     /// dimension. The outward leg uses `entry` or this portal's default bottom-center entry;
     /// the return uses the target's default entry, not the outward arrival block. As with `link`,
     /// this is a prediction: entering another block or unavailable chunks can change the trip.
-    /// Returns `nil` for a dimension without Nether-portal travel.
+    /// Returns nil when the outward facts are unavailable; a known outward link is retained
+    /// as returnUnknown when only the return facts are missing. Supply all possible return
+    /// destinations: a custom dimension's Nether portal returns through the Overworld.
     public func roundTrip(into candidates: [NetherPortal], returningThrough origins: [NetherPortal],
+                          dimensionTypes: [String: DimensionType], borders: [String: WorldBorder],
                           entering entry: Block? = nil) -> RoundTrip? {
-        guard let outward = link(into: candidates, entering: entry) else { return nil }
+        guard let outward = link(into: candidates, dimensionTypes: dimensionTypes, borders: borders, entering: entry) else { return nil }
         switch outward {
         case .wouldCreateNewPortal(let destination):
             return .wouldCreateNewPortal(destination: destination)
         case .portal(let target, let block):
-            guard let returning = target.link(into: origins) else { return nil }
+            guard let returning = target.link(into: origins, dimensionTypes: dimensionTypes, borders: borders) else {
+                return .returnUnknown(target: target, block: block)
+            }
             if case .portal(let back, _) = returning, back == self {
                 return .twoWay(target: target, block: block)
             }
             return .oneWay(target: target, block: block, returning: returning)
         }
+    }
+}
+
+/// WorldBorder's absolute limit, inclusive minimum and exclusive maximum are shared by
+/// destination clamping and candidate filtering. Border motion cannot be predicted offline.
+private struct BorderBounds {
+    let x: Range<Double>, z: Range<Double>
+
+    init?(_ border: WorldBorder?) {
+        guard let border, border.centerX.isFinite, border.centerZ.isFinite,
+              border.size.isFinite, border.size > 0 else { return nil }
+        let limit = Double(GeneratedPortalFacts.absoluteBorderLimit)
+        func range(_ center: Double) -> Range<Double>? {
+            let low = min(max(center - border.size / 2, -limit), limit)
+            let high = min(max(center + border.size / 2, -limit), limit)
+            guard low < high else { return nil }
+            return low..<high
+        }
+        guard let x = range(border.centerX), let z = range(border.centerZ) else { return nil }
+        self.x = x; self.z = z
+    }
+
+    func clamped(_ value: Double, within range: Range<Double>) -> Int? {
+        guard value.isFinite else { return nil }
+        return Int(exactly: min(max(value, range.lowerBound), range.upperBound - GeneratedPortalFacts.borderInset).rounded(.down))
+    }
+
+    func contains(_ block: NetherPortal.Block) -> Bool {
+        x.contains(Double(block.x)) && z.contains(Double(block.z))
     }
 }
 

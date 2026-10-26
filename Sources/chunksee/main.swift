@@ -48,7 +48,7 @@ let commands: [Command] = [
     Command(name: "players", summary: "players' positions, deaths, respawn points and status", run: playersCommand),
     Command(name: "structures", arguments: "[dimension]", summary: "structures found in generated chunks, by kind", run: structuresCommand),
     Command(name: "poi", arguments: "[dimension]", summary: "points of interest (beds, workstations, portals…) by type", run: poiCommand),
-    Command(name: "portals", summary: "Nether portals and where each one leads", run: portalsCommand),
+    Command(name: "portals", arguments: "[game.jar]", summary: "Nether portals and where each one leads", run: portalsCommand),
     Command(name: "find", arguments: "<text> [dimension]", summary: "containers and players holding matching items", run: findCommand),
     Command(name: "text", arguments: "<text> [dimension]", summary: "signs and books containing the text", run: textCommand),
 ]

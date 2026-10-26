@@ -163,3 +163,10 @@ and test commands before publishing it.
   Only this code association (including empty maps) is generated. Trade sets, their candidate
   tags and trade definitions are read at runtime, not inferred from folder names or copied
   from the jar. The public query describes potential trading, not rolled or currently usable offers.
+
+Portal travel facts are extracted by ExtractPortalFacts through the JDK class-file API and
+actual game fields. It verifies the NetherPortalBlock dimension-selection instruction format,
+extracts PortalForcer search radii, DimensionType coordinate-scale codec bounds, and WorldBorder
+clamp margin, absolute limit and default size. Dimension scale values and saved borders remain
+runtime inputs. A changed code format fails regeneration for inspection; no version gate or
+dimension registry is generated.

@@ -4,6 +4,10 @@ import ChunkseeKit
 /// Commands about the world as a whole and its players.
 
 func summaryAssetsCommand(_ world: World, _ arguments: Arguments) throws {
+    summaryCommand(world, assets: try suppliedGameAssets(arguments))
+}
+
+func suppliedGameAssets(_ arguments: Arguments) throws -> GameAssets? {
     guard arguments.words.count <= 2 else { fail(usage) }
     let assets: GameAssets?
     if arguments.words.count == 2 {
@@ -13,7 +17,7 @@ func summaryAssetsCommand(_ world: World, _ arguments: Arguments) throws {
         }
         assets = supplied
     } else { assets = nil }
-    summaryCommand(world, assets: assets)
+    return assets
 }
 
 func summaryCommand(_ world: World, assets: GameAssets? = nil) {
