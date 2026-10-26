@@ -109,8 +109,11 @@ import ChunkseeKit
         let definitions = try tradingDefinitions(for: ["farmer"])
         let old = Data(#"{"profession":"minecraft:nitwit","level":1,"trades":[]}"#.utf8)
         var villager = try JSONDecoder().decode(Villager.self, from: old)
-        #expect(villager.supportsTrading(using: definitions) == false && villager.level == 1)
+        #expect(villager.supportsTrading(using: definitions) == nil && villager.level == 1)
+        #expect(villager.offerState == nil)
         villager.profession = "minecraft:farmer"
+        #expect(villager.supportsTrading(using: definitions) == nil)
+        villager.offerState = .absent
         #expect(villager.supportsTrading(using: definitions) == true)
         villager.profession = "example:farmer"
         #expect(villager.supportsTrading(using: definitions) == nil)
@@ -124,7 +127,7 @@ import ChunkseeKit
         #expect(villager.supportsTrading(using: definitions) == true && decoded.supportsTrading(using: definitions) == true)
         #expect(decoded == villager)
         let fields = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        #expect(Set(fields.keys) == ["profession", "level", "trades"])
+        #expect(Set(fields.keys) == ["profession", "level", "trades", "offerState"])
         villager.trades = []
         #expect(villager.supportsTrading(using: definitions) == nil)
     }

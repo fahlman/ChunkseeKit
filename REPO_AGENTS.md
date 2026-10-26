@@ -1053,9 +1053,16 @@ selection or a level with no code link establishes false. Missing code, level or
 dynamic selection amounts stay unknown. Offers are not rolled and merchant conditions, age,
 sleep and sold-out status are not evaluated. Enabled folder/ZIP overrides use shared resource priority;
 a malformed override never reveals the lower definition. There is no version gate.
-This intentionally replaces the old no-argument property, requiring a minor release. Raw saved
-fields, Codable data and RegionFacts interpretation are unchanged. The app must retain the
-world's resource snapshot and pass it when adopting the release.
+This intentionally replaces the old no-argument property, requiring a minor release. The app must
+retain the world's resource snapshot and pass it when adopting the release.
+`Villager.offerState` owns saved Offers presence and recipe readability. AbstractVillager stores
+every initialized offer list; MerchantOffers.CODEC omits Recipes when empty. Saved empty Offers
+therefore returns false without consulting resources. Only absent Offers uses current-level
+definitions. Incomplete lists retain their readable recipes and otherwise stay unknown, including
+Offers-only records without VillagerData. The optional Codable state leaves older standalone
+records' presence unknown without discarding trades. RegionFacts interpretation 20 invalidates
+the former absence/empty/unreadable conflation. This additive API is the #228 follow-up to #267;
+trade-price and sold-out numeric defaults remain a separate #222 code-fact finding.
 
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
