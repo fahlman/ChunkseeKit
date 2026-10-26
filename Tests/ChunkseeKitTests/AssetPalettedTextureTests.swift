@@ -49,6 +49,28 @@ import Testing
         #expect(try assets([source]).palettedTexture("demo:trims/helmet", in: "demo:items") != nil)
     }
 
+    @Test func directPaletteTexturePathsRemainReadableAndPaletteResourcesTakePrecedence() throws {
+        let direct = [base,
+                      TestZIP.Entry(path: "assets/keys/textures/base.png", text: "", data: Data([6])),
+                      TestZIP.Entry(path: "assets/colors/textures/blue.png", text: "", data: Data([7]))]
+        let reader = try assets([generated], files: direct, version: "older", dataVersion: 1)
+        let source = try #require(reader.palettedTexture("demo:trims/helmet_blue", in: "demo:items"))
+        #expect(source.paletteKey.description == "keys:base")
+        #expect(source.palette.description == "colors:blue")
+        #expect(reader.texture(source.paletteKey.description) == Data([6]))
+        #expect(reader.texture(source.palette.description) == Data([7]))
+
+        let both = try assets([generated], files: direct + [
+            .init(path: "assets/keys/textures/palettes/base.png", text: "", data: Data([8])),
+            .init(path: "assets/colors/textures/palettes/blue.png", text: "", data: Data())
+        ])
+        let preferred = try #require(both.palettedTexture("demo:trims/helmet_blue", in: "demo:items"))
+        #expect(preferred.paletteKey.description == "keys:palettes/base")
+        #expect(preferred.palette.description == "colors:palettes/blue")
+        #expect(both.texture(preferred.paletteKey.description) == Data([8]))
+        #expect(both.texture(preferred.palette.description)?.isEmpty == true)
+    }
+
     @Test func laterSourcesReplaceExistingSpritesButMissingBaseImagesDoNot() throws {
         var later = generated
         later["palette_key"] = "keys:later"
@@ -79,7 +101,21 @@ import Testing
         #expect(try assets([generated, directory], files: foreign).palettedTexture("demo:trims/helmet_blue", in: "demo:items") != nil)
     }
 
-    @Test func malformedPathsUnsupportedSourcesAndUnknownVersionsStayUnavailable() throws {
+    @Test func versionLabelsDoNotChangePaletteRecipesOrOverridePriority() throws {
+        let plain: [String: Any] = ["type": "single", "resource": "demo:trims/helmet",
+                                    "sprite": "demo:trims/helmet_blue"]
+        let expected = try #require(assets([generated]).palettedTexture("demo:trims/helmet_blue", in: "demo:items"))
+        for (version, number) in [("older", 1), ("26.3", 1), ("fixture", 5023), ("future", Int(Int32.max))] {
+            let reader = try assets([plain, generated], version: version, dataVersion: number)
+            #expect(reader.palettedTexture("demo:trims/helmet_blue", in: "demo:items") == expected)
+            #expect(try assets([generated, plain], version: version, dataVersion: number)
+                .palettedTexture("demo:trims/helmet_blue", in: "demo:items") == nil)
+            #expect(try assets([generated, ["type": "unknown"]], version: version, dataVersion: number)
+                .palettedTexture("demo:trims/helmet_blue", in: "demo:items") == nil)
+        }
+    }
+
+    @Test func malformedPathsAndUnsupportedSourcesStayUnavailable() throws {
         for (key, value) in [("textures", ["../escape"] as Any), ("textures", true as Any),
                              ("palette_key", "../escape" as Any), ("separator", false as Any),
                              ("permutations", ["blue": "bad path"] as Any),
@@ -89,9 +125,6 @@ import Testing
         }
         for unknown in ["filter", "unstitch", "mod:paletted_permutations"] {
             #expect(try assets([generated, ["type": unknown]]).palettedTexture("demo:trims/helmet_blue", in: "demo:items") == nil)
-        }
-        for (version, number) in [("26.4", 5023), ("26.3", 5024)] {
-            #expect(try assets([generated], version: version, dataVersion: number).palettedTexture("demo:trims/helmet_blue", in: "demo:items") == nil)
         }
         #expect(try assets([generated]).palettedTexture("../escape", in: "demo:items") == nil)
         #expect(try assets([generated]).palettedTexture("demo:trims/helmet_blue", in: "../escape") == nil)

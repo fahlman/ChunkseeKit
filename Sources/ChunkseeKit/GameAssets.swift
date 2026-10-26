@@ -53,9 +53,9 @@ public struct GameAssets: Sendable {
     }
 
     /// Resolves an inventory illustration with the stack's saved model reference, trim material
-    /// custom-model data and saved shield designs. Custom conditions, strings, numeric ranges and colors require
-    /// verified 26.3/5023 semantics. Non-nil trim keys require that version too; absent trim keys
-    /// keep the generic fallback in other versions. Obtain the key from ItemStack.itemModelSelection.
+    /// custom-model data and saved shield designs. Trim selection, custom conditions, strings,
+    /// numeric ranges and colors follow readable formats independently of version metadata.
+    /// Obtain the key from ItemStack.itemModelSelection.
     /// Shield patterns resolve named definitions in this jar or saved inline asset holders. The
     /// material's ordered overlays carry the base dye and first sixteen pattern layers; clients
     /// composite them before projecting the existing geometry. Trim-pattern identity stays unused.
@@ -87,11 +87,12 @@ public struct GameAssets: Sendable {
         resource(identifier, directory: "textures", extension: "png")
     }
 
-    /// Resolves a generated palette sprite in one 26.3 atlas, without reading its PNG payloads.
+    /// Resolves a generated palette sprite in one atlas, without reading its PNG payloads.
     /// Paletted, directory and single sources preserve their order; a later existing plain
     /// sprite hides a previous palette sprite. Missing base images add nothing. Missing palette
     /// images or invalid PNGs remain unavailable when the client reads/decodes the returned IDs.
-    /// Other source kinds, malformed resources and unverified game versions return nil.
+    /// Palette-directory resources take precedence over older direct texture paths when present.
+    /// Other source kinds and malformed resources return nil; version labels do not gate lookup.
     /// Work is bounded to 16 MiB JSON, 256 sources and 4,096 generated sprite entries.
     /// Resource-pack layering, animation, image decoding and caching are not performed here.
     public func palettedTexture(_ identifier: String, in atlas: String) -> AssetPalettedTexture? {

@@ -75,10 +75,6 @@ struct AssetItemReader {
                     return value
                 }
             } else if property.description == "minecraft:trim_material", let selection {
-                guard selection.trimMaterialID == nil ||
-                        (assets.version.id == "26.3" && Int(assets.version.dataVersion) == SaveVersion.java26_3) else {
-                    throw Invalid.asset
-                }
                 child = try selectedCase(node, value: selection.trimMaterialID?.description) { value in
                     guard let identifier = Identifier(value) else { throw Invalid.asset }
                     return identifier.description
@@ -160,8 +156,7 @@ struct AssetItemReader {
     }
 
     private func customModelData() throws -> ItemCustomModelData {
-        guard assets.version.id == "26.3", Int(assets.version.dataVersion) == SaveVersion.java26_3,
-              let selection else { throw Invalid.asset }
+        guard let selection else { throw Invalid.asset }
         return selection.customModelData
     }
 

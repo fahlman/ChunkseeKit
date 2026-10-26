@@ -783,7 +783,7 @@ variants. It computes from retained components, so existing cached items need no
 
 For a saved stack, `ItemStack.itemModelSelection` adds its trim-material key and custom-model data.
 Pass this hashable value to `GameAssets.itemModel(for:)` and use it as the model-cache key; stacks
-with different trim materials can select different models. The **26.3 / 5023** trim selector reads
+with different trim materials can select different models. The trim selector reads
 the saved `minecraft:trim.material` reference, or legacy `tag.Trim.material`. Missing/removed trim
 uses the definition's fallback; removal/current values suppress legacy data. An inline material
 holder has no registry key and also uses the fallback, matching the game's `Holder.unwrapKey`.
@@ -1365,14 +1365,15 @@ model, so the app retains its symbol fallback. This additive API requires a mino
 app adoption is fahlman/Chunksee#433. It changes no saved facts or cache interpretation.
 
 `assets.palettedTexture("minecraft:trims/items/helmet_trim_quartz", in: "minecraft:items")`
-resolves a palette-generated sprite from one atlas definition in **26.3 / 5023**. Its
+resolves a palette-generated sprite from one readable atlas definition. Its
 `AssetPalettedTexture` names the base image, key palette and replacement palette as texture IDs;
 read their original PNG bytes with `assets.texture(_:)`. Palette paths include the game's
-`palettes/` directory. No trim/material-name table or image decoder is included.
+`palettes/` directory when present, otherwise an existing older direct texture path is used.
+No trim/material-name table or image decoder is included.
 
 Source order is preserved for `paletted_permutations`, `directory` and `single`: later existing
 sprites replace earlier ones, while missing base images add nothing. A later plain sprite,
-unsupported source kind, malformed resource or unverified version returns nil. Missing palette
+unsupported source kind or malformed resource returns nil. Version labels do not gate lookup. Missing palette
 PNGs or invalid images remain unavailable when the client reads/decodes the returned resources.
 The atlas is limited to 16 MiB of JSON, 256 sources and 4,096 generated sprite entries in total.
 
@@ -1420,7 +1421,7 @@ explicit fallback behavior nor texture loading. Generated trim textures still re
 interpretation and native image decoding in the client. The official 26.3 TrimMaterialProperty,
 ArmorTrim and select codecs establish selection; the item data fixer establishes the legacy field.
 
-With the saved selection and verified **26.3 / 5023** assets, `minecraft:custom_model_data`
+With the saved selection and readable assets, `minecraft:custom_model_data`
 conditions read flags, selects match exact strings (including the empty string), numeric ranges
 read Floats, and tint sources resolve to constant RGB. Each property's nonnegative `index`
 defaults to zero; missing entries yield false, no matching string, zero, or the tint's required
@@ -1428,7 +1429,7 @@ default color. String cases use the same bounded table reader as GUI/trim cases,
 keys instead of identifier normalization. Numeric ranges apply Float scaling, stable threshold
 sorting and the game's actual search, including its duplicate/signed-zero behavior at 16 entries.
 NaN products and below-range values use the fallback; an absent required fallback stays unavailable.
-Tables are bounded to 4,096 entries. Unverified versions and malformed selected data stay unavailable.
+Tables are bounded to 4,096 entries. Malformed selected data stays unavailable, independently of version labels.
 The default-only reader keeps its earlier static branch choices and does not resolve custom tints.
 The official 26.3 component/property/tint codecs and range selector establish these semantics;
 synthetic saved NBT and definitions are compared directly with those game classes. No game artwork,
@@ -1573,7 +1574,7 @@ if let plains = definitions["minecraft:plains"] {
 let jarPlains = assets?.biomeDefinition("plains")
 ```
 
-These additive APIs read the verified 26.3 format (data version 5023). Results contain
+These APIs read any game/save version whose biome resources parse. Results contain
 unclamped base temperature/downfall, a 24-bit RGB water color, optional grass, foliage and
 dry-foliage overrides, and the grass modifier (`none`, `dark_forest`, or `swamp`). Colors accept
 six-digit `#RRGGBB` strings, signed Int32 values, or three Float channels in 0...1, using the
@@ -1585,7 +1586,7 @@ World lookup canonicalizes requested IDs and reads only those resource payloads.
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. A missing
 jar makes vanilla unavailable; higher-priority pack definitions can
-still resolve. Missing/other saved data versions return an empty result, and an absent enabled
+still resolve. Save and jar version labels do not restrict these reads, and an absent enabled
 pack list is not replaced with an assumed vanilla pack. File errors propagate.
 
 No Minecraft biome-color table or artwork is bundled. The caller supplies the game file and
