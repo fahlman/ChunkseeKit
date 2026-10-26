@@ -301,6 +301,22 @@ This snapshot does not evaluate timeline periods, fractional ticks, rates or dim
 and does not validate clock registry membership. This additive API is unreleased; the app's
 time-of-day lighting is tracked separately on fahlman/Chunksee#357.
 
+`GameAssets.timelineTiming(_:)` and `World.timelineTiming(_:assets:)` read a timeline's `clockID`
+and optional `periodTicks`, independently of game/save version labels. The world query resolves
+the supplied jar and enabled folder/ZIP overrides through the shared resource reader; a present
+malformed override or unknown higher pack blocks fallback. Track contents and time markers are
+not interpreted. Missing clock references and invalid/nonpositive periods leave timing unavailable;
+an omitted period is a valid nonperiodic timeline.
+
+Use `clockTimes()[timing.clockID]` for its saved time. `timing.position(at:)` gives the zero-based
+cycle and signed tick remainder using Minecraft's division toward zero, preserving the saved
+integer's full range rather than narrowing a command result; nonperiodic timelines return nil.
+No day length, default clock, time simulation or registry membership is inferred.
+The CLI's summary uses the `minecraft:day` timeline and its named clock, with zero-based day
+numbers matching Minecraft's F3 counter. If the needed definition/clock is unavailable it keeps
+the raw saved Overworld ticks; nonperiodic timelines keep their own raw clock ticks. These additive APIs
+require a minor release; app day-length adoption is tracked on fahlman/ChunkseeKit#232 item 5.
+
 ### Dimensions, chunks and blocks
 
 ```swift
@@ -1753,6 +1769,7 @@ Other commands:
 
 | Command | Output |
 |---|---|
+| `chunksee <world> summary [game.jar]` | World summary; uses the selected game and enabled packs for the day timeline, or preserves raw clock ticks when timing is unavailable |
 | `chunksee <world> block <x> <y> <z> [dimension]` | Block, biome and block entity at a world position |
 | `chunksee <world> chunk <cx> <cz> [dimension]` | Each section's palette, bit width and biomes |
 | `chunksee <world> scan [dimension]` | Decodes every chunk, reports block counts and any errors |
