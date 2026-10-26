@@ -485,9 +485,10 @@ Dimension.vanillaBiomes and its hand-copied inventories are removed, an intentio
 API change requiring a minor release and app adoption. No per-snapshot biome list is maintained.
 
 `BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
-26.3/5023 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
-and the saved grass modifier. World queries canonicalize only requested IDs and require a
-known saved version and saved enabled-pack list. A missing jar makes vanilla
+base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
+and the saved grass modifier from any version whose resources parse. World queries canonicalize
+only requested IDs and use the saved enabled-pack list. Save/jar version labels do not suppress
+readable definitions, including for older or unlabeled saves. A missing jar makes vanilla
 unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
 cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the
 hex/integer/channel forms. Unknown grass modifiers retain their raw strings and leave only
@@ -498,12 +499,14 @@ numeric validation intentionally rejects Gson coercions, as the other asset read
 Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
 fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
 biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported packs, missing
-versions/jars, paths and unchanged inputs. These definition APIs are available in v0.52.0 for
+version labels/jars, paths and unchanged inputs. The unreleased #217 correction removes both
+world and direct-jar version gates; parsing, priority and bounds retain one owner. It changes
+no public signature or serialized facts. These definition APIs are available in v0.52.0 for
 fahlman/Chunksee#361.
 
 The new `World.biomeDefinitions(assets:)` overload discovers the complete biome-definition
 catalog without reading chunks. `WorldResourcePack` lists candidate IDs from its enabled folder
-or ZIP sources, then the same requested-ID reader applies priority, version checks and invalid
+or ZIP sources, then the same requested-ID reader applies priority and invalid
 override shadowing. ZIP names come from the existing validated directory without reading entry
 payloads. Folder discovery preserves containment and matches 26.3 `PathPackResources.listPath`:
 `Files.find` receives no `FOLLOW_LINKS`, so linked category folders, descendant directories and
