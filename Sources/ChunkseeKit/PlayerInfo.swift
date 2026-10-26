@@ -45,6 +45,7 @@ public struct PlayerInfo: Sendable {
 
     /// Supply current world enchantment definitions to interpret equipped enchantments' health effects.
     public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil, enchantments: [String: EnchantmentDefinition] = [:]) {
+        let nbt = SaveDataUpgrade.player(nbt, dataVersion: nbt["DataVersion"]?.int)
         self.uuid = uuid
         self.nbt = nbt
         self.lastSaved = lastSaved
