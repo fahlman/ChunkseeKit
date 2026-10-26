@@ -51,7 +51,7 @@ def save_renames_source(facts, notice):
     result += "    static let steps: [SaveDataUpgrade.Rename] = [\n"
     previous = -1
     for step in steps:
-        if step["kind"] not in {"block", "item", "biome"} or type(step["version"]) is not int or step["version"] < previous:
+        if step["kind"] not in {"block", "item", "biome", "entity", "blockEntity"} or type(step["version"]) is not int or step["version"] < previous:
             raise ValueError("Invalid or unordered save rename step")
         previous = step["version"]
         result += "        // " + step["source"] + ": " + step["name"] + ".\n"
@@ -62,6 +62,14 @@ def save_renames_source(facts, notice):
             result += f"            {quoted(old)}: {quoted(new)},\n"
         result += "        ]),\n"
     result += "    ]\n"
+    for kind, versions in sorted(facts["entityIntroductions"].items()):
+        result += f"    // First input schema accepting each renamed {kind} ID; not a membership catalog.\n"
+        result += f"    static let {kind}Introductions: [String: Int] = [\n"
+        for name, version in sorted(versions.items()):
+            if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", name) or type(version) is not int:
+                raise ValueError("Invalid entity rename applicability")
+            result += f"        {quoted(name)}: {version},\n"
+        result += "    ]\n"
     item_names = facts["itemNames"]
     result += "    // " + item_names["source"] + ". Saved string identity and variant, not numeric item IDs.\n"
     result += f"    static let itemNameBoundary = {item_names['boundary']}\n"
@@ -84,7 +92,20 @@ def save_rename_proofs_source(facts, notice):
     result += "    struct Sample: Sendable { let kind: String; let version: Int; let input: String; let expected: String }\n"
     result += "    static let samples: [Sample] = [\n"
     for row in facts["proofs"]:
+        if row["kind"] in {"entity", "blockEntity"}:
+            continue
         result += f"        .init(kind: {quoted(row['kind'])}, version: {row['version']}, input: {quoted(row['input'])}, expected: {quoted(row['expected'])}),\n"
+    result += "    ]\n"
+    result += "    struct EntitySample: Sendable { let kind: String; let input: String; let expected: String; let versions: [Int] }\n"
+    result += "    static let entitySamples: [EntitySample] = [\n"
+    groups = {}
+    for row in facts["proofs"]:
+        if row["kind"] in {"entity", "blockEntity"}:
+            groups.setdefault((row["kind"], row["input"], row["expected"]), set()).add(row["version"])
+    for (kind, name, expected), versions in sorted(groups.items()):
+        result += f"        .init(kind: {quoted(kind)}, input: {quoted(name)}, expected: {quoted(expected)}, versions: [\n"
+        result += textwrap.indent(textwrap.fill(", ".join(map(str, sorted(versions))), width=100), "            ") + "\n"
+        result += "        ]),\n"
     result += "    ]\n"
     result += "    struct Record: Sendable { let kind: String; let version: Int; let input: String; let output: String }\n"
     result += "    static let records: [Record] = [\n"
@@ -512,7 +533,7 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
                   "categories": ["dyes", "mob_appearance", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames"]}

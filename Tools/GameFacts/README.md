@@ -48,8 +48,17 @@ Sources and interpretation:
   class constants. All table entries and version boundaries have independent complete-game
   ITEM_STACK proofs. This prevents old grass blocks from being mistaken for newer short grass.
   Nothing writes a world. This slice does not implement numeric
-  flattening, older chunk layouts, entity/attribute renames, or every other data-fixer class;
+  flattening, older chunk layouts, attribute renames, or every other data-fixer class;
   those remain on #255. These rename facts are not registry membership lists.
+
+- `SimplestEntityRenameFix` and `BlockEntityRenameFix` supply namespaced record aliases.
+  The extractor calls their actual name functions over input-schema choices, verifies the real
+  boundary upgrade, then records complete-chain results at every schema interval. Only changed
+  names and their first applicable schema boundaries are emitted; these are rewrite facts, not
+  a list of types the reader admits. Unknown records remain readable and unchanged. Whole-record
+  proofs use ENTITY_TREE for passengers and PLAYER for shoulder/root-vehicle snapshots, plus
+  spawn-egg and spawner records. Pre-namespace aliases need the earlier field-dependent entity
+  splits and remain in the older-format slice; type-changing fixes are not inferred from an ID.
 
 - `BlockStateDefinitions.STATIC_DEFINITIONS` supplies synthetic rendering-only definition IDs.
   Registered blocks take precedence in definitionLocationToBlockStateMapper, so the extractor

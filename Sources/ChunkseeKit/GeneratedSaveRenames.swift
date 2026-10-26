@@ -74,6 +74,10 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1483, changes: [
             "minecraft:puffer_fish_spawn_egg": "minecraft:pufferfish_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityPufferfishRenameFix: EntityPufferfishRenameFix.
+        .init(kind: .entity, version: 1483, changes: [
+            "minecraft:puffer_fish": "minecraft:pufferfish",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename seagrass items.
         .init(kind: .item, version: 1484, changes: [
             "minecraft:sea_grass": "minecraft:seagrass",
@@ -88,6 +92,11 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1486, changes: [
             "minecraft:cod_mob_spawn_egg": "minecraft:cod_spawn_egg",
             "minecraft:salmon_mob_spawn_egg": "minecraft:salmon_spawn_egg",
+        ]),
+        // net.minecraft.util.datafix.fixes.EntityCodSalmonFix: EntityCodSalmonFix.
+        .init(kind: .entity, version: 1486, changes: [
+            "minecraft:cod_mob": "minecraft:cod",
+            "minecraft:salmon_mob": "minecraft:salmon",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename prismarine_brick(s)_* blocks.
         .init(kind: .item, version: 1487, changes: [
@@ -156,6 +165,21 @@ enum GeneratedSaveRenames {
             "minecraft:stripped_spruce_bark": "minecraft:stripped_spruce_wood",
             "minecraft:vindication_illager_spawn_egg": "minecraft:vindicator_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityTheRenameningFix: EntityTheRenameningBlock.
+        .init(kind: .entity, version: 1510, changes: [
+            "minecraft:commandblock_minecart": "minecraft:command_block_minecart",
+            "minecraft:ender_crystal": "minecraft:end_crystal",
+            "minecraft:evocation_fangs": "minecraft:evoker_fangs",
+            "minecraft:evocation_illager": "minecraft:evoker",
+            "minecraft:eye_of_ender_signal": "minecraft:eye_of_ender",
+            "minecraft:fireworks_rocket": "minecraft:firework_rocket",
+            "minecraft:illusion_illager": "minecraft:illusioner",
+            "minecraft:snowman": "minecraft:snow_golem",
+            "minecraft:villager_golem": "minecraft:iron_golem",
+            "minecraft:vindication_illager": "minecraft:vindicator",
+            "minecraft:xp_bottle": "minecraft:experience_bottle",
+            "minecraft:xp_orb": "minecraft:experience_orb",
+        ]),
         // net.minecraft.util.datafix.fixes.LegacyBlockRenameFix: Rename coral fan blocks.
         .init(kind: .block, version: 1515, changes: [
             "minecraft:brain_coral_fan": "minecraft:brain_coral_wall_fan",
@@ -185,6 +209,10 @@ enum GeneratedSaveRenames {
         .init(kind: .item, version: 1928, changes: [
             "minecraft:illager_beast_spawn_egg": "minecraft:ravager_spawn_egg",
         ]),
+        // net.minecraft.util.datafix.fixes.EntityRavagerRenameFix: EntityRavagerRenameFix.
+        .init(kind: .entity, version: 1928, changes: [
+            "minecraft:illager_beast": "minecraft:ravager",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename bee_hive item to beehive.
         .init(kind: .item, version: 2209, changes: [
             "minecraft:bee_hive": "minecraft:beehive",
@@ -206,6 +234,10 @@ enum GeneratedSaveRenames {
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename zombie pigman egg item.
         .init(kind: .item, version: 2509, changes: [
             "minecraft:zombie_pigman_spawn_egg": "minecraft:zombified_piglin_spawn_egg",
+        ]),
+        // net.minecraft.util.datafix.fixes.EntityZombifiedPiglinRenameFix: EntityZombifiedPiglinRenameFix.
+        .init(kind: .entity, version: 2509, changes: [
+            "minecraft:zombie_pigman": "minecraft:zombified_piglin",
         ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Rename soul fire torch and soul fire lantern.
         .init(kind: .item, version: 2528, changes: [
@@ -451,6 +483,10 @@ enum GeneratedSaveRenames {
             "minecraft:pottery_shard_prize": "minecraft:prize_pottery_shard",
             "minecraft:pottery_shard_skull": "minecraft:skull_pottery_shard",
         ]),
+        // net.minecraft.util.datafix.fixes.BlockEntityRenameFix: Rename Suspicious Sand to Brushable Block.
+        .init(kind: .blockEntity, version: 3438, changes: [
+            "minecraft:suspicious_sand": "minecraft:brushable_block",
+        ]),
         // net.minecraft.util.datafix.fixes.ItemRenameFix: Pottery shard item renaming to Pottery sherd.
         .init(kind: .item, version: 3447, changes: [
             "minecraft:angler_pottery_shard": "minecraft:angler_pottery_sherd",
@@ -502,6 +538,30 @@ enum GeneratedSaveRenames {
             "minecraft:trial_explorer_map": "minecraft:buried_trial_chambers_map",
             "minecraft:woodland_explorer_map": "minecraft:woodland_mansion_map",
         ]),
+    ]
+    // First input schema accepting each renamed blockEntity ID; not a membership catalog.
+    static let blockEntityIntroductions: [String: Int] = [
+        "minecraft:suspicious_sand": 3327,
+    ]
+    // First input schema accepting each renamed entity ID; not a membership catalog.
+    static let entityIntroductions: [String: Int] = [
+        "minecraft:cod_mob": 1470,
+        "minecraft:commandblock_minecart": 705,
+        "minecraft:ender_crystal": 705,
+        "minecraft:evocation_fangs": 705,
+        "minecraft:evocation_illager": 705,
+        "minecraft:eye_of_ender_signal": 705,
+        "minecraft:fireworks_rocket": 705,
+        "minecraft:illager_beast": 1801,
+        "minecraft:illusion_illager": 705,
+        "minecraft:puffer_fish": 1470,
+        "minecraft:salmon_mob": 1470,
+        "minecraft:snowman": 705,
+        "minecraft:villager_golem": 705,
+        "minecraft:vindication_illager": 705,
+        "minecraft:xp_bottle": 705,
+        "minecraft:xp_orb": 705,
+        "minecraft:zombie_pigman": 705,
     ]
     // ItemStackTheFlatteningFix.MAP / updateItem. Saved string identity and variant, not numeric item IDs.
     static let itemNameBoundary = 1452

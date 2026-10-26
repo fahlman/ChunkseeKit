@@ -42,6 +42,45 @@ import ChunkseeKitTestSupport
         #expect(ItemStack(input, dataVersion: sample.version)?.id == sample.expected)
     }
 
+    @Test(arguments: GeneratedSaveRenameProofs.entitySamples)
+    func matchesMinecraftEntityNamesAcrossEverySchemaInterval(_ sample: GeneratedSaveRenameProofs.EntitySample) {
+        for version in sample.versions {
+            let entity = NBT.compound([
+                "id": .string(sample.input), "x": .int(1), "y": .int(64), "z": .int(2),
+                "Pos": .list([.double(1), .double(64), .double(2)]),
+                "Items": .list([item("example:unchanged")]),
+            ])
+            let chunk = NBT.compound(["DataVersion": .int(Int32(version)),
+                                      "block_entities": .list([entity]), "Entities": .list([entity])])
+            let entries = sample.kind == "entity" ? ItemContainer.containers(inEntityChunk: chunk)
+                : ItemContainer.containers(inChunk: chunk)
+            #expect(entries.first?.kind == sample.expected, "Saved version \(version)")
+            #expect(entries.first?.items.first?.id == "example:unchanged")
+        }
+    }
+
+    @Test func entityAliasesPreserveUnknownAndInapplicableNames() throws {
+        func mob(_ id: String) -> NBT {
+            Fixtures.mob(["id": .string(id), "Pos": .list([.double(1), .double(64), .double(2)])])
+        }
+        #expect(Creature(mob("zombie_pigman"), dataVersion: 2508)?.id == "minecraft:zombified_piglin")
+        #expect(Creature(mob("minecraft:zombie_pigman"), dataVersion: nil)?.id == "minecraft:zombie_pigman")
+        #expect(Creature(mob("example:zombie_pigman"), dataVersion: 2508)?.id == "example:zombie_pigman")
+        #expect(Creature(mob("minecraft:new_mob"), dataVersion: 2508)?.id == "minecraft:new_mob")
+        for version in [2509, 5023, Int.max] {
+            #expect(Creature(mob("minecraft:zombie_pigman"), dataVersion: version)?.id == "minecraft:zombie_pigman")
+        }
+        let id = NBT.string("minecraft:zombie_pigman")
+        let egg = item("example:egg", extra: ["tag": .compound([
+            "EntityTag": .compound(["id": id, "CustomName": id, "custom": .compound(["id": id])]),
+        ])])
+        let result = try #require(ItemStack(egg, dataVersion: 2508))
+        #expect(result.components?["EntityTag"]?["id"] == .string("minecraft:zombified_piglin"))
+        #expect(result.components?["EntityTag"]?["CustomName"] == id)
+        #expect(result.components?["EntityTag"]?["custom"]?["id"] == id)
+        #expect(egg["tag"]?["EntityTag"]?["id"] == id)
+    }
+
     @Test func legacyNamesPrecedeLaterAliasesAndRespectDamageVariants() {
         #expect(ItemStack(item("minecraft:grass"), dataVersion: nil)?.id == "minecraft:grass_block")
         #expect(ItemStack(item("minecraft:grass"), dataVersion: 2865)?.id == "minecraft:short_grass")
@@ -210,6 +249,46 @@ import ChunkseeKitTestSupport
             let expected = PlayerInfo(uuid: UUID(), nbt: .compound(expectedFields))
             #expect(ids(actual.inventory) == ids(expected.inventory) && counts(actual.inventory) == counts(expected.inventory))
             #expect(ids(actual.enderChest) == ids(expected.enderChest))
+        case "entityNames":
+            func creatures(_ nbt: NBT, version: Int) -> [Creature] {
+                Creature.creatures(inEntityChunk: .compound([
+                    "DataVersion": .int(Int32(version)), "Entities": .list([nbt]),
+                ]))
+            }
+            let actual = creatures(input, version: record.version)
+            let expected = creatures(output, version: Int(Int32.max))
+            #expect(actual.count == 2 && actual.map(\.id) == expected.map(\.id))
+            #expect(actual.map(\.x) == expected.map(\.x) && actual.map(\.z) == expected.map(\.z))
+        case "entityPlayer":
+            let uuid = UUID()
+            let actual = PlayerInfo(uuid: uuid, nbt: input)
+            var fields = try #require(output.compound); fields["DataVersion"] = .int(Int32.max)
+            let expected = PlayerInfo(uuid: uuid, nbt: .compound(fields))
+            #expect(actual.shoulderPets.count == 1 && actual.shoulderPets.map(\.id) == expected.shoulderPets.map(\.id))
+            #expect(actual.rootVehicleCreatures.count == 2 && actual.rootVehicleCreatures.map(\.id) == expected.rootVehicleCreatures.map(\.id))
+        case "entityItem":
+            let actual = try #require(ItemStack(input, dataVersion: record.version))
+            let expected = try #require(ItemStack(output))
+            #expect(actual.components?["EntityTag"]?["id"] == expected.components?["minecraft:entity_data"]?["id"])
+        case "beehiveNames":
+            let actual = SaveDataUpgrade.blockEntity(input, dataVersion: record.version)
+            #expect(actual["Bees"]?[0]?["EntityData"]?["id"] == output["bees"]?[0]?["entity_data"]?["id"])
+            #expect(actual["Bees"]?[0]?["EntityData"]?["id"] != nil)
+        case "spawnerNames", "blockEntityNames":
+            func chunk(_ entity: NBT, version: Int) -> NBT {
+                .compound(["DataVersion": .int(Int32(version)), "block_entities": .list([entity])])
+            }
+            let actual = chunk(input, version: record.version)
+            let expected = chunk(output, version: Int(Int32.max))
+            if record.kind == "spawnerNames" {
+                #expect(Spawner.spawners(inChunk: actual) == Spawner.spawners(inChunk: expected))
+                #expect(Spawner.spawners(inChunk: actual).count == 1)
+                #expect(SaveDataUpgrade.blockEntities(inChunk: actual).first?["SpawnPotentials"]?[0]?["Entity"]?["id"]
+                    == output["SpawnPotentials"]?[0]?["data"]?["entity"]?["id"])
+            } else {
+                #expect(ItemContainer.containers(inChunk: actual) == ItemContainer.containers(inChunk: expected))
+                #expect(ItemContainer.containers(inChunk: actual).count == 1)
+            }
         default: Issue.record("Unexpected generated record kind")
         }
     }
@@ -272,5 +351,35 @@ import ChunkseeKitTestSupport
         var upgraded = SaveDataUpgrade.item(value, dataVersion: 4540)
         for _ in 0..<150 { upgraded = upgraded["components"]!["minecraft:bundle_contents"]![0]! }
         #expect(upgraded["id"] == .string("minecraft:iron_chain"))
+    }
+
+    @Test func regionEntityIdentitiesUseEachFilesVersionWithoutWriting() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root), region = RegionPosition(x: 0, z: 0)
+        var terrain = try #require(chunk(version: 3437).compound)
+        terrain["block_entities"] = .list([.compound([
+            "id": .string("minecraft:suspicious_sand"), "x": .int(0), "y": .int(64), "z": .int(0),
+            "LootTable": .string("example:loot"),
+        ])])
+        let uuid = UUID()
+        let mob = Fixtures.mob([
+            "id": .string("minecraft:zombie_pigman"), "UUID": Fixtures.uuidInts(uuid),
+            "Pos": .list([.double(1), .double(64), .double(2)]),
+        ])
+        let entities = NBT.compound(["DataVersion": .int(2508), "Entities": .list([mob])])
+        let terrainURL = dimension.regionURL(.terrain, at: region), entityURL = dimension.regionURL(.entities, at: region)
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(terrain))]), to: terrainURL)
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: entities)]), to: entityURL)
+        let before = try [Data(contentsOf: terrainURL), Data(contentsOf: entityURL)]
+        let facts = try dimension.scan(region: region)
+        #expect(facts.containers.count == 1 && facts.containers.first?.kind == "minecraft:brushable_block")
+        #expect(facts.containers.first?.lootTable == "example:loot")
+        #expect(facts.creatures.count == 1 && facts.creatures.first?.id == "minecraft:zombified_piglin")
+        #expect(facts.creatures.first?.uuid == uuid)
+        #expect(try dimension.creatures(regionX: 0, regionZ: 0) == facts.creatures)
+        #expect(try dimension.containers(regionX: 0, regionZ: 0) == facts.containers)
+        #expect(try RegionFile(contentsOf: entityURL).chunkNBT(localX: 0, localZ: 0) == entities)
+        #expect(try before == [Data(contentsOf: terrainURL), Data(contentsOf: entityURL)])
     }
 }
