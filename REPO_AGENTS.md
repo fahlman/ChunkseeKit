@@ -1140,7 +1140,9 @@ Raw NBT, RegionFile and World.playerData remain unchanged, and no save is writte
 item callers can supply their containing file's version through ItemStack.init(_:dataVersion:);
 the existing initializer consumes an already interpreted value. Missing DataVersion means -1;
 current/newer records return before traversing or allocating rename state. Each step applies once,
-and only later steps can rename its result again. Unrelated text, custom tags, malformed fields,
+and only later steps can rename its result again. Old records share immutable plans for the finite
+generated change boundaries; arbitrary saved versions do not grow a cache or rebuild dictionaries.
+Unrelated text, custom tags, malformed fields,
 unknown names and properties are preserved. Traversal uses an explicit stack for nested contents.
 Embedded level players use their own version, as LevelDatToSavedDataFileFix does, rather than
 inheriting the surrounding level's version. RegionFacts interpretation 21 invalidates earlier names.

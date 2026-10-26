@@ -34,7 +34,7 @@ enum SaveDataUpgrade {
         upgrade(nbt, as: .item, dataVersion: dataVersion)
     }
 
-    private struct Names {
+    private struct Names: Sendable {
         var block: [String: String] = [:]
         var item: [String: String] = [:]
         var biome: [String: String] = [:]
@@ -110,6 +110,32 @@ enum SaveDataUpgrade {
         }
     }
 
+    private struct Plan: Sendable {
+        let boundary: Int
+        let names: Names
+    }
+
+    // A plan changes only at a generated fix boundary, not at every saved version. Swift's
+    // immutable static initialization shares these bounded plans across concurrent readers.
+    // The current-save fast path never initializes them or pays for their dictionaries.
+    private static let plans: [Plan] = {
+        let boundaries = Set(GeneratedSaveRenames.steps.map(\.version)
+            + GeneratedSaveRenames.itemDamageChanges.map(\.version)
+            + [GeneratedSaveRenames.itemNameBoundary])
+        return boundaries.sorted().map { Plan(boundary: $0, names: Names(after: $0 - 1)) }
+    }()
+
+    private static func names(after version: Int) -> Names {
+        var lower = 0, upper = plans.count
+        while lower < upper {
+            let middle = lower + (upper - lower) / 2
+            if plans[middle].boundary <= version { lower = middle + 1 }
+            else { upper = middle }
+        }
+        // upgrade returns before this lookup at/after the final generated rename boundary.
+        return plans[lower].names
+    }
+
     private enum Shape {
         case chunk, sections, section, blockPalette, biomePalette, blockStates, biomes
         case blockState, biome, item, items, itemTag, components, componentContainers, componentContainer
@@ -128,7 +154,7 @@ enum SaveDataUpgrade {
         // before allocating a traversal or initializing the generated rename dictionaries.
         let version = dataVersion ?? -1
         guard version < GeneratedSaveRenames.lastVersion else { return nbt }
-        let names = Names(after: version)
+        let names = names(after: version)
         var work: [Work] = [.visit(nbt, shape)]
         var results: [NBT] = []
         // An explicit stack preserves arbitrarily nested saved contents without consuming the

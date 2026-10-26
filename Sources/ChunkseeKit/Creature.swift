@@ -49,12 +49,14 @@ public struct Creature: Sendable, Equatable, Codable {
 
     /// Reads Minecraft's saved mob format, including new and modded type IDs.
     /// Health and the type's name alone do not establish that the saved record is a mob.
+    /// With no file version, names receive the game's oldest-save upgrades. For current data,
+    /// pass its containing entity-chunk or player-file DataVersion to the versioned initializer.
     public init?(_ nbt: NBT) {
         self.init(nbt, dataVersion: nil)
     }
 
     /// The saved mob format establishes membership independently of the game's version.
-    /// The version is retained for facts such as omitted health defaults, not a type list.
+    /// The version selects saved-name upgrades and facts such as omitted health defaults, not a type list.
     /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
     public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
         let nbt = SaveDataUpgrade.entity(nbt, dataVersion: dataVersion)
