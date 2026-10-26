@@ -263,7 +263,7 @@ public struct Chunk: Sendable {
     public static let keysNotNeededForTerrain: Set<String> = [
         "block_ticks", "fluid_ticks", "PostProcessing", "structures", "blending_data", "block_entities",
         "BlockLight", "SkyLight", "entities", "CarvingMasks", "Lights", "UpgradeData", "isLightOn",
-        "Entities", "TileEntities", "Structures", "TileTicks", "LiquidTicks", "LiquidsToBeTicked", "ToBeTicked",
+        "Entities", "TileEntities", "TileTicks", "LiquidTicks", "LiquidsToBeTicked", "ToBeTicked",
     ]
 
     /// Opt-in terrain read retaining the saved light channels and their validity flag.

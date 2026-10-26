@@ -77,8 +77,9 @@ import Testing
         let malformed = NBT.compound(["block_entities": .list([.compound(["id": .string("minecraft:mob_spawner"), "x": .int(1)])] + entities)])
         #expect(Spawner.spawners(inChunk: malformed).count == 1)
         let legacy = NBT.compound(["Level": .compound(["TileEntities": .list(entities)])])
-        #expect(Sign.signs(inChunk: legacy).isEmpty && ItemContainer.containers(inChunk: legacy).isEmpty)
-        #expect(Spawner.spawners(inChunk: legacy).isEmpty)
+        #expect(Sign.signs(inChunk: legacy).first?.x == -9)
+        #expect(ItemContainer.containers(inChunk: legacy).first?.y == 63)
+        #expect(Spawner.spawners(inChunk: legacy).first?.z == -17)
     }
 
 }
