@@ -1,6 +1,7 @@
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.Dynamic;
@@ -73,6 +74,8 @@ public final class ExtractGameFacts {
         facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
         facts.add("statisticUnits", ExtractStatisticUnits.extract());
         facts.add("potionColors", ExtractPotionColors.extract());
+        facts.add("healthDefaults", ExtractHealthDefaults.extract(
+            JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject()));
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));

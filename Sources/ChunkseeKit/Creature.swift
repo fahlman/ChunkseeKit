@@ -15,7 +15,7 @@ public struct Creature: Sendable, Equatable, Codable {
     public var villager: Villager?
     /// Saved current health in half-hearts; nil when unavailable, including older cached records.
     public var health: Double?
-    /// Maximum health in half-hearts, from saved attributes or a verified version's defaults.
+    /// Maximum health in half-hearts, from saved attributes or generated game-code defaults.
     /// Saved effect modifiers are included; unsupported transient equipment modifiers leave it nil.
     public var maxHealth: Double?
     /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
@@ -56,7 +56,7 @@ public struct Creature: Sendable, Equatable, Codable {
     }
 
     /// The saved mob format establishes membership independently of the game's version.
-    /// The version selects saved-name upgrades and facts such as omitted health defaults, not a type list.
+    /// The version selects saved-name upgrades, not a type list or health-default catalog.
     /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
     public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
         let nbt = SaveDataUpgrade.entity(nbt, dataVersion: dataVersion)
@@ -76,7 +76,7 @@ public struct Creature: Sendable, Equatable, Codable {
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt), health: nbt["Health"]?.double)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
-        maxHealth = EntityHealth.maximumHealth(nbt, species: id, dataVersion: dataVersion, isTamed: isTamed, enchantments: enchantments)
+        maxHealth = EntityHealth.maximumHealth(nbt, species: id, isTamed: isTamed, enchantments: enchantments)
         uuid = nbt.uuid
         if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
         appearance = CreatureData.appearance(nbt, species: id, villager: villager)
