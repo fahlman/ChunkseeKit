@@ -7,7 +7,7 @@ into the reader. Saved variant strings are read directly, without consulting thi
 The current categories are mob appearance, shared dye identities/texture RGB, enchantment
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
-and block seed methods, tints, fluid states, upper-face support, air flags, static special-item models
+and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
 and profession trade-set associations, natural-spawn defaults and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
@@ -24,7 +24,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColors.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`, `GeneratedBlockItems.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedBlockEntityRenderers.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
@@ -40,6 +40,14 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `BlockEntityRenderers.PROVIDERS` and `BlockEntityType.isValid` identify blocks with a registered
+  code renderer. Every registered state is independently checked by creating its actual block
+  entity and looking up that entity's type, as the dispatcher does. If the block factory returns
+  null because creation needs a world operation, the registered type factory supplies the entity;
+  raw samples distinguish that narrower check. Generation fails if these
+  paths disagree or if registration depends on state properties. These facts say nothing about
+  saved entity presence, texture/model coverage or visibility; clients read those resources at runtime.
 
 - `ColorLerper.Type.SHEEP.getColor` supplies the wool multiplier for each actual DyeColor,
   independently checked through `SheepRenderState.getWoolColor` with live animation disabled.

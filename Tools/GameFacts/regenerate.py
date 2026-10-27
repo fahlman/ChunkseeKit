@@ -437,16 +437,16 @@ def block_fluids_source(facts, notice):
     return result + "}\n"
 
 
-def air_blocks_source(facts, notice):
+def block_flags_source(facts, notice, type_name, value_name):
     result = notice + "// " + facts["source"] + ". Not a block-existence catalog.\n"
-    result += "enum GeneratedAirBlocks {\n    static let values: [String: Bool] = {\n"
+    result += f"enum {type_name} {{\n    static let values: [String: Bool] = {{\n"
     result += "        var result = [String: Bool]()\n"
-    result += "        func add(_ names: String, _ air: Bool) {\n"
-    result += "            for name in names.split(whereSeparator: \\.isWhitespace) { result[String(name)] = air }\n        }\n"
+    result += f"        func add(_ names: String, _ {value_name}: Bool) {{\n"
+    result += "            for name in names.split(whereSeparator: \\.isWhitespace) { result[String(name)] = " + value_name + " }\n        }\n"
     groups = {False: [], True: []}
     for identifier, value in sorted(facts["flags"].items()):
         if type(value) is not bool or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
-            raise ValueError("Unsupported air flag")
+            raise ValueError("Unsupported block code flag")
         groups[value].append(identifier)
     for value, names in groups.items():
         if not names: continue
@@ -631,7 +631,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedBlockModelSeeds.swift": seed_source,
             "Sources/ChunkseeKit/GeneratedBlockTints.swift": block_tints_source(facts["blockTints"], notice),
             "Sources/ChunkseeKit/GeneratedBlockFluids.swift": block_fluids_source(facts["blockFluids"], notice),
-            "Sources/ChunkseeKit/GeneratedAirBlocks.swift": air_blocks_source(facts["airBlocks"], notice),
+            "Sources/ChunkseeKit/GeneratedAirBlocks.swift": block_flags_source(facts["airBlocks"], notice, "GeneratedAirBlocks", "air"),
+            "Sources/ChunkseeKit/GeneratedBlockEntityRenderers.swift": block_flags_source(facts["blockEntityRenderers"], notice, "GeneratedBlockEntityRenderers", "hasRenderer"),
             "Sources/ChunkseeKit/GeneratedSpecialItemModels.swift": generated_special_models(facts["specialItemModels"], notice),
             "Sources/ChunkseeKit/GeneratedSpawnEggs.swift": egg_source,
             "Sources/ChunkseeKit/GeneratedBlockItems.swift": block_items_source(facts["blockItems"], notice),
@@ -673,11 +674,11 @@ def main():
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
-                    "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
+                    "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
