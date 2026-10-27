@@ -901,9 +901,16 @@ single-player-carrying root vehicles from entity storage. The CLI combines these
 region creatures and shoulder pets; app adoption follows a published library release.
 
 `Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
-permanent modifiers; verified cat/parrot/wolf defaults cover exactly 26.1/4786, 26.1.1/4788,
-26.1.2/4790, 26.2/4903 and 26.3/5023, with other pet defaults limited to 26.3/5023. Verified unowned wolves reset the loaded
-base to 8; owned wolves retain the saved base, and an unidentified saved owner stays unavailable.
+permanent modifiers, with omitted bases supplied by the generated DefaultAttributes registry
+independently of the save version. The same owner supplies player defaults and the MAX_HEALTH
+range. Unowned wolves apply the generated taming-side-effect base after saved attributes; owned
+wolves retain the saved base, and an unidentified saved owner stays unavailable. Cube-mob size
+sets its generated base before saved attributes, so an explicit saved base wins. The saved Size
+integer follows Java narrowing/overflow, then the game's size clamp. Unknown default types remain
+unavailable without a saved base; no health fact decides creature membership. The release tool
+executes the actual isolated wolf/cube health methods, maps their owning classes through registry
+ancestry, and supplies independent AttributeMap outputs. RegionFacts interpretation 29 invalidates
+earlier cached health omissions; adopting apps must invalidate derived tile/projection caches.
 `Dimension.creatures(chunkX:chunkZ:)` retains the entity chunk's saved version, as the existing
 per-region creature read does; raw `entities` remains unchanged.
 Health Boost is included once through the permanent saved attribute modifiers. `EntityEquipment`
@@ -1436,7 +1443,7 @@ changes no reader or cache interpretation; app #442 measures runtime geometry an
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
-relationships, saved equipment attachment identities, statistic formatter units, potion-color defaults,
+relationships, saved equipment attachment identities, statistic formatter units, potion-color and health defaults,
 absent block-light defaults, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and

@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -289,6 +290,79 @@ def light_storage_sources(facts, notice):
         if any(type(sample[key]) is not int for key in ("x", "y", "z", "value")) or sample["value"] != absent:
             raise ValueError("Invalid absent-light proof")
         proofs += f"        ({sample['x']}, {sample['y']}, {sample['z']}, {sample['value']}),\n"
+    return source, proofs + "    ]\n}\n"
+
+
+def health_default_sources(facts, entities, notice):
+    def number(value):
+        if type(value) not in (int, float) or not math.isfinite(value):
+            raise ValueError("Invalid health default")
+        return str(float(value))
+
+    low, high = facts["minimumCubeSize"], facts["maximumCubeSize"]
+    if type(low) is not int or type(high) is not int or not 1 <= low <= high <= 4096:
+        raise ValueError("Invalid cube size range")
+    bases, actual = facts["bases"], facts["attributeValues"]
+    if bases.keys() != actual.keys() or not bases.keys() <= entities.keys() or facts["player"] not in bases:
+        raise ValueError("Incomplete health defaults or proofs")
+    rules = {rule["class"]: rule for rule in facts["loadingRules"]}
+    if len(rules) != len(facts["loadingRules"]):
+        raise ValueError("Duplicate health loading rules")
+    curves = [rule for _, rule in sorted(rules.items()) if rule["kind"] == "cubeSize"]
+    for rule in rules.values():
+        if rule["kind"] == "cubeSize":
+            if len(rule["bases"]) != high - low + 1 or len(rule["actual"]) != high - low + 1:
+                raise ValueError("Incomplete cube health curve")
+        elif rule["kind"] != "untamedReset":
+            raise ValueError("Unsupported health loading rule")
+
+    source = notice + "// DefaultAttributes -> AttributeSupplier; bounds from Attributes.MAX_HEALTH.\n"
+    source += "enum GeneratedHealthDefaults {\n    static let bases: [String: Double] = [\n"
+    for species, value in sorted(bases.items()):
+        source += f"        {quoted(species)}: {number(value)},\n"
+    source += "    ]\n"
+    source += f"    static let player = {quoted(facts['player'])}\n"
+    source += f"    static let minimum = {number(facts['minimum'])}\n"
+    source += f"    static let maximum = {number(facts['maximum'])}\n"
+    source += f"    static let minimumCubeSize = {low}\n    static let maximumCubeSize = {high}\n"
+    source += "    // Actual setCubeMobHealth outputs, before saved attributes load.\n"
+    source += "    static let cubeBases: [[Double]] = [\n"
+    for rule in curves:
+        source += f"        // {rule['class']}.setCubeMobHealth\n"
+        source += "        [" + ", ".join(number(value) for value in rule["bases"]) + "],\n"
+    source += "    ]\n"
+
+    defaults, sized, resets = {}, {}, {}
+    source += "    static let cubeKinds: [String: Int] = [\n"
+    for species in sorted(bases):
+        entity = entities[species]
+        rule = next((rules[owner] for owner in entity["ancestry"] if owner in rules), None)
+        expected = actual[species]
+        if rule and rule["kind"] == "cubeSize":
+            source += f"        {quoted(species)}: {curves.index(rule)},\n"
+            expected = rule["actual"][0]
+            if entity["mob"]:
+                sized[species] = rule["actual"]
+        elif rule:
+            resets[species] = rule["base"]
+            expected = rule["actual"]
+        if entity["mob"]:
+            defaults[species] = expected
+    source += "    ]\n    // Wolf.applyTamingSideEffects runs after saved attributes for an unowned wolf.\n"
+    source += "    static let untamedBaseOverrides: [String: Double] = [\n"
+    for species, base in sorted(resets.items()):
+        source += f"        {quoted(species)}: {number(base)},\n"
+    source += "    ]\n}\n"
+
+    proofs = notice + "// Independent AttributeMap values and actual game load-side-effect method outputs.\n"
+    proofs += "enum GeneratedHealthDefaultProofs {\n"
+    proofs += f"    static let playerMaximum = {number(actual[facts['player']])}\n"
+    proofs += "    static let defaultMaximums: [String: Double] = [\n"
+    for species, value in sorted(defaults.items()):
+        proofs += f"        {quoted(species)}: {number(value)},\n"
+    proofs += "    ]\n    static let cubeMaximums: [String: [Double]] = [\n"
+    for species, values in sorted(sized.items()):
+        proofs += f"        {quoted(species)}: [" + ", ".join(number(value) for value in values) + "],\n"
     return source, proofs + "    ]\n}\n"
 
 
@@ -706,6 +780,7 @@ def generated_sources(facts, entities):
     seed_source += "    ]\n}\n"
     statistic_units, statistic_proofs = statistic_unit_sources(facts["statisticUnits"], notice)
     potion_colors, potion_proofs = potion_color_sources(facts["potionColors"], notice)
+    health_defaults, health_proofs = health_default_sources(facts["healthDefaults"], entities, notice)
     light_storage, light_proofs = light_storage_sources(facts["lightStorage"], notice)
     return {**creature_color_sources(facts["creatureColors"], entities, notice),
             "Sources/ChunkseeKit/DyeColor.swift": dye_source,
@@ -728,6 +803,8 @@ def generated_sources(facts, entities):
             "Tests/ChunkseeKitTests/GeneratedStatisticUnitProofs.swift": statistic_proofs,
             "Sources/ChunkseeKit/GeneratedPotionColors.swift": potion_colors,
             "Tests/ChunkseeKitTests/GeneratedPotionColorProofs.swift": potion_proofs,
+            "Sources/ChunkseeKit/GeneratedHealthDefaults.swift": health_defaults,
+            "Tests/ChunkseeKitTests/GeneratedHealthDefaultProofs.swift": health_proofs,
             "Sources/ChunkseeKit/GeneratedLightStorage.swift": light_storage,
             "Tests/ChunkseeKitTests/GeneratedLightStorageProofs.swift": light_proofs,
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
@@ -764,12 +841,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractHealthDefaults.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "light_storage_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "health_defaults", "light_storage_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

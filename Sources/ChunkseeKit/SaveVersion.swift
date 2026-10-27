@@ -1,5 +1,4 @@
-/// Verified save versions and format boundaries used by the readers. Unknown versions do not
-/// acquire release-specific defaults merely because their number is newer.
+/// Known save-version numbers and historical format boundaries used by the readers.
 public enum SaveVersion {
     public static let java26_1 = 4786
     public static let java26_1_1 = 4788
@@ -13,8 +12,6 @@ public enum SaveVersion {
     public static let lowercaseBlockPalette = 5009
     /// 26.4 Snapshot 1: per-block biomes and lowercase chunk status; synthetic coverage only.
     public static let perBlockBiomes = 5119
-
-    static let verifiedRecentPetHealth: Set<Int> = [java26_1, java26_1_1, java26_1_2, java26_2, java26_3]
 }
 
 /// Source-compatible name for the original chunk-format constants.

@@ -8,7 +8,7 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
-and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color defaults,
+and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color and health defaults,
 absent block-light defaults, and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
@@ -29,7 +29,8 @@ writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColor
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, `GeneratedStatisticUnits.swift`, the test-only
 `GeneratedStatisticUnitProofs.swift`, `GeneratedPotionColors.swift`, the test-only
-`GeneratedPotionColorProofs.swift`, `GeneratedLightStorage.swift`, the test-only
+`GeneratedPotionColorProofs.swift`, `GeneratedHealthDefaults.swift`, the test-only
+`GeneratedHealthDefaultProofs.swift`, `GeneratedLightStorage.swift`, the test-only
 `GeneratedLightStorageProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
@@ -44,6 +45,22 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `DefaultAttributes`/`AttributeSupplier` supplies per-type health bases, including players;
+  `Attributes.MAX_HEALTH` supplies its range. `AttributeMap.getValue` independently supplies
+  expected maximums using LivingEntity's Float conversion. Registered class ancestry maps
+  `Wolf.applyTamingSideEffects` and `AbstractCubeMob`/`SulfurCube.setCubeMobHealth` to saved IDs.
+  The extractor calls those actual methods for an untamed wolf and every bounded cube size.
+  Tool-only probe subclasses supply an attribute map and tame flag. They use Unsafe solely
+  to allocate receivers without the world-requiring entity constructors; no world, entity
+  loading, ticks, spawning or persistence occurs. The inspected methods use only those
+  supplied inputs; that boundary needs source review when their implementations change.
+  New taming/cube method
+  owners also fail inspection rather than inheriting a guessed rule. Compiler warnings about
+  this tool-only JDK API remain in the generation log; it is not a Swift runtime dependency.
+  Save-load ordering is part of the reader format: cube size runs before saved attributes,
+  untamed-wolf reset runs afterward. Panda, horse and zombie health changes during spawning
+  are already saved in attributes and are not re-applied while reading a save.
 
 - `BlockLightSectionStorage.getLightValue` supplies the value for an absent block-light layer.
   A small subclass exposes the protected read on normally constructed empty storage; its chunk

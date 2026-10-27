@@ -3,16 +3,17 @@ import Foundation
 enum EntityHealth {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
-    static func maximumHealth(_ nbt: NBT, species: String, dataVersion: Int?, isTamed: Bool?, enchantments: [String: EnchantmentDefinition]) -> Double? {
+    static func maximumHealth(_ nbt: NBT, species: String, isTamed: Bool?, enchantments: [String: EnchantmentDefinition]) -> Double? {
         guard supportsEffects(nbt),
               let modifiers = EquipmentHealth.modifiers(in: EntityEquipment.creature(nbt) ?? [:], enchantments: enchantments) else { return nil }
-        let base = defaultMaximum(species: species, dataVersion: dataVersion)
+        let base = defaultMaximum(nbt, species: species)
+        let untamedBase = GeneratedHealthDefaults.untamedBaseOverrides[species]
         // An unrecognized saved owner can still require the game's old-owner conversion.
         // Do not treat an owner we cannot identify as proof that a wolf is untamed.
-        if species == "minecraft:wolf", base != nil, isTamed == nil { return nil }
+        if untamedBase != nil, isTamed == nil { return nil }
         // Loading an unowned wolf calls setTame(false, true): reset the base, retaining modifiers.
         // Owned wolves load with setTame(true, false), preserving their saved base.
-        let loadedBase = species == "minecraft:wolf" && isTamed == false ? base : nil
+        let loadedBase = isTamed == false ? untamedBase : nil
         return value(nbt, defaultBase: base, additionalModifiers: modifiers, baseOverride: loadedBase)
     }
 
@@ -50,10 +51,10 @@ enum EntityHealth {
             }
         }
         // AttributeInstance applies additive modifiers before both kinds of multiplication.
-        // MAX_HEALTH is a ranged attribute, clamped to 1...1024 in Java Edition.
+        // MAX_HEALTH uses the game's generated range, then LivingEntity converts to Float.
         let result = (base + added) * (1 + multipliedBase) * multipliedTotal
         guard result.isFinite else { return nil }
-        return Double(Float(min(1024, max(1, result))))
+        return Double(Float(min(GeneratedHealthDefaults.maximum, max(GeneratedHealthDefaults.minimum, result))))
     }
 
     private static func modifierID(_ nbt: NBT) -> String? {
@@ -61,25 +62,17 @@ enum EntityHealth {
         return nbt.uuid?.uuidString
     }
 
-    private static func defaultMaximum(species: String, dataVersion: Int?) -> Double? {
-        // Exact release data versions only; do not infer defaults for snapshots or newer saves.
-        if let dataVersion, SaveVersion.verifiedRecentPetHealth.contains(dataVersion) {
-            switch species {
-            case "minecraft:cat": return 10
-            case "minecraft:parrot": return 6
-            case "minecraft:wolf": return 8
-            default: break
-            }
+    private static func defaultMaximum(_ nbt: NBT, species: String) -> Double? {
+        if let kind = GeneratedHealthDefaults.cubeKinds[species] {
+            // The save stores size minus one. ValueInput narrows to a Java int before
+            // adding one (including overflow); setSize clamps before setting health.
+            // Cube mobs do this before loading attributes, so an explicit saved base wins.
+            let size = (nbt["Size"]?.javaInt ?? 0) &+ 1
+            let clamped = min(GeneratedHealthDefaults.maximumCubeSize,
+                              max(GeneratedHealthDefaults.minimumCubeSize, Int(size)))
+            return GeneratedHealthDefaults.cubeBases[kind][clamped - GeneratedHealthDefaults.minimumCubeSize]
         }
-        guard dataVersion == SaveVersion.java26_3 else { return nil }
-        switch species {
-        case "minecraft:horse", "minecraft:donkey", "minecraft:mule", "minecraft:llama", "minecraft:trader_llama": return 53
-        case "minecraft:skeleton_horse": return 15
-        case "minecraft:zombie_horse": return 25
-        case "minecraft:camel", "minecraft:camel_husk": return 32
-        case "minecraft:nautilus", "minecraft:zombie_nautilus": return 15
-        default: return nil
-        }
+        return GeneratedHealthDefaults.bases[species]
     }
 
 }

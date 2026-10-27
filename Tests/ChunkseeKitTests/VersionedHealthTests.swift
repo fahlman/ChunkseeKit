@@ -9,19 +9,17 @@ import Testing
                    "Pos": .list([.double(-520), .double(64), .double(-8)])].merging(fields) { $1 })
     }
 
-    @Test func defaultsApplyOnlyToTheVerifiedSpeciesAndReleaseVersions() {
-        for version in [4786, 4788, 4790, 4903, 5023] {
-            for (species, maximum) in [("cat", 10.0), ("parrot", 6.0), ("wolf", 8.0)] {
-                #expect(Creature(entity(species), dataVersion: version)?.maxHealth == maximum)
+    @Test func generatedDefaultsMatchGameValuesAcrossSaveVersions() {
+        for version in [nil, 100, 4786, 5023, 9999] as [Int?] {
+            for (id, maximum) in GeneratedHealthDefaultProofs.defaultMaximums {
+                let saved = Fixtures.mob(["id": .string(id), "Health": .float(7),
+                    "Pos": .list([.double(0), .double(64), .double(0)])])
+                #expect(Creature(saved, dataVersion: version)?.maxHealth == maximum, "\(id), version \(String(describing: version))")
             }
         }
-        let unverified: [Int?] = [nil, 4785, 4787, 4789, 4791, 4902, 4904, 5022, 5024, 9999]
-        for version in unverified {
-            for species in ["cat", "parrot", "wolf"] {
-                #expect(Creature(entity(species), dataVersion: version)?.maxHealth == nil)
-            }
-        }
-        #expect(Creature(entity("horse"), dataVersion: 4786)?.maxHealth == nil)
+        let unknown = Fixtures.mob(["id": .string("example:new_mob"), "Health": .float(7),
+            "Pos": .list([.double(0), .double(64), .double(0)])])
+        #expect(Creature(unknown)?.maxHealth == nil)
         let saved = entity("cat", fields: ["attributes": .list([.compound([
             "id": .string("minecraft:max_health"), "base": .double(12),
         ])])])
@@ -35,7 +33,7 @@ import Testing
             .compound(["id": .string("test:base"), "amount": .double(0.5), "operation": .string("add_multiplied_base")]),
             .compound(["id": .string("test:total"), "amount": .double(1), "operation": .string("add_multiplied_total")]),
         ])])
-        for version in [4786, 4788, 4790, 4903, 5023] {
+        for version in [nil, 100, 4786, 5023, 9999] as [Int?] {
             let wild = entity("wolf", fields: ["attributes": .list([attribute])])
             #expect(Creature(wild, dataVersion: version)?.maxHealth == 36) // (8 + 4) * 1.5 * 2
             let owner = NBT.intArray([1, 2, 3, 4])
@@ -49,10 +47,28 @@ import Testing
             "id": .string("minecraft:max_health"), "base": .double(40),
         ])])])
         #expect(Creature(explicit, dataVersion: 5023)?.maxHealth == 8)
-        #expect(Creature(explicit, dataVersion: 9999)?.maxHealth == 40)
+        #expect(Creature(explicit, dataVersion: 9999)?.maxHealth == 8)
     }
 
-    @Test(arguments: [4786, 4788, 4790, 4903, 5023])
+    @Test func cubeSizeDefaultsMatchTheGameAndYieldToSavedAttributes() {
+        for (id, maximums) in GeneratedHealthDefaultProofs.cubeMaximums {
+            for (index, maximum) in maximums.enumerated() {
+                let saved = Fixtures.mob(["id": .string(id), "Size": .int(Int32(index)),
+                    "Health": .float(7), "Pos": .list([.double(0), .double(64), .double(0)])])
+                #expect(Creature(saved, dataVersion: 9999)?.maxHealth == maximum, "\(id), size \(index)")
+            }
+        }
+        let attribute = NBT.compound(["id": .string("minecraft:max_health"), "base": .double(37),
+            "modifiers": .list([.compound(["id": .string("test:add"), "amount": .double(4), "operation": .string("add_value")])])])
+        #expect(Creature(entity("slime", fields: ["Size": .int(126), "attributes": .list([attribute])]))?.maxHealth == 41)
+        for size in [NBT.int(Int32.max), .int(-1), .string("unreadable"), .double(.nan)] {
+            #expect(Creature(entity("slime", fields: ["Size": size]))?.maxHealth == 1)
+        }
+        #expect(Creature(entity("slime", fields: ["Size": .double(3.9)]))?.maxHealth == 16)
+        #expect(Creature(entity("slime", fields: ["Size": .int(10_000)]))?.maxHealth == 1024)
+    }
+
+    @Test(arguments: [100, 4786, 5023, 9999])
     func perChunkCreatureReadPreservesVersionAndNegativeCoordinates(_ version: Int) throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -70,9 +86,9 @@ import Testing
         ]), to: dir.appendingPathComponent("entities/r.-2.-1.mca"))
         let dimension = try #require(World(contentsOf: dir).dimension("overworld"))
         let raw = try dimension.entities(chunkX: -33, chunkZ: -1)
-        #expect(raw.count == 4 && Creature(raw[0])?.maxHealth == nil)
+        #expect(raw.count == 4 && Creature(raw[0])?.maxHealth == 10)
         #expect(try dimension.creatures(chunkX: -33, chunkZ: -1).map(\.maxHealth) == [10, 6, 8])
-        #expect(try dimension.creatures(chunkX: -34, chunkZ: -1).first?.maxHealth == nil)
+        #expect(try dimension.creatures(chunkX: -34, chunkZ: -1).first?.maxHealth == 10)
         #expect(try dimension.creatures(chunkX: 0, chunkZ: 0).isEmpty)
         #expect(try dimension.creatures(chunkX: -35, chunkZ: -1).isEmpty)
         #expect(try dimension.creatures(regionX: -2, regionZ: -1).count == 4)
