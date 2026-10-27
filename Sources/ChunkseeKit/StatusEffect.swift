@@ -26,8 +26,9 @@ public struct StatusEffect: Sendable, Equatable {
     static func savedID(_ nbt: NBT) -> String? {
         if let saved = nbt["id"]?.string, !saved.isEmpty {
             return Identifier(saved)?.description
-        } else if let number = nbt["Id"]?.int, Self.legacyIDs.indices.contains(number), number > 0 {
-            return "minecraft:" + Self.legacyIDs[number]
+        } else if let number = nbt["Id"]?.javaInt.map(Int.init),
+                  GeneratedLegacyContentIDs.effects.indices.contains(number) {
+            return GeneratedLegacyContentIDs.effects[number]
         }
         return nil
     }
@@ -38,14 +39,6 @@ public struct StatusEffect: Sendable, Equatable {
         guard let tag else { return 0 }
         return tag.javaInt.map { Int(UInt8(truncatingIfNeeded: $0)) }
     }
-
-    // Before 1.20.2 effects used numeric IDs; player files can remain in the older format.
-    private static let legacyIDs = ["", "speed", "slowness", "haste", "mining_fatigue", "strength",
-        "instant_health", "instant_damage", "jump_boost", "nausea", "regeneration", "resistance",
-        "fire_resistance", "water_breathing", "invisibility", "blindness", "night_vision", "hunger",
-        "weakness", "poison", "wither", "health_boost", "absorption", "saturation", "glowing",
-        "levitation", "luck", "unluck", "slow_falling", "conduit_power", "dolphins_grace", "bad_omen",
-        "hero_of_the_village", "darkness"]
 }
 
 extension PlayerInfo {

@@ -90,7 +90,7 @@ private enum BannerDesignReader {
                 // out-of-range values stay unavailable here rather than being silently repaired.
                 guard let id = fields["Color"]?.javaInt ?? (fields["Color"] == nil ? 0 : nil),
                       let dye = DyeColor(legacyID: Int(id)), let name = string(fields["Pattern"]),
-                      let identifier = Identifier(legacyPatterns[name] ?? name) else { return nil }
+                      let identifier = Identifier(GeneratedLegacyContentIDs.bannerPatterns[name] ?? name) else { return nil }
                 color = dye
                 pattern = .reference(identifier)
             } else {
@@ -110,21 +110,4 @@ private enum BannerDesignReader {
         }
         return result
     }
-
-    /// The old short IDs migrate through BannerPatternFormatFix, not an asset-name heuristic.
-    private static let legacyPatterns = [
-        "b": "minecraft:base", "bl": "minecraft:square_bottom_left", "br": "minecraft:square_bottom_right",
-        "tl": "minecraft:square_top_left", "tr": "minecraft:square_top_right", "bs": "minecraft:stripe_bottom",
-        "ts": "minecraft:stripe_top", "ls": "minecraft:stripe_left", "rs": "minecraft:stripe_right",
-        "cs": "minecraft:stripe_center", "ms": "minecraft:stripe_middle", "drs": "minecraft:stripe_downright",
-        "dls": "minecraft:stripe_downleft", "ss": "minecraft:small_stripes", "cr": "minecraft:cross",
-        "sc": "minecraft:straight_cross", "bt": "minecraft:triangle_bottom", "tt": "minecraft:triangle_top",
-        "bts": "minecraft:triangles_bottom", "tts": "minecraft:triangles_top", "ld": "minecraft:diagonal_left",
-        "rd": "minecraft:diagonal_up_right", "lud": "minecraft:diagonal_up_left", "rud": "minecraft:diagonal_right",
-        "mc": "minecraft:circle", "mr": "minecraft:rhombus", "vh": "minecraft:half_vertical",
-        "hh": "minecraft:half_horizontal", "vhr": "minecraft:half_vertical_right", "hhb": "minecraft:half_horizontal_bottom",
-        "bo": "minecraft:border", "cbo": "minecraft:curly_border", "gra": "minecraft:gradient", "gru": "minecraft:gradient_up",
-        "bri": "minecraft:bricks", "glb": "minecraft:globe", "cre": "minecraft:creeper", "sku": "minecraft:skull",
-        "flo": "minecraft:flower", "moj": "minecraft:mojang", "pig": "minecraft:piglin"
-    ]
 }
