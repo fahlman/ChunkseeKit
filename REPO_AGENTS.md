@@ -1255,15 +1255,20 @@ Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB 
 64 component levels and 65,536 text/argument visits. These additive APIs are tracked on #290;
 saved progress remains unchanged, and no existing public API is removed.
 
-Text-component JSON uses Foundation JSONDecoder to preserve the game's correctly rounded Double
-arguments before the existing JSON/NBT interpreter runs. JSONSerialization's intermediate
-NSDecimalNumber can select an adjacent binary value; reparsing its decimal string also loses
-digits beyond that type's precision. Standalone JSON text, advancement definitions and legacy
-JSON inside saved NBT share the adapter. Primitive types, finite-value handling and existing
-resource/text bounds remain; generic asset integer/float decoding is unchanged. The existing
-first-member behavior for duplicate JSON keys differs from Gson and remains tracked on #297.
-This numeric correction does not alter plainText's translation-key projection or its literal
-strings, so RegionFacts interpretation remains 26. Copied-world parity/timing is still required.
+Text-component JSON retains original number spellings until JsonOps' primitive-number rule can
+select an exact Int64, otherwise an exactly representable Float, otherwise Double. Foundation
+still owns JSON structure, strings and booleans; the narrow token adapter protects every number
+and prefixes every original string/key to prevent marker collisions. JSONSerialization's
+NSDecimalNumber conversion loses precision, while a Double-only decoder loses the original
+integer/fraction distinction. Standalone JSON, advancement definitions and legacy JSON inside
+saved NBT share this adapter. Native NBT retains its integer/Float/Double kind and follows
+FloatTag/DoubleTag.load's signed-zero canonicalization. Nonfinite numeric arguments remain
+readable, as the game's PRIMITIVE_ARG_CODEC permits; plainText still projects translation keys.
+RegionFacts interpretation 27 invalidates earlier saved-text omissions. Existing resource/text
+bounds remain, along with StrictJsonParser's numeric token rules and Gson's decimal-scale bound. Generic asset numeric
+decoding is unchanged; duplicate JSON members still select the first, tracked separately on #297.
+The new public Argument.integer and Argument.float enum cases require a minor release and
+client switch updates. #296 owns this correction; copied-world parity/timing is required.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's

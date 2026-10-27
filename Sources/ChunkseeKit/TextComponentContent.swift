@@ -12,6 +12,9 @@ extension TextComponent {
     /// Translation arguments retain their primitive type or nested component.
     public enum Argument: Sendable, Hashable {
         case string(String)
+        case integer(Int64)
+        case float(Float)
+        /// A Double argument; do not infer an integer or Float from its rounded value.
         case number(Double)
         case boolean(Bool)
         case component(Content)
@@ -40,25 +43,8 @@ extension TextComponent {
         try read(.json(json), depth: 0, budget: &budget)
     }
 
-    /// ComponentSerialization's numeric arguments use Double. JSONSerialization may instead
-    /// store a decimal NSNumber, whose Double conversion can round to a different value.
-    /// Decode that primitive directly before passing through the shared component interpreter.
     static func jsonValue(from data: Data) throws -> Any {
-        try JSONDecoder().decode(JSONValue.self, from: data).value
-    }
-
-    private struct JSONValue: Decodable {
-        let value: Any
-
-        init(from decoder: any Decoder) throws {
-            let container = try decoder.singleValueContainer()
-            if container.decodeNil() { value = NSNull() }
-            else if let text = try? container.decode(String.self) { value = text }
-            else if let boolean = try? container.decode(Bool.self) { value = NSNumber(value: boolean) }
-            else if let number = try? container.decode(Double.self) { value = NSNumber(value: number) }
-            else if let list = try? container.decode([Self].self) { value = list.map(\.value) }
-            else { value = try container.decode([String: Self].self).mapValues(\.value) }
-        }
+        try TextJSON.value(from: data)
     }
 
     private static func read(_ input: TextInput, depth: Int, budget: inout ResourceReadBudget) throws -> Content {
@@ -114,10 +100,7 @@ extension TextComponent {
         guard budget.consume(1) else { throw AssetReadError.invalidData }
         if let value = try input.readString(budget: &budget) { return .string(value) }
         if let value = input.boolean { return .boolean(value) }
-        if let value = input.number {
-            guard value.isFinite else { throw AssetReadError.invalidData }
-            return .number(value)
-        }
+        if let value = input.numberArgument { return value }
         return .component(try read(input, depth: depth, budget: &budget))
     }
 }
@@ -145,11 +128,22 @@ private enum TextInput {
         return try? AssetJSON.boolean(value)
     }
 
-    var number: Double? {
+    var numberArgument: TextComponent.Argument? {
         switch self {
-        case .json(let value): try? AssetJSON.jsonNumber(value).doubleValue
-        // NbtOps exports numeric tags as numbers, including byte-valued arguments.
-        case .nbt(let value): value.double
+        case .json(let value): (value as? TextJSON.Number)?.argument
+        // JavaOps keeps NBT's supplied numeric kind, including byte arguments and nonfinite
+        // floats. Unlike JSON, a Double equal to an integer or Float is not narrowed.
+        case .nbt(let value):
+            switch value {
+            case .byte(let value): .integer(Int64(value))
+            case .short(let value): .integer(Int64(value))
+            case .int(let value): .integer(Int64(value))
+            case .long(let value): .integer(value)
+            // FloatTag/DoubleTag.load use valueOf, which canonicalizes either signed zero.
+            case .float(let value): .float(value == 0 ? 0 : value)
+            case .double(let value): .number(value == 0 ? 0 : value)
+            default: nil
+            }
         }
     }
 
