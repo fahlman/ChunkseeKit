@@ -113,7 +113,7 @@ import ChunkseeKitTestSupport
         try write(#"{"example:unknown":{"done":true,"criteria":{"found":"2026-10-01 12:00:00 +0000"}},"example:dynamic":{"done":false,"criteria":{}}}"#,
                   at: "advancements/\(player.uuidString.lowercased()).json", under: root)
         let reader = try assets([entry("example:dynamic", #"{"display":{"title":{"selector":"@s"}}}"#)])
-        let before = try #require(current.advancements(for: player))
+        let before = try #require(try current.advancements(for: player))
         let definitions = try current.advancementDefinitions(for: Set(before.map(\.id)), assets: reader)
         #expect(definitions["example:unknown"] == nil)
         #expect(definitions["example:dynamic"] != nil && definitions["example:dynamic"]?.title == nil)
