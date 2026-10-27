@@ -38,7 +38,7 @@ import Testing
             ]))
             #expect(player.position == nil)
             #expect(player.shoulderPets.count == 1)
-            #expect(player.shoulderPets.first?.maxHealth == nil)
+            #expect(player.shoulderPets.first?.maxHealth == 6)
         }
     }
 

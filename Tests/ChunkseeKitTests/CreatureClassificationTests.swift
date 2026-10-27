@@ -29,7 +29,7 @@ import Testing
     func mobFormatSupportsAnyTypeWithoutHealthOrATypeList(_ type: String) throws {
         let creature = try #require(Creature(entity(typeID(type), fields: mobFields)))
         #expect(creature.id == typeID(type))
-        #expect(creature.health == nil && creature.maxHealth == nil)
+        #expect(creature.health == nil)
     }
 
     private func typeID(_ type: String) -> String { type.contains(":") ? type : "minecraft:" + type }
@@ -42,7 +42,7 @@ import Testing
             #expect(creature.id == "future:new_mob" && creature.health == 7 && creature.maxHealth == nil)
         }
         #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 5023)?.maxHealth == 10)
-        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 999999)?.maxHealth == nil)
+        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 999999)?.maxHealth == 10)
     }
 
     @Test func incompleteOrMalformedMobFieldsDoNotInventMembership() {

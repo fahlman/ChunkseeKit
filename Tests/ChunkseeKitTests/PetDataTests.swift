@@ -90,13 +90,13 @@ import Testing
         #expect(cat.maxHealth == 36)
     }
 
-    @Test func versionedDefaultsPassThroughTheEntityChunkReader() throws {
+    @Test func generatedDefaultsPassThroughTheEntityChunkReader() throws {
         let entity = Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(7), "Pos": .list([.double(0), .double(64), .double(0)])])
         let chunk = NBT.compound(["DataVersion": .int(5023), "Entities": .list([entity])])
         #expect(Creature.creatures(inEntityChunk: chunk).first?.maxHealth == 10)
-        #expect(Creature(entity)?.maxHealth == nil)
-        #expect(try pet("cat", version: 100).maxHealth == nil)
-        #expect(try pet("cat", version: 6000).maxHealth == nil)
+        #expect(Creature(entity)?.maxHealth == 10)
+        #expect(try pet("cat", version: 100).maxHealth == 10)
+        #expect(try pet("cat", version: 6000).maxHealth == 10)
     }
 
     @Test func unknownMaximumStaysUnavailableAndExplicitEquipmentIsIncluded() throws {

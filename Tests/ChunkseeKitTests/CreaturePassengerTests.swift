@@ -112,7 +112,7 @@ import ChunkseeKit
         ]))
         #expect(player.position == nil && player.dimension == "minecraft:overworld")
         #expect(player.rootVehicleCreatures.first?.id == "minecraft:cat")
-        #expect(player.rootVehicleCreatures.first?.maxHealth == nil)
+        #expect(player.rootVehicleCreatures.first?.maxHealth == 10)
         for rootVehicle in [NBT.compound([:]), .string("malformed"), .compound(["Entity": .list([])])] {
             #expect(PlayerInfo(uuid: playerID, nbt: .compound(["RootVehicle": rootVehicle])).rootVehicleCreatures.isEmpty)
         }

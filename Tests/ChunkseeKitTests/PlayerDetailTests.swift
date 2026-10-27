@@ -167,9 +167,11 @@ import Testing
     }
 
     @Test func maximumAndMainHandStayUnavailableWhenDataCannotResolveThem() {
-        #expect(PlayerInfo(uuid: uuid, nbt: .compound([:])).maxHealth == nil)
+        #expect(PlayerInfo(uuid: uuid, nbt: .compound([:])).maxHealth == GeneratedHealthDefaultProofs.playerMaximum)
         #expect(player().maxHealth == 20 && player().mainHandItem == nil)
-        #expect(player(["DataVersion": .int(6000)]).maxHealth == nil)
+        for version in [100, 5023, 6000] as [Int32] {
+            #expect(player(["DataVersion": .int(version)]).maxHealth == GeneratedHealthDefaultProofs.playerMaximum)
+        }
         let unsupported = player(["equipment": .compound(["head": item("diamond_helmet", components: ["minecraft:attribute_modifiers": .list([
             modifier(10, slot: "head", operation: "unknown_operation"),
         ])])])])
