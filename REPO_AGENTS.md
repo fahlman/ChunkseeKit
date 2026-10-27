@@ -1215,7 +1215,10 @@ remain on #255. Paired copied-current-world timing is required before publishing
 
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the
-final ID-derived fallback. GameLanguage is an immutable Sendable snapshot; its subscript returns
+final ID-derived fallback. GameLanguage is an immutable Sendable, Equatable snapshot; equality
+compares every effective translation after fallback and key migration, independent of the source
+or query history (#292). Clients can retain their snapshot identity across unchanged rereads.
+Its subscript returns
 nil only when no readable translation remains. The jar supplies language resources across its
 namespaces; an optional installation folder supplies the jar version's launcher metadata,
 selected asset index and hash-addressed language objects. No installed-version inventory,

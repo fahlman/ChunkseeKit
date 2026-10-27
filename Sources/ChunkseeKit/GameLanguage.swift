@@ -2,7 +2,7 @@ import Foundation
 
 /// An immutable translation snapshot from the supplied game files. Locale selection, text
 /// layout, argument substitution and the final ID-based fallback belong to the client.
-public struct GameLanguage: Sendable {
+public struct GameLanguage: Sendable, Equatable {
     fileprivate let values: [String: String]
 
     /// The selected language's value, then English; nil when neither supplies this key.

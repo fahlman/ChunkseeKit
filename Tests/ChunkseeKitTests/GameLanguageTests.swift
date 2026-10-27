@@ -12,6 +12,36 @@ import ChunkseeKitTestSupport
         ] + entries))))
     }
 
+    @Test func independentlyReadEquivalentLanguagesCompareEqual() throws {
+        let first = try assets([
+            .init(path: "assets/example/lang/en_us.json", text: #"{"shared":"English","fallback":"Kept"}"#),
+            .init(path: "assets/example/lang/fr_fr.json", text: #"{"shared":"Français","number":3}"#),
+        ]).language("fr_FR")
+        let second = try assets([
+            .init(path: "assets/example/lang/en_us.json", text: #"{"fallback":"Kept","shared":"Unused change"}"#),
+            .init(path: "assets/example/lang/fr_fr.json", text: #"{"number":"3","shared":"Français"}"#),
+        ], version: "another-source").language("fr-fr")
+        #expect(first == second)
+        #expect(first["shared"] == "Français" && first["fallback"] == "Kept")
+        #expect(try assets().language("unavailable") == assets().language("en_US"))
+    }
+
+    @Test func equalityIncludesSelectedFallbackAndNotYetQueriedKeys() throws {
+        func language(selected: String = "Français", fallback: String = "Kept", future: String = "Original") throws -> GameLanguage {
+            let english = try JSONSerialization.data(withJSONObject: ["fallback": fallback, "future": future])
+            let french = try JSONSerialization.data(withJSONObject: ["shared": selected])
+            return try assets([
+                .init(path: "assets/example/lang/en_us.json", text: String(decoding: english, as: UTF8.self)),
+                .init(path: "assets/example/lang/fr_fr.json", text: String(decoding: french, as: UTF8.self)),
+            ]).language("fr_fr")
+        }
+        let initial = try language()
+        #expect(initial["shared"] == "Français")
+        #expect(initial != (try language(selected: "Changed")))
+        #expect(initial != (try language(fallback: "Changed")))
+        #expect(initial != (try language(future: "Changed")))
+    }
+
     private func write(_ data: Data, _ path: String, under root: URL) throws {
         let file = root.appendingPathComponent(path)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
