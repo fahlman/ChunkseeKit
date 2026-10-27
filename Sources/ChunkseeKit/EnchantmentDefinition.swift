@@ -1,7 +1,10 @@
 import Foundation
 
-/// Health-relevant facts from one data-defined enchantment. No enchantment-ID catalog is used.
+/// Readable facts from one data-defined enchantment. No enchantment-ID catalog is used.
 public struct EnchantmentDefinition: Sendable, Hashable, Codable {
+    /// The definition's maximum level, when it is an integer in the game's 1...255 range.
+    /// This is definition metadata, not a restriction on the level stored on an item.
+    public let maximumLevel: Int?
     /// Whether its effects declare unsaved maximum-health attribute modifiers. Nil means a
     /// relevant effect format cannot be interpreted, including functions with unknown behavior.
     public let hasMaximumHealthModifier: Bool?
@@ -11,6 +14,9 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
     public init?(data: Data) {
         guard data.count <= ZipResources.maximumResourceSize,
               let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
+        // Enchantment.EnchantmentDefinition.CODEC uses intRange(1, 255) for max_level.
+        let level = try? AssetJSON.integer(json["max_level"])
+        maximumLevel = level.flatMap { (1...255).contains($0) ? $0 : nil }
         slots = json["slots"] as? [String]
         if let effects = json["effects"] {
             var reader = EnchantmentEffectHealth()
@@ -40,7 +46,7 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
 }
 
 extension GameAssets {
-    /// A bounded snapshot of enchantment health facts from this jar. Missing or malformed
+    /// A bounded snapshot of enchantment facts from this jar. Missing or malformed
     /// definitions are omitted; unknown effect formats remain explicit nil facts.
     public func enchantmentDefinitions() throws -> [String: EnchantmentDefinition] {
         try EnchantmentDefinition.read(in: [.zip(resources)])

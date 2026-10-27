@@ -909,7 +909,12 @@ equipped modifiers for both APIs. Empty/broken items, removed components and wro
 do not contribute. Unsupported item/effect/active-enchantment defaults leave either maximum
 unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
 book enchantments separate from equipped effects. EnchantmentDefinition reads health-relevant
-effects from GameAssets and the world's enabled packs; no enchantment-ID list remains. Direct
+effects and optional `maximumLevel` from GameAssets and the world's enabled packs; no
+enchantment-ID list remains. Maximum level follows the definition codec's integer 1...255 range;
+missing or invalid values do not discard the other readable facts or restrict saved item levels.
+This additive API is tracked on #289 for the app's data-derived level suffixes. Old Codable
+snapshots decode with nil maximum; changed definitions already change RegionScanOptions identity,
+so no scan interpretation bump is needed. Direct
 and conditional attribute effects are interpreted through generated codec/class associations.
 Unknown formats/functions and missing definitions leave the maximum unavailable; known wrong-slot
 effects do not apply. PlayerInfo, shoulder/root-vehicle mobs, Creature and regional scans accept
