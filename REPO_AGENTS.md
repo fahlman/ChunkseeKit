@@ -1266,9 +1266,12 @@ Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB 
 saved progress remains unchanged, and no existing public API is removed.
 
 Text-component JSON retains original number spellings until JsonOps' primitive-number rule can
-select an exact Int64, otherwise an exactly representable Float, otherwise Double. Foundation
-still owns JSON structure, strings and booleans; the narrow token adapter protects every number
-and prefixes every original string/key to prevent marker collisions. JSONSerialization's
+select an exact Int64, otherwise an exactly representable Float, otherwise Double. The shared
+UTF-8 parser builds the value tree directly, retaining number tokens without rewriting the
+document. Its explicit container stack preserves Foundation's 512-level limit on concurrency
+workers; Foundation still validates escaped strings. The previous Foundation route remains for
+non-UTF-8 text input. Existing trailing-comma and first-member behavior is unchanged.
+JSONSerialization's
 NSDecimalNumber conversion loses precision, while a Double-only decoder loses the original
 integer/fraction distinction. Standalone JSON, advancement definitions and legacy JSON inside
 saved NBT share this adapter. Native NBT retains its integer/Float/Double kind and follows
