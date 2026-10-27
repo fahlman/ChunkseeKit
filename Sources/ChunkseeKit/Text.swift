@@ -1,6 +1,6 @@
 import Foundation
 
-/// Minecraft text components (custom names, sign text, book pages) reduced to plain text.
+/// Minecraft text components: plain saved text and language-independent resource content.
 public enum TextComponent {
     /// Accepts a literal string, a JSON-encoded component (older worlds), an NBT compound with
     /// `text`/`translate` and `extra`, or a list of components. Removes legacy `§` formatting
