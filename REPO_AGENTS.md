@@ -1310,7 +1310,8 @@ duplicate JSON keys on #297; this is not a claim that every JSON/NBT number path
 The #297 JSON member-selection owner replaces an earlier decoded member as it parses, including
 escaped-equivalent names and nested objects. Losing values still must be syntactically valid.
 Raw resource/text readers retain original number tokens; Foundation-backed
-statistics, language, tag and pack readers retain their scalar contracts. Existing Decodable
+statistics, language, tag and pack readers retain their scalar contracts through number-fragment
+decoding, without rewriting their complete documents. Existing Decodable
 metadata passes through the same selection owner with numeric spelling intact. Its iterative
 normalizer lets Foundation retain its numeric conversions without recursive worker-stack growth.
 Game numeric token limits remain confined to the raw-number readers; existing Foundation adapters

@@ -55,45 +55,47 @@ extension AssetJSON {
     }
 
     static func value(from data: Data) throws -> Any {
-        try value(from: data, limitsNumbers: true)
+        try value(from: data, numbers: .game)
     }
 
-    /// Existing Foundation-backed fields keep their numeric conversion and validation. Only
-    /// decoded member selection is shared with the game-number path before Foundation reads it.
+    /// Existing Foundation-backed fields keep their scalar conversions. Only number fragments
+    /// need Foundation decoding; string-heavy language/tag files need no rewritten document.
     static func foundationValue(from data: Data) throws -> Any {
-        try JSONSerialization.jsonObject(with: normalized(data), options: [.fragmentsAllowed])
+        try value(from: data, numbers: .foundation)
     }
 
     static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
         try JSONDecoder().decode(type, from: normalized(data))
     }
 
-    private static func value(from data: Data, limitsNumbers: Bool) throws -> Any {
+    private static func value(from data: Data, numbers: NumberDecoding) throws -> Any {
         if data.prefix(4).contains(0) || data.first == 0xFF || data.first == 0xFE {
             // Keep the Unicode encodings Foundation previously accepted, while selecting
             // duplicate decoded names through the same parser as UTF-8 game files.
             for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
                 if let text = String(data: data, encoding: encoding),
-                   let result = try? parse(Data(text.utf8), limitsNumbers: limitsNumbers) { return result }
+                   let result = try? parse(Data(text.utf8), numbers: numbers) { return result }
             }
             throw AssetReadError.invalidData
         }
-        return try parse(data, limitsNumbers: limitsNumbers)
+        return try parse(data, numbers: numbers)
     }
 
-    private static func parse(_ data: Data, limitsNumbers: Bool) throws -> Any {
+    private static func parse(_ data: Data, numbers: NumberDecoding) throws -> Any {
         try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), limitsNumbers: limitsNumbers)
+            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), numbers: numbers)
             return try parser.read()
         }
     }
+
+    private enum NumberDecoding { case game, foundation, decoder }
 
     private enum JSONOutput { case value(Any), byte(UInt8) }
 
     /// Re-encode the selected tree without rounding numbers. An explicit stack keeps ignored
     /// deeply nested metadata safe on the same small worker stacks as the parser.
     private static func normalized(_ data: Data) throws -> Data {
-        var pending: [JSONOutput] = [.value(try value(from: data, limitsNumbers: false))]
+        var pending: [JSONOutput] = [.value(try value(from: data, numbers: .decoder))]
         var output = Data()
         while let next = pending.popLast() {
             switch next {
@@ -125,7 +127,7 @@ extension AssetJSON {
     /// their own bytes before the parsed value leaves it.
     private struct Parser {
         let bytes: UnsafeBufferPointer<UInt8>
-        let limitsNumbers: Bool
+        let numbers: NumberDecoding
         var cursor = 0
 
         private struct Container {
@@ -213,12 +215,21 @@ extension AssetJSON {
         private mutating func scalar() throws -> Any {
             switch bytes[cursor] {
             case 34: return try string()
-            case 116: try literal("true"); return true
-            case 102: try literal("false"); return false
+            case 116:
+                try literal("true")
+                if numbers == .foundation { return NSNumber(value: true) }
+                return true
+            case 102:
+                try literal("false")
+                if numbers == .foundation { return NSNumber(value: false) }
+                return false
             case 110: try literal("null"); return NSNull()
             case 45, 48...57:
                 let start = cursor
-                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: limitsNumbers)
+                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: numbers == .game)
+                if numbers == .foundation {
+                    return try JSONSerialization.jsonObject(with: Data(bytes[start..<cursor]), options: [.fragmentsAllowed])
+                }
                 return Number(literal: String(decoding: bytes[start..<cursor], as: UTF8.self))
             default: throw AssetReadError.invalidData
             }
