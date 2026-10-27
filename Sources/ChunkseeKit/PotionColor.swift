@@ -5,19 +5,18 @@ extension ItemStack {
     }
 
     /// The game's potion tint, using an explicit override or visible effects weighted by level.
-    /// Supply the matching asset/game data version and the item definition's default RGB.
-    /// Vanilla recipes/effect colors are verified for 26.3 (5023) only. Unknown needed facts,
+    /// Supply the item definition's default RGB. Generated code-only potion/effect defaults
+    /// apply independently of gameDataVersion, retained for existing callers. Unknown needed facts,
     /// malformed color-driving fields or more than 4096 effects return nil, not a guessed color.
     /// Missing/removed contents and no visible effects use the supplied default.
-    public func potionColor(gameDataVersion: Int32, defaultColor: UInt32) -> UInt32? {
+    public func potionColor(gameDataVersion _: Int32, defaultColor: UInt32) -> UInt32? {
         let saved = SavedPotion(components)
         if let override = saved.customColor { return ItemColor.integer(override) }
         guard saved.isReadable else { return nil }
         var effects = [PotionColorEffect]()
         if let base = saved.base {
-            guard gameDataVersion == SaveVersion.java26_3,
-                  let rawID = base.string, let id = Identifier(rawID),
-                  let recipe = VanillaPotionColors.recipes[id.description] else { return nil }
+            guard let rawID = base.string, let id = Identifier(rawID),
+                  let recipe = GeneratedPotionColors.recipes[id.description] else { return nil }
             effects = recipe
         }
         if let custom = saved.effects {
@@ -32,10 +31,9 @@ extension ItemStack {
                 if visible { effects.append(.init(id: id, amplifier: amplifier)) }
             }
         }
-        guard effects.isEmpty || gameDataVersion == SaveVersion.java26_3 else { return nil }
         var red = 0, green = 0, blue = 0, weight = 0
         for effect in effects {
-            guard let color = VanillaPotionColors.effects[effect.id] else { return nil }
+            guard let color = GeneratedPotionColors.effects[effect.id] else { return nil }
             let level = effect.amplifier + 1
             red += Int((color >> 16) & 255) * level
             green += Int((color >> 8) & 255) * level

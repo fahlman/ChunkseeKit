@@ -1061,10 +1061,12 @@ that same explicit override reader and shared StatusEffect ID/amplifier interpre
 effects are weighted by level; zero duration does not remove a potion color. Removed/missing
 contents or no visible effects uses the caller's definition default. Unknown needed registry
 facts and unreadable color-driving fields remain unavailable. Sums are bounded to 4,096 saved
-effects. Vanilla recipes/colors are verified for 26.3/5023 only, against official bytecode and
-the game's built-in registries (46 potions, 40 effects); these facts have no asset JSON. There
-is no global inference for other versions. This additive computed API is unreleased on #149,
-with no serialized/cache interpretation change or player-active-effect behavior change. Image
+effects. Tools/GameFacts extracts the code-only MobEffect colors and visible Potion ingredients
+from the game's built-in registries. Independent PotionContents.getColorOr outputs cover every
+base potion, base/custom mixtures, every effect, weighted pairs and hidden particles. Generated
+defaults apply across game version labels; the gameDataVersion argument remains for existing
+callers. Unknown needed defaults still leave the color unavailable. This computed API changes
+no serialized/cache interpretation or player-active-effect behavior. Image
 tinting remains app-owned on fahlman/Chunksee#390.
 Chunk's block-entity list and lookup expose BlockEntity identity/position values rather than NBT.
 They retain list order/count and first local-column match, including unavailable fields, using the
@@ -1431,7 +1433,7 @@ changes no reader or cache interpretation; app #442 measures runtime geometry an
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
-relationships, saved equipment attachment identities, statistic formatter units, block seed methods, block tints, static special-item
+relationships, saved equipment attachment identities, statistic formatter units, potion-color defaults, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated

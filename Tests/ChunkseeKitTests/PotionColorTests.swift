@@ -73,13 +73,26 @@ import Testing
     }
 
     @Test func unknownOrMalformedNeededFactsStayUnavailable() {
-        #expect(item(.string("healing")).potionColor(gameDataVersion: 5024, defaultColor: fallback) == nil)
         #expect(item(.compound([:])).potionColor(gameDataVersion: 5024, defaultColor: 0xff123456) == 0x123456)
         for value in [NBT.string("mod:healing"), .compound(["potion": .int(0)]), .compound(["custom_effects": .int(0)]),
                       .compound(["custom_effects": .list(.compound, [effect("mod:unknown")])]),
                       .compound(["custom_effects": .list(.compound, [effect("speed", amplifier: .string("two"))])]),
                       .compound(["custom_effects": .list(.compound, [effect("speed", visible: .string("yes"))])])] {
             #expect(color(value) == nil)
+        }
+    }
+
+    @Test func generatedDefaultsMatchTheGamesColorMethodAcrossVersionLabels() {
+        for sample in GeneratedPotionColorProofs.cases {
+            var fields: [String: NBT] = [:]
+            if let potion = sample.potion { fields["potion"] = .string(potion) }
+            fields["custom_effects"] = .list(.compound, sample.effects.map {
+                effect($0.id, amplifier: .int(Int32($0.amplifier)), visible: .byte($0.visible ? 1 : 0))
+            })
+            let stack = item(.compound(fields))
+            for version in [-1, 1, 5023, 1_000_000] as [Int32] {
+                #expect(stack.potionColor(gameDataVersion: version, defaultColor: GeneratedPotionColorProofs.defaultColor) == sample.color)
+            }
         }
     }
 

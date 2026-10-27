@@ -8,7 +8,7 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
-and profession trade-set associations, natural-spawn defaults, statistic formatter units and non-block rendering definitions.
+and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color defaults and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -27,7 +27,8 @@ writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColor
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedBlockEntityRenderers.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, `GeneratedStatisticUnits.swift`, the test-only
-`GeneratedStatisticUnitProofs.swift`, and `Tools/GameFacts/source.json`.
+`GeneratedStatisticUnitProofs.swift`, `GeneratedPotionColors.swift`, the test-only
+`GeneratedPotionColorProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -41,6 +42,14 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `MobEffect.getColor` supplies effect RGB defaults; `Potion.getEffects` supplies base potion
+  ingredients. Only visible ingredients contribute, as in `PotionContents.getColorOptional`.
+  These built-in registries have no data-pack definitions for their colors/ingredients; potion
+  tags describe membership, not these defaults. Independent `PotionContents.getColorOr` calls
+  produce test-only expected colors for every base potion, base/custom mixture, single effect,
+  weighted adjacent pair and hidden-particle pair. Registry order does not choose the pairs:
+  the extractor sorts actual IDs first. No potion/effect ID list is maintained by hand.
 
 - `Stats.makeCustomStat` registers each general statistic with its actual `StatFormatter`.
   The extractor matches formatter identity to DEFAULT, DISTANCE, TIME or DIVIDE_BY_TEN and
