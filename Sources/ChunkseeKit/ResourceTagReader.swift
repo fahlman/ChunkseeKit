@@ -15,8 +15,12 @@ struct ResourceReadBudget {
 
     /// Charge each selected resource once, whether it is a tag layer or a typed definition.
     mutating func charge(_ data: Data) -> Bool {
-        guard data.count <= ZipResources.maximumResourceSize, data.count <= bytes else { return false }
-        bytes -= data.count
+        charge(bytes: data.count)
+    }
+
+    mutating func charge(bytes count: Int) -> Bool {
+        guard count >= 0, count <= ZipResources.maximumResourceSize, count <= bytes else { return false }
+        bytes -= count
         return true
     }
 }

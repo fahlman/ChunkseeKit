@@ -61,6 +61,54 @@ import ChunkseeKitTestSupport
         }
     }
 
+    @Test func savedNBTAndLegacyJSONUseTheSameComponentInterpreter() {
+        let json = #"{"type":"translatable","text":"Wrong branch","translate":"block.minecraft.chest","fallback":"Chest","with":[{"text":"First"},{"text":"Nested"}],"extra":[{"text":"!"}]}"#
+        let nbt = NBT.compound([
+            "type": .string("translatable"), "text": .string("Wrong branch"),
+            "translate": .string("block.minecraft.chest"), "fallback": .string("Chest"),
+            "with": .list([.compound(["text": .string("First")]), .compound(["text": .string("Nested")])]),
+            "extra": .list([.compound(["text": .string("!")])]),
+        ])
+        let expected = TextComponent.content(json: Data(json.utf8))
+        #expect(expected != nil)
+        #expect(TextComponent.content(nbt) == expected)
+        #expect(TextComponent.content(.string(json)) == expected)
+        #expect(TextComponent.plainText(nbt) == "block.minecraft.chest!")
+        #expect(TextComponent.plainText(.string(json)) == "block.minecraft.chest!")
+        #expect(TextComponent.plainText(.string("§aSummer\n§lHouse")) == "Summer\nHouse")
+        #expect(TextComponent.content(.string("[draft]")) == .literal("[draft]"))
+        #expect(TextComponent.content(.compound(["text": .string(#"{"text":"literal"}"#)])) == .literal(#"{"text":"literal"}"#))
+        #expect(TextComponent.content(.compound(["translate": .string("example.number"), "with": .list([.byte(1)])])) ==
+                .translated(key: "example.number", fallback: nil, arguments: [.number(1)]))
+        #expect(TextComponent.plainText(.compound(["type": .string("future"), "text": .string("Unproven")])) == nil)
+    }
+
+    @Test func sharedDispatchReachesSavedItemsSignsBooksAndRegionalCreatures() throws {
+        let component = NBT.compound(["type": .string("translatable"), "text": .string("Wrong branch"),
+                                      "translate": .string("block.minecraft.chest"), "extra": .list([.string("!")])])
+        let expected = "block.minecraft.chest!"
+        let stack = ItemStack(.compound(["id": .string("minecraft:written_book"), "count": .int(1),
+            "components": .compound([
+                "minecraft:custom_name": component,
+                "minecraft:written_book_content": .compound(["pages": .list([.compound(["raw": component])])]),
+            ])]))
+        #expect(stack?.customName == expected && stack?.book?.pages == [expected])
+        let sign = Sign(blockEntity: .compound(["id": .string("minecraft:sign"), "x": .int(0), "y": .int(64), "z": .int(0),
+            "front_text": .compound(["messages": .list([component])])]))
+        #expect(sign?.front == [expected])
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let current = try world(root, packs: []), region = RegionPosition(x: 0, z: 0)
+        let dimension = try #require(current.dimension("overworld"))
+        let mob = Fixtures.mob(["id": .string("minecraft:zombie"), "DataVersion": .int(5023), "CustomName": component,
+                               "Pos": .list([.double(1), .double(64), .double(2)])])
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(["Entities": .list([mob])]))]),
+                           to: dimension.regionURL(.entities, at: region))
+        let facts = try dimension.scan(region: region)
+        #expect(facts.creatures.first?.customName == expected)
+        #expect(try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts)).creatures == facts.creatures)
+    }
+
     @Test func titlesComeFromDefinitionsWithoutInferringAKeyFromTheID() throws {
         let reader = try assets([
             entry("minecraft:story/mine_diamond", diamond),
@@ -132,6 +180,10 @@ import ChunkseeKitTestSupport
         let oversized = Data(repeating: 32, count: 16 * 1024 * 1024 + 1)
         #expect(TextComponent.content(json: oversized) == nil)
         #expect(AdvancementDefinition(data: oversized) == nil)
+        #expect(TextComponent.content(.string(String(decoding: oversized, as: UTF8.self))) == nil)
+        var nbt = NBT.string("End")
+        for _ in 0..<64 { nbt = .compound(["text": .string(""), "extra": .list([nbt])]) }
+        #expect(TextComponent.content(nbt) == nil)
     }
 
     @Test func requestedIDsAndPackCountsAreBoundedAndPathsStayContained() throws {

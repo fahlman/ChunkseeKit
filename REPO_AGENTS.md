@@ -1241,11 +1241,16 @@ absent, malformed or dynamic titles remain nil without discarding saved advancem
 `TextComponent.Content` retains literal/translated components, fallback strings, typed arguments,
 arrays and extra siblings under the existing text owner. The client chooses language and performs
 substitution/layout; styles and actions are not retained. Keybind, score, selector, NBT and object
-components need game context and remain unavailable. DisplayInfo, ComponentSerialization and
-TranslatableContents establish these formats, including explicit type dispatch and lenient fallback.
+components need game context and remain unavailable. Saved NBT and older JSON-wrapped text
+use the same interpreter through format adapters; plainText renders that content with its existing
+translation-key output and formatting-code removal. Explicit type dispatch and malformed-content
+handling now also reach saved names/signs/books. RegionFacts interpretation 26 invalidates the old
+projections. Paired copied-world timing is also required for this shared saved-reader change.
+DisplayInfo, ComponentSerialization and TranslatableContents establish these formats, including
+explicit type dispatch and lenient fallback.
 Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB per query,
 64 component levels and 65,536 text/argument visits. These additive APIs are tracked on #290;
-existing saved-text and progress APIs, caches and region interpretation do not change.
+saved progress remains unchanged, and no existing public API is removed.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's

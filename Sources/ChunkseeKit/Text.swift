@@ -6,40 +6,17 @@ public enum TextComponent {
     /// `text`/`translate` and `extra`, or a list of components. Removes legacy `§` formatting
     /// codes after joining the fragments, preserving their spaces and line breaks.
     public static func plainText(_ nbt: NBT) -> String? {
-        guard let text = componentText(nbt) else { return nil }
-        let plain = removingFormattingCodes(text)
+        guard let content = content(nbt) else { return nil }
+        let plain = removingFormattingCodes(plainText(content))
         return plain.isEmpty ? nil : plain
     }
 
-    private static func componentText(_ nbt: NBT) -> String? {
-        let text: String
-        switch nbt {
-        case .string(let s):
-            let trimmed = s.trimmingCharacters(in: .whitespaces)
-            if let first = trimmed.first, "{[\"".contains(first),
-               let json = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8), options: [.fragmentsAllowed]) {
-                text = plainText(json: json)
-            } else {
-                text = s
-            }
-        case .compound:
-            text = (nbt["text"]?.string ?? nbt["translate"]?.string ?? "") + (nbt["extra"]?.list ?? []).compactMap(componentText).joined()
-        case .list(_, let items):
-            text = items.compactMap(componentText).joined()
-        default:
-            return nil
-        }
-        return text.isEmpty ? nil : text
-    }
-
-    private static func plainText(json: Any) -> String {
-        switch json {
-        case let s as String: return s
-        case let array as [Any]: return array.map(plainText(json:)).joined()
-        case let dict as [String: Any]:
-            let base = (dict["text"] as? String) ?? (dict["translate"] as? String) ?? ""
-            return base + ((dict["extra"] as? [Any]) ?? []).map(plainText(json:)).joined()
-        default: return ""
+    private static func plainText(_ content: Content) -> String {
+        switch content {
+        case .literal(let text): text
+        // Keep the existing language-free projection; structured clients resolve the key.
+        case .translated(let key, _, _): key
+        case .sequence(let children): children.map(plainText).joined()
         }
     }
 
