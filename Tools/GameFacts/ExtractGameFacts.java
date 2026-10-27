@@ -64,6 +64,7 @@ public final class ExtractGameFacts {
         facts.add("blockTints", ExtractBlockTints.extract());
         facts.add("blockFluids", ExtractBlockFluids.extract());
         facts.add("airBlocks", ExtractAirBlocks.extract());
+        facts.add("blockEntityRenderers", ExtractBlockEntityRenderers.extract());
         facts.add("specialItemModels", ExtractSpecialItemModels.extract());
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
         facts.add("blockItems", ExtractBlockItems.extract());

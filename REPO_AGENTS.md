@@ -1321,11 +1321,18 @@ gate or actual-spawn probability is inferred. Counts, costs, light, height, stru
 environment layers remain separate. These additive APIs are unreleased for #232 item 4; no chunk
 reader, serialized/cache data or slime-chunk arithmetic changes. App adoption follows release.
 
+`BlockState.hasBlockEntityRenderer` exposes the generated client renderer registration for a
+block, independently of its runtime model. Unknown code returns nil; it does not classify block
+existence, saved entity presence or face coverage. The single generator cross-checks every state
+through its actual EntityBlock factory (or the type factory when creation requires world context)
+and dispatcher type lookup. This additive #232 item 1 API
+changes no reader or cache interpretation; app #442 measures runtime geometry and textures.
+
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
 relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
-models, fluid identities, upper-face support, air flags, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
+models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
 entries name their code sources. Registry strings are read directly from saves; no snapshot
