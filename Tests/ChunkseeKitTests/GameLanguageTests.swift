@@ -5,6 +5,66 @@ import ChunkseeKit
 import ChunkseeKitTestSupport
 
 @Suite struct GameLanguageTests {
+    @Test func declaredLanguageIdentityComesFromTheRequestedFilesWithoutEnglishFallback() throws {
+        let reader = try assets([
+            .init(path: "assets/example/lang/en_us.json", text: #"{"language.code":"en_us"}"#),
+            .init(path: "assets/example/lang/en_pt.json", text: #"{"language.code":"qpe","greeting":"Ahoy"}"#),
+            .init(path: "assets/example/lang/fra_de.json", text: #"{"language.code":"vmf_DE"}"#),
+            .init(path: "assets/example/lang/sr_cs.json", text: #"{"language.code":"srp-Latn_RS"}"#),
+            .init(path: "assets/example/lang/sr_sp.json", text: #"{"language.code":"srp-Cyrl_RS"}"#),
+            .init(path: "assets/example/lang/no_identity.json", text: #"{"greeting":"Readable"}"#),
+            .init(path: "assets/example/lang/bad_identity.json", text: #"{"language.code":{},"greeting":"Readable"}"#),
+        ])
+        for (file, identity) in [("en-US", "en_us"), ("en_pt", "qpe"), ("fra_de", "vmf_DE"),
+                                 ("SR-cs", "srp-Latn_RS"), ("sr_sp", "srp-Cyrl_RS")] {
+            let language = reader.language(file)
+            #expect(language.declaredLanguageCode == identity)
+            #expect(language["language.code"] == identity)
+            #expect(language["block.minecraft.stone"] == "Stone")
+        }
+        for code in ["no_identity", "bad_identity", "unavailable", "../en_us"] {
+            let language = reader.language(code)
+            #expect(language.declaredLanguageCode == nil)
+            #expect(language["language.code"] == "en_us")
+            #expect(language["block.minecraft.stone"] == "Stone")
+        }
+        #expect(reader.language("no_identity")["greeting"] == "Readable")
+    }
+
+    @Test func declaredIdentityFollowsNamespaceAndInstalledFilePrecedence() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let reader = try assets([
+            .init(path: "assets/a/lang/sr_sp.json", text: #"{"language.code":"srp-Latn_RS"}"#),
+            .init(path: "assets/z/lang/sr_sp.json", text: #"{"language.code":"srp-Cyrl_RS"}"#),
+        ])
+        #expect(reader.language("sr_sp").declaredLanguageCode == "srp-Cyrl_RS")
+        let object = try install(Data(#"{"language.code":"srp-Latn_RS","greeting":"Zdravo"}"#.utf8),
+                                 locale: "sr_sp", under: root)
+        let before = try Data(contentsOf: object)
+        let installed = reader.language("sr_sp", minecraftDirectory: root)
+        #expect(installed.declaredLanguageCode == "srp-Latn_RS")
+        #expect(installed["greeting"] == "Zdravo" && installed["block.minecraft.stone"] == "Stone")
+        #expect(try Data(contentsOf: object) == before)
+        try Data(#"{"language.code":{},"greeting":"Still readable"}"#.utf8).write(to: object)
+        #expect(reader.language("sr_sp", minecraftDirectory: root).declaredLanguageCode == "srp-Cyrl_RS")
+        try FileManager.default.removeItem(at: object)
+        #expect(reader.language("sr_sp", minecraftDirectory: root).declaredLanguageCode == "srp-Cyrl_RS")
+    }
+
+    @Test func equalityKeepsDeclaredIdentitySeparateFromFallbackText() throws {
+        func language(declared: Bool) throws -> GameLanguage {
+            try assets([
+                .init(path: "assets/example/lang/en_us.json", text: #"{"language.code":"en_us"}"#),
+                .init(path: "assets/example/lang/custom.json", text: declared ? #"{"language.code":"en_us"}"# : "{}"),
+            ]).language("custom")
+        }
+        let declared = try language(declared: true), fallback = try language(declared: false)
+        #expect(declared["language.code"] == fallback["language.code"])
+        #expect(declared != fallback)
+        #expect(declared == (try language(declared: true)))
+    }
+
     @Test func languageCodesComeFromReadableFilesAndKeepNamespacesOutOfTheChoice() throws {
         let reader = try assets([
             .init(path: "assets/example/lang/fr_fr.json", text: #"{"greeting":"Bonjour"}"#),

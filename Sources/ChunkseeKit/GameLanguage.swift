@@ -5,6 +5,12 @@ import Foundation
 public struct GameLanguage: Sendable, Equatable {
     fileprivate let values: [String: String]
 
+    /// The requested language's own `language.code`, without inheriting English's declaration.
+    /// This may differ from its resource filename. Nil means that the requested files supplied
+    /// no readable declaration; the translation subscript still keeps its English fallback.
+    /// Locale normalization and matching belong to the client.
+    public let declaredLanguageCode: String?
+
     /// The selected language's value, then English; nil when neither supplies this key.
     public subscript(key: String) -> String? { values[key] }
 }
@@ -60,14 +66,17 @@ private struct GameLanguageReader {
         let locale = locale.replacingOccurrences(of: "-", with: "_").lowercased()
         let locales = Self.validLocale(locale) && locale != "en_us" ? ["en_us", locale] : ["en_us"]
         var values: [String: String] = [:]
-        let paths = assets.resources.paths(under: "assets/") ?? []
-        for locale in locales {
-            for path in paths.sorted() where Self.languageCode(path, inJar: true) == locale {
-                if let data = archive(path) { Self.append(data, to: &values) }
+        var declaredLanguageCode: String?
+        let paths = (assets.resources.paths(under: "assets/") ?? []).sorted()
+        for selected in locales {
+            var declaration: String?
+            for path in paths where Self.languageCode(path, inJar: true) == selected {
+                if let data = archive(path) { Self.append(data, to: &values, declaration: &declaration) }
             }
-            if locale != "en_us", let minecraftDirectory {
-                appendIndexed(locale, in: minecraftDirectory, to: &values)
+            if selected != "en_us", let minecraftDirectory {
+                appendIndexed(selected, in: minecraftDirectory, to: &values, declaration: &declaration)
             }
+            if selected == locale { declaredLanguageCode = declaration }
         }
         // The game applies these data-supplied removals/renames after merging all languages.
         if let data = archive("assets/minecraft/lang/deprecated.json"),
@@ -77,7 +86,7 @@ private struct GameLanguageReader {
                 values[new] = values.removeValue(forKey: old)
             }
         }
-        return GameLanguage(values: values)
+        return GameLanguage(values: values, declaredLanguageCode: declaredLanguageCode)
     }
 
     private struct Deprecated: Decodable {
@@ -101,10 +110,11 @@ private struct GameLanguageReader {
         return code
     }
 
-    private mutating func appendIndexed(_ locale: String, in root: URL, to values: inout [String: String]) {
+    private mutating func appendIndexed(_ locale: String, in root: URL, to values: inout [String: String],
+                                       declaration: inout String?) {
         for (path, object) in indexedFiles(in: root).sorted(by: { $0.key < $1.key })
             where Self.languageCode(path, inJar: false) == locale {
-            if let data = file(object, under: root) { Self.append(data, to: &values) }
+            if let data = file(object, under: root) { Self.append(data, to: &values, declaration: &declaration) }
         }
     }
 
@@ -126,7 +136,7 @@ private struct GameLanguageReader {
         return files
     }
 
-    private static func append(_ data: Data, to values: inout [String: String]) {
+    private static func append(_ data: Data, to values: inout [String: String], declaration: inout String?) {
         guard let object = object(data) else { return }
         for (key, value) in object {
             let text: String
@@ -135,8 +145,10 @@ private struct GameLanguageReader {
             else if let number = try? AssetJSON.jsonNumber(value) { text = number.stringValue }
             else { continue }
             // Language.loadFromJson converts numeric format placeholders to string ones.
-            values[key] = unsupportedFormat.stringByReplacingMatches(in: text,
+            let translated = unsupportedFormat.stringByReplacingMatches(in: text,
                 range: NSRange(text.startIndex..., in: text), withTemplate: "%$1s")
+            values[key] = translated
+            if key == "language.code" { declaration = translated }
         }
     }
 
