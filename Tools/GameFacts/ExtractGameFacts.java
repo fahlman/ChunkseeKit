@@ -78,6 +78,7 @@ public final class ExtractGameFacts {
             JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject()));
         facts.add("lightStorage", ExtractLightStorage.extract());
         facts.add("mapColors", ExtractMapColors.extract());
+        facts.add("legacyContentIDs", ExtractLegacyContentIDs.extract(Integer.parseInt(args[2])));
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));

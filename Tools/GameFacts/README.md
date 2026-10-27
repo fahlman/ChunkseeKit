@@ -9,7 +9,8 @@ effect format associations, code-only item prototype facts needed by model selec
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
 and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color and health defaults,
-absent block-light defaults, saved-map palette colors/brightness, and non-block rendering definitions.
+absent block-light defaults, saved-map palette colors/brightness, legacy effect/banner identities,
+and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -32,7 +33,8 @@ plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorPro
 `GeneratedPotionColorProofs.swift`, `GeneratedHealthDefaults.swift`, the test-only
 `GeneratedHealthDefaultProofs.swift`, `GeneratedLightStorage.swift`, the test-only
 `GeneratedLightStorageProofs.swift`, `GeneratedMapColors.swift`, the test-only
-`GeneratedMapColorProofs.swift`, and `Tools/GameFacts/source.json`.
+`GeneratedMapColorProofs.swift`, `GeneratedLegacyContentIDs.swift`, the test-only
+`GeneratedLegacyContentProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -46,6 +48,15 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `MobEffectIdFix.ID_MAP` and `BannerPatternFormatFix.PATTERN_ID_MAP` supply historical numeric
+  effect and short banner identities. Current registry order cannot establish these mappings.
+  Independent full PLAYER/BLOCK_ENTITY upgrades through native NbtOps supply the expected
+  identities for every mapping plus numeric edge cases and unmapped banner names. Proofs start
+  one whole data version before each actual registered fix, including fixes with subversions;
+  these proof boundaries are not runtime version gates. The effect fixer uses Number.intValue,
+  so the reader delegates to the existing NBT.javaInt owner before the generated lookup.
+  Unmapped effect numbers stay unavailable; unmapped banner names retain their saved identity.
 
 - `MapColor.byId/col` supplies the saved-map base palette; `MapColor.Brightness` supplies its
   shade multipliers. The packed byte format has 64 base slots and four shades. Slots mapped
