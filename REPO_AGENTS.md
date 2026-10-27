@@ -1296,6 +1296,15 @@ shared text refactor. Dimension environment attributes retain their existing dec
 and validation; the shared helper still accepts those native scalars. The separate world-generation numeric reader and native spawn-weight follow-up
 remain on #51/#232; this is not a claim that every JSON/NBT number path has migrated.
 
+The #297 JSON member-selection owner preserves each member's source position until Foundation
+has decoded its name, then keeps the last occurrence, including escaped-equivalent names and
+nested objects. Raw resource/text readers retain original number tokens; Foundation-backed
+statistics, language, tag and pack readers retain their scalar contracts. Existing Decodable
+metadata passes through the same selection owner with numeric spelling intact. Only AssetJSON
+calls the Foundation JSON readers for game input. RegionFacts interpretation 28 invalidates
+legacy JSON sign/book/name facts produced with first-member selection. App adoption also needs
+tile invalidation for changed resource definitions. Native NBT text and numeric types are unchanged.
+
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
 Mob serializer, including false. Health, Owner and the type's name alone are insufficient.

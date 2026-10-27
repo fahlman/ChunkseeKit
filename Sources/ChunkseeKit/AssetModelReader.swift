@@ -23,7 +23,7 @@ struct AssetModelReader {
             }
             let data = try assets.requiredResource(id.description, directory: "models", extension: "json", missing: AssetReadError.missingModel)
             try budget.consume(bytes: data.count)
-            let model = try JSONDecoder().decode(RawModel.self, from: data)
+            let model = try AssetJSON.decode(RawModel.self, from: data)
             textures.merge(model.textures) { child, _ in child }
             elements = elements ?? model.elements
             gui = gui ?? model.gui

@@ -73,15 +73,13 @@ import Testing
         for invalid in ["null", "1e9999", "NaN", "Infinity", "{", #"{"translate":"test.number","with":[null]}"#] {
             #expect(read(invalid) == nil)
         }
-        // Both Foundation readers currently select the first duplicate member. #297 records
-        // this pre-existing difference from Gson; the number fix must not change it silently.
-        #expect(read(#"{"text":"first","text":"last"}"#) == .literal("first"))
+        #expect(read(#"{"text":"first","text":"last"}"#) == .literal("last"))
         #expect(read(#"{"text":"title","unused":[true,null,1.5,{"other":"value"}]}"#) == .literal("title"))
     }
 
-    @Test func numericDecodingPreservesStringsAndBaselineDuplicateSelection() throws {
+    @Test func numericDecodingPreservesStringsAndSelectsTheLastDuplicate() throws {
         let json = #"{"translate":"test.number","with":[2],"with":[0.0009999999999999998]}"#
-        #expect(try argument(in: TextComponent.content(json: Data(json.utf8))) == .integer(2)) // Existing #297 behavior.
+        #expect(try argument(in: TextComponent.content(json: Data(json.utf8))) == .number(Double(bitPattern: 4562254508917369339)))
         let strings = #"{"translate":"test.types","with":["0","-1.2e3","escaped \" 7 \\\\ end",{"text":"42","extra":[" -0"]},1.5]}"#
         #expect(TextComponent.content(json: Data(strings.utf8)) == .translated(key: "test.types", fallback: nil, arguments: [
             .string("0"), .string("-1.2e3"), .string("escaped \" 7 \\\\ end"),

@@ -34,7 +34,7 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
     }
 
     init?(json: Data) {
-        guard let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
+        guard let value = try? AssetJSON.decode(Definition.self, from: json) else { return nil }
         self.init(minY: value.noise.minY, height: value.noise.height, seaLevel: value.seaLevel)
     }
 

@@ -1,8 +1,8 @@
 import Foundation
 
-/// Preserve numeric spelling until the resource codec chooses its Java primitive. Foundation
-/// still parses JSON structure, strings and booleans; neither of its number decoders retains
-/// enough information to distinguish an exact integer from a nearby fraction rounded to it.
+/// Foundation validates JSON structure and strings. Temporary unique names preserve member
+/// order until we can apply Gson's last-member rule; protected numbers retain their spelling
+/// until the resource codec chooses its Java primitive.
 extension AssetJSON {
     struct Number {
         let literal: String
@@ -56,26 +56,35 @@ extension AssetJSON {
     }
 
     static func value(from data: Data) throws -> Any {
-        let bytes = Array(data)
-        var cursor = 0
-        while cursor < bytes.count {
-            if bytes[cursor] == 34 { cursor = try endOfString(bytes, from: cursor) }
-            else if bytes[cursor] == 45 || digit(bytes[cursor]) { return try preservingNumbers(bytes) }
-            else { cursor += 1 }
-        }
-        // Ordinary literal components need no transformed object tree.
-        return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+        try value(from: data, preservingNumbers: true)
     }
 
-    private static func preservingNumbers(_ bytes: [UInt8]) throws -> Any {
+    /// Existing Foundation-backed readers keep their scalar conversions while sharing member
+    /// selection. Their independent numeric contracts are not changed by this adapter.
+    static func foundationValue(from data: Data) throws -> Any {
+        try value(from: data, preservingNumbers: false)
+    }
+
+    /// Metadata with an existing Decodable contract retains its field validation and exact
+    /// numeric spelling. Only duplicate-member selection happens before JSONDecoder.
+    static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
+        var normalized = Data()
+        try appendJSON(value(from: data), to: &normalized)
+        return try JSONDecoder().decode(type, from: normalized)
+    }
+
+    private static func value(from data: Data, preservingNumbers: Bool) throws -> Any {
+        let bytes = Array(data)
         var protected = Data(), cursor = 0, copied = 0
         while cursor < bytes.count {
             if bytes[cursor] == 34 {
                 protected.append(contentsOf: bytes[copied...cursor])
-                protected.append(83) // Every original string/key gets an S prefix.
+                // Even escaped-equivalent names remain distinct until Foundation has decoded
+                // their spelling. A source offset also makes selection independent of hash order.
+                protected.append(contentsOf: "S\(cursor):".utf8)
                 copied = cursor + 1
                 cursor = try endOfString(bytes, from: cursor)
-            } else if bytes[cursor] == 45 || digit(bytes[cursor]) {
+            } else if preservingNumbers && (bytes[cursor] == 45 || digit(bytes[cursor])) {
                 let end = try endOfNumber(bytes, from: cursor)
                 protected.append(contentsOf: bytes[copied..<cursor])
                 protected.append(contentsOf: [34, 78]) // Numeric spelling becomes an N string.
@@ -142,7 +151,7 @@ extension AssetJSON {
     private static func restore(_ value: Any) throws -> Any {
         if let text = value as? String {
             switch text.first {
-            case "S": return String(text.dropFirst())
+            case "S": return try originalString(text).value
             case "N": return Number(literal: String(text.dropFirst()))
             default: throw AssetReadError.invalidData
             }
@@ -150,12 +159,42 @@ extension AssetJSON {
         if let list = value as? [Any] { return try list.map(restore) }
         if let object = value as? [String: Any] {
             var result: [String: Any] = [:]
+            var positions: [String: Int] = [:]
             for (key, value) in object {
-                guard key.first == "S" else { throw AssetReadError.invalidData }
-                result[String(key.dropFirst())] = try restore(value)
+                let member = try originalString(key)
+                guard member.position > (positions[member.value] ?? -1) else { continue }
+                positions[member.value] = member.position
+                result[member.value] = try restore(value)
             }
             return result
         }
         return value
+    }
+
+    private static func originalString(_ text: String) throws -> (position: Int, value: String) {
+        guard text.first == "S", let colon = text.firstIndex(of: ":"),
+              let position = Int(text[text.index(after: text.startIndex)..<colon]) else { throw AssetReadError.invalidData }
+        return (position, String(text[text.index(after: colon)...]))
+    }
+
+    private static func appendJSON(_ value: Any, to data: inout Data) throws {
+        if let number = value as? Number { data.append(contentsOf: number.literal.utf8) }
+        else if let object = value as? [String: Any] {
+            data.append(123)
+            for (index, key) in object.keys.sorted().enumerated() {
+                if index > 0 { data.append(44) }
+                data.append(try JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed]))
+                data.append(58)
+                try appendJSON(object[key]!, to: &data)
+            }
+            data.append(125)
+        } else if let values = value as? [Any] {
+            data.append(91)
+            for (index, value) in values.enumerated() {
+                if index > 0 { data.append(44) }
+                try appendJSON(value, to: &data)
+            }
+            data.append(93)
+        } else { data.append(try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])) }
     }
 }

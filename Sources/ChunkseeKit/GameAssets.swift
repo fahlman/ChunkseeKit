@@ -51,7 +51,7 @@ public struct GameAssets: Sendable {
 
     private init?(resources: ZipResources) {
         guard let metadata = resources.read("version.json"),
-              let version = try? JSONDecoder().decode(Version.self, from: metadata), !version.id.isEmpty else { return nil }
+              let version = try? AssetJSON.decode(Version.self, from: metadata), !version.id.isEmpty else { return nil }
         self.resources = resources
         self.version = version
     }

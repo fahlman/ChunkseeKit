@@ -72,7 +72,7 @@ public struct DimensionType: Sendable, Equatable {
 
     init?(json: Data) {
         guard json.count <= ZipResources.maximumResourceSize,
-              let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
+              let value = try? AssetJSON.decode(Definition.self, from: json) else { return nil }
         self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
                   coordinateScale: value.coordinateScale,
                   monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,

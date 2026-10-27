@@ -34,7 +34,7 @@ public enum UserCache {
             var name: String?
             var expiresOn: String?
         }
-        guard let raw = try? JSONDecoder().decode([Raw].self, from: data) else { throw ReadError.notAUserCache }
+        guard let raw = try? AssetJSON.decode([Raw].self, from: data) else { throw ReadError.notAUserCache }
         return raw.compactMap { entry in
             guard let text = entry.uuid, let uuid = UUID(uuidString: text), let name = entry.name, !name.isEmpty else {
                 return nil
