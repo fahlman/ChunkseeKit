@@ -1237,6 +1237,16 @@ and the launcher object layout. Invalid entries leave other readable translation
 Resource-pack layering, argument substitution and text layout are client work. The additive API
 is unreleased for #225/fahlman/Chunksee#438; no public API removal or RegionFacts version change.
 
+`GameAssets.languageCodes(minecraftDirectory:)` exposes sorted, deduplicated codes from the
+same language-file owner for #300/fahlman/Chunksee#465. It reads bounded jar resources and the
+selected version's existing launcher index. An indexed choice requires an openable regular
+file within the selected folder and the per-resource size limit; absent objects, directories,
+escaping links and invalid hashes are omitted. Listing a readable file does not claim its JSON
+translations are valid: the existing language read still applies per-key English fallback.
+The deprecated-key rule file is metadata, not a language choice. The app owns matching the
+Mac's preferred interface language to these codes. This additive API requires a minor release;
+it changes no saved facts, RegionFacts interpretation or renderer cache.
+
 `AdvancementDefinition` reads requested IDs from `data/<namespace>/advancement/` through
 GameAssets or the world's enabled-pack priority. Its optional title comes from `display.title`,
 not an ID-derived language-key convention. Missing or malformed definitions are omitted;

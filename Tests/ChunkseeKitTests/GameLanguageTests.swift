@@ -5,6 +5,61 @@ import ChunkseeKit
 import ChunkseeKitTestSupport
 
 @Suite struct GameLanguageTests {
+    @Test func languageCodesComeFromReadableFilesAndKeepNamespacesOutOfTheChoice() throws {
+        let reader = try assets([
+            .init(path: "assets/example/lang/fr_fr.json", text: #"{"greeting":"Bonjour"}"#),
+            .init(path: "assets/another/lang/fr_fr.json", text: #"{"other":"Autre"}"#),
+            .init(path: "assets/example/lang/zh_cn.json", text: "malformed JSON"),
+            .init(path: "assets/minecraft/lang/deprecated.json", text: #"{"removed":[],"renamed":{}}"#),
+            .init(path: "assets/example/lang/ES_es.json", text: "{}"),
+            .init(path: "assets/example/lang/nested/de_de.json", text: "{}"),
+            .init(path: "assets/example/notlang/de_de.json", text: "{}"),
+        ])
+        #expect(reader.languageCodes() == ["en_us", "fr_fr", "zh_cn"])
+        #expect(reader.language("fr_FR")["greeting"] == "Bonjour")
+        // Listing a readable file is not a claim that every translation inside it is valid.
+        #expect(reader.language("zh_cn")["block.minecraft.stone"] == "Stone")
+    }
+
+    @Test func indexedChoicesRequireLocalBoundedRegularFilesAndValidHashes() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let object = try install(Data(#"{"block.minecraft.stone":"Pierre"}"#.utf8), under: root)
+        let indexPath = root.appendingPathComponent("assets/indexes/chosen-index.json")
+        let goodHash = object.lastPathComponent, missingHash = String(repeating: "a", count: 40),
+            directoryHash = String(repeating: "b", count: 40), hugeHash = String(repeating: "c", count: 40)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("assets/objects/bb/\(directoryHash)"), withIntermediateDirectories: true)
+        try write(Data(), "assets/objects/cc/\(hugeHash)", under: root)
+        let huge = try FileHandle(forWritingTo: root.appendingPathComponent("assets/objects/cc/\(hugeHash)"))
+        try huge.truncate(atOffset: 17 * 1024 * 1024); try huge.close()
+        let files: [String: Any] = [
+            "minecraft/lang/fr_fr.json": ["hash": goodHash],
+            "custom/lang/es_mx.json": ["hash": goodHash],
+            "minecraft/lang/de_de.json": ["hash": missingHash],
+            "minecraft/lang/it_it.json": ["hash": directoryHash],
+            "minecraft/lang/nl_nl.json": ["hash": hugeHash],
+            "minecraft/lang/pt_br.json": ["hash": "../outside"],
+            "minecraft/lang/deprecated.json": ["hash": goodHash],
+        ]
+        try JSONSerialization.data(withJSONObject: ["objects": files]).write(to: indexPath)
+        let reader = try assets()
+        #expect(reader.languageCodes(minecraftDirectory: root) == ["en_us", "es_mx", "fr_fr"])
+        #expect(reader.language("es_MX", minecraftDirectory: root)["block.minecraft.stone"] == "Pierre")
+        try FileManager.default.removeItem(at: object)
+        #expect(reader.languageCodes(minecraftDirectory: root) == ["en_us"])
+    }
+
+    @Test func languageChoicesDoNotFollowAnIndexedObjectOutsideTheSelectedFolder() throws {
+        let root = try Fixtures.tempDirectory(), outside = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let object = try install(Data(#"{"block.minecraft.stone":"Pierre"}"#.utf8), under: root)
+        let moved = outside.appendingPathComponent("language.json")
+        try FileManager.default.moveItem(at: object, to: moved)
+        try FileManager.default.createSymbolicLink(at: object, withDestinationURL: moved)
+        #expect(try assets().languageCodes(minecraftDirectory: root) == ["en_us"])
+        #expect(try assets().language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
+    }
+
     private func assets(_ entries: [TestZIP.Entry] = [], version: String = "fixture") throws -> GameAssets {
         try #require(GameAssets(data: Data(TestZIP.zip([
             .init(path: "version.json", text: "{\"id\":\"\(version)\",\"world_version\":999999}"),
@@ -101,6 +156,7 @@ import ChunkseeKitTestSupport
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let reader = try assets()
+        #expect(reader.languageCodes(minecraftDirectory: root) == ["en_us"])
         #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
         let object = try install(Data(#"{"block.minecraft.stone":"Pierre"}"#.utf8), under: root)
         // The launcher index can change while older version metadata still has its download hash.
@@ -148,7 +204,9 @@ import ChunkseeKitTestSupport
         let handle = try FileHandle(forWritingTo: huge)
         try handle.truncate(atOffset: 17 * 1024 * 1024)
         try handle.close()
+        #expect(reader.languageCodes(minecraftDirectory: root) == ["en_us"])
         #expect(reader.language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
+        #expect(try assets(version: "../outside").languageCodes(minecraftDirectory: root) == ["en_us"])
         #expect(try assets(version: "../outside").language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
     }
 }
