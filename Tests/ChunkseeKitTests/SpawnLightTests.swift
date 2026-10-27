@@ -156,8 +156,8 @@ import Testing
         let cases: [(String, String, Int?, ClosedRange<Int>?)] = [
             ("4", #"{"type":"uniform","min_inclusive":3,"max_inclusive":11}"#, 4, 3...11),
             ("15", "7", 15, 7...7), ("0", #"{"type":"constant","value":12}"#, 0, 12...12),
-            ("true", "7", nil, 7...7), ("-1", "7", nil, 7...7), ("4.5", "7", nil, 7...7),
-            ("0", "true", 0, nil), ("0", "7.5", 0, nil), ("0", "16", 0, nil),
+            ("true", "7", nil, 7...7), ("-1", "7", nil, 7...7), ("4.5", "7", 4, 7...7),
+            ("0", "true", 0, nil), ("0", "7.5", 0, 7...7), ("0", "16", 0, nil),
             ("0", #"{"type":"uniform","min_inclusive":8,"max_inclusive":7}"#, 0, nil),
             ("0", #"{"type":"mod:uniform","min_inclusive":0,"max_inclusive":7}"#, 0, nil)
         ]
