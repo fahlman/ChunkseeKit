@@ -1141,6 +1141,12 @@ trade-price and sold-out numeric defaults remain a separate #222 code-fact findi
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.
 
+`MapItem.rgb(forColor:)` owns saved-map byte interpretation. The single GameFacts release tool
+extracts MapColor's base palette and Brightness multipliers, including transparent/unused
+slots, and independently calls getColorFromPackedId for every possible saved byte. The public
+decoder keeps integer channel scaling and applies generated facts without version gates.
+Saved bytes, map loading, app rendering and RegionFacts interpretation remain unchanged.
+
 Modern world spawn and player death/respawn share `SavedBlockLocation`'s paired string-dimension
 and integer-array position reader. World-spawn fields become available together; a partial modern
 record never gains an inferred Overworld dimension. The existing dimension-tag normalization is
@@ -1444,7 +1450,7 @@ Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for 
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
 relationships, saved equipment attachment identities, statistic formatter units, potion-color and health defaults,
-absent block-light defaults, block seed methods, block tints, static special-item
+absent block-light defaults, saved-map palette colors/brightness, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated

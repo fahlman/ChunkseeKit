@@ -39,6 +39,33 @@ import Testing
         #expect(MapItem.rgb(forColor: 255) == nil)
     }
 
+    @Test func matchesGameColorMethodForEverySavedByte() throws {
+        #expect(GeneratedMapColorProofs.argb.count == 256)
+        for (id, expected) in GeneratedMapColorProofs.argb.enumerated() {
+            let actual = MapItem.rgb(forColor: UInt8(id))
+            if expected >> 24 == 0 {
+                #expect(actual == nil, "Map color byte \(id)")
+            } else {
+                let color = try #require(actual, "Map color byte \(id)")
+                #expect(color.red == UInt8((expected >> 16) & 255), "Map color byte \(id)")
+                #expect(color.green == UInt8((expected >> 8) & 255), "Map color byte \(id)")
+                #expect(color.blue == UInt8(expected & 255), "Map color byte \(id)")
+            }
+        }
+    }
+
+    @Test func preservesSavedColorBytesAcrossVersionLabels() throws {
+        let bytes = (0..<(MapItem.size * MapItem.size)).map { UInt8($0 % 256) }
+        for version in [nil, 100, 5023, 5119, 9999] as [Int32?] {
+            var nbt: [String: NBT] = ["data": .compound([
+                "colors": .byteArray(bytes.map { Int8(bitPattern: $0) }),
+            ])]
+            if let version { nbt["DataVersion"] = .int(version) }
+            let map = try #require(MapItem(id: 1, nbt: .compound(nbt)))
+            #expect(map.colors == bytes)
+        }
+    }
+
     @Test func worldReadsCurrentAndLegacyBannerPositions() throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
