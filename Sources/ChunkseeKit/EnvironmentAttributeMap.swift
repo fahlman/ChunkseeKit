@@ -2,7 +2,7 @@ import Foundation
 
 /// Each projection reads only its own attributes through the same codecs. A malformed
 /// gameplay value must not hide otherwise readable visual lighting.
-struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable>: Decodable where Attribute.RawValue == String {
+struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable> where Attribute.RawValue == String {
     private let entries: [Attribute: Entry]
 
     func applying<Value: LightingValue>(_ attribute: Attribute, to base: Value,
@@ -29,28 +29,14 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable>: Decodabl
         entries = try Self.selected(values).mapValues { try Entry(nbt: $0) }
     }
 
-    private enum RootKey: String, CodingKey { case attributes }
-    private struct AttributeKey: CodingKey {
-        let stringValue: String
-        var intValue: Int? { nil }
-        init?(stringValue: String) { self.stringValue = stringValue }
-        init?(intValue: Int) { return nil }
+    init(json: [String: Any]) throws {
+        guard let raw = json["attributes"], !(raw is NSNull) else { entries = [:]; return }
+        entries = try Self.selected(AssetJSON.object(raw)).mapValues { try Entry(json: $0) }
     }
 
-    init(from decoder: any Decoder) throws {
-        let root = try decoder.container(keyedBy: RootKey.self)
-        guard root.contains(.attributes), try !root.decodeNil(forKey: .attributes) else {
-            entries = [:]; return
-        }
-        let fields = try root.nestedContainer(keyedBy: AttributeKey.self, forKey: .attributes)
-        let keys = try Self.selected(Dictionary(uniqueKeysWithValues: fields.allKeys.map { ($0.stringValue, $0) }))
-        entries = try keys.mapValues { try fields.decode(Entry.self, forKey: $0) }
-    }
-
-    private struct Entry: Decodable {
+    private struct Entry {
         let modifier: LightingModifier
         let argument: Argument
-        private enum Key: String, CodingKey { case modifier, argument }
 
         init(nbt: NBT) throws {
             if nbt.compound != nil {
@@ -64,24 +50,22 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable>: Decodabl
             }
         }
 
-        init(from decoder: any Decoder) throws {
-            if let value = try? Argument(from: decoder) {
-                modifier = .override
-                argument = value
-            } else {
-                let fields = try decoder.container(keyedBy: Key.self)
-                guard let modifier = LightingModifier(rawValue: try fields.decode(String.self, forKey: .modifier)) else {
-                    throw InvalidLighting.data
-                }
+        init(json: Any) throws {
+            if let fields = json as? [String: Any] {
+                guard let text = fields["modifier"] as? String, let modifier = LightingModifier(rawValue: text),
+                      let raw = fields["argument"] else { throw InvalidLighting.data }
                 self.modifier = modifier
-                argument = try fields.decode(Argument.self, forKey: .argument)
+                argument = Argument(json: raw)
+            } else {
+                modifier = .override
+                argument = Argument(json: json)
             }
         }
     }
 
     /// Both encodings feed the same strict scalar, RGB and phase codecs used by timelines.
     /// Only supported primitive forms are adapted; this is not a recursive JSON/NBT bridge.
-    private struct Argument: Decodable {
+    private struct Argument {
         let raw: Any
 
         init(nbt: NBT) throws {
@@ -108,15 +92,7 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable>: Decodabl
             }
         }
 
-        init(from decoder: any Decoder) throws {
-            let value = try decoder.singleValueContainer()
-            if let text = try? value.decode(String.self) { raw = text }
-            else if let number = try? value.decode(Double.self) { raw = number }
-            else {
-                var values = try decoder.unkeyedContainer()
-                guard values.count == 3 else { throw InvalidLighting.data }
-                raw = try [values.decode(Double.self), values.decode(Double.self), values.decode(Double.self)]
-            }
-        }
+        // Keep the original JSON number tokens for the shared FLOAT/INT codecs.
+        init(json: Any) { raw = json }
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Five visual attributes, independently projected from the shared environment-attribute codec.
-struct DimensionBaseLighting: Decodable {
+struct DimensionBaseLighting {
     let value: SkyLighting
 
     private init(_ entries: EnvironmentAttributeMap<SkyLighting.Attribute>) throws {
@@ -17,5 +17,5 @@ struct DimensionBaseLighting: Decodable {
     }
 
     init(nbt: NBT) throws { try self.init(EnvironmentAttributeMap(nbt: nbt)) }
-    init(from decoder: any Decoder) throws { try self.init(EnvironmentAttributeMap(from: decoder)) }
+    init(json: [String: Any]) throws { try self.init(EnvironmentAttributeMap(json: json)) }
 }

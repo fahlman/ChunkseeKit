@@ -13,7 +13,7 @@ public struct DimensionTime: Sendable, Equatable {
         case tag(String)
         case list([String])
 
-        private init?(single: String) {
+        fileprivate init?(single: String) {
             if single.hasPrefix("#") {
                 guard let id = Identifier(String(single.dropFirst())) else { return nil }
                 self = .tag(id.description)
@@ -47,6 +47,30 @@ public struct DimensionTime: Sendable, Equatable {
         if let raw = nbt["timelines"] {
             guard let value = Timelines(nbt: raw) else { return nil }
             timelines = value
+        } else { timelines = .list([]) }
+    }
+
+    init?(json: [String: Any]) {
+        guard let sky = try? AssetJSON.boolean(json["has_skylight"]) else { return nil }
+        hasSkylight = sky
+        if let fixed = json["has_fixed_time"], !(fixed is NSNull) {
+            guard let value = try? AssetJSON.boolean(fixed) else { return nil }
+            hasFixedTime = value
+        } else { hasFixedTime = false }
+        if let clock = json["default_clock"], !(clock is NSNull) {
+            guard let text = clock as? String, let value = Identifier(text) else { return nil }
+            defaultClock = value.description
+        } else { defaultClock = nil }
+        if let raw = json["timelines"], !(raw is NSNull) {
+            if let text = raw as? String {
+                guard let value = Timelines(single: text) else { return nil }
+                timelines = value
+            } else {
+                guard let values = raw as? [String] else { return nil }
+                let ids = values.compactMap { Identifier($0)?.description }
+                guard ids.count == values.count else { return nil }
+                timelines = .list(ids)
+            }
         } else { timelines = .list([]) }
     }
 }

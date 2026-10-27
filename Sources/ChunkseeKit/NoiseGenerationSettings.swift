@@ -34,26 +34,12 @@ public struct NoiseGenerationSettings: Sendable, Equatable {
     }
 
     init?(json: Data) {
-        guard let value = try? JSONDecoder().decode(Definition.self, from: json) else { return nil }
-        self.init(minY: value.noise.minY, height: value.noise.height, seaLevel: value.seaLevel)
-    }
-
-    private struct Definition: Decodable {
-        let noise: Bounds
-        let seaLevel: Int?
-        enum CodingKeys: String, CodingKey { case noise, seaLevel = "sea_level" }
-
-        init(from decoder: any Decoder) throws {
-            let values = try decoder.container(keyedBy: CodingKeys.self)
-            noise = try values.decode(Bounds.self, forKey: .noise)
-            // A bad sea level must not discard independently readable generation bounds.
-            seaLevel = (try? values.decode(Int32.self, forKey: .seaLevel)).map(Int.init)
-        }
-
-        struct Bounds: Decodable {
-            let minY: Int, height: Int
-            enum CodingKeys: String, CodingKey { case minY = "min_y", height }
-        }
+        guard json.count <= ZipResources.maximumResourceSize,
+              let value = try? AssetJSON.object(from: json), let noise = value["noise"] as? [String: Any],
+              let minY = try? AssetJSON.integer(noise["min_y"]),
+              let height = try? AssetJSON.integer(noise["height"]) else { return nil }
+        // A bad sea level must not discard independently readable generation bounds.
+        self.init(minY: minY, height: height, seaLevel: try? AssetJSON.integer(value["sea_level"]))
     }
 
 }

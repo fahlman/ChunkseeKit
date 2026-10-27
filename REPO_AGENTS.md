@@ -1282,9 +1282,17 @@ selection and native NBT owners. RegionFacts stays at 27: text results are uncha
 enchantment snapshots already participate in RegionScanOptions identity. App adoption must invalidate
 its rendered-tile cache because unchanged resource files can now produce different colors/model
 selection; other changed resource projections are recomputed. Paired copied-world checks cover the
-shared text refactor. Dimension environment attributes retain their existing decoded-scalar bridge
-and validation; the shared helper still accepts those native scalars. The separate world-generation numeric reader and native spawn-weight follow-up
-remain on #51/#232; this is not a claim that every JSON/NBT number path has migrated.
+shared text refactor. The remaining #295 migration routes model face tint/rotation, element light emission,
+dimension/noise limits, sea levels and spawn-light providers through that same raw-number owner.
+Dimension environment attributes preserve their original number tokens for FLOAT and packed RGB
+conversion; their NBT adapter retains its existing native-scalar behavior. Model vectors and
+transforms also parse the original decimal directly as Float. Required field validation still
+rejects invalid bounds; malformed optional lighting, time, scale and sea-level fields do not hide
+other readable facts. Dimension JSON is parsed once and shared by its projections, including
+natural spawns. Public DimensionTime Decodable remains source-compatible. No public API or saved
+NBT interpretation changes, and RegionFacts stays at 27. App adoption must invalidate tile colors,
+geometry and dimension-context interpretation again. Native spawn weights remain on #232 and
+duplicate JSON keys on #297; this is not a claim that every JSON/NBT number path has migrated.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
