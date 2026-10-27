@@ -24,7 +24,7 @@ extension TextComponent {
     public static func content(json data: Data) -> Content? {
         var budget = ResourceReadBudget()
         guard budget.charge(data),
-              let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) else { return nil }
+              let json = try? jsonValue(from: data) else { return nil }
         return try? content(json, budget: &budget)
     }
 
@@ -40,6 +40,27 @@ extension TextComponent {
         try read(.json(json), depth: 0, budget: &budget)
     }
 
+    /// ComponentSerialization's numeric arguments use Double. JSONSerialization may instead
+    /// store a decimal NSNumber, whose Double conversion can round to a different value.
+    /// Decode that primitive directly before passing through the shared component interpreter.
+    static func jsonValue(from data: Data) throws -> Any {
+        try JSONDecoder().decode(JSONValue.self, from: data).value
+    }
+
+    private struct JSONValue: Decodable {
+        let value: Any
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if container.decodeNil() { value = NSNull() }
+            else if let text = try? container.decode(String.self) { value = text }
+            else if let boolean = try? container.decode(Bool.self) { value = NSNumber(value: boolean) }
+            else if let number = try? container.decode(Double.self) { value = NSNumber(value: number) }
+            else if let list = try? container.decode([Self].self) { value = list.map(\.value) }
+            else { value = try container.decode([String: Self].self).mapValues(\.value) }
+        }
+    }
+
     private static func read(_ input: TextInput, depth: Int, budget: inout ResourceReadBudget) throws -> Content {
         guard depth < 64, budget.consume(1) else { throw AssetReadError.invalidData }
         if let literal = try input.readString(budget: &budget) {
@@ -48,7 +69,7 @@ extension TextComponent {
             if case .nbt = input {
                 let trimmed = literal.trimmingCharacters(in: .whitespaces)
                 if let first = trimmed.first, "{[\"".contains(first),
-                   let json = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8), options: [.fragmentsAllowed]) {
+                   let json = try? jsonValue(from: Data(trimmed.utf8)) {
                     return try read(.json(json), depth: depth, budget: &budget)
                 }
             }

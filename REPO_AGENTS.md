@@ -1255,6 +1255,16 @@ Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB 
 64 component levels and 65,536 text/argument visits. These additive APIs are tracked on #290;
 saved progress remains unchanged, and no existing public API is removed.
 
+Text-component JSON uses Foundation JSONDecoder to preserve the game's correctly rounded Double
+arguments before the existing JSON/NBT interpreter runs. JSONSerialization's intermediate
+NSDecimalNumber can select an adjacent binary value; reparsing its decimal string also loses
+digits beyond that type's precision. Standalone JSON text, advancement definitions and legacy
+JSON inside saved NBT share the adapter. Primitive types, finite-value handling and existing
+resource/text bounds remain; generic asset integer/float decoding is unchanged. The existing
+first-member behavior for duplicate JSON keys differs from Gson and remains tracked on #297.
+This numeric correction does not alter plainText's translation-key projection or its literal
+strings, so RegionFacts interpretation remains 26. Copied-world parity/timing is still required.
+
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's
 Mob serializer, including false. Health, Owner and the type's name alone are insufficient.

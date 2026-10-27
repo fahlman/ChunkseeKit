@@ -15,7 +15,7 @@ public struct AdvancementDefinition: Sendable, Hashable {
     private init(title: TextComponent.Content?) { self.title = title }
 
     private static func read(_ data: Data, budget: inout ResourceReadBudget) -> Self? {
-        guard budget.charge(data), let json = try? AssetJSON.object(from: data) else { return nil }
+        guard budget.charge(data), let json = try? AssetJSON.object(TextComponent.jsonValue(from: data)) else { return nil }
         let title = (json["display"] as? [String: Any])?["title"]
         return Self(title: title.flatMap { try? TextComponent.content($0, budget: &budget) })
     }
