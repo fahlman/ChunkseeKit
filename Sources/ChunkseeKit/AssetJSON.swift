@@ -18,6 +18,11 @@ enum AssetJSON {
         return value
     }
 
+    static func string(_ value: Any?) throws -> String {
+        guard let value = value as? String else { throw AssetReadError.invalidData }
+        return value
+    }
+
     static func identifier(_ value: Any?) throws -> Identifier {
         guard let value = value as? String, let id = GameAssets.resourceID(value) else { throw AssetReadError.invalidData }
         return id
@@ -30,14 +35,21 @@ enum AssetJSON {
 
     static func number(_ value: Any?) throws -> Float {
         // Gson's typed FLOAT field parses the original decimal directly, without a Double
-        // intermediate. EnvironmentAttributeMap also supplies already-decoded native scalars;
-        // preserve that adapter's conversion and the finite-value requirement for both paths.
+        // intermediate. Saved NBT attributes supply native scalars; retain their adapter's
+        // conversion and the finite-value requirement for both paths.
         let number: Float
         if let value = value as? Number {
             guard let parsed = Float(value.literal) else { throw AssetReadError.invalidData }
             number = parsed
         } else { number = try jsonNumber(value).floatValue }
         guard number.isFinite else { throw AssetReadError.invalidData }
+        return number
+    }
+
+    static func double(_ value: Any?) throws -> Double {
+        guard let value = value as? Number, let number = Double(value.literal), number.isFinite else {
+            throw AssetReadError.invalidData
+        }
         return number
     }
 
@@ -80,8 +92,8 @@ enum AssetJSON {
             guard let integer = value.int32 else { throw AssetReadError.invalidData }
             return Int(integer)
         }
-        // Dimension attributes retain their existing decoded-scalar bridge. Raw resource
-        // JSON always reaches the Number case above, before Foundation can discard digits.
+        // Native NBT attributes retain their existing scalar conversion. Resource JSON,
+        // including dimension attributes, reaches Number before Foundation discards digits.
         guard let integer = Int32(exactly: try jsonNumber(value).doubleValue) else { throw AssetReadError.invalidData }
         return Int(integer)
     }

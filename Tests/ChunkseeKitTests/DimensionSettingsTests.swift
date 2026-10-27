@@ -51,6 +51,27 @@ import Testing
         ] + entries))))
     }
 
+    @Test func resourceNumbersKeepGameIntegerAndFloatSemanticsAcrossDimensionProjections() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(at: root, definitions: [
+            "example:numbers": definition(type: .string("numbers"), noise: .string("numbers"))
+        ])
+        let assets = try assets([
+            "dimension_type/numbers": #"{"min_y":4294967232.9,"height":4294967680.9,"logical_height":4294967424.9,"has_ceiling":true,"coordinate_scale":8.5,"has_skylight":true,"monster_spawn_block_light_limit":4294967303.9,"monster_spawn_light_level":{"type":"uniform","min_inclusive":4294967297.9,"max_inclusive":15.9},"attributes":{"visual/sun_angle":1.0000000596046448,"visual/sky_light_color":4296160342.9,"gameplay/sky_light_level":1.0000000596046448}}"#,
+            "worldgen/noise_settings/numbers": #"{"noise":{"min_y":-64.9,"height":128.9},"sea_level":9223372036854775871}"#
+        ])
+        let read = try #require(try world.dimensionSettings(assets: assets)["example:numbers"])
+        let type = try #require(read.type), noise = try #require(read.noiseGeneration)
+        #expect(type.buildRange == -64...319 && type.logicalHeight == 128 && type.hasCeiling)
+        #expect(type.coordinateScale == 8.5 && type.time?.hasSkylight == true)
+        #expect(type.monsterSpawnBlockLightLimit == 7 && type.monsterSpawnLightLevel == 1...15)
+        #expect(type.baseSkyLighting?.sunAngle.bitPattern == 0x3f80_0001)
+        #expect(type.baseSkyLightLevel?.bitPattern == 0x3f80_0001)
+        #expect(type.baseSkyLighting?.skyLightColor == SIMD3<Float>(18, 52, 86) / 255)
+        #expect(noise.range == -64..<64 && noise.seaLevel == 63)
+    }
+
     @Test func savedGeneratorReferencesAreIndependentOfDimensionNamesAndLogicalHeight() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -180,7 +201,12 @@ import Testing
         try FileManager.default.removeItem(at: upper)
         #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.range == -64..<128)
         #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.seaLevel == -32)
-        for bad in ["{}", "{\"noise\":{\"min_y\":0.5,\"height\":128}}", "{\"noise\":{\"min_y\":0,\"height\":1e100}}"] {
+        for (json, range) in [("{\"noise\":{\"min_y\":0.5,\"height\":128}}", 0..<128),
+                              ("{\"noise\":{\"min_y\":0,\"height\":1e100}}", 0..<0)] {
+            try Fixtures.write(Array(json.utf8), to: upper)
+            #expect(try world.dimensionSettings(assets: nil)["example:mine"]?.noiseGeneration?.range == range)
+        }
+        for bad in ["{}", "{\"noise\":{\"min_y\":1.5,\"height\":128}}", "{\"noise\":{\"min_y\":0,\"height\":17.5}}"] {
             try Fixtures.write(Array(bad.utf8), to: upper)
             let value = try #require(try world.dimensionSettings(assets: nil)["example:mine"])
             #expect(value.type?.height == 256 && value.noiseGeneration == nil)
@@ -217,8 +243,9 @@ import Testing
         let cases: [(String?, Int?)] = [
             ("-64", -64), ("0", 0), ("2147483647", Int(Int32.max)), ("-2147483648", Int(Int32.min)),
             ("63.0", 63), ("6.3e1", 63),
-            (nil, nil), ("null", nil), ("true", nil), ("\"63\"", nil), ("1.5", nil),
-            ("2147483648", nil), ("-2147483649", nil), ("{}", nil),
+            (nil, nil), ("null", nil), ("true", nil), ("\"63\"", nil), ("1.5", 1), ("-1.5", -1),
+            ("2147483648", Int(Int32.min)), ("-2147483649", Int(Int32.max)), ("{}", nil),
+            ("1e100", 0), ("18446744073709551679.9", 63),
         ]
         for (raw, expected) in cases {
             let field = raw.map { ",\"sea_level\":\($0)" } ?? ""

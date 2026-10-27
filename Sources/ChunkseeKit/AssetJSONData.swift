@@ -1,8 +1,7 @@
 import Foundation
 
-/// Foundation validates JSON structure and strings. Temporary unique names preserve member
-/// order until we can apply Gson's last-member rule; protected numbers retain their spelling
-/// until the resource codec chooses its Java primitive.
+/// Preserve numeric spelling until the resource codec chooses its Java primitive. The UTF-8
+/// game path builds that tree directly; Foundation still decodes escaped Unicode strings.
 extension AssetJSON {
     struct Number {
         let literal: String
@@ -56,62 +55,219 @@ extension AssetJSON {
     }
 
     static func value(from data: Data) throws -> Any {
-        try value(from: data, preservingNumbers: true)
+        try value(from: data, limitsNumbers: true)
     }
 
-    /// Existing Foundation-backed readers keep their scalar conversions while sharing member
-    /// selection. Their independent numeric contracts are not changed by this adapter.
+    /// Existing Foundation-backed fields keep their numeric conversion and validation. Only
+    /// decoded member selection is shared with the game-number path before Foundation reads it.
     static func foundationValue(from data: Data) throws -> Any {
-        try value(from: data, preservingNumbers: false)
+        try JSONSerialization.jsonObject(with: normalized(data), options: [.fragmentsAllowed])
     }
 
-    /// Metadata with an existing Decodable contract retains its field validation and exact
-    /// numeric spelling. Only duplicate-member selection happens before JSONDecoder.
     static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
-        var normalized = Data()
-        try appendJSON(value(from: data), to: &normalized)
-        return try JSONDecoder().decode(type, from: normalized)
+        try JSONDecoder().decode(type, from: normalized(data))
     }
 
-    private static func value(from data: Data, preservingNumbers: Bool) throws -> Any {
-        let bytes = Array(data)
-        var protected = Data(), cursor = 0, copied = 0
-        while cursor < bytes.count {
-            if bytes[cursor] == 34 {
-                protected.append(contentsOf: bytes[copied...cursor])
-                // Even escaped-equivalent names remain distinct until Foundation has decoded
-                // their spelling. A source offset also makes selection independent of hash order.
-                protected.append(contentsOf: "S\(cursor):".utf8)
-                copied = cursor + 1
-                cursor = try endOfString(bytes, from: cursor)
-            } else if preservingNumbers && (bytes[cursor] == 45 || digit(bytes[cursor])) {
-                let end = try endOfNumber(bytes, from: cursor)
-                protected.append(contentsOf: bytes[copied..<cursor])
-                protected.append(contentsOf: [34, 78]) // Numeric spelling becomes an N string.
-                protected.append(contentsOf: bytes[cursor..<end])
-                protected.append(34)
-                cursor = end; copied = end
-            } else { cursor += 1 }
+    private static func value(from data: Data, limitsNumbers: Bool) throws -> Any {
+        if data.prefix(4).contains(0) || data.first == 0xFF || data.first == 0xFE {
+            // Keep the Unicode encodings Foundation previously accepted, while selecting
+            // duplicate decoded names through the same parser as UTF-8 game files.
+            for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
+                if let text = String(data: data, encoding: encoding),
+                   let result = try? parse(Data(text.utf8), limitsNumbers: limitsNumbers) { return result }
+            }
+            throw AssetReadError.invalidData
         }
-        protected.append(contentsOf: bytes[copied...])
-        return try restore(JSONSerialization.jsonObject(with: protected, options: [.fragmentsAllowed]))
+        return try parse(data, limitsNumbers: limitsNumbers)
     }
 
-    private static func endOfString(_ bytes: [UInt8], from start: Int) throws -> Int {
-        var cursor = start + 1
-        while cursor < bytes.count, bytes[cursor] != 34 {
-            if bytes[cursor] == 92 { cursor += 1 }
+    private static func parse(_ data: Data, limitsNumbers: Bool) throws -> Any {
+        try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), limitsNumbers: limitsNumbers)
+            return try parser.read()
+        }
+    }
+
+    private enum JSONOutput { case value(Any), byte(UInt8) }
+
+    /// Re-encode the selected tree without rounding numbers. An explicit stack keeps ignored
+    /// deeply nested metadata safe on the same small worker stacks as the parser.
+    private static func normalized(_ data: Data) throws -> Data {
+        var pending: [JSONOutput] = [.value(try value(from: data, limitsNumbers: false))]
+        var output = Data()
+        while let next = pending.popLast() {
+            switch next {
+            case let .byte(byte): output.append(byte)
+            case let .value(value):
+                if let number = value as? Number { output.append(contentsOf: number.literal.utf8) }
+                else if let object = value as? [String: Any] {
+                    output.append(123); pending.append(.byte(125))
+                    for (index, key) in object.keys.sorted().enumerated().reversed() {
+                        pending.append(.value(object[key]!))
+                        pending.append(.byte(58)); pending.append(.value(key))
+                        if index > 0 { pending.append(.byte(44)) }
+                    }
+                } else if let values = value as? [Any] {
+                    output.append(91); pending.append(.byte(93))
+                    for (index, value) in values.enumerated().reversed() {
+                        pending.append(.value(value))
+                        if index > 0 { pending.append(.byte(44)) }
+                    }
+                } else {
+                    output.append(try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed]))
+                }
+            }
+        }
+        return output
+    }
+
+    /// The borrowed buffer never escapes `withUnsafeBytes`; strings and number tokens copy
+    /// their own bytes before the parsed value leaves it.
+    private struct Parser {
+        let bytes: UnsafeBufferPointer<UInt8>
+        let limitsNumbers: Bool
+        var cursor = 0
+
+        private struct Container {
+            let closing: UInt8
+            var fields: [String: Any] = [:]
+            var elements: [Any] = []
+            var key: String?
+            var value: Any { closing == 125 ? fields : elements }
+        }
+
+        mutating func read() throws -> Any {
+            if bytes.count >= 3, bytes[0] == 0xEF, bytes[1] == 0xBB, bytes[2] == 0xBF { cursor = 3 }
+            // A bounded explicit stack also supports Foundation's deepest accepted inputs
+            // on Swift concurrency workers, whose call stacks are much smaller than main's.
+            var containers: [Container] = []
+            var result: Any?
+            while true {
+                if let ready = result {
+                    guard !containers.isEmpty else {
+                        whitespace()
+                        guard cursor == bytes.count else { throw AssetReadError.invalidData }
+                        return ready
+                    }
+                    let index = containers.count - 1, closing = containers[index].closing
+                    if closing == 125 {
+                        let key = containers[index].key!
+                        // Gson's object builder replaces an earlier member with the same
+                        // decoded name. Every losing value was still fully parsed above.
+                        containers[index].fields[key] = ready
+                    } else { containers[index].elements.append(ready) }
+                    whitespace()
+                    if consume(closing) { result = containers.removeLast().value }
+                    else {
+                        guard consume(44) else { throw AssetReadError.invalidData }
+                        whitespace()
+                        // Foundation permits a trailing comma; preserve its current syntax.
+                        if consume(closing) { result = containers.removeLast().value }
+                        else {
+                            if closing == 125 { containers[index].key = try key() }
+                            result = nil
+                        }
+                    }
+                } else {
+                    whitespace()
+                    guard cursor < bytes.count else { throw AssetReadError.invalidData }
+                    if bytes[cursor] == 123 || bytes[cursor] == 91 {
+                        guard containers.count < 512 else { throw AssetReadError.invalidData }
+                        let closing: UInt8 = bytes[cursor] == 123 ? 125 : 93
+                        cursor += 1
+                        whitespace()
+                        var container = Container(closing: closing)
+                        if consume(closing) { result = container.value }
+                        else {
+                            if closing == 125 { container.key = try key() }
+                            containers.append(container)
+                        }
+                    } else { result = try scalar() }
+                }
+            }
+        }
+
+        private mutating func whitespace() {
+            while cursor < bytes.count {
+                switch bytes[cursor] {
+                case 9, 10, 13, 32: cursor += 1
+                default: return
+                }
+            }
+        }
+
+        private mutating func consume(_ byte: UInt8) -> Bool {
+            guard cursor < bytes.count, bytes[cursor] == byte else { return false }
             cursor += 1
+            return true
         }
-        guard cursor < bytes.count else { throw AssetReadError.invalidData }
-        return cursor + 1
+
+        private mutating func key() throws -> String {
+            guard cursor < bytes.count, bytes[cursor] == 34 else { throw AssetReadError.invalidData }
+            let key = try string()
+            whitespace()
+            guard consume(58) else { throw AssetReadError.invalidData }
+            return key
+        }
+
+        private mutating func scalar() throws -> Any {
+            switch bytes[cursor] {
+            case 34: return try string()
+            case 116: try literal("true"); return true
+            case 102: try literal("false"); return false
+            case 110: try literal("null"); return NSNull()
+            case 45, 48...57:
+                let start = cursor
+                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: limitsNumbers)
+                return Number(literal: String(decoding: bytes[start..<cursor], as: UTF8.self))
+            default: throw AssetReadError.invalidData
+            }
+        }
+
+        private mutating func literal(_ text: StaticString) throws {
+            let matches = text.withUTF8Buffer { literal in
+                bytes.count - cursor >= literal.count &&
+                    bytes[cursor..<(cursor + literal.count)].elementsEqual(literal)
+            }
+            guard matches else { throw AssetReadError.invalidData }
+            cursor += text.utf8CodeUnitCount
+        }
+
+        private mutating func string() throws -> String {
+            let start = cursor
+            cursor += 1
+            var escaped = false
+            while cursor < bytes.count {
+                switch bytes[cursor] {
+                case 34:
+                    let end = cursor
+                    cursor += 1
+                    if escaped {
+                        let data = Data(bytes[start..<cursor])
+                        guard let text = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) as? String else {
+                            throw AssetReadError.invalidData
+                        }
+                        return text
+                    }
+                    guard let text = String(bytes: bytes[(start + 1)..<end], encoding: .utf8) else {
+                        throw AssetReadError.invalidData
+                    }
+                    return text
+                case 92: escaped = true; cursor += 2
+                case 0..<32: throw AssetReadError.invalidData
+                default: cursor += 1
+                }
+            }
+            throw AssetReadError.invalidData
+        }
     }
 
     private static func digit(_ value: UInt8) -> Bool { (48...57).contains(value) }
 
-    /// Validate number spelling and its following delimiter before replacing it with a string.
-    /// In particular, an invalid numeric object key must not become a valid string key.
-    private static func endOfNumber(_ bytes: [UInt8], from start: Int) throws -> Int {
+    /// Game-number readers add StrictJsonParser's token limits. Existing Foundation adapters
+    /// keep their own numeric bounds; both paths validate JSON spelling and delimiters here.
+    private static func endOfNumber<Bytes: RandomAccessCollection>(_ bytes: Bytes, from start: Int, limitsNumbers: Bool) throws -> Int
+        where Bytes.Element == UInt8, Bytes.Index == Int {
         var cursor = start
         if bytes[cursor] == 45 { cursor += 1 }
         guard cursor < bytes.count, digit(bytes[cursor]) else { throw AssetReadError.invalidData }
@@ -122,7 +278,7 @@ extension AssetJSON {
             var integer: UInt64 = 0
             let firstDigit = cursor
             while cursor < bytes.count, digit(bytes[cursor]) {
-                guard cursor == firstDigit || integer != 0 else { throw AssetReadError.invalidData }
+                guard !limitsNumbers || cursor == firstDigit || integer != 0 else { throw AssetReadError.invalidData }
                 integer = integer &* 10 &+ UInt64(bytes[cursor] - 48)
                 cursor += 1
             }
@@ -141,60 +297,11 @@ extension AssetJSON {
             guard cursor > exponent else { throw AssetReadError.invalidData }
         }
         // StrictJsonParser cannot read a number that fills JsonReader's 1,024-character buffer.
-        guard cursor - start < 1024 else { throw AssetReadError.invalidData }
+        guard !limitsNumbers || cursor - start < 1024 else { throw AssetReadError.invalidData }
         var next = cursor
         while next < bytes.count, [9, 10, 13, 32].contains(bytes[next]) { next += 1 }
         guard next == bytes.count || [44, 93, 125].contains(bytes[next]) else { throw AssetReadError.invalidData }
         return cursor
     }
 
-    private static func restore(_ value: Any) throws -> Any {
-        if let text = value as? String {
-            switch text.first {
-            case "S": return try originalString(text).value
-            case "N": return Number(literal: String(text.dropFirst()))
-            default: throw AssetReadError.invalidData
-            }
-        }
-        if let list = value as? [Any] { return try list.map(restore) }
-        if let object = value as? [String: Any] {
-            var result: [String: Any] = [:]
-            var positions: [String: Int] = [:]
-            for (key, value) in object {
-                let member = try originalString(key)
-                guard member.position > (positions[member.value] ?? -1) else { continue }
-                positions[member.value] = member.position
-                result[member.value] = try restore(value)
-            }
-            return result
-        }
-        return value
-    }
-
-    private static func originalString(_ text: String) throws -> (position: Int, value: String) {
-        guard text.first == "S", let colon = text.firstIndex(of: ":"),
-              let position = Int(text[text.index(after: text.startIndex)..<colon]) else { throw AssetReadError.invalidData }
-        return (position, String(text[text.index(after: colon)...]))
-    }
-
-    private static func appendJSON(_ value: Any, to data: inout Data) throws {
-        if let number = value as? Number { data.append(contentsOf: number.literal.utf8) }
-        else if let object = value as? [String: Any] {
-            data.append(123)
-            for (index, key) in object.keys.sorted().enumerated() {
-                if index > 0 { data.append(44) }
-                data.append(try JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed]))
-                data.append(58)
-                try appendJSON(object[key]!, to: &data)
-            }
-            data.append(125)
-        } else if let values = value as? [Any] {
-            data.append(91)
-            for (index, value) in values.enumerated() {
-                if index > 0 { data.append(44) }
-                try appendJSON(value, to: &data)
-            }
-            data.append(93)
-        } else { data.append(try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])) }
-    }
 }

@@ -4,6 +4,28 @@ import ChunkseeKitTestSupport
 import Testing
 
 @Suite struct DimensionTimeTests {
+    @Test func publicDecoderAndResourceReaderAgreeOnOptionalFieldsAndReferences() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let world = try world(root, types: ["test:sky": .string("test:sky")])
+        let variants: [[String: Any]] = [
+            [:], ["has_fixed_time": true, "has_skylight": false, "default_clock": "day", "timelines": "#day"],
+            ["default_clock": ":sun", "timelines": "day"], ["timelines": ["day", "custom:moon", "day"]],
+            ["has_fixed_time": NSNull(), "default_clock": NSNull(), "timelines": NSNull()]
+        ]
+        for fields in variants {
+            let text = try json(fields)
+            let decoded = try JSONDecoder().decode(DimensionTime.self, from: Data(text.utf8))
+            let jar = try assets([entry("test:sky", text)])
+            #expect(try world.dimensionTypes(assets: jar)["test:sky"]?.time == decoded)
+        }
+        for fields: [String: Any] in [["has_skylight": NSNull()], ["has_fixed_time": 1],
+                                      ["default_clock": "Bad ID"], ["timelines": ["#day"]]] {
+            let data = Data(try json(fields).utf8)
+            #expect(throws: (any Error).self) { try JSONDecoder().decode(DimensionTime.self, from: data) }
+        }
+    }
+
     @Test func inlineMetadataPreservesClocksFlagsAndTimelineReferences() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

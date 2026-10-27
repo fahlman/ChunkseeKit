@@ -107,6 +107,45 @@ import Testing
         }
     }
 
+    @Test func modelIntegerFieldsUseGameConversionBeforeFieldValidation() throws {
+        let cases: [(tint: String, rotation: String, light: String, expectedTint: Int?, expectedRotation: Int, expectedLight: Int)] = [
+            ("1.9", "90.9", "15.9", 1, 90, 15),
+            ("-1.9", "-90.9", "-0.9", nil, 270, 0),
+            ("2147483648", "4294967386.9", "4294967303.9", nil, 90, 7),
+            ("18446744073709551617.9", "1e100", "1e100", 1, 0, 0),
+            ("99999999999999999999999999999999999999999", "360.9", "0", nil, 0, 0),
+        ]
+        for test in cases {
+            let json = ##"{"textures":{"all":"block/a"},"elements":[{"from":[0,0,0],"to":[16,16,16],"light_emission":\##(test.light),"faces":{"up":{"texture":"#all","rotation":\##(test.rotation),"tintindex":\##(test.tint)}}}]}"##
+            let reader = try assets([model("block/numbers", json)])
+            guard case .elements(let elements) = try #require(reader.model("block/numbers")).geometry else {
+                Issue.record("Missing numeric model"); return
+            }
+            let element = try #require(elements.first), face = try #require(element.faces[.up])
+            #expect(element.lightEmission == test.expectedLight)
+            #expect(face.rotation == test.expectedRotation && face.tintIndex == test.expectedTint)
+        }
+        for field in ["tintindex", "rotation"] {
+            for value in ["true", "null", #""1""#, "[]", "{}"] {
+                let element = face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"\(field)\":\(value)")
+                #expect(try assets([model("bad", "{\"textures\":{\"all\":\"block/a\"},\"elements\":[\(element)]}")]).model("bad") == nil)
+            }
+        }
+        for value in ["16.9", "-1.9", "true", "null", #""7""#] {
+            let element = face.replacingOccurrences(of: "\"from\"", with: "\"light_emission\":\(value),\"from\"")
+            #expect(try assets([model("bad", "{\"textures\":{\"all\":\"block/a\"},\"elements\":[\(element)]}")]).model("bad") == nil)
+        }
+    }
+
+    @Test func modelFloatFieldsParseTheOriginalDecimalWithoutDoubleRounding() throws {
+        let element = face.replacingOccurrences(of: "[1,2,3]", with: "[1.0000000596046448,2,3]")
+        let reader = try assets([model("numbers", "{\"textures\":{\"all\":\"block/a\"},\"elements\":[\(element)]}")])
+        guard case .elements(let elements) = try #require(reader.model("numbers")).geometry else {
+            Issue.record("Missing float model"); return
+        }
+        #expect(elements.first?.from.x.bitPattern == 0x3f80_0001)
+    }
+
     @Test func malformedNumericAndShapeFieldsStayUnavailable() throws {
         let badElements = [
             face.replacingOccurrences(of: "[1,2,3]", with: "[1,2]"),
@@ -117,7 +156,7 @@ import Testing
             face.replacingOccurrences(of: "\"up\"", with: "\"diagonal\""),
             face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"rotation\":45"),
             face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"rotation\":1.5"),
-            face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"tintindex\":2147483648"),
+            face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"tintindex\":true"),
             face.replacingOccurrences(of: "\"#all\"", with: "\"#all\",\"uv\":[0,0,1e100,16]")
         ]
         for element in badElements {

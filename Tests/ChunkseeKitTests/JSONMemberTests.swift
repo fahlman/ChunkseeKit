@@ -61,4 +61,27 @@ import ChunkseeKitTestSupport
         let wrongType = cache.replacingOccurrences(of: #""last""#, with: "false")
         #expect(throws: UserCache.ReadError.notAUserCache) { try UserCache.parse(Data(wrongType.utf8)) }
     }
+
+    @Test func unicodeEncodingsAndDeepIgnoredMetadataShareMemberSelection() throws {
+        let json = #"{"text":"first","\u0074ext":"last","unused":1.5}"#
+        for encoding in [String.Encoding.utf8, .utf16LittleEndian, .utf16BigEndian,
+                         .utf32LittleEndian, .utf32BigEndian] {
+            let data = try #require(json.data(using: encoding))
+            #expect(TextComponent.content(json: data) == .literal("last"))
+        }
+
+        let nested = String(repeating: "[", count: 510) + "true" + String(repeating: "]", count: 510)
+        let cache = #"[{"uuid":"52dfb519-de9c-47e6-bc6c-bb053cc423e7","name":"first","name":"last","unused":"# + nested + "}]"
+        #expect(try UserCache.parse(Data(cache.utf8)).map(\.name) == ["last"])
+        let stats = #"{"stats":{"minecraft:custom":{"minecraft:play_time":42}},"unused":["# + nested + "]}"
+        #expect(try PlayerStatistics(json: Data(stats.utf8)).playTime == 42)
+
+        // JSONDecoder can skip a long numeric field it never decodes. Sharing member
+        // selection must not apply the game-number codec's token bound to that adapter.
+        let metadata = #"{"id":"old","id":"last","world_version":999999,"unused":"# +
+            String(repeating: "1", count: 1_024) + "}"
+        let entries = [TestZIP.Entry(path: "version.json", text: metadata)]
+        let game = try #require(GameAssets(data: Data(TestZIP.zip(entries))))
+        #expect(game.version.id == "last" && game.version.dataVersion == 999999)
+    }
 }

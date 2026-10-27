@@ -72,52 +72,26 @@ public struct DimensionType: Sendable, Equatable {
 
     init?(json: Data) {
         guard json.count <= ZipResources.maximumResourceSize,
-              let value = try? AssetJSON.decode(Definition.self, from: json) else { return nil }
-        self.init(minY: value.minY, height: value.height, logicalHeight: value.logicalHeight, hasCeiling: value.hasCeiling,
-                  coordinateScale: value.coordinateScale,
-                  monsterSpawnBlockLightLimit: value.monsterSpawnBlockLightLimit,
-                  monsterSpawnLightLevel: value.monsterSpawnLightLevel?.value,
-                  time: value.time, baseSkyLighting: value.baseSkyLighting,
-                  baseSkyLightLevel: value.baseSkyLightLevel,
-                  baseMobSpawnSettings: MobSpawnSettings.dimension(json: json))
-    }
-
-    private struct Definition: Decodable {
-        let minY: Int, height: Int, logicalHeight: Int
-        let hasCeiling: Bool
-        let coordinateScale: Double?
-        let monsterSpawnBlockLightLimit: Int?
-        let monsterSpawnLightLevel: SpawnLightRange?
-        let time: DimensionTime?
-        let baseSkyLighting: SkyLighting?
-        let baseSkyLightLevel: Float?
-        enum CodingKeys: String, CodingKey {
-            case minY = "min_y", height, logicalHeight = "logical_height", hasCeiling = "has_ceiling"
-            case coordinateScale = "coordinate_scale"
-            case monsterSpawnBlockLightLimit = "monster_spawn_block_light_limit", monsterSpawnLightLevel = "monster_spawn_light_level"
-        }
-
-        init(from decoder: any Decoder) throws {
-            let fields = try decoder.container(keyedBy: CodingKeys.self)
-            minY = try fields.decode(Int.self, forKey: .minY)
-            height = try fields.decode(Int.self, forKey: .height)
-            logicalHeight = try fields.decode(Int.self, forKey: .logicalHeight)
-            hasCeiling = try fields.decode(Bool.self, forKey: .hasCeiling)
-            coordinateScale = try? fields.decode(Double.self, forKey: .coordinateScale)
-            // These independently available facts must not discard valid build limits.
-            monsterSpawnBlockLightLimit = try? fields.decode(Int.self, forKey: .monsterSpawnBlockLightLimit)
-            monsterSpawnLightLevel = try? fields.decode(SpawnLightRange.self, forKey: .monsterSpawnLightLevel)
-            time = try? DimensionTime(from: decoder)
-            baseSkyLighting = (try? DimensionBaseLighting(from: decoder))?.value
-            baseSkyLightLevel = (try? DimensionMonsterLighting(from: decoder))?.value
-        }
+              let value = try? AssetJSON.object(from: json),
+              let minY = try? AssetJSON.integer(value["min_y"]),
+              let height = try? AssetJSON.integer(value["height"]),
+              let logicalHeight = try? AssetJSON.integer(value["logical_height"]),
+              let hasCeiling = try? AssetJSON.boolean(value["has_ceiling"]) else { return nil }
+        // Optional projections stay independent: malformed light/time facts do not erase bounds.
+        self.init(minY: minY, height: height, logicalHeight: logicalHeight, hasCeiling: hasCeiling,
+                  coordinateScale: try? AssetJSON.double(value["coordinate_scale"]),
+                  monsterSpawnBlockLightLimit: try? AssetJSON.integer(value["monster_spawn_block_light_limit"]),
+                  monsterSpawnLightLevel: SpawnLightRange(json: value["monster_spawn_light_level"])?.value,
+                  time: DimensionTime(json: value), baseSkyLighting: (try? DimensionBaseLighting(json: value))?.value,
+                  baseSkyLightLevel: (try? DimensionMonsterLighting(json: value))?.value,
+                  baseMobSpawnSettings: MobSpawnSettings.dimension(jsonObject: value))
     }
 
 }
 
 /// The verified constant/uniform IntProvider shapes, with DimensionType's 0...15 bounds.
 /// NBT and JSON adapters share validation; unsupported distributions stay unavailable.
-private struct SpawnLightRange: Decodable {
+private struct SpawnLightRange {
     let value: ClosedRange<Int>
 
     private init?(constant: Int?, type: String?, minimum: Int?, maximum: Int?) {
@@ -141,21 +115,14 @@ private struct SpawnLightRange: Decodable {
         } else { self.init(constant: nbt?.int, type: nil, minimum: nil, maximum: nil) }
     }
 
-    private enum Keys: String, CodingKey { case type, value, minimum = "min_inclusive", maximum = "max_inclusive" }
-
-    init(from decoder: any Decoder) throws {
-        let parsed: Self?
-        if let constant = try? decoder.singleValueContainer().decode(Int.self) {
-            parsed = Self(constant: constant, type: nil, minimum: nil, maximum: nil)
+    init?(json: Any?) {
+        if let fields = json as? [String: Any] {
+            guard let type = fields["type"] as? String else { return nil }
+            self.init(constant: try? AssetJSON.integer(fields["value"]), type: type,
+                      minimum: try? AssetJSON.integer(fields["min_inclusive"]),
+                      maximum: try? AssetJSON.integer(fields["max_inclusive"]))
         } else {
-            let fields = try decoder.container(keyedBy: Keys.self)
-            let type = try fields.decode(String.self, forKey: .type)
-            parsed = Self(constant: try? fields.decode(Int.self, forKey: .value), type: type,
-                          minimum: try? fields.decode(Int.self, forKey: .minimum), maximum: try? fields.decode(Int.self, forKey: .maximum))
+            self.init(constant: try? AssetJSON.integer(json), type: nil, minimum: nil, maximum: nil)
         }
-        guard let parsed else {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported spawn-light threshold"))
-        }
-        self = parsed
     }
 }
