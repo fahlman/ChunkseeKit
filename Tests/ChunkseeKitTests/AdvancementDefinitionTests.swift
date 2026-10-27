@@ -40,7 +40,7 @@ import ChunkseeKitTestSupport
                 .sequence([.literal("A "), .translated(key: "example.title", fallback: "A fallback", arguments: [])]))
         #expect(read(#"{"translate":"example.title","with":["Alex",3.5,true,{"translate":"example.thing"}],"extra":[{"text":"!"}]}"#) ==
                 .sequence([.translated(key: "example.title", fallback: nil, arguments: [
-                    .string("Alex"), .number(3.5), .boolean(true),
+                    .string("Alex"), .float(3.5), .boolean(true),
                     .component(.translated(key: "example.thing", fallback: nil, arguments: [])),
                 ]), .literal("!")]))
         #expect(read(#"{"type":"translatable","text":"Ignored","translate":"example.title","fallback":false}"#) ==
@@ -79,13 +79,14 @@ import ChunkseeKitTestSupport
         #expect(TextComponent.content(.string("[draft]")) == .literal("[draft]"))
         #expect(TextComponent.content(.compound(["text": .string(#"{"text":"literal"}"#)])) == .literal(#"{"text":"literal"}"#))
         #expect(TextComponent.content(.compound(["translate": .string("example.number"), "with": .list([.byte(1)])])) ==
-                .translated(key: "example.number", fallback: nil, arguments: [.number(1)]))
+                .translated(key: "example.number", fallback: nil, arguments: [.integer(1)]))
         #expect(TextComponent.plainText(.compound(["type": .string("future"), "text": .string("Unproven")])) == nil)
     }
 
     @Test func sharedDispatchReachesSavedItemsSignsBooksAndRegionalCreatures() throws {
         let component = NBT.compound(["type": .string("translatable"), "text": .string("Wrong branch"),
-                                      "translate": .string("block.minecraft.chest"), "extra": .list([.string("!")])])
+                                      "translate": .string("block.minecraft.chest"), "with": .list([.double(.infinity)]),
+                                      "extra": .list([.string("!")])])
         let expected = "block.minecraft.chest!"
         let stack = ItemStack(.compound(["id": .string("minecraft:written_book"), "count": .int(1),
             "components": .compound([
