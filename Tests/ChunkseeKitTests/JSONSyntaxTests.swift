@@ -14,7 +14,7 @@ import ChunkseeKit
             #expect(TextComponent.content(json: Data(json.utf8)) == .literal("🌊"))
         }
         let escapedKey = #"{"\u0074ext":"first","text":"second","unused":1.5}"#
-        #expect(TextComponent.content(json: Data(escapedKey.utf8)) == .literal("first"))
+        #expect(TextComponent.content(json: Data(escapedKey.utf8)) == .literal("second"))
     }
 
     @Test func completeContainersAndFoundationSyntaxRemainReadable() throws {

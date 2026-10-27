@@ -55,22 +55,79 @@ extension AssetJSON {
     }
 
     static func value(from data: Data) throws -> Any {
-        try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-            let bytes = raw.bindMemory(to: UInt8.self)
-            // Keep the previous Foundation path for non-UTF-8 input. Game resources use UTF-8;
-            // this optimization must not silently narrow the existing public text reader.
-            if bytes.prefix(4).contains(0) || bytes.first == 0xFF || bytes.first == 0xFE {
-                return try legacyValue(from: data)
+        try value(from: data, numbers: .game)
+    }
+
+    /// Existing Foundation-backed fields keep their scalar conversions. Only number fragments
+    /// need Foundation decoding; string-heavy language/tag files need no rewritten document.
+    static func foundationValue(from data: Data) throws -> Any {
+        try value(from: data, numbers: .foundation)
+    }
+
+    static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
+        try JSONDecoder().decode(type, from: normalized(data))
+    }
+
+    private static func value(from data: Data, numbers: NumberDecoding) throws -> Any {
+        if data.prefix(4).contains(0) || data.first == 0xFF || data.first == 0xFE {
+            // Keep the Unicode encodings Foundation previously accepted, while selecting
+            // duplicate decoded names through the same parser as UTF-8 game files.
+            for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
+                if let text = String(data: data, encoding: encoding),
+                   let result = try? parse(Data(text.utf8), numbers: numbers) { return result }
             }
-            var parser = Parser(bytes: bytes)
+            throw AssetReadError.invalidData
+        }
+        return try parse(data, numbers: numbers)
+    }
+
+    private static func parse(_ data: Data, numbers: NumberDecoding) throws -> Any {
+        try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), numbers: numbers)
             return try parser.read()
         }
+    }
+
+    private enum NumberDecoding { case game, foundation, decoder }
+
+    private enum JSONOutput { case value(Any), byte(UInt8) }
+
+    /// Re-encode the selected tree without rounding numbers. An explicit stack keeps ignored
+    /// deeply nested metadata safe on the same small worker stacks as the parser.
+    private static func normalized(_ data: Data) throws -> Data {
+        var pending: [JSONOutput] = [.value(try value(from: data, numbers: .decoder))]
+        var output = Data()
+        while let next = pending.popLast() {
+            switch next {
+            case let .byte(byte): output.append(byte)
+            case let .value(value):
+                if let number = value as? Number { output.append(contentsOf: number.literal.utf8) }
+                else if let object = value as? [String: Any] {
+                    output.append(123); pending.append(.byte(125))
+                    for (index, key) in object.keys.sorted().enumerated().reversed() {
+                        pending.append(.value(object[key]!))
+                        pending.append(.byte(58)); pending.append(.value(key))
+                        if index > 0 { pending.append(.byte(44)) }
+                    }
+                } else if let values = value as? [Any] {
+                    output.append(91); pending.append(.byte(93))
+                    for (index, value) in values.enumerated().reversed() {
+                        pending.append(.value(value))
+                        if index > 0 { pending.append(.byte(44)) }
+                    }
+                } else {
+                    output.append(try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed]))
+                }
+            }
+        }
+        return output
     }
 
     /// The borrowed buffer never escapes `withUnsafeBytes`; strings and number tokens copy
     /// their own bytes before the parsed value leaves it.
     private struct Parser {
         let bytes: UnsafeBufferPointer<UInt8>
+        let numbers: NumberDecoding
         var cursor = 0
 
         private struct Container {
@@ -97,8 +154,9 @@ extension AssetJSON {
                     let index = containers.count - 1, closing = containers[index].closing
                     if closing == 125 {
                         let key = containers[index].key!
-                        // Preserve first-member selection; #297 owns its behavioral correction.
-                        if containers[index].fields[key] == nil { containers[index].fields[key] = ready }
+                        // Gson's object builder replaces an earlier member with the same
+                        // decoded name. Every losing value was still fully parsed above.
+                        containers[index].fields[key] = ready
                     } else { containers[index].elements.append(ready) }
                     whitespace()
                     if consume(closing) { result = containers.removeLast().value }
@@ -157,12 +215,21 @@ extension AssetJSON {
         private mutating func scalar() throws -> Any {
             switch bytes[cursor] {
             case 34: return try string()
-            case 116: try literal("true"); return true
-            case 102: try literal("false"); return false
+            case 116:
+                try literal("true")
+                if numbers == .foundation { return NSNumber(value: true) }
+                return true
+            case 102:
+                try literal("false")
+                if numbers == .foundation { return NSNumber(value: false) }
+                return false
             case 110: try literal("null"); return NSNull()
             case 45, 48...57:
                 let start = cursor
-                cursor = try AssetJSON.endOfNumber(bytes, from: start)
+                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: numbers == .game)
+                if numbers == .foundation {
+                    return try JSONSerialization.jsonObject(with: Data(bytes[start..<cursor]), options: [.fragmentsAllowed])
+                }
                 return Number(literal: String(decoding: bytes[start..<cursor], as: UTF8.self))
             default: throw AssetReadError.invalidData
             }
@@ -206,54 +273,11 @@ extension AssetJSON {
         }
     }
 
-    private static func legacyValue(from data: Data) throws -> Any {
-        let bytes = Array(data)
-        var cursor = 0
-        while cursor < bytes.count {
-            if bytes[cursor] == 34 { cursor = try endOfString(bytes, from: cursor) }
-            else if bytes[cursor] == 45 || digit(bytes[cursor]) { return try preservingNumbers(bytes) }
-            else { cursor += 1 }
-        }
-        // Ordinary literal components need no transformed object tree.
-        return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-    }
-
-    private static func preservingNumbers(_ bytes: [UInt8]) throws -> Any {
-        var protected = Data(), cursor = 0, copied = 0
-        while cursor < bytes.count {
-            if bytes[cursor] == 34 {
-                protected.append(contentsOf: bytes[copied...cursor])
-                protected.append(83) // Every original string/key gets an S prefix.
-                copied = cursor + 1
-                cursor = try endOfString(bytes, from: cursor)
-            } else if bytes[cursor] == 45 || digit(bytes[cursor]) {
-                let end = try endOfNumber(bytes, from: cursor)
-                protected.append(contentsOf: bytes[copied..<cursor])
-                protected.append(contentsOf: [34, 78]) // Numeric spelling becomes an N string.
-                protected.append(contentsOf: bytes[cursor..<end])
-                protected.append(34)
-                cursor = end; copied = end
-            } else { cursor += 1 }
-        }
-        protected.append(contentsOf: bytes[copied...])
-        return try restore(JSONSerialization.jsonObject(with: protected, options: [.fragmentsAllowed]))
-    }
-
-    private static func endOfString(_ bytes: [UInt8], from start: Int) throws -> Int {
-        var cursor = start + 1
-        while cursor < bytes.count, bytes[cursor] != 34 {
-            if bytes[cursor] == 92 { cursor += 1 }
-            cursor += 1
-        }
-        guard cursor < bytes.count else { throw AssetReadError.invalidData }
-        return cursor + 1
-    }
-
     private static func digit(_ value: UInt8) -> Bool { (48...57).contains(value) }
 
-    /// Validate number spelling and its following delimiter before replacing it with a string.
-    /// In particular, an invalid numeric object key must not become a valid string key.
-    private static func endOfNumber<Bytes: RandomAccessCollection>(_ bytes: Bytes, from start: Int) throws -> Int
+    /// Game-number readers add StrictJsonParser's token limits. Existing Foundation adapters
+    /// keep their own numeric bounds; both paths validate JSON spelling and delimiters here.
+    private static func endOfNumber<Bytes: RandomAccessCollection>(_ bytes: Bytes, from start: Int, limitsNumbers: Bool) throws -> Int
         where Bytes.Element == UInt8, Bytes.Index == Int {
         var cursor = start
         if bytes[cursor] == 45 { cursor += 1 }
@@ -265,7 +289,7 @@ extension AssetJSON {
             var integer: UInt64 = 0
             let firstDigit = cursor
             while cursor < bytes.count, digit(bytes[cursor]) {
-                guard cursor == firstDigit || integer != 0 else { throw AssetReadError.invalidData }
+                guard !limitsNumbers || cursor == firstDigit || integer != 0 else { throw AssetReadError.invalidData }
                 integer = integer &* 10 &+ UInt64(bytes[cursor] - 48)
                 cursor += 1
             }
@@ -284,30 +308,11 @@ extension AssetJSON {
             guard cursor > exponent else { throw AssetReadError.invalidData }
         }
         // StrictJsonParser cannot read a number that fills JsonReader's 1,024-character buffer.
-        guard cursor - start < 1024 else { throw AssetReadError.invalidData }
+        guard !limitsNumbers || cursor - start < 1024 else { throw AssetReadError.invalidData }
         var next = cursor
         while next < bytes.count, [9, 10, 13, 32].contains(bytes[next]) { next += 1 }
         guard next == bytes.count || [44, 93, 125].contains(bytes[next]) else { throw AssetReadError.invalidData }
         return cursor
     }
 
-    private static func restore(_ value: Any) throws -> Any {
-        if let text = value as? String {
-            switch text.first {
-            case "S": return String(text.dropFirst())
-            case "N": return Number(literal: String(text.dropFirst()))
-            default: throw AssetReadError.invalidData
-            }
-        }
-        if let list = value as? [Any] { return try list.map(restore) }
-        if let object = value as? [String: Any] {
-            var result: [String: Any] = [:]
-            for (key, value) in object {
-                guard key.first == "S" else { throw AssetReadError.invalidData }
-                result[String(key.dropFirst())] = try restore(value)
-            }
-            return result
-        }
-        return value
-    }
 }

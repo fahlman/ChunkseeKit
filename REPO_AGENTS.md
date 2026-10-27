@@ -1269,17 +1269,17 @@ Text-component JSON retains original number spellings until JsonOps' primitive-n
 select an exact Int64, otherwise an exactly representable Float, otherwise Double. The shared
 UTF-8 parser builds the value tree directly, retaining number tokens without rewriting the
 document. Its explicit container stack preserves Foundation's 512-level limit on concurrency
-workers; Foundation still validates escaped strings. The previous Foundation route remains for
-non-UTF-8 text input. Existing trailing-comma and first-member behavior is unchanged.
-JSONSerialization's
-NSDecimalNumber conversion loses precision, while a Double-only decoder loses the original
+workers; Foundation still validates escaped strings. Foundation-supported non-UTF-8 text is
+decoded to UTF-8 for the same parser. Existing trailing-comma behavior is unchanged; duplicate
+members select the last decoded name. JSONSerialization's NSDecimalNumber conversion loses
+precision, while a Double-only decoder loses the original
 integer/fraction distinction. Standalone JSON, advancement definitions and legacy JSON inside
 saved NBT share this adapter. Native NBT retains its integer/Float/Double kind and follows
 FloatTag/DoubleTag.load's signed-zero canonicalization. Nonfinite numeric arguments remain
 readable, as the game's PRIMITIVE_ARG_CODEC permits; plainText still projects translation keys.
 RegionFacts interpretation 27 invalidates earlier saved-text omissions. Existing resource/text
 bounds remain, along with StrictJsonParser's numeric token rules and Gson's decimal-scale bound.
-Duplicate JSON members still select the first, tracked separately on #297.
+Duplicate JSON members select the last, corrected on #297.
 The new public Argument.integer and Argument.float enum cases require a minor release and
 client switch updates. #296 owns this correction; copied-world parity/timing is required.
 
@@ -1306,6 +1306,19 @@ natural spawns. Public DimensionTime Decodable remains source-compatible. No pub
 NBT interpretation changes, and RegionFacts stays at 27. App adoption must invalidate tile colors,
 geometry and dimension-context interpretation again. Native spawn weights remain on #232 and
 duplicate JSON keys on #297; this is not a claim that every JSON/NBT number path has migrated.
+
+The #297 JSON member-selection owner replaces an earlier decoded member as it parses, including
+escaped-equivalent names and nested objects. Losing values still must be syntactically valid.
+Raw resource/text readers retain original number tokens; Foundation-backed
+statistics, language, tag and pack readers retain their scalar contracts through number-fragment
+decoding, without rewriting their complete documents. Existing Decodable
+metadata passes through the same selection owner with numeric spelling intact. Its iterative
+normalizer lets Foundation retain its numeric conversions without recursive worker-stack growth.
+Game numeric token limits remain confined to the raw-number readers; existing Foundation adapters
+retain their own limits. The supported Unicode encodings share decoded member selection. Only AssetJSON
+calls the Foundation JSON readers for game input. RegionFacts interpretation 28 invalidates
+legacy JSON sign/book/name facts produced with first-member selection. App adoption also needs
+tile invalidation for changed resource definitions. Native NBT text and numeric types are unchanged.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's

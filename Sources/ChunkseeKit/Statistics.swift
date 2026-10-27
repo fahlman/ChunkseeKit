@@ -25,7 +25,7 @@ public struct PlayerStatistics: Sendable, Equatable {
     }
 
     public init(json data: Data) throws {
-        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        guard let root = try AssetJSON.foundationValue(from: data) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
         dataVersion = root["DataVersion"] as? Int
@@ -107,7 +107,7 @@ public struct AdvancementProgress: Sendable, Equatable {
     /// Reads every entry of an advancements file, upgrading saved names and sorting by id.
     /// Ambiguous name collisions retain their original keys and progress.
     public static func list(json data: Data) throws -> [AdvancementProgress] {
-        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        guard let root = try AssetJSON.foundationValue(from: data) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
         let interpreted = SaveDataUpgrade.advancements(root, dataVersion: root["DataVersion"] as? Int)

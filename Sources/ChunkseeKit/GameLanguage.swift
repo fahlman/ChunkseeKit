@@ -71,7 +71,7 @@ private struct GameLanguageReader {
         }
         // The game applies these data-supplied removals/renames after merging all languages.
         if let data = archive("assets/minecraft/lang/deprecated.json"),
-           let rules = try? JSONDecoder().decode(Deprecated.self, from: data) {
+           let rules = try? AssetJSON.decode(Deprecated.self, from: data) {
             for key in rules.removed { values[key] = nil }
             for (old, new) in rules.renamed.sorted(by: { $0.key < $1.key }) {
                 values[new] = values.removeValue(forKey: old)
@@ -141,7 +141,7 @@ private struct GameLanguageReader {
     }
 
     private static func object(_ data: Data) -> [String: Any]? {
-        (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        (try? AssetJSON.foundationValue(from: data)) as? [String: Any]
     }
 
     private static func component(_ value: String) -> Bool {
