@@ -41,6 +41,71 @@ import ChunkseeKitTestSupport
                 "components": .compound(["minecraft:enchantments": .compound([enchantment: .int(1)])])])])])
     }
 
+    @Test func maximumLevelsComeFromDefinitionsIncludingUnfamiliarEnchantments() throws {
+        let definitions = try assets([
+            entry("minecraft:mending", #"{"max_level":4}"#),
+            entry("example:single", #"{"max_level":1}"#),
+            entry("example:highest", #"{"max_level":255}"#),
+            entry("example:whole_number", #"{"max_level":5.0}"#),
+        ]).enchantmentDefinitions()
+        #expect(definitions["minecraft:mending"]?.maximumLevel == 4)
+        #expect(definitions["example:single"]?.maximumLevel == 1)
+        #expect(definitions["example:highest"]?.maximumLevel == 255)
+        #expect(definitions["example:whole_number"]?.maximumLevel == 5)
+    }
+
+    @Test func unreadableMaximumLevelsPreserveOtherDefinitionFacts() throws {
+        for value in ["null", "true", "false", "0", "-1", "256", "1.5", "1e100", #""1""#, "[]", "{}"] {
+            let json = #"{"max_level":\#(value),"slots":["head"],"effects":{"minecraft:attributes":[{"attribute":"minecraft:max_health"}]}}"#
+            let definition = try #require(EnchantmentDefinition(data: Data(json.utf8)))
+            #expect(definition.maximumLevel == nil)
+            #expect(definition.slots == ["head"])
+            #expect(definition.hasMaximumHealthModifier == true)
+        }
+        #expect(EnchantmentDefinition(data: Data(neutral.utf8))?.maximumLevel == nil)
+    }
+
+    @Test func maximumLevelsUseEnabledPackPriorityWithoutFallingBackThroughInvalidFields() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let reader = try assets([
+            entry("minecraft:mending", #"{"max_level":1}"#),
+            entry("example:missing", #"{"max_level":3}"#),
+            entry("example:invalid", #"{"max_level":5}"#),
+        ])
+        let pack = root.appendingPathComponent("datapacks/custom")
+        try write(metadata, at: "pack.mcmeta", under: pack)
+        try write(#"{"max_level":2}"#, at: "data/minecraft/enchantment/mending.json", under: pack)
+        try write(neutral, at: "data/example/enchantment/missing.json", under: pack)
+        try write(#"{"max_level":256}"#, at: "data/example/enchantment/invalid.json", under: pack)
+        let archive = try TestZIP.zip([
+            .init(path: "pack.mcmeta", text: metadata),
+            entry("minecraft:mending", #"{"max_level":4}"#),
+        ])
+        try Fixtures.write(archive, to: root.appendingPathComponent("datapacks/high.zip"))
+        let folderWorld = try world(root, packs: ["vanilla", "file/custom"])
+        let folder = try folderWorld.enchantmentDefinitions(assets: reader)
+        #expect(folder["minecraft:mending"]?.maximumLevel == 2)
+        #expect(folder["example:missing"]?.maximumLevel == nil)
+        #expect(folder["example:invalid"]?.maximumLevel == nil)
+        #expect(folder.count == 3)
+        let zipWorld = try world(root, packs: ["vanilla", "file/custom", "file/high.zip"])
+        #expect(try zipWorld.enchantmentDefinitions(assets: reader)["minecraft:mending"]?.maximumLevel == 4)
+        #expect(try zipWorld.enchantmentDefinitions(assets: nil)["minecraft:mending"]?.maximumLevel == 4)
+        let disabled = try world(root, packs: ["vanilla"])
+        #expect(try disabled.enchantmentDefinitions(assets: reader)["minecraft:mending"]?.maximumLevel == 1)
+    }
+
+    @Test func maximumLevelRoundTripsAndOldSnapshotsStillDecode() throws {
+        let legacy = Data(#"{"hasMaximumHealthModifier":false,"slots":["any"]}"#.utf8)
+        let old = try JSONDecoder().decode(EnchantmentDefinition.self, from: legacy)
+        #expect(old.maximumLevel == nil && old.hasMaximumHealthModifier == false && old.slots == ["any"])
+        let current = try #require(EnchantmentDefinition(data: Data(#"{"max_level":1,"slots":["any"]}"#.utf8)))
+        #expect(try JSONDecoder().decode(EnchantmentDefinition.self, from: JSONEncoder().encode(current)) == current)
+        #expect(RegionScanOptions(enchantments: ["example:single": old]) !=
+                RegionScanOptions(enchantments: ["example:single": current]))
+    }
+
     @Test func directAndNestedAttributesAreDistinguishedFromUnrelatedEffects() throws {
         func read(_ text: String) throws -> EnchantmentDefinition { try #require(EnchantmentDefinition(data: Data(text.utf8))) }
         #expect(try read(neutral).hasMaximumHealthModifier == false)
