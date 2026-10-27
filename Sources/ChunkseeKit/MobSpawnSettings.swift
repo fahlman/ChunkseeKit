@@ -37,7 +37,7 @@ public struct MobSpawnSettings: Sendable, Equatable {
 
     static func read(json: Data, base: Self?) -> Self? {
         guard json.count <= ZipResources.maximumResourceSize,
-              let root = try? JSONSerialization.jsonObject(with: json) else { return nil }
+              let root = try? AssetJSON.value(from: json) else { return nil }
         return read(.json(root), base: base)
     }
 

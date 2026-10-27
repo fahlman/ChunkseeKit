@@ -2,7 +2,7 @@ import Foundation
 
 /// Readable facts from one data-defined enchantment. No enchantment-ID catalog is used.
 public struct EnchantmentDefinition: Sendable, Hashable, Codable {
-    /// The definition's maximum level, when it is an integer in the game's 1...255 range.
+    /// The definition's maximum level, after the game's integer conversion and 1...255 range check.
     /// This is definition metadata, not a restriction on the level stored on an item.
     public let maximumLevel: Int?
     /// Whether its effects declare unsaved maximum-health attribute modifiers. Nil means a
@@ -13,7 +13,7 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
 
     public init?(data: Data) {
         guard data.count <= ZipResources.maximumResourceSize,
-              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
+              let json = try? AssetJSON.object(from: data) else { return nil }
         // Enchantment.EnchantmentDefinition.CODEC uses intRange(1, 255) for max_level.
         let level = try? AssetJSON.integer(json["max_level"])
         maximumLevel = level.flatMap { (1...255).contains($0) ? $0 : nil }

@@ -1,10 +1,10 @@
 import Foundation
 import CoreFoundation
 
-/// Strict JSON primitives shared by the game-resource readers.
+/// JSON primitives and game numeric conversions shared by the resource readers.
 enum AssetJSON {
     static func object(from data: Data) throws -> [String: Any] {
-        do { return try object(JSONSerialization.jsonObject(with: data)) }
+        do { return try object(value(from: data)) }
         catch { throw AssetReadError.invalidData }
     }
 
@@ -29,7 +29,14 @@ enum AssetJSON {
     }
 
     static func number(_ value: Any?) throws -> Float {
-        let number = try jsonNumber(value).floatValue
+        // Gson's typed FLOAT field parses the original decimal directly, without a Double
+        // intermediate. EnvironmentAttributeMap also supplies already-decoded native scalars;
+        // preserve that adapter's conversion and the finite-value requirement for both paths.
+        let number: Float
+        if let value = value as? Number {
+            guard let parsed = Float(value.literal) else { throw AssetReadError.invalidData }
+            number = parsed
+        } else { number = try jsonNumber(value).floatValue }
         guard number.isFinite else { throw AssetReadError.invalidData }
         return number
     }
@@ -69,8 +76,14 @@ enum AssetJSON {
     }
 
     static func integer(_ value: Any?) throws -> Int {
-        guard let value = Int32(exactly: try jsonNumber(value).doubleValue) else { throw AssetReadError.invalidData }
-        return Int(value)
+        if let value = value as? Number {
+            guard let integer = value.int32 else { throw AssetReadError.invalidData }
+            return Int(integer)
+        }
+        // Dimension attributes retain their existing decoded-scalar bridge. Raw resource
+        // JSON always reaches the Number case above, before Foundation can discard digits.
+        guard let integer = Int32(exactly: try jsonNumber(value).doubleValue) else { throw AssetReadError.invalidData }
+        return Int(integer)
     }
 
     static func boolean(_ value: Any?) throws -> Bool {

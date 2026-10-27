@@ -114,7 +114,6 @@ import Testing
             #expect(try assets(invalid).defaultItemModel("sample") == nil, "\(invalid)")
         }
         for invalidTint in [#"{"type":"unknown"}"#, #"{"type":"constant","value":true}"#,
-                            #"{"type":"constant","value":1.5}"#, #"{"type":"dye","default":2147483648}"#,
                             #"{"type":"dye","default":[1,0]}"#, #"{"type":"dye","default":[1,2,0]}"#,
                             #"{"type":"dye","default":[1,0,false]}"#, #"{"type":"potion","default":null}"#,
                             #"{"type":"grass","temperature":0.5}"#, #"{"type":"grass","temperature":1e100,"downfall":1}"#,
@@ -123,6 +122,12 @@ import Testing
         }
         let reader = try assets(node)
         for id in ["unknown", "../sample", "mod:sample"] { #expect(reader.defaultItemModel(id) == nil) }
+    }
+
+    @Test func packedTintsUseTheGamesIntegerConversion() throws {
+        let definition = #"{"type":"model","model":"item/flat","tints":[{"type":"constant","value":1.5},{"type":"dye","default":2147483648}]}"#
+        let tints = try #require(try assets(definition).defaultItemModel("sample")?.parts.first?.tints)
+        #expect(tints == [.constant(1), .dye(defaultColor: 0)])
     }
 
     @Test func nestedAndWideDefinitionsHaveBoundedWork() throws {

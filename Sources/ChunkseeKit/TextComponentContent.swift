@@ -44,7 +44,7 @@ extension TextComponent {
     }
 
     static func jsonValue(from data: Data) throws -> Any {
-        try TextJSON.value(from: data)
+        try AssetJSON.value(from: data)
     }
 
     private static func read(_ input: TextInput, depth: Int, budget: inout ResourceReadBudget) throws -> Content {
@@ -130,7 +130,7 @@ private enum TextInput {
 
     var numberArgument: TextComponent.Argument? {
         switch self {
-        case .json(let value): (value as? TextJSON.Number)?.argument
+        case .json(let value): (value as? AssetJSON.Number)?.argument
         // JavaOps keeps NBT's supplied numeric kind, including byte arguments and nonfinite
         // floats. Unlike JSON, a Double equal to an integer or Float is not narrowed.
         case .nbt(let value):

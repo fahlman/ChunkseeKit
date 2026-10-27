@@ -55,7 +55,7 @@ import ChunkseeKitTestSupport
     }
 
     @Test func unreadableMaximumLevelsPreserveOtherDefinitionFacts() throws {
-        for value in ["null", "true", "false", "0", "-1", "256", "1.5", "1e100", #""1""#, "[]", "{}"] {
+        for value in ["null", "true", "false", "0", "-1", "256", "0.9", "1e100", #""1""#, "[]", "{}"] {
             let json = #"{"max_level":\#(value),"slots":["head"],"effects":{"minecraft:attributes":[{"attribute":"minecraft:max_health"}]}}"#
             let definition = try #require(EnchantmentDefinition(data: Data(json.utf8)))
             #expect(definition.maximumLevel == nil)

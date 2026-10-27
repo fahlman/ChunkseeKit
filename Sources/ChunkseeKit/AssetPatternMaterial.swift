@@ -89,7 +89,7 @@ enum AssetPatternMaterial {
             throw Invalid.pattern
         }
         try budget.consume(bytes: data.count)
-        return try AssetJSON.object(JSONSerialization.jsonObject(with: data))
+        return try AssetJSON.object(from: data)
     }
 
     // Items' 23 potPattern registrations in 26.3. These component defaults are game code,

@@ -1,16 +1,44 @@
 import Foundation
 
-/// Preserve numeric spelling until the text codec chooses its Java primitive. Foundation
+/// Preserve numeric spelling until the resource codec chooses its Java primitive. Foundation
 /// still parses JSON structure, strings and booleans; neither of its number decoders retains
 /// enough information to distinguish an exact integer from a nearby fraction rounded to it.
-enum TextJSON {
+extension AssetJSON {
     struct Number {
         let literal: String
 
+        /// Gson LazilyParsedNumber.intValue truncates decimal fractions and keeps the low
+        /// 32 bits. A floating-point conversion would lose integer digits before narrowing.
+        var int32: Int32? {
+            guard let value = decimal else { return nil }
+            let digits = value.digits.dropLast(max(0, min(value.scale, value.digits.count)))
+            var magnitude: UInt32 = 0
+            for digit in digits.utf8 { magnitude = magnitude &* 10 &+ UInt32(digit - 48) }
+            if value.scale < 0 {
+                // Each decimal zero supplies a factor of two; no low bits survive 32 zeros.
+                guard -value.scale < UInt32.bitWidth else { return 0 }
+                for _ in 0..<(-value.scale) { magnitude = magnitude &* 10 }
+            }
+            return Int32(bitPattern: value.negative ? 0 &- magnitude : magnitude)
+        }
+
         /// JsonOps.convertTo first tries BigDecimal.longValueExact, then an exact Float,
-        /// then Double. Gson NumberLimits requires an absolute decimal scale below 10,000.
-        /// These are numeric-format rules, not a catalog of game content.
+        /// then Double. This is distinct from a typed INT or FLOAT resource field.
         var argument: TextComponent.Argument? {
+            guard let value = decimal else { return nil }
+            if value.digits.isEmpty { return .integer(0) }
+            if value.scale <= 0, value.digits.count - value.scale <= 19,
+               let integer = Int64((value.negative ? "-" : "") + value.digits + String(repeating: "0", count: -value.scale)) {
+                return .integer(integer)
+            }
+            guard let number = Double(literal) else { return nil }
+            let float = Float(number)
+            return Double(float) == number ? .float(float) : .number(number)
+        }
+
+        /// Exact decimal coefficient/scale under Gson NumberLimits, normalized without
+        /// rounding. The parser already bounds number tokens before any codec reads them.
+        private var decimal: (negative: Bool, digits: Substring, scale: Int)? {
             let negative = literal.first == "-"
             let unsigned = negative ? literal.dropFirst() : literal[...]
             let parts = unsigned.lowercased().split(separator: "e", omittingEmptySubsequences: false)
@@ -22,15 +50,8 @@ enum TextJSON {
             let digits = mantissa.joined()
             var significant = digits[...]
             while significant.first == "0" { significant.removeFirst() }
-            if significant.isEmpty { return .integer(0) }
             while significant.last == "0" { significant.removeLast(); scale -= 1 }
-            if scale <= 0, significant.count - scale <= 19,
-               let integer = Int64((negative ? "-" : "") + significant + String(repeating: "0", count: -scale)) {
-                return .integer(integer)
-            }
-            guard let number = Double(literal) else { return nil }
-            let float = Float(number)
-            return Double(float) == number ? .float(float) : .number(number)
+            return (negative, significant, scale)
         }
     }
 

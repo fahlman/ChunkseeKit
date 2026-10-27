@@ -246,7 +246,7 @@ import Testing
 
     @Test func malformedFieldsDoNotBecomeDefaultsOrFabricatedColors() throws {
         let invalidColors = [#""ffffff""#, ##""#fff""##, ##""#12345678""##, ##""#12zz00""##,
-                             ##""#+12345""##, ##""#１２３４５６""##, "true", "null", "1.5", "2147483648",
+                             ##""#+12345""##, ##""#１２３４５６""##, "true", "null",
                              "[0,1]", "[0,1,2]", "[true,0,1]"]
         var invalid = invalidColors.map { #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":\#($0)}}"# }
         invalid += [
@@ -262,6 +262,13 @@ import Testing
         ]
         let reader = try assets(invalid.enumerated().map { resource("example:bad\($0.offset)", $0.element) })
         for index in invalid.indices { #expect(reader.biomeDefinition("example:bad\(index)") == nil) }
+    }
+
+    @Test func packedColorsUseTheGamesIntegerConversionBeforeKeepingRGB() throws {
+        for (number, color): (String, UInt32) in [("1.5", 1), ("2147483648", 0), ("4294967295", 0xffffff)] {
+            let json = #"{"temperature":0.8,"downfall":0.4,"effects":{"water_color":\#(number)}}"#
+            #expect(try assets([resource(json)]).biomeDefinition("plains")?.waterColor == color)
+        }
     }
 
     @Test func unknownGrassModifierPreservesOtherColorsAndClimate() throws {
