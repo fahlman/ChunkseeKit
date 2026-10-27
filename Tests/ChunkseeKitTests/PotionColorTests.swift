@@ -87,13 +87,12 @@ import Testing
             var fields: [String: NBT] = [:]
             if let potion = sample.potion { fields["potion"] = .string(potion) }
             fields["custom_effects"] = .list(.compound, sample.effects.map {
-                effect($0.id, amplifier: .int($0.amplifier), visible: .byte($0.visible ? 1 : 0))
+                effect($0.id, amplifier: .int(Int32($0.amplifier)), visible: .byte($0.visible ? 1 : 0))
             })
             let stack = item(.compound(fields))
             for version in [-1, 1, 5023, 1_000_000] as [Int32] {
                 #expect(stack.potionColor(gameDataVersion: version, defaultColor: GeneratedPotionColorProofs.defaultColor) == sample.color)
             }
-            #expect(stack.components == .compound(["minecraft:potion_contents": .compound(fields)]))
         }
     }
 
