@@ -71,7 +71,7 @@ public struct TradingDefinitions: Sendable, Equatable {
 
     private static func json(_ data: Data, budget: inout ResourceReadBudget) -> Any? {
         guard budget.charge(data) else { return nil }
-        return try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+        return try? AssetJSON.value(from: data)
     }
 
     /// ContextIntProviders accepts a bare integer, a typed provider or a registry reference.

@@ -41,7 +41,7 @@ public struct BiomeDefinition: Sendable, Equatable {
     init?(json: Data) {
         guard json.count <= ZipResources.maximumResourceSize else { return nil }
         do {
-            let root = try AssetJSON.object(JSONSerialization.jsonObject(with: json))
+            let root = try AssetJSON.object(from: json)
             let effects = try AssetJSON.object(root["effects"])
             temperature = try AssetJSON.number(root["temperature"])
             downfall = try AssetJSON.number(root["downfall"])

@@ -147,7 +147,7 @@ import Testing
         let defaults = try #require(try read([sun: track([(0, 0), (10, 10)], modifier: NSNull(), ease: NSNull())]))
         #expect(defaults.applying(at: 5, to: base)?.sunAngle == 5)
         for fields: [String: Any] in [["period_ticks": 0], ["period_ticks": -1], ["period_ticks": true],
-                                     ["period_ticks": 1.5], ["tracks": []], ["clock": NSNull()],
+                                     ["period_ticks": 0.9], ["tracks": []], ["clock": NSNull()],
                                      ["clock": "Invalid Clock"], ["clock": [:]]] {
             var root: [String: Any] = ["clock": "test:sky"]; root.merge(fields) { _, new in new }
             #expect(try assets(root).lightingTimeline("test:sky") == nil)

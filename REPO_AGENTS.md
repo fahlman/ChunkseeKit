@@ -517,8 +517,8 @@ cache or game-registry validator is added. The shared AssetJSON/RGBColor reader 
 hex/integer/channel forms. Unknown grass modifiers retain their raw strings and leave only
 resolved grass color unavailable; other colors and climate remain readable. The added
 GrassColorModifier.unknown case requires a minor release for exhaustive-switch compatibility.
-Malformed fields remain unavailable. Strict
-numeric validation intentionally rejects Gson coercions, as the other asset readers do.
+Malformed fields remain unavailable. Shared AssetJSON conversion follows Gson's integer
+truncation/narrowing and direct Float parsing before these fields' own validation.
 Official 26.3 Biome.ClimateSettings, BiomeSpecialEffects and ExtraCodecs codecs establish these
 fields; an independent codec comparison matched all seven exposed fields in all 67 vanilla
 biomes. Synthetic tests cover priority, invalid-present shadowing, unsupported packs, missing
@@ -629,7 +629,7 @@ This corrects in-hand spear/spyglass choices and makes the flat trident illustra
 (Claude-F148-1). JSON, element, node and part
 budgets span all selected models. RGB conversion is shared with ItemStack's saved-color reader;
 grass tint sources expose the official 256×256 colormap sample without decoding an image.
-JSON numeric fields stay strict rather than emulating Gson coercions. These additive APIs are
+JSON numeric fields use the shared game-number conversion and retain their semantic checks. These additive APIs are
 unreleased, tracked on #147. The app selects this static representation, applies saved colors,
 and owns images and caching. Potion color calculation uses ItemStack.potionColor. Saved firework
 colors, blockstate selection and resource-pack layering remain separate; no UI or world writing
@@ -1265,10 +1265,25 @@ saved NBT share this adapter. Native NBT retains its integer/Float/Double kind a
 FloatTag/DoubleTag.load's signed-zero canonicalization. Nonfinite numeric arguments remain
 readable, as the game's PRIMITIVE_ARG_CODEC permits; plainText still projects translation keys.
 RegionFacts interpretation 27 invalidates earlier saved-text omissions. Existing resource/text
-bounds remain, along with StrictJsonParser's numeric token rules and Gson's decimal-scale bound. Generic asset numeric
-decoding is unchanged; duplicate JSON members still select the first, tracked separately on #297.
+bounds remain, along with StrictJsonParser's numeric token rules and Gson's decimal-scale bound.
+Duplicate JSON members still select the first, tracked separately on #297.
 The new public Argument.integer and Argument.float enum cases require a minor release and
 client switch updates. #296 owns this correction; copied-world parity/timing is required.
+
+AssetJSON owns that same raw-number adapter for its resource readers. Typed INT fields truncate
+decimal fractions toward zero and retain the low 32 bits, matching Gson LazilyParsedNumber and
+Codec.INT without losing digits through Foundation or Double. Typed FLOAT fields parse the original
+decimal directly as Float; the existing finite-value requirement remains. Strings and booleans
+are not numeric fields. Block/item models, colors, timelines, spawn weights, trade providers and
+enchantment maximums apply their existing semantic ranges after conversion. The strict game-parser
+oracle and public resource fixtures cover signed fractions, overflow, large/exponent values and
+Float halfway boundaries. This #295 correction adds no public API and preserves the text primitive
+selection and native NBT owners. RegionFacts stays at 27: text results are unchanged, and changed
+enchantment snapshots already participate in RegionScanOptions identity. App adoption must invalidate
+its rendered-tile cache because unchanged resource files can now produce different colors/model
+selection; other changed resource projections are recomputed. Paired copied-world checks cover the
+shared text refactor. The separate world-generation numeric reader and native spawn-weight follow-up
+remain on #51/#232; this is not a claim that every JSON/NBT number path has migrated.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's

@@ -33,7 +33,7 @@ import Testing
             (["test:offer"], ["type": "example:dynamic"], nil),
             ([String](), ["type": "example:dynamic"], false),
             (["test:missing"], 2, nil), (["invalid id"], 2, nil),
-            (["test:offer"], true, nil), (["test:offer"], 2.5, nil),
+            (["test:offer"], true, nil), (["test:offer"], 2.5, true),
             ([String](), true, nil), ([String](), ["type": "constant", "value": true], nil)
         ]
         for (members, amount, expected) in cases {
@@ -61,6 +61,15 @@ import Testing
                 .init(path: "data/test/villager_trade/bad.json", text: "invalid")]
             let definitions = try jar(entries).tradingDefinitions()
             #expect(try villager("farmer").supportsTrading(using: definitions) == expected)
+        }
+    }
+
+    @Test func constantAmountsUseGameIntegerCoercion() throws {
+        for (amount, expected) in [(1.5, true), (0.9, false), (4294967297.9, true), (2147483648.0, false)] {
+            for value: Any in [amount, ["type": "constant", "value": amount]] {
+                let definitions = try jar(sets(trades: ["test:offer"], amount: value) + [offer]).tradingDefinitions()
+                #expect(try villager("farmer").supportsTrading(using: definitions) == expected)
+            }
         }
     }
 

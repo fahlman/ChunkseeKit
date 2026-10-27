@@ -1,10 +1,10 @@
 import Foundation
 import CoreFoundation
 
-/// Strict JSON primitives shared by the game-resource readers.
+/// JSON primitives and game numeric conversions shared by the resource readers.
 enum AssetJSON {
     static func object(from data: Data) throws -> [String: Any] {
-        do { return try object(JSONSerialization.jsonObject(with: data)) }
+        do { return try object(value(from: data)) }
         catch { throw AssetReadError.invalidData }
     }
 
@@ -29,8 +29,11 @@ enum AssetJSON {
     }
 
     static func number(_ value: Any?) throws -> Float {
-        let number = try jsonNumber(value).floatValue
-        guard number.isFinite else { throw AssetReadError.invalidData }
+        // Gson's typed FLOAT field parses the original decimal directly, without a Double
+        // intermediate. Retain this helper's finite-value requirement for its resource callers.
+        guard let value = value as? Number, let number = Float(value.literal), number.isFinite else {
+            throw AssetReadError.invalidData
+        }
         return number
     }
 
@@ -69,7 +72,7 @@ enum AssetJSON {
     }
 
     static func integer(_ value: Any?) throws -> Int {
-        guard let value = Int32(exactly: try jsonNumber(value).doubleValue) else { throw AssetReadError.invalidData }
+        guard let value = (value as? Number)?.int32 else { throw AssetReadError.invalidData }
         return Int(value)
     }
 

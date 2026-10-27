@@ -9,7 +9,7 @@ struct TimelineInput {
 
     init(json: Data) throws {
         guard json.count <= ZipResources.maximumResourceSize else { throw InvalidLighting.data }
-        let root = try AssetJSON.object(JSONSerialization.jsonObject(with: json))
+        let root = try AssetJSON.object(from: json)
         guard let clock = root["clock"] as? String, let id = Identifier(clock) else { throw InvalidLighting.data }
         clockID = id.description
         if let raw = root["period_ticks"], !(raw is NSNull) {

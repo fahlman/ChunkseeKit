@@ -18,7 +18,7 @@ import ChunkseeKitTestSupport
         }
         for body in [#"{}"#, #"{"clock":1}"#, #"{"clock":"Bad ID"}"#,
                      #"{"clock":"test:clock","period_ticks":0}"#, #"{"clock":"test:clock","period_ticks":-1}"#,
-                     #"{"clock":"test:clock","period_ticks":1.5}"#, #"{"clock":"test:clock","period_ticks":true}"#,
+                     #"{"clock":"test:clock","period_ticks":0.9}"#, #"{"clock":"test:clock","period_ticks":true}"#,
                      #"{"clock":"test:clock","period_ticks":2147483648}"#, #"{"clock":"test:clock","tracks":[]}"#] {
             #expect(try assets([entry(body)]).timelineTiming("day") == nil)
         }
