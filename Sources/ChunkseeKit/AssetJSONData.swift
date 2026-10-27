@@ -1,8 +1,7 @@
 import Foundation
 
-/// Preserve numeric spelling until the resource codec chooses its Java primitive. Foundation
-/// still parses JSON structure, strings and booleans; neither of its number decoders retains
-/// enough information to distinguish an exact integer from a nearby fraction rounded to it.
+/// Preserve numeric spelling until the resource codec chooses its Java primitive. The UTF-8
+/// game path builds that tree directly; Foundation still decodes escaped Unicode strings.
 extension AssetJSON {
     struct Number {
         let literal: String
@@ -56,6 +55,158 @@ extension AssetJSON {
     }
 
     static func value(from data: Data) throws -> Any {
+        try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            let bytes = raw.bindMemory(to: UInt8.self)
+            // Keep the previous Foundation path for non-UTF-8 input. Game resources use UTF-8;
+            // this optimization must not silently narrow the existing public text reader.
+            if bytes.prefix(4).contains(0) || bytes.first == 0xFF || bytes.first == 0xFE {
+                return try legacyValue(from: data)
+            }
+            var parser = Parser(bytes: bytes)
+            return try parser.read()
+        }
+    }
+
+    /// The borrowed buffer never escapes `withUnsafeBytes`; strings and number tokens copy
+    /// their own bytes before the parsed value leaves it.
+    private struct Parser {
+        let bytes: UnsafeBufferPointer<UInt8>
+        var cursor = 0
+
+        private struct Container {
+            let closing: UInt8
+            var fields: [String: Any] = [:]
+            var elements: [Any] = []
+            var key: String?
+            var value: Any { closing == 125 ? fields : elements }
+        }
+
+        mutating func read() throws -> Any {
+            if bytes.count >= 3, bytes[0] == 0xEF, bytes[1] == 0xBB, bytes[2] == 0xBF { cursor = 3 }
+            // A bounded explicit stack also supports Foundation's deepest accepted inputs
+            // on Swift concurrency workers, whose call stacks are much smaller than main's.
+            var containers: [Container] = []
+            var result: Any?
+            while true {
+                if let ready = result {
+                    guard !containers.isEmpty else {
+                        whitespace()
+                        guard cursor == bytes.count else { throw AssetReadError.invalidData }
+                        return ready
+                    }
+                    let index = containers.count - 1, closing = containers[index].closing
+                    if closing == 125 {
+                        let key = containers[index].key!
+                        // Preserve first-member selection; #297 owns its behavioral correction.
+                        if containers[index].fields[key] == nil { containers[index].fields[key] = ready }
+                    } else { containers[index].elements.append(ready) }
+                    whitespace()
+                    if consume(closing) { result = containers.removeLast().value }
+                    else {
+                        guard consume(44) else { throw AssetReadError.invalidData }
+                        whitespace()
+                        // Foundation permits a trailing comma; preserve its current syntax.
+                        if consume(closing) { result = containers.removeLast().value }
+                        else {
+                            if closing == 125 { containers[index].key = try key() }
+                            result = nil
+                        }
+                    }
+                } else {
+                    whitespace()
+                    guard cursor < bytes.count else { throw AssetReadError.invalidData }
+                    if bytes[cursor] == 123 || bytes[cursor] == 91 {
+                        guard containers.count < 512 else { throw AssetReadError.invalidData }
+                        let closing: UInt8 = bytes[cursor] == 123 ? 125 : 93
+                        cursor += 1
+                        whitespace()
+                        var container = Container(closing: closing)
+                        if consume(closing) { result = container.value }
+                        else {
+                            if closing == 125 { container.key = try key() }
+                            containers.append(container)
+                        }
+                    } else { result = try scalar() }
+                }
+            }
+        }
+
+        private mutating func whitespace() {
+            while cursor < bytes.count {
+                switch bytes[cursor] {
+                case 9, 10, 13, 32: cursor += 1
+                default: return
+                }
+            }
+        }
+
+        private mutating func consume(_ byte: UInt8) -> Bool {
+            guard cursor < bytes.count, bytes[cursor] == byte else { return false }
+            cursor += 1
+            return true
+        }
+
+        private mutating func key() throws -> String {
+            guard cursor < bytes.count, bytes[cursor] == 34 else { throw AssetReadError.invalidData }
+            let key = try string()
+            whitespace()
+            guard consume(58) else { throw AssetReadError.invalidData }
+            return key
+        }
+
+        private mutating func scalar() throws -> Any {
+            switch bytes[cursor] {
+            case 34: return try string()
+            case 116: try literal("true"); return true
+            case 102: try literal("false"); return false
+            case 110: try literal("null"); return NSNull()
+            case 45, 48...57:
+                let start = cursor
+                cursor = try AssetJSON.endOfNumber(bytes, from: start)
+                return Number(literal: String(decoding: bytes[start..<cursor], as: UTF8.self))
+            default: throw AssetReadError.invalidData
+            }
+        }
+
+        private mutating func literal(_ text: StaticString) throws {
+            let matches = text.withUTF8Buffer { literal in
+                bytes.count - cursor >= literal.count &&
+                    bytes[cursor..<(cursor + literal.count)].elementsEqual(literal)
+            }
+            guard matches else { throw AssetReadError.invalidData }
+            cursor += text.utf8CodeUnitCount
+        }
+
+        private mutating func string() throws -> String {
+            let start = cursor
+            cursor += 1
+            var escaped = false
+            while cursor < bytes.count {
+                switch bytes[cursor] {
+                case 34:
+                    let end = cursor
+                    cursor += 1
+                    if escaped {
+                        let data = Data(bytes[start..<cursor])
+                        guard let text = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) as? String else {
+                            throw AssetReadError.invalidData
+                        }
+                        return text
+                    }
+                    guard let text = String(bytes: bytes[(start + 1)..<end], encoding: .utf8) else {
+                        throw AssetReadError.invalidData
+                    }
+                    return text
+                case 92: escaped = true; cursor += 2
+                case 0..<32: throw AssetReadError.invalidData
+                default: cursor += 1
+                }
+            }
+            throw AssetReadError.invalidData
+        }
+    }
+
+    private static func legacyValue(from data: Data) throws -> Any {
         let bytes = Array(data)
         var cursor = 0
         while cursor < bytes.count {
@@ -102,7 +253,8 @@ extension AssetJSON {
 
     /// Validate number spelling and its following delimiter before replacing it with a string.
     /// In particular, an invalid numeric object key must not become a valid string key.
-    private static func endOfNumber(_ bytes: [UInt8], from start: Int) throws -> Int {
+    private static func endOfNumber<Bytes: RandomAccessCollection>(_ bytes: Bytes, from start: Int) throws -> Int
+        where Bytes.Element == UInt8, Bytes.Index == Int {
         var cursor = start
         if bytes[cursor] == 45 { cursor += 1 }
         guard cursor < bytes.count, digit(bytes[cursor]) else { throw AssetReadError.invalidData }

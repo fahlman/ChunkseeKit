@@ -124,7 +124,7 @@ import Testing
         #expect(type.logicalHeight == 256 && type.hasCeiling)
     }
 
-    @Test(arguments: ["{\"min_y\":-64.5,\"height\":384,\"logical_height\":384,\"has_ceiling\":true}",
+    @Test(arguments: ["{\"min_y\":-63.5,\"height\":384,\"logical_height\":384,\"has_ceiling\":true}",
                       "{\"min_y\":0,\"height\":1e100,\"logical_height\":0,\"has_ceiling\":true}",
                       "{\"min_y\":0,\"height\":16,\"logical_height\":16,\"has_ceiling\":\"true\"}"])
     func invalidJSONOverrideDoesNotFallBack(json: String) throws {

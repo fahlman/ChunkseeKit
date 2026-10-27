@@ -23,7 +23,7 @@ struct AssetModelReader {
             }
             let data = try assets.requiredResource(id.description, directory: "models", extension: "json", missing: AssetReadError.missingModel)
             try budget.consume(bytes: data.count)
-            let model = try JSONDecoder().decode(RawModel.self, from: data)
+            let model = try RawModel(AssetJSON.object(from: data))
             textures.merge(model.textures) { child, _ in child }
             elements = elements ?? model.elements
             gui = gui ?? model.gui
@@ -53,13 +53,7 @@ struct AssetModelReader {
 
 
 /// Missing optional fields inherit/default. Explicit null or the wrong type is not absence.
-private extension KeyedDecodingContainer {
-    func optional<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
-        contains(key) ? try decode(type, forKey: key) : nil
-    }
-}
-
-private struct RawModel: Decodable {
+private struct RawModel {
     let parent: String?
     let textures: [String: TextureSlot]
     let elements: [RawElement]?
@@ -67,36 +61,30 @@ private struct RawModel: Decodable {
     let light: AssetModel.GuiLight?
     let ambient: Bool?
 
-    private enum Keys: String, CodingKey { case parent, textures, elements, display, gui_light, ambientocclusion }
-    private struct Display: Decodable {
-        let gui: RawTransform?
-        private enum Keys: String, CodingKey { case gui }
-        init(from decoder: any Decoder) throws {
-            gui = try decoder.container(keyedBy: Keys.self).optional(RawTransform.self, forKey: .gui)
-        }
-    }
-
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        parent = try c.optional(String.self, forKey: .parent)
-        textures = try c.optional([String: TextureSlot].self, forKey: .textures) ?? [:]
-        elements = try c.optional([RawElement].self, forKey: .elements)
-        guard (elements?.count ?? 0) <= 4096 else { throw AssetReadError.limitExceeded }
-        gui = try c.optional(Display.self, forKey: .display)?.gui?.value
-        light = try c.optional(AssetModel.GuiLight.self, forKey: .gui_light)
-        ambient = try c.optional(Bool.self, forKey: .ambientocclusion)
+    init(_ object: [String: Any]) throws {
+        parent = try object["parent"].map(AssetJSON.string)
+        textures = try object["textures"].map { try AssetJSON.object($0).mapValues(TextureSlot.init) } ?? [:]
+        if let raw = object["elements"] {
+            let values = try AssetJSON.array(raw)
+            guard values.count <= 4096 else { throw AssetReadError.limitExceeded }
+            elements = try values.map(RawElement.init)
+        } else { elements = nil }
+        gui = try object["display"].flatMap { try AssetJSON.object($0)["gui"].map { try RawTransform($0).value } }
+        if let raw = object["gui_light"] {
+            guard let value = AssetModel.GuiLight(rawValue: try AssetJSON.string(raw)) else { throw AssetReadError.invalidData }
+            light = value
+        } else { light = nil }
+        ambient = try object["ambientocclusion"].map(AssetJSON.boolean)
     }
 }
 
-private enum TextureSlot: Decodable {
+private enum TextureSlot {
     case reference(String)
     case value(AssetModel.Material)
 
-    private enum Keys: String, CodingKey { case sprite, force_translucent }
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.singleValueContainer()
+    init(_ raw: Any) throws {
         let sprite: String, translucent: Bool
-        if let string = try? c.decode(String.self) {
+        if let string = raw as? String {
             if string.hasPrefix("#") {
                 guard string.count > 1 else { throw AssetReadError.invalidData }
                 self = .reference(String(string.dropFirst()))
@@ -105,9 +93,9 @@ private enum TextureSlot: Decodable {
             sprite = string
             translucent = false
         } else {
-            let object = try decoder.container(keyedBy: Keys.self)
-            sprite = try object.decode(String.self, forKey: .sprite)
-            translucent = try object.optional(Bool.self, forKey: .force_translucent) ?? false
+            let object = try AssetJSON.object(raw)
+            sprite = try AssetJSON.string(object["sprite"])
+            translucent = try object["force_translucent"].map(AssetJSON.boolean) ?? false
         }
         guard let id = GameAssets.resourceID(sprite) else { throw AssetReadError.invalidData }
         self = .value(.init(texture: id, forceTranslucent: translucent))
@@ -129,32 +117,24 @@ private func material(_ reference: String, in textures: [String: TextureSlot]) t
     }
 }
 
-private struct Vector3: Decodable {
-    let value: SIMD3<Float>
-    init(from decoder: any Decoder) throws {
-        let a = try decoder.singleValueContainer().decode([Float].self)
-        guard a.count == 3, a.allSatisfy(\.isFinite) else { throw AssetReadError.invalidData }
-        value = SIMD3(a[0], a[1], a[2])
-    }
+private func vector3(_ raw: Any?) throws -> SIMD3<Float> {
+    let values = try AssetJSON.numbers(raw, count: 3)
+    return SIMD3(values[0], values[1], values[2])
 }
 
-private struct Vector4: Decodable {
-    let value: SIMD4<Float>
-    init(from decoder: any Decoder) throws {
-        let a = try decoder.singleValueContainer().decode([Float].self)
-        guard a.count == 4, a.allSatisfy(\.isFinite) else { throw AssetReadError.invalidData }
-        value = SIMD4(a[0], a[1], a[2], a[3])
-    }
+private func vector4(_ raw: Any?) throws -> SIMD4<Float> {
+    let values = try AssetJSON.numbers(raw, count: 4)
+    return SIMD4(values[0], values[1], values[2], values[3])
 }
 
-private struct RawTransform: Decodable {
+private struct RawTransform {
     let value: AssetModel.Transform
-    private enum Keys: String, CodingKey { case rotation, translation, scale }
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        let rotation = try c.optional(Vector3.self, forKey: .rotation)?.value ?? .zero
-        let translation = try c.optional(Vector3.self, forKey: .translation)?.value ?? .zero
-        let scale = try c.optional(Vector3.self, forKey: .scale)?.value ?? .one
+
+    init(_ raw: Any) throws {
+        let object = try AssetJSON.object(raw)
+        let rotation = try object["rotation"].map(vector3) ?? .zero
+        let translation = try object["translation"].map(vector3) ?? .zero
+        let scale = try object["scale"].map(vector3) ?? .one
         value = .init(rotation: rotation, translation: clamp(translation / 16, to: -5...5), scale: clamp(scale, to: -4...4))
     }
 }
@@ -165,54 +145,53 @@ private func clamp(_ vector: SIMD3<Float>, to range: ClosedRange<Float>) -> SIMD
           min(max(vector.z, range.lowerBound), range.upperBound))
 }
 
-private struct RawRotation: Decodable {
+private struct RawRotation {
     let value: AssetModel.Rotation
-    private enum Keys: String, CodingKey { case origin, axis, angle, x, y, z, rescale }
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        let origin = try c.decode(Vector3.self, forKey: .origin).value
+
+    init(_ raw: Any) throws {
+        let object = try AssetJSON.object(raw)
+        let origin = try vector3(object["origin"])
         let angles: AssetModel.Rotation.Angles
-        if c.contains(.axis) || c.contains(.angle) {
-            let rawAxis = try c.decode(String.self, forKey: .axis)
+        if object["axis"] != nil || object["angle"] != nil {
+            let rawAxis = try AssetJSON.string(object["axis"])
             guard let axis = AssetModel.Rotation.Axis(rawValue: rawAxis.lowercased()) else { throw AssetReadError.invalidData }
-            let angle = try c.decode(Float.self, forKey: .angle)
-            guard angle.isFinite else { throw AssetReadError.invalidData }
-            angles = .axis(axis, angle)
+            angles = .axis(axis, try AssetJSON.number(object["angle"]))
         } else {
-            guard c.contains(.x) || c.contains(.y) || c.contains(.z) else { throw AssetReadError.invalidData }
-            let x = try c.optional(Float.self, forKey: .x) ?? 0
-            let y = try c.optional(Float.self, forKey: .y) ?? 0
-            let z = try c.optional(Float.self, forKey: .z) ?? 0
-            guard x.isFinite, y.isFinite, z.isFinite else { throw AssetReadError.invalidData }
+            guard object["x"] != nil || object["y"] != nil || object["z"] != nil else { throw AssetReadError.invalidData }
+            let x = try object["x"].map(AssetJSON.number) ?? 0
+            let y = try object["y"].map(AssetJSON.number) ?? 0
+            let z = try object["z"].map(AssetJSON.number) ?? 0
             angles = .eulerXYZ(SIMD3(x, y, z))
         }
-        value = .init(origin: origin, angles: angles, rescale: try c.optional(Bool.self, forKey: .rescale) ?? false)
+        value = .init(origin: origin, angles: angles, rescale: try object["rescale"].map(AssetJSON.boolean) ?? false)
     }
 }
 
-private struct RawElement: Decodable {
+private struct RawElement {
     let from: SIMD3<Float>, to: SIMD3<Float>
     let faces: [AssetModel.Direction: RawFace]
     let rotation: AssetModel.Rotation?
     let shadeDirection: AssetModel.Direction?
     let lightEmission: Int
-    private enum Keys: String, CodingKey { case from, to, faces, rotation, shade_direction_override, light_emission }
 
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        from = try c.decode(Vector3.self, forKey: .from).value
-        to = try c.decode(Vector3.self, forKey: .to).value
+    init(_ raw: Any) throws {
+        let object = try AssetJSON.object(raw)
+        from = try vector3(object["from"])
+        to = try vector3(object["to"])
         guard from == clamp(from, to: -16...32), to == clamp(to, to: -16...32) else { throw AssetReadError.invalidData }
         var faces = [AssetModel.Direction: RawFace]()
-        for (name, face) in try c.decode([String: RawFace?].self, forKey: .faces) {
+        for (name, rawFace) in try AssetJSON.object(object["faces"]) {
             guard let direction = AssetModel.Direction(rawValue: name) else { throw AssetReadError.invalidData }
-            if let face { faces[direction] = face }
+            if !(rawFace is NSNull) { faces[direction] = try RawFace(rawFace) }
         }
         guard !faces.isEmpty else { throw AssetReadError.invalidData }
         self.faces = faces
-        rotation = try c.optional(RawRotation.self, forKey: .rotation)?.value
-        shadeDirection = try c.optional(AssetModel.Direction.self, forKey: .shade_direction_override)
-        lightEmission = Int(try c.optional(Int32.self, forKey: .light_emission) ?? 0)
+        rotation = try object["rotation"].map { try RawRotation($0).value }
+        if let raw = object["shade_direction_override"] {
+            guard let value = AssetModel.Direction(rawValue: try AssetJSON.string(raw)) else { throw AssetReadError.invalidData }
+            shadeDirection = value
+        } else { shadeDirection = nil }
+        lightEmission = try object["light_emission"].map(AssetJSON.integer) ?? 0
         guard (0...15).contains(lightEmission) else { throw AssetReadError.invalidData }
     }
 
@@ -240,23 +219,23 @@ private struct RawElement: Decodable {
     }
 }
 
-private struct RawFace: Decodable {
+private struct RawFace {
     let texture: String
     let uv: SIMD4<Float>?
     let rotation: Int
     let tintIndex: Int?
     let cullFace: AssetModel.Direction?
-    private enum Keys: String, CodingKey { case texture, uv, rotation, tintindex, cullface }
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: Keys.self)
-        texture = try c.decode(String.self, forKey: .texture)
+
+    init(_ raw: Any) throws {
+        let object = try AssetJSON.object(raw)
+        texture = try AssetJSON.string(object["texture"])
         guard !texture.isEmpty else { throw AssetReadError.invalidData }
-        uv = try c.optional(Vector4.self, forKey: .uv)?.value
-        let angle = Int(try c.optional(Int32.self, forKey: .rotation) ?? 0)
+        uv = try object["uv"].map(vector4)
+        let angle = try object["rotation"].map(AssetJSON.integer) ?? 0
         guard angle.isMultiple(of: 90) else { throw AssetReadError.invalidData }
         rotation = (angle % 360 + 360) % 360
-        let tint = try c.optional(Int32.self, forKey: .tintindex) ?? -1
-        tintIndex = tint >= 0 ? Int(tint) : nil
-        cullFace = try c.optional(String.self, forKey: .cullface).flatMap(AssetModel.Direction.init(rawValue:))
+        let tint = try object["tintindex"].map(AssetJSON.integer) ?? -1
+        tintIndex = tint >= 0 ? tint : nil
+        cullFace = try object["cullface"].map(AssetJSON.string).flatMap(AssetModel.Direction.init(rawValue:))
     }
 }

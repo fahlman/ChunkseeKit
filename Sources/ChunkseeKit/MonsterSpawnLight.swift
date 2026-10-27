@@ -60,7 +60,7 @@ enum MonsterLightAttribute: String {
     case skyLevel = "minecraft:gameplay/sky_light_level"
 }
 
-struct DimensionMonsterLighting: Decodable {
+struct DimensionMonsterLighting {
     let value: Float
 
     private init(_ entries: EnvironmentAttributeMap<MonsterLightAttribute>) throws {
@@ -69,5 +69,5 @@ struct DimensionMonsterLighting: Decodable {
     }
 
     init(nbt: NBT) throws { try self.init(EnvironmentAttributeMap(nbt: nbt)) }
-    init(from decoder: any Decoder) throws { try self.init(EnvironmentAttributeMap(from: decoder)) }
+    init(json: [String: Any]) throws { try self.init(EnvironmentAttributeMap(json: json)) }
 }

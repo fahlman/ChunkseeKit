@@ -1266,9 +1266,12 @@ Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB 
 saved progress remains unchanged, and no existing public API is removed.
 
 Text-component JSON retains original number spellings until JsonOps' primitive-number rule can
-select an exact Int64, otherwise an exactly representable Float, otherwise Double. Foundation
-still owns JSON structure, strings and booleans; the narrow token adapter protects every number
-and prefixes every original string/key to prevent marker collisions. JSONSerialization's
+select an exact Int64, otherwise an exactly representable Float, otherwise Double. The shared
+UTF-8 parser builds the value tree directly, retaining number tokens without rewriting the
+document. Its explicit container stack preserves Foundation's 512-level limit on concurrency
+workers; Foundation still validates escaped strings. The previous Foundation route remains for
+non-UTF-8 text input. Existing trailing-comma and first-member behavior is unchanged.
+JSONSerialization's
 NSDecimalNumber conversion loses precision, while a Double-only decoder loses the original
 integer/fraction distinction. Standalone JSON, advancement definitions and legacy JSON inside
 saved NBT share this adapter. Native NBT retains its integer/Float/Double kind and follows
@@ -1292,9 +1295,17 @@ selection and native NBT owners. RegionFacts stays at 27: text results are uncha
 enchantment snapshots already participate in RegionScanOptions identity. App adoption must invalidate
 its rendered-tile cache because unchanged resource files can now produce different colors/model
 selection; other changed resource projections are recomputed. Paired copied-world checks cover the
-shared text refactor. Dimension environment attributes retain their existing decoded-scalar bridge
-and validation; the shared helper still accepts those native scalars. The separate world-generation numeric reader and native spawn-weight follow-up
-remain on #51/#232; this is not a claim that every JSON/NBT number path has migrated.
+shared text refactor. The remaining #295 migration routes model face tint/rotation, element light emission,
+dimension/noise limits, sea levels and spawn-light providers through that same raw-number owner.
+Dimension environment attributes preserve their original number tokens for FLOAT and packed RGB
+conversion; their NBT adapter retains its existing native-scalar behavior. Model vectors and
+transforms also parse the original decimal directly as Float. Required field validation still
+rejects invalid bounds; malformed optional lighting, time, scale and sea-level fields do not hide
+other readable facts. Dimension JSON is parsed once and shared by its projections, including
+natural spawns. Public DimensionTime Decodable remains source-compatible. No public API or saved
+NBT interpretation changes, and RegionFacts stays at 27. App adoption must invalidate tile colors,
+geometry and dimension-context interpretation again. Native spawn weights remain on #232 and
+duplicate JSON keys on #297; this is not a claim that every JSON/NBT number path has migrated.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,
 PersistenceRequired and LeftHanded are all unconditionally written as booleans by Minecraft's

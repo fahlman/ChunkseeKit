@@ -33,7 +33,7 @@ public struct MobSpawnSettings: Sendable, Equatable {
     }
 
     static func dimension(_ nbt: NBT) -> Self? { read(.nbt(nbt), base: gameDefault) }
-    static func dimension(json: Data) -> Self? { read(json: json, base: gameDefault) }
+    static func dimension(jsonObject: [String: Any]) -> Self? { read(.json(jsonObject), base: gameDefault) }
 
     static func read(json: Data, base: Self?) -> Self? {
         guard json.count <= ZipResources.maximumResourceSize,
