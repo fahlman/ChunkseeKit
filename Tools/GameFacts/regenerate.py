@@ -276,6 +276,25 @@ def portal_source(facts, notice):
 
 
 
+def statistic_unit_sources(facts, notice):
+    source = notice + "// Stats registrations -> Stat.formatter -> StatFormatter scale.\n"
+    source += "enum GeneratedStatisticUnits {\n    static let values: [String: PlayerStatistics.Unit] = [\n"
+    for identifier, unit in sorted(facts["units"].items()):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+            raise ValueError("Invalid statistic identifier: " + identifier)
+        if unit not in ("centimeters", "ticks", "tenthsOfDamagePoint"):
+            raise ValueError("Unsupported statistic unit: " + unit)
+        source += f"        {quoted(identifier)}: .{unit},\n"
+    source += "    ]\n}\n"
+    proofs = notice + "// Independent public Stat.format output; no unit labels copied from the table.\n"
+    proofs += "enum GeneratedStatisticUnitProofs {\n"
+    proofs += "    static let formatted: [String: [String]] = [\n"
+    for identifier, values in sorted(facts["formatted"].items()):
+        examples = ", ".join(quoted(values[str(value)]) for value in (20, 100, 155))
+        proofs += f"        {quoted(identifier)}: [{examples}],\n"
+    return source, proofs + "    ]\n}\n"
+
+
 def mob_spawn_source(facts, notice):
     weight = None if facts["requiresWeight"] else facts["defaultWeight"]
     if weight is not None and (type(weight) is not int or weight < 0):
@@ -622,6 +641,7 @@ def generated_sources(facts, entities):
             seed_source += f"            {quoted(facing)}: {vector(offset)},\n"
         seed_source += "        ],\n"
     seed_source += "    ]\n}\n"
+    statistic_units, statistic_proofs = statistic_unit_sources(facts["statisticUnits"], notice)
     return {**creature_color_sources(facts["creatureColors"], entities, notice),
             "Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
@@ -639,6 +659,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedEquipmentFacts.swift": equipment_source,
             "Sources/ChunkseeKit/GeneratedTradingFacts.swift": trading_source(facts["trading"], notice),
             "Sources/ChunkseeKit/GeneratedMobSpawnFacts.swift": mob_spawn_source(facts["mobSpawns"], notice),
+            "Sources/ChunkseeKit/GeneratedStatisticUnits.swift": statistic_units,
+            "Tests/ChunkseeKitTests/GeneratedStatisticUnitProofs.swift": statistic_proofs,
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
             "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice),
             "Sources/ChunkseeKit/GeneratedSaveRenames.swift": save_renames_source(facts["saveRenames"], notice),
@@ -673,12 +695,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

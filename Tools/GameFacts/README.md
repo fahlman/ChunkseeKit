@@ -8,7 +8,7 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
-and profession trade-set associations, natural-spawn defaults and non-block rendering definitions.
+and profession trade-set associations, natural-spawn defaults, statistic formatter units and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -26,7 +26,8 @@ writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColor
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`, `GeneratedBlockItems.swift`,
 `GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedBlockEntityRenderers.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
-`GeneratedLegacyChunkProofs.swift`, and `Tools/GameFacts/source.json`.
+`GeneratedLegacyChunkProofs.swift`, `GeneratedStatisticUnits.swift`, the test-only
+`GeneratedStatisticUnitProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -40,6 +41,14 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `Stats.makeCustomStat` registers each general statistic with its actual `StatFormatter`.
+  The extractor matches formatter identity to DEFAULT, DISTANCE, TIME or DIVIDE_BY_TEN and
+  fails on an unsupported formatter. The scale contracts are centimeters, ticks and tenths
+  of a damage point; unscaled counts have no unit. Independent public `Stat.format` samples
+  at 20, 100 and 155 become test-only proofs for every registered statistic. Historical unit
+  queries reuse the existing generated statistic rename chain; saved values stay unchanged.
+  No version gate or statistic-name suffix rule establishes a unit.
 
 - `BlockEntityRenderers.PROVIDERS` and `BlockEntityType.isValid` identify blocks with a registered
   code renderer. Every registered state is independently checked by creating its actual block

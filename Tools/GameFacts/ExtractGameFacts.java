@@ -71,6 +71,7 @@ public final class ExtractGameFacts {
         facts.add("equipment", ExtractEquipmentFacts.extract());
         facts.add("trading", ExtractTradingFacts.extract());
         facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
+        facts.add("statisticUnits", ExtractStatisticUnits.extract());
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));
