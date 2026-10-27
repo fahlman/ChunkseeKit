@@ -277,6 +277,30 @@ def portal_source(facts, notice):
 
 
 
+def map_color_sources(facts, notice):
+    colors, brightness, argb = (facts[key] for key in ("baseColors", "brightness", "argb"))
+    if len(colors) != 64 or not any(color is not None for color in colors) or any(
+            color is not None and (type(color) is not int or not 0 <= color <= 0xffffff)
+            for color in colors):
+        raise ValueError("Invalid map base colors")
+    if len(brightness) != 4 or any(type(value) is not int or not 0 <= value <= 255 for value in brightness):
+        raise ValueError("Invalid map brightness")
+    if len(argb) != 256 or any(type(value) is not int or not 0 <= value <= 0xffffffff
+                             or value >> 24 not in (0, 255) for value in argb):
+        raise ValueError("Invalid packed map-color proofs")
+    source = notice + "// MapColor.byId/col and Brightness.modifier; NONE remains transparent.\n"
+    source += "enum GeneratedMapColors {\n    static let baseColors: [UInt32?] = [\n"
+    for start in range(0, len(colors), 8):
+        source += "        " + ", ".join("nil" if color is None else f"0x{color:06X}"
+                                        for color in colors[start:start + 8]) + ",\n"
+    source += "    ]\n    static let brightness = [" + ", ".join(map(str, brightness)) + "]\n}\n"
+    proofs = notice + "// Actual MapColor.getColorFromPackedId outputs, indexed by every saved UInt8.\n"
+    proofs += "enum GeneratedMapColorProofs {\n    static let argb: [UInt32] = [\n"
+    for start in range(0, len(argb), 8):
+        proofs += "        " + ", ".join(f"0x{color:08X}" for color in argb[start:start + 8]) + ",\n"
+    return source, proofs + "    ]\n}\n"
+
+
 def light_storage_sources(facts, notice):
     absent = facts["absentBlockLight"]
     if type(absent) is not int or not 0 <= absent <= 15 or not facts["samples"]:
@@ -782,6 +806,7 @@ def generated_sources(facts, entities):
     potion_colors, potion_proofs = potion_color_sources(facts["potionColors"], notice)
     health_defaults, health_proofs = health_default_sources(facts["healthDefaults"], entities, notice)
     light_storage, light_proofs = light_storage_sources(facts["lightStorage"], notice)
+    map_colors, map_proofs = map_color_sources(facts["mapColors"], notice)
     return {**creature_color_sources(facts["creatureColors"], entities, notice),
             "Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
@@ -807,6 +832,8 @@ def generated_sources(facts, entities):
             "Tests/ChunkseeKitTests/GeneratedHealthDefaultProofs.swift": health_proofs,
             "Sources/ChunkseeKit/GeneratedLightStorage.swift": light_storage,
             "Tests/ChunkseeKitTests/GeneratedLightStorageProofs.swift": light_proofs,
+            "Sources/ChunkseeKit/GeneratedMapColors.swift": map_colors,
+            "Tests/ChunkseeKitTests/GeneratedMapColorProofs.swift": map_proofs,
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
             "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice),
             "Sources/ChunkseeKit/GeneratedSaveRenames.swift": save_renames_source(facts["saveRenames"], notice),
@@ -841,12 +868,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractHealthDefaults.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractHealthDefaults.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractMapColors.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "health_defaults", "light_storage_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "health_defaults", "light_storage_defaults", "map_colors", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
