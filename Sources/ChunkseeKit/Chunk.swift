@@ -286,9 +286,9 @@ public struct Chunk: Sendable {
         return section(atBlockY: y)?.blockLight(x: x, y: y, z: z)
     }
 
-    /// Valid block light, including the verified 26.3 omitted-layer value of zero.
+    /// Valid block light, including the generated game default for an omitted layer.
     /// X/Z must be chunk-local (0..<16), and absolute Y must fit the game's Int32.
-    /// Stale light, malformed present arrays, and unverified omissions remain unknown.
+    /// Stale light and malformed present arrays remain unknown.
     /// Read all light fields, or use keysNotNeededForTerrainAndLight: selectively skipping
     /// BlockLight while retaining isLightOn is indistinguishable from an omitted saved layer.
     /// The raw blockLight accessors keep their stored-array meaning. No propagation is run.
@@ -296,7 +296,7 @@ public struct Chunk: Sendable {
         guard isLightOn, (0..<16).contains(x), (0..<16).contains(z), Int32(exactly: y) != nil else { return nil }
         let section = section(atBlockY: y)
         if section?.hasBlockLightTag == true { return section?.blockLight(x: x, y: y, z: z) }
-        return dataVersion == SaveVersion.java26_3 ? 0 : nil
+        return GeneratedLightStorage.absentBlockLight
     }
 
     /// Saved sky light with the same validity and missing-data rules as blockLight(x:y:z:).

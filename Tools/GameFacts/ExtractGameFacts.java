@@ -76,6 +76,7 @@ public final class ExtractGameFacts {
         facts.add("potionColors", ExtractPotionColors.extract());
         facts.add("healthDefaults", ExtractHealthDefaults.extract(
             JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject()));
+        facts.add("lightStorage", ExtractLightStorage.extract());
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));
