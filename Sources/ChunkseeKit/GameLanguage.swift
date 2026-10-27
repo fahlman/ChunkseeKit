@@ -19,6 +19,17 @@ extension GameAssets {
         var reader = GameLanguageReader(assets: self)
         return reader.read(locale: locale, minecraftDirectory: minecraftDirectory)
     }
+
+    /// Sorted codes from readable language files in this jar and its installed asset index.
+    /// The client chooses a language; this query does not match locales or download files.
+    /// A listed file may still contain malformed translations; `language` retains its per-key
+    /// English fallback. Metadata and archive reads share a 16 MiB budget. Indexed objects
+    /// must be openable regular files within the same per-resource size limit, but their
+    /// contents are read only when the client requests a language. Call off the UI actor.
+    public func languageCodes(minecraftDirectory: URL? = nil) -> [String] {
+        var reader = GameLanguageReader(assets: self)
+        return reader.codes(minecraftDirectory: minecraftDirectory)
+    }
 }
 
 private struct GameLanguageReader {
@@ -28,16 +39,30 @@ private struct GameLanguageReader {
 
     init(assets: GameAssets) { self.assets = assets }
 
+    mutating func codes(minecraftDirectory: URL?) -> [String] {
+        var codes: Set<String> = []
+        if let root = minecraftDirectory {
+            for (path, object) in indexedFiles(in: root) {
+                guard let code = Self.languageCode(path, inJar: false),
+                      let bytes = Self.localFile(object, under: root),
+                      bytes.count <= ZipResources.maximumResourceSize, bytes.isUnchanged else { continue }
+                codes.insert(code)
+            }
+        }
+        for path in (assets.resources.paths(under: "assets/") ?? []).sorted() {
+            guard let code = Self.languageCode(path, inJar: true), archive(path) != nil else { continue }
+            codes.insert(code)
+        }
+        return codes.sorted()
+    }
+
     mutating func read(locale: String, minecraftDirectory: URL?) -> GameLanguage {
         let locale = locale.replacingOccurrences(of: "-", with: "_").lowercased()
-        let validLocale = !locale.isEmpty && locale.utf8.allSatisfy {
-            (97...122).contains($0) || (48...57).contains($0) || $0 == 95
-        }
-        let locales = validLocale && locale != "en_us" ? ["en_us", locale] : ["en_us"]
+        let locales = Self.validLocale(locale) && locale != "en_us" ? ["en_us", locale] : ["en_us"]
         var values: [String: String] = [:]
         let paths = assets.resources.paths(under: "assets/") ?? []
         for locale in locales {
-            for path in paths.sorted() where Self.isLanguage(path, locale: locale, inJar: true) {
+            for path in paths.sorted() where Self.languageCode(path, inJar: true) == locale {
                 if let data = archive(path) { Self.append(data, to: &values) }
             }
             if locale != "en_us", let minecraftDirectory {
@@ -60,28 +85,45 @@ private struct GameLanguageReader {
         let renamed: [String: String]
     }
 
-    private static func isLanguage(_ path: String, locale: String, inJar: Bool) -> Bool {
+    private static func validLocale(_ code: String) -> Bool {
+        !code.isEmpty && code.utf8.allSatisfy { (97...122).contains($0) || (48...57).contains($0) || $0 == 95 }
+    }
+
+    private static func languageCode(_ path: String, inJar: Bool) -> String? {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
         let start = inJar ? 1 : 0
         guard parts.count == start + 3, !inJar || parts[0] == "assets",
-              parts[start + 1] == "lang", parts[start + 2] == "\(locale).json" else { return false }
-        return GameAssets.resourceID("\(parts[start]):language") != nil
+              parts[start + 1] == "lang", parts[start + 2].hasSuffix(".json"),
+              GameAssets.resourceID("\(parts[start]):language") != nil else { return nil }
+        let code = String(parts[start + 2].dropLast(5))
+        // This file supplies removal/rename rules, not a selectable language.
+        guard validLocale(code), !(parts[start] == "minecraft" && code == "deprecated") else { return nil }
+        return code
     }
 
     private mutating func appendIndexed(_ locale: String, in root: URL, to values: inout [String: String]) {
+        for (path, object) in indexedFiles(in: root).sorted(by: { $0.key < $1.key })
+            where Self.languageCode(path, inJar: false) == locale {
+            if let data = file(object, under: root) { Self.append(data, to: &values) }
+        }
+    }
+
+    private mutating func indexedFiles(in root: URL) -> [String: String] {
         let id = assets.version.id
         guard Self.component(id), let data = file("versions/\(id)/\(id).json", under: root),
               let metadata = Self.object(data)?["assetIndex"] as? [String: Any],
               let index = metadata["id"] as? String, Self.component(index),
               let indexData = file("assets/indexes/\(index).json", under: root),
-              let objects = Self.object(indexData)?["objects"] as? [String: Any] else { return }
+              let objects = Self.object(indexData)?["objects"] as? [String: Any] else { return [:] }
         // IndexedAssetSource uses the current local index and hash-named files. Download
         // checksums/sizes describe a launcher download, not whether these strings are readable.
-        for path in objects.keys.sorted() where Self.isLanguage(path, locale: locale, inJar: false) {
+        var files: [String: String] = [:]
+        for path in objects.keys where Self.languageCode(path, inJar: false) != nil {
             guard let object = objects[path] as? [String: Any], let hash = object["hash"] as? String,
-                  Self.isHash(hash), let data = file("assets/objects/\(hash.prefix(2))/\(hash)", under: root) else { continue }
-            Self.append(data, to: &values)
+                  Self.isHash(hash) else { continue }
+            files[path] = "assets/objects/\(hash.prefix(2))/\(hash)"
         }
+        return files
     }
 
     private static func append(_ data: Data, to values: inout [String: String]) {
@@ -119,10 +161,14 @@ private struct GameLanguageReader {
     }
 
     private mutating func file(_ path: String, under root: URL) -> Data? {
-        guard remaining > 0, root.isFileURL, let url = WorldResourcePack.file(path, under: root),
-              let bytes = try? ZipBytes(contentsOf: url), bytes.count <= remaining,
+        guard remaining > 0, let bytes = Self.localFile(path, under: root), bytes.count <= remaining,
               bytes.isUnchanged, let data = try? bytes.read(0..<bytes.count), bytes.isUnchanged else { return nil }
         remaining -= data.count
         return data
+    }
+
+    private static func localFile(_ path: String, under root: URL) -> ZipBytes? {
+        guard root.isFileURL, let url = WorldResourcePack.file(path, under: root) else { return nil }
+        return try? ZipBytes(contentsOf: url)
     }
 }
