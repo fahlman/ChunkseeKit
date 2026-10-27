@@ -57,9 +57,27 @@ import Testing
         #expect(stats.unit(of: "minecraft:play_time", in: "mod:custom") == nil)
         #expect(stats.unit(of: "minecraft:PLAY_TIME") == nil)
         #expect(stats.unit(of: "walk_one_cm", in: "custom") == .centimeters)
-        for version in [nil, 1343, SaveVersion.java26_3 + 1] as [Int?] {
-            let unknownDamage = PlayerStatistics(dataVersion: version, values: [:])
-            #expect(unknownDamage.unit(of: "minecraft:damage_taken") == nil)
+    }
+
+    @Test func generatedUnitsMatchTheGamesPublicFormatterAcrossVersionLabels() {
+        for (id, samples) in GeneratedStatisticUnitProofs.formatted {
+            let expected: PlayerStatistics.Unit?
+            switch samples {
+            case ["20", "100", "155"]: expected = nil
+            case ["20 cm", "1.00 m", "1.55 m"]: expected = .centimeters
+            case ["1.0 s", "5.0 s", "7.75 s"]: expected = .ticks
+            case ["2.00", "10.00", "15.50"]: expected = .tenthsOfDamagePoint
+            default:
+                Issue.record("Uninterpretable public game formatter output for \(id): \(samples)")
+                continue
+            }
+            for version in [nil, -1, 1, 5023, 1_000_000] as [Int?] {
+                let values = ["minecraft:custom": [id: 155]]
+                let stats = PlayerStatistics(dataVersion: version, values: values)
+                #expect(stats.unit(of: id) == expected, "\(id), saved version \(String(describing: version))")
+                #expect(stats.values == values)
+                #expect(stats.distances[id] == (expected == .centimeters ? 155 : nil))
+            }
         }
     }
 

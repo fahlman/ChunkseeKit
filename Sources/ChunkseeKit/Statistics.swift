@@ -61,26 +61,13 @@ public struct PlayerStatistics: Sendable, Equatable {
         value("minecraft:play_time") ?? value("minecraft:play_one_minute")
     }
 
-    /// The saved scale for a known vanilla general statistic; nil means keep its raw number.
-    /// Time and distance include the supported legacy IDs. Damage scaling is verified for 26.3
-    /// only; unknown versions must not acquire a conversion from their names.
+    /// The game's formatter scale for a general statistic, including generated historical
+    /// aliases. Code-only units apply independently of saved version labels. Nil means keep
+    /// the raw number; a familiar name or suffix never establishes an unknown statistic's unit.
     public func unit(of id: String, in category: String = "minecraft:custom") -> Unit? {
         guard Identifier(category)?.description == "minecraft:custom",
-              let id = Identifier(id), id.namespace == "minecraft" else { return nil }
-        switch id.path {
-        case "play_time", "play_one_minute", "total_world_time", "time_since_death", "time_since_rest", "sneak_time":
-            return .ticks
-        case "walk_one_cm", "crouch_one_cm", "sprint_one_cm", "walk_on_water_one_cm", "fall_one_cm",
-             "climb_one_cm", "fly_one_cm", "walk_under_water_one_cm", "minecart_one_cm", "boat_one_cm",
-             "pig_one_cm", "happy_ghast_one_cm", "horse_one_cm", "aviate_one_cm", "swim_one_cm",
-             "strider_one_cm", "nautilus_one_cm", "dive_one_cm":
-            return .centimeters
-        case "damage_dealt", "damage_dealt_absorbed", "damage_dealt_resisted", "damage_taken",
-             "damage_blocked_by_shield", "damage_absorbed", "damage_resisted":
-            return dataVersion == SaveVersion.java26_3 ? .tenthsOfDamagePoint : nil
-        default:
-            return nil
-        }
+              let id = Identifier(id) else { return nil }
+        return GeneratedStatisticUnits.values[SaveDataUpgrade.currentStatisticIdentifier(id.description)]
     }
 
     /// Known vanilla travel distances, in centimeters, including the legacy diving statistic.

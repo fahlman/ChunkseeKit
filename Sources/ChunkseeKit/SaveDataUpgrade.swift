@@ -51,6 +51,12 @@ enum SaveDataUpgrade {
         return values
     }
 
+    /// Unit queries accept historical names without changing saved counts or keys. Reuse the
+    /// complete game's rename chain instead of maintaining a second set of unit aliases.
+    static func currentStatisticIdentifier(_ id: String) -> String {
+        names(after: -1).renamed(.string(id), kind: .stat).string ?? id
+    }
+
     static func advancements<Value>(_ entries: [String: Value], dataVersion: Int?) -> [String: Value] {
         progressKeys(entries, kind: .advancement, dataVersion: dataVersion)
     }

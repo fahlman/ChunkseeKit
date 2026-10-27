@@ -1140,10 +1140,10 @@ modern DateFormatter as thread safe on 64-bit macOS, covering this Mac-only macO
 https://developer.apple.com/documentation/foundation/dateformatter. No custom unchecked-concurrency
 annotation or additional lock is used.
 
-`PlayerStatistics.unit(of:in:)` owns scaled-statistic units, verified against 26.3 Stats and
-StatFormatter. It recognizes vanilla general-statistic IDs and retains legacy play-time/diving
-IDs; the latter share the time/distance formatters in the official 1.12.2 client. Damage scaling
-is limited to verified data version 5023. Unknown or unscaled values remain raw. The existing
+`PlayerStatistics.unit(of:in:)` owns scaled-statistic units. Tools/GameFacts extracts the registered
+Stats.CUSTOM formatter associations and checks every ID through public Stat.format outputs.
+Generated units apply across saved version labels; historical names use the existing generated
+statistic rename chain without changing saved counts or keys. Unknown or unscaled values remain raw. The existing
 distances projection uses this owner instead of guessing from an arbitrary ID's suffix.
 This additive API is available in v0.38.0; app names, locale, rounding and presentation stay in Chunksee,
 with adoption on fahlman/Chunksee#298. No region-cache interpretation changes.
@@ -1431,7 +1431,7 @@ changes no reader or cache interpretation; app #442 measures runtime geometry an
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
-relationships, saved equipment attachment identities, block seed methods, block tints, static special-item
+relationships, saved equipment attachment identities, statistic formatter units, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated
