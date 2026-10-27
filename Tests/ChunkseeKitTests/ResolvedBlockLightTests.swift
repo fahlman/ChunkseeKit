@@ -4,38 +4,39 @@ import Foundation
 import Testing
 
 @Suite struct ResolvedBlockLightTests {
-    private func chunk(block: NBT? = nil, version: Int = SaveVersion.java26_3,
+    private func chunk(block: NBT? = nil, version: Int? = nil,
                        flag: NBT? = .byte(1), sectionY: Int8? = -4) throws -> Chunk {
         var section: [String: NBT] = [:]
         section["Y"] = sectionY.map(NBT.byte)
         section["BlockLight"] = block
         var fields = try #require(Fixtures.chunk(x: -1, z: 2,
             sections: sectionY == nil ? [] : [.compound(section)]).compound)
-        fields["DataVersion"] = .int(Int32(version))
+        fields["DataVersion"] = version.map { .int(Int32($0)) }
         fields["isLightOn"] = flag
         return try Chunk(nbt: .compound(fields))
     }
 
-    @Test func verifiedOmittedLayerIsZeroButRawDataStaysAbsent() throws {
-        for sectionY: Int8? in [-4, nil] {
-            let chunk = try chunk(sectionY: sectionY)
-            for y in [-80, -64, -49, -48, 0, 319] {
-                #expect(chunk.resolvedBlockLight(x: 0, y: y, z: 15) == 0)
-                #expect(chunk.blockLight(x: 0, y: y, z: 15) == nil)
-                #expect(chunk.skyLight(x: 0, y: y, z: 15) == nil)
+    @Test func omittedLayersMatchGameReadsAcrossSaveVersionsButRawDataStaysAbsent() throws {
+        for version in [nil, 100, 2844, 5023, 5119, 9999] as [Int?] {
+            for sectionY: Int8? in [-4, nil] {
+                let chunk = try chunk(version: version, sectionY: sectionY)
+                for sample in GeneratedLightStorageProofs.samples {
+                    let x = sample.x & 15, z = sample.z & 15
+                    #expect(chunk.resolvedBlockLight(x: x, y: sample.y, z: z) == sample.value)
+                    #expect(chunk.blockLight(x: x, y: sample.y, z: z) == nil)
+                    #expect(chunk.skyLight(x: x, y: sample.y, z: z) == nil)
+                }
             }
         }
     }
 
-    @Test func staleAndUnverifiedOmissionsStayUnknown() throws {
+    @Test func staleOmissionsStayUnknownAndPresentArraysDoNotNeedVersionEvidence() throws {
         for flag: NBT? in [nil, .byte(0), .string("true"), .compound([:])] {
             #expect(try chunk(flag: flag).resolvedBlockLight(x: 0, y: -64, z: 0) == nil)
             #expect(try chunk(block: .byteArray(Array(repeating: 0, count: 2048)), flag: flag)
                 .resolvedBlockLight(x: 0, y: -64, z: 0) == nil)
         }
-        for version in [SaveVersion.flatChunkRoot, SaveVersion.java26_2, 5022, 5024, SaveVersion.perBlockBiomes, 9999] {
-            #expect(try chunk(version: version).resolvedBlockLight(x: 0, y: -64, z: 0) == nil)
-            #expect(try chunk(version: version, sectionY: nil).resolvedBlockLight(x: 0, y: -64, z: 0) == nil)
+        for version in [nil, 100, 2844, 5023, 5119, 9999] as [Int?] {
             #expect(try chunk(block: .byteArray(Array(repeating: 0x33, count: 2048)), version: version)
                 .resolvedBlockLight(x: 0, y: -64, z: 0) == 3)
         }
@@ -70,7 +71,7 @@ import Testing
     }
 
     @Test func onlyCompleteOrLightRetainingReadsResolveOmissions() throws {
-        let source = Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [.compound(["Y": .byte(0)])],
+        let source = Fixtures.chunk(x: 0, z: 0, dataVersion: 9999, sections: [.compound(["Y": .byte(0)])],
                                     extra: ["isLightOn": .byte(1)]).serialized()
         for skipping in [Set<String>(), Chunk.keysNotNeededForTerrainAndLight] {
             let chunk = try Chunk(nbt: NBT.read(source, skipping: skipping).value)

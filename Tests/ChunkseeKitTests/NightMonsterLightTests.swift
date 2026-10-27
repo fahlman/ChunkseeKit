@@ -254,6 +254,6 @@ import Testing
         var section: [String: NBT] = ["Y": .byte(0)]
         section["BlockLight"] = block.map(NBT.byteArray)
         section["SkyLight"] = sky.map(NBT.byteArray)
-        return try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [.compound(section)], extra: ["isLightOn": .byte(valid ? 1 : 0)]))
+        return try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, dataVersion: 9999, sections: [.compound(section)], extra: ["isLightOn": .byte(valid ? 1 : 0)]))
     }
 }

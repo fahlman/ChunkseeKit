@@ -456,15 +456,18 @@ propagation, persistent cache, serialized fact or ordinary terrain-cost change i
 Official 26.3 Monster, Level/LevelReader, LevelLightEngine, environment attribute and timeline
 codecs establish these rules. App drawing and layer-on/off measurements remain on app#86.
 
-The #187 extension adds Chunk.resolvedBlockLight, consumed by MonsterSpawnLight. Only verified
-26.3 omissions in valid saved lighting resolve to zero, matching SerializableChunkData's null/
-empty-layer omission and BlockLightSectionStorage's absent-layer read. ChunkSection retains tag
+The #187 extension adds Chunk.resolvedBlockLight, consumed by MonsterSpawnLight. Omissions in
+valid saved lighting use the generated BlockLightSectionStorage absent-layer value regardless
+of save version. SerializableChunkData omits null/empty layers. The release tool constructs empty
+storage and calls the actual read at varied coordinates without a world or propagation.
+ChunkSection retains tag
 presence so a malformed present value cannot become zero. Raw light accessors remain unchanged;
-missing sky data and unverified omissions stay unknown. Callers must retain all light fields
+missing sky data stays unknown. Callers must retain all light fields
 (or use keysNotNeededForTerrainAndLight); selectively skipping only BlockLight loses provenance.
 Ordinary terrain reads skip isLightOn as before, so they remain unavailable to this query.
 The public query checks local X/Z and Int32 Y. It adds no asynchronous work or cancellation owner,
-persistent fields, cache version, light propagation, or app-side rule. App adoption follows release.
+persistent fields, RegionFacts cache version, light propagation, or app-side rule. App adoption
+must invalidate cached light-overlay pixels when updating to the changed interpretation.
 
 Enabled ZIP packs now use the same priority as folders. `ZipResources` validates their complete
 central directory and matching local headers before a missing resource can permit fallback.
@@ -1433,7 +1436,8 @@ changes no reader or cache interpretation; app #442 measures runtime geometry an
 Tools/GameFacts/regenerate.py is the single release regeneration entrypoint for code-only facts.
 Its current categories are dye IDs/names/texture RGB, mob appearance, enchantment effect
 format associations, item model prototype facts, block default properties, spawn-egg and block-item
-relationships, saved equipment attachment identities, statistic formatter units, potion-color defaults, block seed methods, block tints, static special-item
+relationships, saved equipment attachment identities, statistic formatter units, potion-color defaults,
+absent block-light defaults, block seed methods, block tints, static special-item
 models, fluid identities, upper-face support, air flags, block entity renderer registrations, profession trade-set associations and natural-spawn defaults and non-block rendering definitions. It verifies the installed stable
 client's download hash, records tool/output hashes and exact commands, and
 uses the official enum methods, entity-class ancestry and full CatType data-fix chain. Generated

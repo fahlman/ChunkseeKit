@@ -8,7 +8,8 @@ The current categories are mob appearance, shared dye identities/texture RGB, en
 effect format associations, code-only item prototype facts needed by model selectors, and
 registered block default properties, spawn-egg and block-item relationships, saved equipment attachment identities
 and block seed methods, tints, fluid states, upper-face support, air flags, block entity renderer registrations, static special-item models
-and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color defaults and non-block rendering definitions.
+and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color defaults,
+absent block-light defaults, and non-block rendering definitions.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -28,7 +29,8 @@ writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColor
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, `GeneratedStatisticUnits.swift`, the test-only
 `GeneratedStatisticUnitProofs.swift`, `GeneratedPotionColors.swift`, the test-only
-`GeneratedPotionColorProofs.swift`, and `Tools/GameFacts/source.json`.
+`GeneratedPotionColorProofs.swift`, `GeneratedLightStorage.swift`, the test-only
+`GeneratedLightStorageProofs.swift`, and `Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -42,6 +44,14 @@ fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
 
 Sources and interpretation:
+
+- `BlockLightSectionStorage.getLightValue` supplies the value for an absent block-light layer.
+  A small subclass exposes the protected read on normally constructed empty storage; its chunk
+  source is unused. The extractor verifies the same result at varied positive/negative block
+  coordinates and emits those actual reads as test fixtures. It creates no world and performs
+  no light propagation. SerializableChunkData's null/empty layer omission establishes the saved
+  format association. This supplies no missing sky-light value and does not validate stale or
+  malformed light data.
 
 - `MobEffect.getColor` supplies effect RGB defaults; `Potion.getEffects` supplies base potion
   ingredients. Only visible ingredients contribute, as in `PotionContents.getColorOptional`.

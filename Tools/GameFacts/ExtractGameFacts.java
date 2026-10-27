@@ -73,6 +73,7 @@ public final class ExtractGameFacts {
         facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
         facts.add("statisticUnits", ExtractStatisticUnits.extract());
         facts.add("potionColors", ExtractPotionColors.extract());
+        facts.add("lightStorage", ExtractLightStorage.extract());
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));

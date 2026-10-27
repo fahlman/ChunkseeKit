@@ -19,6 +19,7 @@
     "natural_spawn_defaults",
     "statistic_units",
     "potion_color_defaults",
+    "light_storage_defaults",
     "non_block_definitions",
     "portal_rules",
     "save_identifier_renames",
@@ -27,7 +28,7 @@
   "clientSHA1": "e877b6a07acd633fb3bb475002175cec036e7b87",
   "extractedSHA256": {
     "entity-types.json": "957e6552fea999c5c2f92c9001f004d27936a112e7885f8443340ebfa88816b1",
-    "facts.json": "df31aaaa056a9155dbb6a6578ed23bfd1e31c82d4ddce371afb519e9a192b4df"
+    "facts.json": "f9aba90a360159ccd4fb4e693c5804def4c0a681c3fe1bcda9c0f360d7f8b647"
   },
   "minecraft": {
     "build_time": "2026-09-15T11:20:48+00:00",
@@ -62,9 +63,10 @@
     "Tools/GameFacts/ExtractEnchantmentEffects.java": "ffaa5e1d13bf377b7b9864f212d92c29d4ef986f944881a840b2e2e111a8d6f8",
     "Tools/GameFacts/ExtractEntityRenames.java": "69e37560a0e7e55b9a65560630ce40314bdeec96a58ee628827b8066f216eeca",
     "Tools/GameFacts/ExtractEquipmentFacts.java": "d606927f602618942d6e0d6f6874f0679f2b3338f957529ec27512876bda5a86",
-    "Tools/GameFacts/ExtractGameFacts.java": "4f73ef2ad3a67a0b5efe5b4c2b7cb808404bb0dca2414af85df1c6156a179a88",
+    "Tools/GameFacts/ExtractGameFacts.java": "cf91f3ff4f21db1836503d2b5b785bd18a9da09a1ca6e12640b37afb46977c48",
     "Tools/GameFacts/ExtractItemModelFacts.java": "eb89922e3e4600f2b950357eea289a23a46053f603d7e683628bfb50d3192d61",
     "Tools/GameFacts/ExtractLegacyChunkFacts.java": "2e90b32efdd49914a7385d480cdf75aa4027b586d3ed049fb985a7c7fb80ec3d",
+    "Tools/GameFacts/ExtractLightStorage.java": "235efa4b3aa25484327fe2796bb95d39bc0d305f97aba2631a8c652d54c0fa07",
     "Tools/GameFacts/ExtractMobSpawnFacts.java": "d8c7d44005b65da58841f70e347b44265376cea9d7dd008d1dd2e3bf02407f35",
     "Tools/GameFacts/ExtractNumericItemIds.java": "c4601e53eb5074d639dd009554e2b55ae187f7e16d9db264cb65fa33e735e83a",
     "Tools/GameFacts/ExtractPortalFacts.java": "7a2bc0074479417c0db5bcd8b00a1807f283f8a2c0fec78da0cccc44d3178b2a",
@@ -75,7 +77,7 @@
     "Tools/GameFacts/ExtractSpecialItemModels.java": "8fda563fc726f8d3c796bf0db514954f1e3aaf5296878478f77f2c155cc90c16",
     "Tools/GameFacts/ExtractStatisticUnits.java": "f4554079f8d2d7d2599326b58bb6ae10b48fdb61b6a9e687b79fb36315645633",
     "Tools/GameFacts/ExtractTradingFacts.java": "9ca04a78417f018741cc650e9d6d3b17564675e3eb2f427dc86ff651f960efb4",
-    "Tools/GameFacts/regenerate.py": "173070d6103bb461e44901a7bfbc3a22bfe9f2e1a55af859011cd5ad28d680b7",
+    "Tools/GameFacts/regenerate.py": "75e30e66602bfd633f22f517a8b97b127978f688fab94ff8bd1fbbfb45617063",
     "Tools/GameFacts/special_item_models.py": "b530d0399a2297bb961a3d70788db26d56e48206f55eeeecf9fd26e97b9bf10e"
   }
 }

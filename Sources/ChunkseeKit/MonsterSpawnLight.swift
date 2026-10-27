@@ -44,7 +44,7 @@ public struct MonsterSpawnLight: Sendable, Equatable {
     }
 
     /// Reads valid light at local X/Z and absolute Y through Chunk.resolvedBlockLight.
-    /// Verified omitted block layers resolve to zero; stale/malformed light remains unknown.
+    /// Omitted block layers use the generated default; stale/malformed light remains unknown.
     /// This never propagates light or treats a missing sky array as darkness.
     public func canPass(in chunk: Chunk, x: Int, y: Int, z: Int) -> Bool? {
         guard chunk.isLightOn, (0..<16).contains(x), (0..<16).contains(z),
