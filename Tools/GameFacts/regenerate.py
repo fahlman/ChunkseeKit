@@ -276,6 +276,53 @@ def portal_source(facts, notice):
 
 
 
+def potion_color_sources(facts, notice):
+    def identifier(value):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", value):
+            raise ValueError("Invalid potion/effect identifier: " + value)
+        return quoted(value)
+
+    def rgb(value):
+        if type(value) is not int or not 0 <= value <= 0xffffff:
+            raise ValueError("Invalid potion RGB color")
+        return f"0x{value:06x}"
+
+    def effect(value, proof=False):
+        name = identifier(value["id"])
+        amplifier = value["amplifier"]
+        if value["id"] not in facts["effects"] or type(amplifier) is not int or not 0 <= amplifier <= 255:
+            raise ValueError("Unsupported potion effect ingredient")
+        fields = f"id: {name}, amplifier: {amplifier}"
+        if proof:
+            if type(value["visible"]) is not bool:
+                raise ValueError("Invalid potion proof visibility")
+            fields += f", visible: {str(value['visible']).lower()}"
+        return ".init(" + fields + ")"
+
+    source = notice + "// BuiltInRegistries.MOB_EFFECT -> MobEffect.getColor.\n"
+    source += "enum GeneratedPotionColors {\n    static let effects: [String: UInt32] = [\n"
+    for name, color in sorted(facts["effects"].items()):
+        source += f"        {identifier(name)}: {rgb(color)},\n"
+    source += "    ]\n    // Potion.getEffects: visible color ingredients and their actual amplifiers.\n"
+    source += "    static let recipes: [String: [PotionColorEffect]] = [\n"
+    for name, values in sorted(facts["recipes"].items()):
+        if len(values) > 4096:
+            raise ValueError("Potion exceeds the reader's effect budget")
+        source += f"        {identifier(name)}: [" + ", ".join(effect(value) for value in values) + "],\n"
+    source += "    ]\n}\n"
+    proofs = notice + "// Independent PotionContents.getColorOr outputs, including base/custom mixtures and visibility.\n"
+    proofs += "enum GeneratedPotionColorProofs {\n"
+    proofs += "    struct Effect: Sendable { let id: String; let amplifier: Int; let visible: Bool }\n"
+    proofs += "    struct Case: Sendable { let potion: String?; let effects: [Effect]; let color: UInt32 }\n"
+    proofs += f"    static let defaultColor: UInt32 = {rgb(facts['proofDefaultColor'])}\n"
+    proofs += "    static let cases: [Case] = [\n"
+    for value in facts["proofs"]:
+        potion = identifier(value["potion"]) if value.get("potion") is not None else "nil"
+        effects = ", ".join(effect(item, proof=True) for item in value["effects"])
+        proofs += f"        .init(potion: {potion}, effects: [{effects}], color: {rgb(value['color'])}),\n"
+    return source, proofs + "    ]\n}\n"
+
+
 def statistic_unit_sources(facts, notice):
     source = notice + "// Stats registrations -> Stat.formatter -> StatFormatter scale.\n"
     source += "enum GeneratedStatisticUnits {\n    static let values: [String: PlayerStatistics.Unit] = [\n"
@@ -642,6 +689,7 @@ def generated_sources(facts, entities):
         seed_source += "        ],\n"
     seed_source += "    ]\n}\n"
     statistic_units, statistic_proofs = statistic_unit_sources(facts["statisticUnits"], notice)
+    potion_colors, potion_proofs = potion_color_sources(facts["potionColors"], notice)
     return {**creature_color_sources(facts["creatureColors"], entities, notice),
             "Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
@@ -661,6 +709,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedMobSpawnFacts.swift": mob_spawn_source(facts["mobSpawns"], notice),
             "Sources/ChunkseeKit/GeneratedStatisticUnits.swift": statistic_units,
             "Tests/ChunkseeKitTests/GeneratedStatisticUnitProofs.swift": statistic_proofs,
+            "Sources/ChunkseeKit/GeneratedPotionColors.swift": potion_colors,
+            "Tests/ChunkseeKitTests/GeneratedPotionColorProofs.swift": potion_proofs,
             "Sources/ChunkseeKit/GeneratedNonBlockDefinitions.swift": non_block_definitions_source(facts["nonBlockDefinitions"], notice),
             "Sources/ChunkseeKit/GeneratedPortalFacts.swift": portal_source(facts["portals"], notice),
             "Sources/ChunkseeKit/GeneratedSaveRenames.swift": save_renames_source(facts["saveRenames"], notice),
@@ -695,12 +745,12 @@ def main():
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
     tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
-                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
+                    "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
                     "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [
