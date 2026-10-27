@@ -90,6 +90,55 @@ import Testing
         #expect(dimension.baseMobSpawnSettings == nil)
     }
 
+    @Test func nativeWeightsUseGameIntegerConversionBeforeCheckingTheirRange() throws {
+        // NbtOps/Codec.INT and MobSpawnSettings.CODEC give these values. The game drops
+        // invalid candidates; the reader keeps their saved type with an unavailable weight.
+        let cases: [(String, NBT?, Int?)] = [
+            ("byte", .byte(1), 1), ("short", .short(2), 2),
+            ("int", .int(3), 3), ("long", .long(4), 4),
+            ("long_wrap_one", .long(4_294_967_297), 1),
+            ("long_wrap_negative", .long(2_147_483_648), nil),
+            ("long_max", .long(.max), nil), ("long_min", .long(.min), 0),
+            ("float_fraction", .float(1.5), 1), ("double_fraction", .double(2.9), 2),
+            ("negative_fraction", .double(-0.5), 0), ("negative_weight", .double(-1.5), nil),
+            ("double_above_int", .double(2_147_483_648), Int(Int32.max)),
+            ("double_below_int", .double(-2_147_483_649), nil),
+            ("nan", .double(.nan), 0), ("positive_infinity", .double(.infinity), Int(Int32.max)),
+            ("negative_infinity", .float(-.infinity), nil),
+            ("string", .string("2"), nil), ("compound", .compound([:]), nil),
+            ("list", .list([]), nil), ("missing", nil, nil),
+        ]
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var dimensions: [String: NBT] = [:]
+        for (name, value, _) in cases {
+            var entry: [String: NBT] = ["type": .string("minecraft:slime")]
+            entry["weight"] = value
+            dimensions["test:" + name] = .compound(["type": .compound([
+                "min_y": .int(0), "height": .int(256), "logical_height": .int(256), "has_ceiling": .byte(0),
+                "attributes": .compound(["minecraft:gameplay/natural_mob_spawns": .compound([
+                    "spawns_by_category": .compound(["monster": .list([
+                        .compound(entry), .compound(["type": .string("minecraft:creeper"), "weight": .int(1)])
+                    ])])
+                ])])
+            ])])
+        }
+        try writeWorld(root, dimensions: dimensions)
+        let file = root.appendingPathComponent("level.dat"), before = try Data(contentsOf: file)
+        let types = try World(contentsOf: root).dimensionTypes(assets: nil)
+        for (name, _, expected) in cases {
+            let type = try #require(types["test:" + name])
+            let settings = try #require(type.baseMobSpawnSettings)
+            let candidate = try #require(settings.candidatesByCategory["monster"]?.first)
+            #expect(candidate.entityType == "minecraft:slime")
+            #expect(candidate.weight == expected, "Native case: \(name)")
+            #expect(settings.contains("slime", in: "monster") == expected.map { $0 > 0 }, "Native case: \(name)")
+            #expect(settings.contains("creeper", in: "monster") == true)
+            #expect(type.logicalHeight == 256)
+        }
+        #expect(try Data(contentsOf: file) == before)
+    }
+
     @Test func enabledPackOverridesAreVersionIndependentAndNeverRewriteTheWorld() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
