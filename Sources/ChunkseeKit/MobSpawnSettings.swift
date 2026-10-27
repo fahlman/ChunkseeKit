@@ -123,7 +123,7 @@ public struct MobSpawnSettings: Sendable, Equatable {
         var integer: Int? {
             switch self {
             case .json(let value): try? AssetJSON.integer(value)
-            case .nbt(let value): value.double.flatMap(Int32.init(exactly:)).map(Int.init)
+            case .nbt(let value): value.javaInt.map(Int.init)
             }
         }
     }
