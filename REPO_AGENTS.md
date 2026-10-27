@@ -1282,7 +1282,8 @@ selection and native NBT owners. RegionFacts stays at 27: text results are uncha
 enchantment snapshots already participate in RegionScanOptions identity. App adoption must invalidate
 its rendered-tile cache because unchanged resource files can now produce different colors/model
 selection; other changed resource projections are recomputed. Paired copied-world checks cover the
-shared text refactor. The separate world-generation numeric reader and native spawn-weight follow-up
+shared text refactor. Dimension environment attributes retain their existing decoded-scalar bridge
+and validation; the shared helper still accepts those native scalars. The separate world-generation numeric reader and native spawn-weight follow-up
 remain on #51/#232; this is not a claim that every JSON/NBT number path has migrated.
 
 Creature owns mob interpretation through the saved Mob format: CanPickUpLoot,

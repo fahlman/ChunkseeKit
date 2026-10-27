@@ -107,9 +107,11 @@ import Testing
 
     @Test func malformedAndOverBudgetPropertiesStayUnavailable() throws {
         let definition = "{\"type\":\"condition\",\"property\":\"custom_model_data\",\"index\":INDEX,\"on_true\":\(leaf("true")),\"on_false\":\(leaf("false"))}"
-        for index in ["-1", "0.5", "true", "2147483648", "\"0\""] {
+        for index in ["-1", "true", "2147483648", "\"0\""] {
             #expect(try chosen(assets(definition.replacingOccurrences(of: "INDEX", with: index))) == nil)
         }
+        let fractional = try assets(definition.replacingOccurrences(of: "INDEX", with: "0.5"))
+        #expect(try chosen(fractional, ["flags": .byteArray([1])]) == "minecraft:item/true")
         let entry = "{\"threshold\":0,\"model\":\(leaf("true"))}"
         #expect(try chosen(assets(range(Array(repeating: entry, count: 4097).joined(separator: ",")))) == nil)
         #expect(try chosen(assets(range("{\"threshold\":0}"))) == nil)

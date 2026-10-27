@@ -109,7 +109,7 @@ import Testing
         for field in ["\"x\":45", "\"y\":1.5", "\"z\":true", "\"x\":2147483648", "\"uvlock\":1", "\"uvlock\":null"] {
             #expect(try assets("{\"variants\":{\"\":{\"model\":\"block/a\",\(field)}}}").blockModel(for: state()) == nil)
         }
-        for weight in ["0", "-1", "true", "1.5", "2147483648", "null"] {
+        for weight in ["0", "-1", "true", "0.9", "2147483648", "null"] {
             #expect(try assets("{\"variants\":{\"\":[{\"model\":\"block/a\",\"weight\":\(weight)}]}}").blockModel(for: state()) == nil)
         }
         let overflow = try assets(##"{"variants":{"": [{"model":"block/a","weight":2147483647},{"model":"block/b"}]}}"##)
