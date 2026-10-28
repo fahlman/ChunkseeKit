@@ -261,7 +261,25 @@ joining and search stay outside the core. Incomplete generation contributes meta
 search facts; unsupported numeric chunks still contribute inhabited time and format counts. Missing files are
 empty, unreadable chunks are counted, and file-open failures/cancellation throw instead of
 returning a cacheable partial value. No cache storage or task scheduling is introduced here.
-`RegionFacts.interpretationVersion` must increase whenever any reader changes a fact's meaning.
+The revision in `RegionFacts.interpretationVersion` must increase whenever a fact reader changes
+meaning. Its typed `InterpretationVersion` also includes the release tool's generated-fact digest
+and `Chunk.interpretationVersion`, so terrain changes invalidate dependent scans without a copied
+counter. The complete value is stored in the archive and checked on decode. Old integer envelopes
+are rejected. This #312 change intentionally replaces the public integer API and requires a minor
+release and app adoption; it changes no chunk/region traversal or decoded fact.
+`Chunk`, `MonsterSpawnLight` and `GameAssets` publish the other interpretation contracts beside
+their readers. They cover terrain/surface, saved light and its light check, and resource-derived
+materials/colors (including saved-map colors). Light also includes the terrain dependency.
+Each handwritten revision covers only its owner's interpretation. Generated digests come from
+the single GameFacts entrypoint, whose explicit per-output domain coverage fails for an
+unclassified new production file. Proof/provenance changes do not retire caches; changes to
+covered production output do. Exact source bytes are hashed, so formatting can conservatively
+retire a cache too. No release number, runtime UUID or randomized hash is an identity.
+Consumers retain whole interpretation values plus their actual inputs. `MonsterSpawnLight`,
+`BiomeDefinition` and `MapItem` supply Hashable and Encodable conformances for whole-value keys;
+they do not gain a new Decodable contract. Immutable catalog identities are encoded once at
+publication, with stable key ordering. Reader/fixed-output tests and generated-source identity
+checks cover invalidation and reuse; the version contract still needs independent review.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
 conformances remain source-compatible until separately migrated. The new API is available in

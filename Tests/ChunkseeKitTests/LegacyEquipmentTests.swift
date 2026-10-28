@@ -89,7 +89,7 @@ import ChunkseeKitTestSupport
         let restored = try JSONDecoder().decode(RegionFacts.self, from: encoded)
         #expect(restored.creatures == facts.creatures && restored.containers == facts.containers)
         var old = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        old["version"] = RegionFacts.interpretationVersion - 1
+        old["version"] = RegionFacts.interpretationVersion.revision - 1
         #expect(throws: (any Error).self) {
             try JSONDecoder().decode(RegionFacts.self, from: JSONSerialization.data(withJSONObject: old))
         }

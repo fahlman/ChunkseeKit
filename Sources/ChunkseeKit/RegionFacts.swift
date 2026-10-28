@@ -56,8 +56,11 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// types deliberately have no standalone Codable contract. Older model conformances remain
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
-    /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 29
+    /// Bump the revision whenever a fact reader changes meaning, even with the same serialized
+    /// shape. Generated facts and the terrain reader contribute their own identities.
+    public static let interpretationVersion = InterpretationVersion(
+        domain: "regionFacts", revision: 29, generatedFacts: GeneratedInterpretationDigests.regionFacts,
+        dependencies: [Chunk.interpretationVersion])
 
     public let dimension: String
     public let region: RegionPosition
@@ -105,7 +108,7 @@ public struct RegionFacts: Sendable, Codable {
 }
 
 private struct Archive: Codable {
-    var version: Int
+    var version: InterpretationVersion
     var dimension: String
     var region: RegionPosition
     var blockIDs: Set<String>?

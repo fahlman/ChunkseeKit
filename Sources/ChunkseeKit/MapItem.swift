@@ -2,9 +2,9 @@ import Foundation
 
 /// A map made in the game (a filled map item), from `data/minecraft/maps/<id>.dat` (26.1+) or
 /// `data/map_<id>.dat` (older).
-public struct MapItem: Sendable, Equatable {
+public struct MapItem: Sendable, Hashable, Encodable {
     /// A banner marked on the map.
-    public struct Banner: Sendable, Equatable {
+    public struct Banner: Sendable, Hashable, Encodable {
         public var x: Int
         public var y: Int
         public var z: Int

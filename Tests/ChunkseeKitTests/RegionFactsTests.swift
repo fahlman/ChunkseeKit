@@ -157,7 +157,8 @@ import Testing
         let facts = RegionFacts(dimension: "minecraft:overworld", region: region, options: .init())
         let data = try JSONEncoder().encode(facts)
         var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        object["version"] = RegionFacts.interpretationVersion - 1
+        let currentVersion = object["version"]
+        object["version"] = RegionFacts.interpretationVersion.revision
         let stale = try JSONSerialization.data(withJSONObject: object)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: stale) }
         var beforeCatalog = object
@@ -165,7 +166,7 @@ import Testing
         beforeCatalog.removeValue(forKey: "paletteBlockIDs")
         let oldShape = try JSONSerialization.data(withJSONObject: beforeCatalog)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: oldShape) }
-        object["version"] = RegionFacts.interpretationVersion
+        object["version"] = currentVersion
         object["inhabitedTimes"] = [0]
         let malformed = try JSONSerialization.data(withJSONObject: object)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: malformed) }

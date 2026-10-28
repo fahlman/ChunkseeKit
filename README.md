@@ -700,10 +700,29 @@ list are unchanged.
 
 Cache keys must include all three source-file fingerprints, the options,
 `RegionFacts.interpretationVersion`, and the consumer's transform version. Kit must bump the
-interpretation version whenever any fact's meaning changes. Decoding rejects other versions and
+reader revision whenever any fact's meaning changes. Decoding rejects other versions and
 malformed grid sizes. `RegionFacts` owns the new persistence contract; existing model Codable
 conformances remain source-compatible but are not independently versioned caches. No raw NBT is
 exposed by the new facts. The lower-level NBT, region and compression APIs remain public.
+
+The cache-identity API introduced by #312 publishes `InterpretationVersion` values from
+`Chunk.interpretationVersion` (terrain, biomes and surface traversal),
+`MonsterSpawnLight.interpretationVersion` (saved light and the spawn-light check),
+`GameAssets.interpretationVersion` (resource interpretation and derived materials/colors,
+including the saved-map palette), and `RegionFacts.interpretationVersion`.
+Each value combines its owning reader's revision, a generated-fact digest from the single
+release tool, and any dependent interpretation values. Light and region facts include terrain's
+contract. Keep the whole typed value in keys, alongside the actual input files/options and
+consumer-owned drawing version. Persist its encoded value, never Swift's randomized hashValue.
+
+This is a breaking public API change: `RegionFacts.interpretationVersion` is now an
+`InterpretationVersion`, not an integer, and its archive stores that complete value. Old integer
+archives are rejected and must be rebuilt. The same decoded facts remain readable; the region
+and chunk read paths do not change. A minor release and consumer adoption are required.
+`MonsterSpawnLight`, `BiomeDefinition` and `MapItem` also support whole-value `Hashable` and
+`Encodable` keys, so clients need not copy their fields by hand. Encode immutable catalogs once
+when publishing them, with sorted dictionary keys for a stable persisted identity. These new
+conformances do not add a separate decodable persistence contract for game values.
 
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while
 region-open errors and cancellation throw; callers must not cache a failed scan as an empty or

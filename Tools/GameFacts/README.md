@@ -34,7 +34,8 @@ plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorPro
 `GeneratedHealthDefaultProofs.swift`, `GeneratedLightStorage.swift`, the test-only
 `GeneratedLightStorageProofs.swift`, `GeneratedMapColors.swift`, the test-only
 `GeneratedMapColorProofs.swift`, `GeneratedLegacyContentIDs.swift`, the test-only
-`GeneratedLegacyContentProofs.swift`, and `Tools/GameFacts/source.json`.
+`GeneratedLegacyContentProofs.swift`, `GeneratedInterpretationDigests.swift`, and
+`Tools/GameFacts/source.json`.
 Use another new evidence directory with `--check` to regenerate and compare every output byte
 without changing tracked files. Java compilation/extraction commands and logs, library hashes,
 raw extracted JSON and generated copies stay in each evidence directory, including failed runs.
@@ -46,6 +47,16 @@ Their `facts.json` and `entity-types.json` counterparts use sorted JSON object k
 not stable; array order and all values are preserved, so meaningful extraction changes still
 fail `--check`. The focused provenance regression checks run with
 `python3 -m unittest discover -s Tools/GameFacts -p 'test_*.py'`.
+
+The release tool also emits SHA-256 identities for the generated production facts used by
+terrain/surface, light, assets and region-facts caches. `interpretation_digests.py` records those
+code dependencies, not game-content lists. Every production output must explicitly name its
+domains (or state that none of these caches uses it); adding an unclassified output fails.
+Digests cover the actual generated production sources, so changes in extraction or conversion
+cannot silently preserve an old identity. Source formatting can conservatively invalidate a
+cache. Test proofs, extraction provenance and tool hashes do not enter these identities, and
+dictionary/output order has no effect. Reader-code revisions remain owned beside their Swift
+readers. The Python checks also compare the checked-in digests with all covered source files.
 
 Sources and interpretation:
 

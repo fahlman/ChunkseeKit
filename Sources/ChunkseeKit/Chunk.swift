@@ -233,6 +233,12 @@ public struct BlockEntity: Sendable, Equatable {
 
 /// A decoded terrain chunk, including older Level-wrapped named palettes.
 public struct Chunk: Sendable {
+    /// Cache contract for decoded terrain, biomes, heightmaps and surface traversal. Bump the
+    /// revision when these readers or their shared format/upgrade rules change meaning.
+    public static let interpretationVersion = InterpretationVersion(
+        domain: "terrain", revision: 1, generatedFacts: GeneratedInterpretationDigests.terrain,
+        dependencies: [])
+
     /// Saved metadata, when present; structural decoding does not require a version label.
     public let dataVersion: Int?
     /// Absolute chunk coordinates.
