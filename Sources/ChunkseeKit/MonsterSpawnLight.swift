@@ -3,7 +3,13 @@ import Foundation
 /// The ordinary 26.3 monster light check at a chosen clear-night sky level. A true result
 /// means some random draws can pass this check, not a probability or complete spawnability.
 /// Terrain, space, biome lists, difficulty and mobs with different light rules are not tested.
-public struct MonsterSpawnLight: Sendable, Equatable {
+public struct MonsterSpawnLight: Sendable, Hashable, Encodable {
+    /// Covers saved-light decoding and this light check. Chunk layout/upgrade changes also
+    /// retire cached light. The resolved rule itself is a separate, whole-value cache input.
+    public static let interpretationVersion = InterpretationVersion(
+        domain: "light", revision: 1, generatedFacts: GeneratedInterpretationDigests.light,
+        dependencies: [Chunk.interpretationVersion])
+
     public let blockLightLimit: Int
     public let maximumRawLight: Int
     public let hasSkylight: Bool

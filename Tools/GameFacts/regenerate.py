@@ -10,6 +10,7 @@ import subprocess
 import textwrap
 import zipfile
 from special_item_models import generated_special_models
+from interpretation_digests import interpretation_digest_source
 
 
 def digest(path, algorithm="sha256"):
@@ -837,7 +838,7 @@ def generated_sources(facts, entities):
     light_storage, light_proofs = light_storage_sources(facts["lightStorage"], notice)
     map_colors, map_proofs = map_color_sources(facts["mapColors"], notice)
     legacy_content, legacy_content_proofs = legacy_content_sources(facts["legacyContentIDs"], notice)
-    return {**creature_color_sources(facts["creatureColors"], entities, notice),
+    sources = {**creature_color_sources(facts["creatureColors"], entities, notice),
             "Sources/ChunkseeKit/DyeColor.swift": dye_source,
             "Sources/ChunkseeKit/GeneratedMobAppearance.swift": source,
             "Sources/ChunkseeKit/GeneratedEnchantmentEffects.swift": enchantments,
@@ -872,6 +873,8 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedLegacyChunkFacts.swift": legacy_chunk_source(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedLegacyChunkProofs.swift": legacy_chunk_proofs(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedSaveRenameProofs.swift": save_rename_proofs_source(facts["saveRenames"], notice)}
+    sources.update(interpretation_digest_source(sources))
+    return sources
 
 
 def main():
@@ -898,7 +901,7 @@ def main():
                  for entry in metadata["libraries"] if "artifact" in entry.get("downloads", {})]
     libraries = [path.resolve() for path in libraries if path.exists()]
     classpath = ":".join(str(path) for path in [jar.resolve()] + libraries)
-    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
+    tool_sources = ["Tools/GameFacts/regenerate.py", "Tools/GameFacts/interpretation_digests.py", "Tools/GameFacts/ExtractGameFacts.java", "Tools/GameFacts/ExtractItemModelFacts.java",
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractHealthDefaults.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractMapColors.java", "Tools/GameFacts/ExtractLegacyContentIDs.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",

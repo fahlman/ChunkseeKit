@@ -700,10 +700,45 @@ list are unchanged.
 
 Cache keys must include all three source-file fingerprints, the options,
 `RegionFacts.interpretationVersion`, and the consumer's transform version. Kit must bump the
-interpretation version whenever any fact's meaning changes. Decoding rejects other versions and
+reader revision whenever any fact's meaning changes. Decoding rejects other versions and
 malformed grid sizes. `RegionFacts` owns the new persistence contract; existing model Codable
 conformances remain source-compatible but are not independently versioned caches. No raw NBT is
 exposed by the new facts. The lower-level NBT, region and compression APIs remain public.
+
+The cache-identity API introduced by #312 publishes `InterpretationVersion` values from
+`Chunk.interpretationVersion` (terrain, biomes and surface traversal),
+`MonsterSpawnLight.interpretationVersion` (saved light and the spawn-light check),
+`GameAssets.interpretationVersion` (resource interpretation and derived materials/colors,
+including the saved-map palette), and `RegionFacts.interpretationVersion`.
+Each value combines its owning reader's revision, a generated-fact digest from the single
+release tool, and any dependent interpretation values. Light and region facts include terrain's
+contract. Keep the whole typed value in keys, alongside the actual input files/options and
+consumer-owned drawing version. Persist its encoded value, never Swift's randomized hashValue.
+
+This is a breaking public API change: `RegionFacts.interpretationVersion` is now an
+`InterpretationVersion`, not an integer, and its archive stores that complete value. Old integer
+archives are rejected and must be rebuilt. The same decoded facts remain readable; the region
+and chunk read paths do not change. A minor release and consumer adoption are required.
+`RegionScanOptions`, `MonsterSpawnLight`, `BiomeDefinition` and `MapItem` support whole-value `Hashable` and
+`Encodable` keys, so clients need not copy their fields by hand. Call
+`try InterpretationKey.identity(of: completeKey)` for a persisted SHA-256 identity. Kit owns
+the compact JSON formatting and recursive dictionary-key ordering; clients never configure
+an encoder for keys. Compute immutable catalog identities once when publishing them. These new
+conformances do not add a separate decodable persistence contract for game values.
+RegionScanOptions encodes its unordered block-ID set in sorted order and includes its complete
+enchantment definitions; nil (all blocks) remains distinct from an empty set (no block counting).
+Region archives likewise sort their block-ID sets without changing the decoded facts or envelope
+shape. Ordered arrays retain their order; custom Encodable inputs must define any set ordering.
+An encoding failure throws rather than returning a shared fallback key.
+
+`InterpretationOutputTests` records fixed decoded-output digests by the complete frozen contract:
+terrain blocks/biomes/surfaces/heightmaps, saved light and light checks, the complete region archive,
+and resolved fixture materials/biome colors/saved-map colors. A changed covered output or a new
+contract without a baseline fails. Keep prior entries and add a reviewed baseline when advancing
+the reader or its generated/dependent identity. A decoder change cannot overwrite the old
+contract's digest. Generated/dependent changes need no copied reader-counter bump.
+These fixtures do not cover every decoder path, so contract review remains
+required alongside the focused behavioral tests and generated-fact identities.
 
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while
 region-open errors and cancellation throw; callers must not cache a failed scan as an empty or

@@ -3,6 +3,13 @@ import Foundation
 /// Immutable, read-only access to a supplied Minecraft game jar. Nothing is extracted.
 /// Opening and resolving resources are synchronous; clients perform this work off their UI actor.
 public struct GameAssets: Sendable {
+    /// Covers resource interpretation and derived materials/colors, including MapItem's saved
+    /// color palette. Bump for handwritten reader changes; generated facts update automatically.
+    /// The selected files and resolved definitions remain separate cache inputs.
+    public static let interpretationVersion = InterpretationVersion(
+        domain: "assets", revision: 1, generatedFacts: GeneratedInterpretationDigests.assets,
+        dependencies: [])
+
     public let version: Version
     let resources: ZipResources
 

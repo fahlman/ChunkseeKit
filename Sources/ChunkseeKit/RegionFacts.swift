@@ -1,7 +1,7 @@
 import Foundation
 
 /// Choices that affect a region scan's result. Include these in a consumer's cache key.
-public struct RegionScanOptions: Sendable, Hashable {
+public struct RegionScanOptions: Sendable, Hashable, Encodable {
     /// nil counts every block ID; an empty set skips block counting. Properties are combined by ID.
     public var blockIDs: Set<String>?
     /// nil samples the middle column at its surface; a supplied Y samples that height instead.
@@ -15,6 +15,18 @@ public struct RegionScanOptions: Sendable, Hashable {
                 enchantments: [String: EnchantmentDefinition] = [:]) {
         self.blockIDs = blockIDs; self.biomeSampleY = biomeSampleY; self.height = height
         self.enchantments = enchantments
+    }
+
+    private enum CodingKeys: String, CodingKey { case blockIDs, biomeSampleY, height, enchantments }
+
+    /// Sets have no semantic order. Keep their persisted identity stable without requiring
+    /// clients to copy option fields. InterpretationKey owns the persisted dictionary ordering.
+    public func encode(to encoder: any Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encodeIfPresent(blockIDs?.sorted(), forKey: .blockIDs)
+        try values.encodeIfPresent(biomeSampleY, forKey: .biomeSampleY)
+        try values.encodeIfPresent(height, forKey: .height)
+        try values.encode(enchantments, forKey: .enchantments)
     }
 }
 
@@ -56,8 +68,11 @@ public struct RegionFormatCounts: Sendable, Equatable {
 /// types deliberately have no standalone Codable contract. Older model conformances remain
 /// source-compatible, but are not independently versioned caches.
 public struct RegionFacts: Sendable, Codable {
-    /// Bump whenever a reader changes a fact's meaning, even if the serialized shape is unchanged.
-    public static let interpretationVersion = 29
+    /// Bump the revision whenever a fact reader changes meaning, even with the same serialized
+    /// shape. Generated facts and the terrain reader contribute their own identities.
+    public static let interpretationVersion = InterpretationVersion(
+        domain: "regionFacts", revision: 29, generatedFacts: GeneratedInterpretationDigests.regionFacts,
+        dependencies: [Chunk.interpretationVersion])
 
     public let dimension: String
     public let region: RegionPosition
@@ -92,12 +107,12 @@ public struct RegionFacts: Sendable, Codable {
                 debugDescription: "RegionFacts contains an invalid grid size"))
         }
         self.init(dimension: archive.dimension, region: archive.region,
-                  options: .init(blockIDs: archive.blockIDs, biomeSampleY: archive.biomeSampleY, height: archive.height,
+                  options: .init(blockIDs: archive.blockIDs.map { Set($0) }, biomeSampleY: archive.biomeSampleY, height: archive.height,
                                  enchantments: archive.enchantments))
         containers = archive.containers; signs = archive.signs; spawners = archive.spawners
         structures = archive.structures.map(\.value); creatures = archive.creatures
         pointsOfInterest = archive.pointsOfInterest; chunks = archive.chunks.map(\.value)
-        paletteBlockIDs = archive.paletteBlockIDs
+        paletteBlockIDs = Set(archive.paletteBlockIDs)
         inhabitedTimes = archive.inhabitedTimes; formats = archive.formats.value
     }
 
@@ -105,10 +120,10 @@ public struct RegionFacts: Sendable, Codable {
 }
 
 private struct Archive: Codable {
-    var version: Int
+    var version: InterpretationVersion
     var dimension: String
     var region: RegionPosition
-    var blockIDs: Set<String>?
+    var blockIDs: [String]?
     var biomeSampleY: Int?
     var height: Int?
     var enchantments: [String: EnchantmentDefinition]
@@ -119,18 +134,18 @@ private struct Archive: Codable {
     var creatures: [Creature]
     var pointsOfInterest: [PointOfInterest]
     var chunks: [ChunkRecord]
-    var paletteBlockIDs: Set<String>
+    var paletteBlockIDs: [String]
     var inhabitedTimes: [Int]
     var formats: FormatRecord
 
     init(_ value: RegionFacts) {
         version = RegionFacts.interpretationVersion; dimension = value.dimension; region = value.region
-        blockIDs = value.options.blockIDs; biomeSampleY = value.options.biomeSampleY; height = value.options.height
+        blockIDs = value.options.blockIDs?.sorted(); biomeSampleY = value.options.biomeSampleY; height = value.options.height
         enchantments = value.options.enchantments
         containers = value.containers; signs = value.signs; spawners = value.spawners
         structures = value.structures.map(StructureRecord.init); creatures = value.creatures
         pointsOfInterest = value.pointsOfInterest; chunks = value.chunks.map(ChunkRecord.init)
-        paletteBlockIDs = value.paletteBlockIDs
+        paletteBlockIDs = value.paletteBlockIDs.sorted()
         inhabitedTimes = value.inhabitedTimes; formats = FormatRecord(value.formats)
     }
 }

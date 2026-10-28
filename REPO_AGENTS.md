@@ -261,7 +261,36 @@ joining and search stay outside the core. Incomplete generation contributes meta
 search facts; unsupported numeric chunks still contribute inhabited time and format counts. Missing files are
 empty, unreadable chunks are counted, and file-open failures/cancellation throw instead of
 returning a cacheable partial value. No cache storage or task scheduling is introduced here.
-`RegionFacts.interpretationVersion` must increase whenever any reader changes a fact's meaning.
+The revision in `RegionFacts.interpretationVersion` must increase whenever a fact reader changes
+meaning. Its typed `InterpretationVersion` also includes the release tool's generated-fact digest
+and `Chunk.interpretationVersion`, so terrain changes invalidate dependent scans without a copied
+counter. The complete value is stored in the archive and checked on decode. Old integer envelopes
+are rejected. This #312 change intentionally replaces the public integer API and requires a minor
+release and app adoption; it changes no chunk/region traversal or decoded fact.
+`Chunk`, `MonsterSpawnLight` and `GameAssets` publish the other interpretation contracts beside
+their readers. They cover terrain/surface, saved light and its light check, and resource-derived
+materials/colors (including saved-map colors). Light also includes the terrain dependency.
+Each handwritten revision covers only its owner's interpretation. Generated digests come from
+the single GameFacts entrypoint, whose explicit per-output domain coverage fails for an
+unclassified new production file. Proof/provenance changes do not retire caches; changes to
+covered production output do. Exact source bytes are hashed, so formatting can conservatively
+retire a cache too. No release number, runtime UUID or randomized hash is an identity.
+Consumers retain whole interpretation values plus their actual inputs. `RegionScanOptions`, `MonsterSpawnLight`,
+`BiomeDefinition` and `MapItem` supply Hashable and Encodable conformances for whole-value keys;
+they do not gain a new Decodable contract. `InterpretationKey.identity(of:)` is the single owner
+of persisted SHA-256 identities, compact JSON formatting and recursive dictionary-key ordering.
+Consumers call it once per immutable catalog publication and never configure their own encoder.
+RegionScanOptions sorts its block-ID set when encoding
+and includes the whole enchantment definitions; nil and empty filters remain distinct.
+Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
+Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
+Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
+terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
+including its owning reader revision and generated/dependent identities. Changed covered output
+fails until a new reviewed contract/baseline is recorded; retain previous entries and never replace
+an old contract's digest. Generated/dependent changes need no copied reader-counter bump.
+Reader and generated-source identity checks cover invalidation and reuse, but unexercised
+decoder paths still require independent review of the version contract.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
 conformances remain source-compatible until separately migrated. The new API is available in

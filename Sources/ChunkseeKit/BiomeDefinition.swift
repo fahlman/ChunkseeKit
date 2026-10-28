@@ -1,7 +1,7 @@
 import Foundation
 
 /// Data-defined climate and color facts. Image decoding and neighboring-biome blending are client-owned.
-public struct BiomeDefinition: Sendable, Equatable {
+public struct BiomeDefinition: Sendable, Hashable, Encodable {
     /// Base climate values remain unclamped; color resolution clamps them when sampling its maps.
     public let temperature: Float
     public let downfall: Float
@@ -12,7 +12,7 @@ public struct BiomeDefinition: Sendable, Equatable {
     public let dryFoliageColor: UInt32?
     public let grassColorModifier: GrassColorModifier
 
-    public enum GrassColorModifier: RawRepresentable, Sendable, Hashable {
+    public enum GrassColorModifier: RawRepresentable, Sendable, Hashable, Encodable {
         case none
         case darkForest
         case swamp

@@ -83,7 +83,8 @@
     "Tools/GameFacts/ExtractSpecialItemModels.java": "8fda563fc726f8d3c796bf0db514954f1e3aaf5296878478f77f2c155cc90c16",
     "Tools/GameFacts/ExtractStatisticUnits.java": "f4554079f8d2d7d2599326b58bb6ae10b48fdb61b6a9e687b79fb36315645633",
     "Tools/GameFacts/ExtractTradingFacts.java": "9ca04a78417f018741cc650e9d6d3b17564675e3eb2f427dc86ff651f960efb4",
-    "Tools/GameFacts/regenerate.py": "230eefe13b026ee5716ca98c9fd873963c1594b4726ce4be055785f9aa7145f9",
+    "Tools/GameFacts/interpretation_digests.py": "0650ad256739e6707006279728978d6ff4fe0db0b5f7032184393e496c4ad902",
+    "Tools/GameFacts/regenerate.py": "168d5c981b3036ac88ff5472798e829b5410679f9f996e25b0f10dac9eaeb2b5",
     "Tools/GameFacts/special_item_models.py": "b530d0399a2297bb961a3d70788db26d56e48206f55eeeecf9fd26e97b9bf10e"
   }
 }
