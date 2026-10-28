@@ -731,11 +731,13 @@ Region archives likewise sort their block-ID sets without changing the decoded f
 shape. Ordered arrays retain their order; custom Encodable inputs must define any set ordering.
 An encoding failure throws rather than returning a shared fallback key.
 
-`InterpretationOutputTests` records fixed decoded-output digests by the owning reader revision:
+`InterpretationOutputTests` records fixed decoded-output digests by the complete frozen contract:
 terrain blocks/biomes/surfaces/heightmaps, saved light and light checks, the complete region archive,
 and resolved fixture materials/biome colors/saved-map colors. A changed covered output or a new
-revision without a baseline fails. Keep prior revision entries and add a reviewed baseline when
-advancing the reader. These fixtures do not cover every decoder path, so contract review remains
+contract without a baseline fails. Keep prior entries and add a reviewed baseline when advancing
+the reader or its generated/dependent identity. A decoder change cannot overwrite the old
+contract's digest. Generated/dependent changes need no copied reader-counter bump.
+These fixtures do not cover every decoder path, so contract review remains
 required alongside the focused behavioral tests and generated-fact identities.
 
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while

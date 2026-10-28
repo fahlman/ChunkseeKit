@@ -4,13 +4,28 @@ import Testing
 @testable import ChunkseeKit
 
 /// These fixture outputs are the persisted reader contract, not a second implementation.
-/// A changed output requires a new reviewed revision and baseline; retain earlier entries.
+/// A changed output requires a new reviewed contract and baseline; retain earlier entries.
 /// Unexercised behavior still needs review of the owning interpretation version.
 @Suite struct InterpretationOutputTests {
+    // Freeze the complete published contract rather than looking up today's generated constants.
+    // A generated/dependent identity change needs a new baseline, not a copied reader counter.
+    private let terrain1 = InterpretationVersion(domain: "terrain", revision: 1,
+        generatedFacts: "ecf3d4cb262728a6dc1418c48cb262fa32d4415dcdb64287ea520c87ba1b8702", dependencies: [])
+    private let assets1 = InterpretationVersion(domain: "assets", revision: 1,
+        generatedFacts: "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c", dependencies: [])
+    private var light1: InterpretationVersion {
+        .init(domain: "light", revision: 1,
+            generatedFacts: "e665beb8560af59ac4835d84dcd2a21b455e44c097d2e82853c5fb88bc626ccc", dependencies: [terrain1])
+    }
+    private var regionFacts29: InterpretationVersion {
+        .init(domain: "regionFacts", revision: 29,
+            generatedFacts: "1f879b3155b000dd66139087f8ee3d12bcff5d3dd6f649e13508aab0676064c7", dependencies: [terrain1])
+    }
+
     private func check(_ output: some Encodable, version: InterpretationVersion,
-                       baselines: [Int: String]) throws {
+                       baselines: [InterpretationVersion: String]) throws {
         let actual = try InterpretationKey.identity(of: output)
-        #expect(baselines[version.revision] == actual,
+        #expect(baselines[version] == actual,
                 "\(version.domain) revision \(version.revision), output SHA-256: \(actual)")
     }
 
@@ -57,7 +72,7 @@ import Testing
         let inputs = [RegionFactsTests().terrain(), negative, legacy]
         let chunks = try inputs.map { try Chunk(nbt: NBT.read($0.serialized()).value) }
         try check(chunks.map(TerrainOutput.init), version: Chunk.interpretationVersion,
-                  baselines: [1: "ae9a3a62f0596f582fbb599d79c3e54c67561c96aba3cd644fa803883c5aeeff"])
+                  baselines: [terrain1: "ae9a3a62f0596f582fbb599d79c3e54c67561c96aba3cd644fa803883c5aeeff"])
     }
 
     private struct LightOutput: Encodable {
@@ -91,7 +106,7 @@ import Testing
                 checks: rules.map { rule in points.map { rule.canPass(in: chunk, x: $0.x, y: $0.y, z: $0.z) } })
         }
         try check(outputs, version: MonsterSpawnLight.interpretationVersion,
-                  baselines: [1: "e2031b194a46173a4fdbb2fe315f70816af820d8081a54cf537b8726bb7ecefb"])
+                  baselines: [light1: "e2031b194a46173a4fdbb2fe315f70816af820d8081a54cf537b8726bb7ecefb"])
     }
 
     @Test func regionArchiveOutputMatchesItsRevision() throws {
@@ -107,7 +122,7 @@ import Testing
         let reopened = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
         #expect(try InterpretationKey.identity(of: reopened) == InterpretationKey.identity(of: facts))
         try check(facts, version: RegionFacts.interpretationVersion,
-                  baselines: [29: "c0e7507380146274ce8e2148ed89e1c5bf65dd0d7f3a0559690c482ee5019ec3"])
+                  baselines: [regionFacts29: "c0e7507380146274ce8e2148ed89e1c5bf65dd0d7f3a0559690c482ee5019ec3"])
     }
 
     private struct MaterialOutput: Encodable {
@@ -151,6 +166,7 @@ import Testing
         let biome = try #require(reader.biomeDefinition("example:tinted"))
         let colors = (0..<256).map { MapItem.rgb(forColor: UInt8($0)).map { [$0.red, $0.green, $0.blue] } }
         try check(AssetOutput(material: material, biome: biome, mapColors: colors),
-                  version: GameAssets.interpretationVersion, baselines: [1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
+                  version: GameAssets.interpretationVersion,
+                  baselines: [assets1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
     }
 }

@@ -285,9 +285,11 @@ and includes the whole enchantment definitions; nil and empty filters remain dis
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
 Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
-terrain, light, region-archive and resolved-asset output digests to each owning reader revision.
-Changed covered output fails until a new reviewed revision/baseline is recorded; retain previous
-entries. Reader and generated-source identity checks cover invalidation and reuse, but unexercised
+terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
+including its owning reader revision and generated/dependent identities. Changed covered output
+fails until a new reviewed contract/baseline is recorded; retain previous entries and never replace
+an old contract's digest. Generated/dependent changes need no copied reader-counter bump.
+Reader and generated-source identity checks cover invalidation and reuse, but unexercised
 decoder paths still require independent review of the version contract.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
