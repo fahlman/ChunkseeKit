@@ -1,7 +1,7 @@
 import Foundation
 
 /// Choices that affect a region scan's result. Include these in a consumer's cache key.
-public struct RegionScanOptions: Sendable, Hashable {
+public struct RegionScanOptions: Sendable, Hashable, Encodable {
     /// nil counts every block ID; an empty set skips block counting. Properties are combined by ID.
     public var blockIDs: Set<String>?
     /// nil samples the middle column at its surface; a supplied Y samples that height instead.
@@ -15,6 +15,18 @@ public struct RegionScanOptions: Sendable, Hashable {
                 enchantments: [String: EnchantmentDefinition] = [:]) {
         self.blockIDs = blockIDs; self.biomeSampleY = biomeSampleY; self.height = height
         self.enchantments = enchantments
+    }
+
+    private enum CodingKeys: String, CodingKey { case blockIDs, biomeSampleY, height, enchantments }
+
+    /// Sets have no semantic order. Keep their persisted identity stable without requiring
+    /// clients to copy option fields; dictionary ordering remains the encoder's responsibility.
+    public func encode(to encoder: any Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encodeIfPresent(blockIDs?.sorted(), forKey: .blockIDs)
+        try values.encodeIfPresent(biomeSampleY, forKey: .biomeSampleY)
+        try values.encodeIfPresent(height, forKey: .height)
+        try values.encode(enchantments, forKey: .enchantments)
     }
 }
 

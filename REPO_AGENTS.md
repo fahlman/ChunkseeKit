@@ -275,10 +275,12 @@ the single GameFacts entrypoint, whose explicit per-output domain coverage fails
 unclassified new production file. Proof/provenance changes do not retire caches; changes to
 covered production output do. Exact source bytes are hashed, so formatting can conservatively
 retire a cache too. No release number, runtime UUID or randomized hash is an identity.
-Consumers retain whole interpretation values plus their actual inputs. `MonsterSpawnLight`,
+Consumers retain whole interpretation values plus their actual inputs. `RegionScanOptions`, `MonsterSpawnLight`,
 `BiomeDefinition` and `MapItem` supply Hashable and Encodable conformances for whole-value keys;
 they do not gain a new Decodable contract. Immutable catalog identities are encoded once at
-publication, with stable key ordering. Reader/fixed-output tests and generated-source identity
+publication, with stable key ordering. RegionScanOptions sorts its block-ID set when encoding
+and includes the whole enchantment definitions; nil and empty filters remain distinct.
+Reader/fixed-output tests and generated-source identity
 checks cover invalidation and reuse; the version contract still needs independent review.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model

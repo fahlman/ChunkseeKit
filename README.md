@@ -719,10 +719,12 @@ This is a breaking public API change: `RegionFacts.interpretationVersion` is now
 `InterpretationVersion`, not an integer, and its archive stores that complete value. Old integer
 archives are rejected and must be rebuilt. The same decoded facts remain readable; the region
 and chunk read paths do not change. A minor release and consumer adoption are required.
-`MonsterSpawnLight`, `BiomeDefinition` and `MapItem` also support whole-value `Hashable` and
+`RegionScanOptions`, `MonsterSpawnLight`, `BiomeDefinition` and `MapItem` support whole-value `Hashable` and
 `Encodable` keys, so clients need not copy their fields by hand. Encode immutable catalogs once
 when publishing them, with sorted dictionary keys for a stable persisted identity. These new
 conformances do not add a separate decodable persistence contract for game values.
+RegionScanOptions encodes its unordered block-ID set in sorted order and includes its complete
+enchantment definitions; nil (all blocks) remains distinct from an empty set (no block counting).
 
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while
 region-open errors and cancellation throw; callers must not cache a failed scan as an empty or

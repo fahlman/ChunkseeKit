@@ -96,4 +96,19 @@ import Testing
         #expect(cache[changed] == nil)
         #expect(try encoded(original) != encoded(changed))
     }
+
+    @Test func completeScanOptionsHaveStableUnorderedInputsAndDistinctDefinitions() throws {
+        let first = try #require(EnchantmentDefinition(data: Data(#"{"max_level":1}"#.utf8)))
+        let second = try #require(EnchantmentDefinition(data: Data(#"{"max_level":2}"#.utf8)))
+        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]),
+                                        enchantments: ["example:a": first, "example:b": second])
+        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]),
+                                         enchantments: ["example:b": second, "example:a": first])
+        #expect(original == reordered)
+        #expect(try encoded(original) == encoded(reordered))
+        var changed = original
+        changed.enchantments["example:a"] = second
+        #expect(try encoded(original) != encoded(changed))
+        #expect(try encoded(RegionScanOptions(blockIDs: nil)) != encoded(RegionScanOptions(blockIDs: [])))
+    }
 }
