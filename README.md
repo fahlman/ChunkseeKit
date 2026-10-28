@@ -720,11 +720,23 @@ This is a breaking public API change: `RegionFacts.interpretationVersion` is now
 archives are rejected and must be rebuilt. The same decoded facts remain readable; the region
 and chunk read paths do not change. A minor release and consumer adoption are required.
 `RegionScanOptions`, `MonsterSpawnLight`, `BiomeDefinition` and `MapItem` support whole-value `Hashable` and
-`Encodable` keys, so clients need not copy their fields by hand. Encode immutable catalogs once
-when publishing them, with sorted dictionary keys for a stable persisted identity. These new
+`Encodable` keys, so clients need not copy their fields by hand. Call
+`try InterpretationKey.identity(of: completeKey)` for a persisted SHA-256 identity. Kit owns
+the compact JSON formatting and recursive dictionary-key ordering; clients never configure
+an encoder for keys. Compute immutable catalog identities once when publishing them. These new
 conformances do not add a separate decodable persistence contract for game values.
 RegionScanOptions encodes its unordered block-ID set in sorted order and includes its complete
 enchantment definitions; nil (all blocks) remains distinct from an empty set (no block counting).
+Region archives likewise sort their block-ID sets without changing the decoded facts or envelope
+shape. Ordered arrays retain their order; custom Encodable inputs must define any set ordering.
+An encoding failure throws rather than returning a shared fallback key.
+
+`InterpretationOutputTests` records fixed decoded-output digests by the owning reader revision:
+terrain blocks/biomes/surfaces/heightmaps, saved light and light checks, the complete region archive,
+and resolved fixture materials/biome colors/saved-map colors. A changed covered output or a new
+revision without a baseline fails. Keep prior revision entries and add a reviewed baseline when
+advancing the reader. These fixtures do not cover every decoder path, so contract review remains
+required alongside the focused behavioral tests and generated-fact identities.
 
 Missing region files are empty. Unreadable individual chunks are counted and skipped, while
 region-open errors and cancellation throw; callers must not cache a failed scan as an empty or

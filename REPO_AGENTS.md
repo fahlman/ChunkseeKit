@@ -277,11 +277,18 @@ covered production output do. Exact source bytes are hashed, so formatting can c
 retire a cache too. No release number, runtime UUID or randomized hash is an identity.
 Consumers retain whole interpretation values plus their actual inputs. `RegionScanOptions`, `MonsterSpawnLight`,
 `BiomeDefinition` and `MapItem` supply Hashable and Encodable conformances for whole-value keys;
-they do not gain a new Decodable contract. Immutable catalog identities are encoded once at
-publication, with stable key ordering. RegionScanOptions sorts its block-ID set when encoding
+they do not gain a new Decodable contract. `InterpretationKey.identity(of:)` is the single owner
+of persisted SHA-256 identities, compact JSON formatting and recursive dictionary-key ordering.
+Consumers call it once per immutable catalog publication and never configure their own encoder.
+RegionScanOptions sorts its block-ID set when encoding
 and includes the whole enchantment definitions; nil and empty filters remain distinct.
-Reader/fixed-output tests and generated-source identity
-checks cover invalidation and reuse; the version contract still needs independent review.
+Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
+Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
+Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
+terrain, light, region-archive and resolved-asset output digests to each owning reader revision.
+Changed covered output fails until a new reviewed revision/baseline is recorded; retain previous
+entries. Reader and generated-source identity checks cover invalidation and reuse, but unexercised
+decoder paths still require independent review of the version contract.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
 conformances remain source-compatible until separately migrated. The new API is available in

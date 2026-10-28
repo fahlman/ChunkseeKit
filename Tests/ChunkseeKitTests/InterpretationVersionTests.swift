@@ -9,6 +9,15 @@ import Testing
         return try encoder.encode(value)
     }
 
+    @Test func persistentIdentityOwnsNestedDictionaryOrderingAndFormatting() throws {
+        let original = ["z": ["path": "example/a", "name": "Café"], "a": ["d": "4", "c": "3"]]
+        let reordered = ["a": ["c": "3", "d": "4"], "z": ["name": "Café", "path": "example/a"]]
+        #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
+        #expect(try InterpretationKey.identity(of: original)
+            == "009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33")
+        #expect(throws: EncodingError.self) { try InterpretationKey.identity(of: Double.nan) }
+    }
+
     @Test func publishedContractsSurviveReopeningAndRemainDistinct() throws {
         let versions = [Chunk.interpretationVersion, MonsterSpawnLight.interpretationVersion,
                         GameAssets.interpretationVersion, RegionFacts.interpretationVersion]
@@ -21,6 +30,18 @@ import Testing
             #expect(version.generatedFacts.count == 64)
             #expect(version.generatedFacts.allSatisfy { "0123456789abcdef".contains($0) })
         }
+    }
+
+    @Test func regionArchiveIdentityIsIndependentOfSetInsertionOrder() throws {
+        var first = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0),
+                                options: .init(blockIDs: Set(["example:a", "example:b"])))
+        first.paletteBlockIDs = Set(["example:a", "example:b", "example:c"])
+        var reordered = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0),
+                                    options: .init(blockIDs: Set(["example:b", "example:a"])))
+        reordered.paletteBlockIDs = Set(["example:c", "example:b", "example:a"])
+        #expect(try InterpretationKey.identity(of: first) == InterpretationKey.identity(of: reordered))
+        reordered.paletteBlockIDs.insert("example:d")
+        #expect(try InterpretationKey.identity(of: first) != InterpretationKey.identity(of: reordered))
     }
 
     @Test func regionArchiveRejectsChangedReaderGeneratedFactsAndDependency() throws {
@@ -61,8 +82,8 @@ import Testing
         let original = try rule(7), same = try rule(7), changed = try rule(6)
         let cache = [original: "cached light"]
         #expect(cache[same] == "cached light" && cache[changed] == nil)
-        #expect(try encoded(original) == encoded(same))
-        #expect(try encoded(original) != encoded(changed))
+        #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: same))
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
         let position = BlockPosition(blockX: 0, blockY: 0, blockZ: 0)
         #expect(original.canPass(blockLight: 7, skyLight: nil, at: position) == true)
         #expect(changed.canPass(blockLight: 7, skyLight: nil, at: position) == false)
@@ -75,8 +96,8 @@ import Testing
         let changed = try #require(BiomeDefinition(json: Data(source.replacingOccurrences(of: "1193046", with: "1193047").utf8)))
         let cache = [original: "cached color"]
         #expect(cache[same] == "cached color" && cache[changed] == nil)
-        #expect(try encoded(original) == encoded(same))
-        #expect(try encoded(original) != encoded(changed))
+        #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: same))
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
         #expect(original.grassColorModifier == .unknown("example:future"))
         #expect(String(decoding: try encoded(original), as: UTF8.self).contains("example:future"))
     }
@@ -89,12 +110,12 @@ import Testing
         changed.colors[0] = 4
         let cache = [original: "cached image"]
         #expect(cache[original] == "cached image" && cache[changed] == nil)
-        #expect(try encoded(original) != encoded(changed))
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
         #expect(original.id == changed.id && original.isBlank && !changed.isBlank)
         changed = original
         changed.banners = [.init(x: 1, y: 2, z: 3, color: "red", name: "Camp")]
         #expect(cache[changed] == nil)
-        #expect(try encoded(original) != encoded(changed))
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
     }
 
     @Test func completeScanOptionsHaveStableUnorderedInputsAndDistinctDefinitions() throws {
@@ -105,10 +126,11 @@ import Testing
         let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]),
                                          enchantments: ["example:b": second, "example:a": first])
         #expect(original == reordered)
-        #expect(try encoded(original) == encoded(reordered))
+        #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
         var changed = original
         changed.enchantments["example:a"] = second
-        #expect(try encoded(original) != encoded(changed))
-        #expect(try encoded(RegionScanOptions(blockIDs: nil)) != encoded(RegionScanOptions(blockIDs: [])))
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
+        #expect(try InterpretationKey.identity(of: RegionScanOptions(blockIDs: nil))
+            != InterpretationKey.identity(of: RegionScanOptions(blockIDs: [])))
     }
 }
