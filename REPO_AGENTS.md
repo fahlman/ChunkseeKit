@@ -350,9 +350,19 @@ adapters own the conversions; the completed game-reader matrix proves the primit
 Float agreement, including direct integer rounding and input-zero canonicalization.
 `SavedNumericSample` retains the captured int/byte/long/boolean/Float results. Public PlayerInfo
 and compressed World.players file tests cover those results, independent missing fields,
-unclamped saved values and unchanged raw bytes. Health projection, selected-slot validation,
+unclamped saved values and unchanged raw bytes. Health projection,
 mode, position and DataVersion remain separate field audit work. These five player metadata
 values are not part of RegionFacts, terrain, light or asset archives; no cache contract changes.
+
+The unreleased #316 selected-slot correction follows `Player.readAdditionalSaveData`:
+`SelectedItemSlot` uses `ValueInput.getIntOr`, then `Inventory.setSelectedSlot` accepts only
+the hotbar range. `PlayerInfo.selectedSlot` owns the shared primitive-int conversion and range
+validation, reusing `PlayerInventorySection.hotbar`; `mainHandItem` consumes that validated
+selection. Missing/nonnumeric/out-of-range selections stay unavailable without suppressing
+independent player facts. Explicit saved main-hand equipment retains precedence. Public and
+compressed-world tests cover the captured numeric inputs, all valid slots, slot-dependent
+equipment/health, partial readability and unchanged bytes. These are uncached player projections;
+the RegionFacts, terrain, light and asset interpretation contracts remain unchanged.
 
 `ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
 chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts
