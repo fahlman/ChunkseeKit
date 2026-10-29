@@ -131,15 +131,23 @@ import Testing
         }
     }
 
-    @Test func traversalPreservesCheckedExtremeBounds() throws {
-        for sectionY in [Int64.min, Int64.max] {
-            let bad = try decode([.compound(["Y": .long(sectionY), "block_states": .compound([
+    @Test func wideSavedSectionCoordinatesNarrowBeforeTraversal() throws {
+        for (saved, sectionY) in [(Int64.min, 0), (Int64.max, -1)] {
+            let chunk = try decode([.compound(["Y": .long(saved), "block_states": .compound([
                 "palette": .list([.string("stone")]),
-            ])])])
-            var called = false
-            bad.forEachColumnRun(from: .height(Int.max)) { _ in called = true; return true }
-            #expect(!called)
+            ])])], bottom: Int32(sectionY))
+            #expect(chunk.sections.map(\.y) == [sectionY])
+            var calls = 0
+            chunk.forEachColumnRun(from: .height(Int.max)) { run in
+                #expect(run.y == (sectionY * 16)...(sectionY * 16 + 15))
+                calls += 1
+                return true
+            }
+            #expect(calls == 256)
         }
+    }
+
+    @Test func traversalPreservesCheckedExtremeBounds() throws {
         let stone = Fixtures.section(y: 0, palette: [.string("stone")])
         for bottom in [Int64.min, Int64.max] {
             let bad = try decode([stone], extra: ["yPos": .long(bottom)])

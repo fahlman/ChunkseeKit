@@ -184,10 +184,11 @@ import Testing
         await #expect(throws: CancellationError.self) { try await task.value }
     }
 
-    @Test func extremeSavedSectionCoordinatesDoNotTrapSharedBiomeLookup() throws {
-        let malformed = NBT.compound(["Y": .long(Int64.min)])
+    @Test func extremeSavedSectionCoordinatesNarrowBeforeSharedBiomeLookup() throws {
+        let narrowed = NBT.compound(["Y": .long(Int64.min)])
         let valid = Fixtures.section(y: 4, palette: [.string("minecraft:stone")])
-        let chunk = try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, sections: [malformed, valid]))
+        let chunk = try Chunk(nbt: Fixtures.chunk(x: 0, z: 0, sections: [narrowed, valid]))
+        #expect(chunk.sections.map(\.y) == [0, 4])
         #expect(chunk.biome(x: 8, y: 64, z: 8) == "minecraft:plains")
         var paletteBlockIDs = Set<String>()
         let facts = try TerrainChunkFacts(chunk, at: .init(x: 0, z: 0), options: .init(biomeSampleY: 64),

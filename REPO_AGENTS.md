@@ -263,8 +263,8 @@ values retain their block-entity identities for repeated lookups. Records-only q
 only their needed upgrades; signs retain saved text/identity fields and spawner-only reads avoid
 walking unrelated inventories. `SavedChunkFields` owns root/Level selection, including existing
 field-specific malformed-input precedence. Raw NBT APIs and saved files remain unchanged.
-This #314 ownership change adds no supported format or numeric conversion; the separate
-field-codec audit in foundation step 4a must establish game evidence before changing those rules.
+The #314 ownership change added no supported format or numeric conversion. The #316 field-codec
+audit in foundation step 4a establishes each game's reader before changing a field family.
 Typed terrain facts expose used biome IDs, an explicitly chosen middle-column biome sample,
 per-ID block counts/section bounds, heightmaps and generation metadata. UI categories, cave-area
 joining and search stay outside the core. Incomplete generation contributes metadata, not terrain
@@ -305,6 +305,36 @@ The versioned envelope is the new Codable boundary, with options and dimension/r
 consumers also key all three file fingerprints and their own transform version. Older model
 conformances remain source-compatible until separately migrated. The new API is available in
 v0.30.0; Chunksee's pin and app adoption are separate work.
+
+The unreleased #316 chunk-field correction uses the following declared readers in
+`SerializableChunkData.parse`. Its `CompoundTag` numeric getters accept all six numeric tags;
+they do not use the `Codec`/`NbtOps` boxed-number conversions. `NBTNumber` owns both families.
+
+| Saved field | Game reader | Saved-data result |
+|---|---|---|
+| `xPos`, `zPos` | `CompoundTag.getIntOr` | Signed 32-bit conversion, widened to public `Int`; missing/nonnumeric required coordinates still fail |
+| Section `Y` | `CompoundTag.getByteOr` | Signed byte conversion, widened to the section index; missing/nonnumeric section identity still fails |
+| `LastUpdate`, `InhabitedTime` | `CompoundTag.getLongOr` | Signed 64-bit conversion; missing/nonnumeric saved metadata stays optional |
+| `isLightOn` | `CompoundTag.getBooleanOr` | Converted byte differs from zero; missing/nonnumeric/skipped flags remain false |
+
+Floating int/byte reads floor before JVM saturation and narrowing. Long reads truncate Float
+but floor Double; NaN converts to zero, and out-of-range floating values saturate before any
+byte narrowing. Integral long reads remain exact. This does not substitute the game's zero
+fallback for missing saved coordinates or time metadata. `SavedChunkFields` retains its
+root/Level fallback, independent inhabited-time reads survive bad terrain, and normalized
+terrain retains its established Level merge precedence. Raw NBT and existing `javaInt`/`javaFloat`
+codec meanings stay unchanged. DataVersion/yPos, older layout fixers' own field reads, and other
+field families remain separate audit work, not evidence for blanket accessor replacement.
+
+The field declarations and conversions are backed by retained official bytecode and 190
+saved named-root inputs through real `NbtIo`, `CompoundTag`, `TagValueInput` and `NbtOps` readers
+on #316. `ChunkPrimitiveSample` preserves all 180 numeric outcomes with source/input/result
+hashes; public chunk, light, column and combined-region tests consume them. Missing/nonnumeric
+cases, wrapped precedence and selective-read policy have separate coverage. Terrain revision 2
+invalidates coordinates/sections/light validity; region-facts revision 30 covers its independent
+inhabited-time interpretation. Light inherits the changed terrain identity without a copied
+revision bump. Generated facts and the asset contract do not change. Required build/tests,
+paired copied-world timing and independent review remain the publication gates for this slice.
 
 `ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
 chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts

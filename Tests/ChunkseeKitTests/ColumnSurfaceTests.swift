@@ -130,7 +130,7 @@ import ChunkseeKit
         #expect(chunk.surfaceY(x: 0, z: 0) == 45 && chunk.surfaceY(x: 1, z: 0) == 43)
     }
 
-    @Test func malformedReferencesAndExtremeSavedCoordinatesStayUnavailable() throws {
+    @Test func malformedReferencesAndExtremeSavedBottomsStayUnavailable() throws {
         var blocks = [Int](repeating: 0, count: 4096)
         blocks[15 * 256] = 7 // Unknown block above a known stone cannot prove a surface.
         blocks[0] = 1; blocks[3 * 256 + 1] = 1
@@ -142,9 +142,18 @@ import ChunkseeKit
             let badBottom = try decode([section], extra: ["yPos": .long(value)])
             #expect(badBottom.surfaceHeights().allSatisfy { $0 == nil })
             #expect(badBottom.surfaceY(x: 1, z: 0) == nil)
+        }
+    }
+
+    @Test func wideSavedSectionCoordinatesNarrowBeforeSurfaceQueries() throws {
+        let section = Fixtures.section(y: 0, palette: [.string("minecraft:stone")])
+        for (saved, sectionY, surfaceY) in [(Int64.min, 0, 15), (Int64.max, -1, -1)] {
             var fields = try #require(section.compound)
-            fields["Y"] = .long(value)
-            #expect(try decode([.compound(fields)]).surfaceHeights().allSatisfy { $0 == nil })
+            fields["Y"] = .long(saved)
+            let chunk = try decode([.compound(fields)])
+            #expect(chunk.sections.map(\.y) == [sectionY])
+            #expect(chunk.surfaceHeights() == [Int?](repeating: surfaceY, count: 256))
+            #expect(chunk.surfaceY(x: 1, z: 0) == surfaceY)
         }
     }
 
