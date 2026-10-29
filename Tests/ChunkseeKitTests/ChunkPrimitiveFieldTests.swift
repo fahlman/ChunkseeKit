@@ -4,7 +4,7 @@ import Testing
 @testable import ChunkseeKit
 
 @Suite struct ChunkPrimitiveFieldTests {
-    private func saved(_ sample: ChunkPrimitiveSample) throws -> NBT {
+    private func saved(_ sample: SavedNumericSample) throws -> NBT {
         var section = try #require(Fixtures.section(y: 0, palette: [.string("minecraft:stone")]).compound)
         section["Y"] = sample.tag
         section["BlockLight"] = .byteArray([Int8](repeating: 0x33, count: 2048))
@@ -15,8 +15,8 @@ import Testing
         ])
     }
 
-    @Test(arguments: ChunkPrimitiveSample.all)
-    func publicChunkReadsMatchMinecraft(_ sample: ChunkPrimitiveSample) throws {
+    @Test(arguments: SavedNumericSample.all)
+    func publicChunkReadsMatchMinecraft(_ sample: SavedNumericSample) throws {
         let bytes = try saved(sample).serialized()
         let decoded = try NBT.read(bytes).value
         let chunk = try Chunk(nbt: decoded)
@@ -40,7 +40,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
         let position = RegionPosition(x: 0, z: 0)
-        let entries = try ChunkPrimitiveSample.all.enumerated().map { index, sample in
+        let entries = try SavedNumericSample.all.enumerated().map { index, sample in
             Fixtures.RegionChunk(localX: index % 32, localZ: index / 32, nbt: try saved(sample))
         }
         let bytes = try Fixtures.region(entries)
@@ -49,7 +49,7 @@ import Testing
         let facts = try dimension.scan(region: position)
         #expect(facts.formats.readable == entries.count && facts.formats.unreadableTerrain == 0)
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
-        for (index, sample) in ChunkPrimitiveSample.all.enumerated() {
+        for (index, sample) in SavedNumericSample.all.enumerated() {
             let at = ChunkPosition(x: index % 32, z: index / 32)
             let terrain = try #require(facts.chunks.first { $0.position == at })
             // Region identity belongs to the file slot even when the saved coordinates differ.
@@ -135,7 +135,7 @@ import Testing
     }
 
     @Test func selectiveTerrainProfilesKeepTheirLightPolicy() throws {
-        let sample = try #require(ChunkPrimitiveSample.all.first { $0.id == "double:negative-half" })
+        let sample = try #require(SavedNumericSample.all.first { $0.id == "double:negative-half" })
         let source = try saved(sample).serialized()
         for skipping in [Set<String>(), Chunk.keysNotNeededForTerrainAndLight,
                          Chunk.keysNotNeededForTerrain, Chunk.keysNotNeededForBiomes] {
