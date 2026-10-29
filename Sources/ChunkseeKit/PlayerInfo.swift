@@ -120,8 +120,12 @@ extension PlayerInfo {
     /// Experience points collected since the player last died.
     public var experienceTotal: Int? { nbt["XpTotal"]?.compoundInt.map(Int.init) }
     public var gameMode: GameMode? { nbt["playerGameType"]?.int.flatMap(GameMode.init(rawValue:)) }
-    /// The selected hotbar slot, 0–8.
-    public var selectedSlot: Int? { nbt["SelectedItemSlot"]?.int }
+    /// The selected hotbar slot, 0–8; missing or invalid selections are unavailable.
+    public var selectedSlot: Int? {
+        guard let slot = nbt["SelectedItemSlot"]?.compoundInt.map(Int.init),
+              PlayerInventorySection.hotbar.slotRange.contains(slot) else { return nil }
+        return slot
+    }
 }
 
 extension PlayerInfo {
