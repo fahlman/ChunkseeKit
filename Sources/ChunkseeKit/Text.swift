@@ -75,7 +75,11 @@ public struct Sign: Sendable, Equatable, Codable {
 
     /// Signs with text among a chunk's block entities.
     public static func signs(inChunk nbt: NBT) -> [Sign] {
-        Chunk.blockEntities(in: nbt).compactMap(Sign.init(blockEntity:)).filter(\.hasText)
+        signs(in: ChunkRecords(nbt, needs: .signs))
+    }
+
+    static func signs(in records: ChunkRecords) -> [Sign] {
+        records.blocks.saved.compactMap(Sign.init(blockEntity:)).filter(\.hasText)
     }
 }
 
@@ -135,17 +139,18 @@ extension Dimension {
     /// can't be read are skipped.
     public func contents(regionX: Int, regionZ: Int) throws -> RegionContents {
         var found = RegionContents(containers: [], signs: [])
-        for chunk in try chunks(.terrain, regionX: regionX, regionZ: regionZ, skipping: Chunk.keysNotNeededForContainers) {
-            found.containers += ItemContainer.containers(inChunk: chunk.nbt)
-            found.signs += Sign.signs(inChunk: chunk.nbt)
-            found.spawners += Spawner.spawners(inChunk: chunk.nbt)
-            if let entities = SaveDataUpgrade.terrainEntityChunk(chunk.nbt) {
-                found.namedCreatures += Creature.creatures(inEntityChunk: entities).filter { $0.customName != nil }
-            }
+        try forEachChunk(.terrain, regionX: regionX, regionZ: regionZ,
+                         skipping: Chunk.keysNotNeededForContainers) { _, _, nbt in
+            let records = ChunkRecords(nbt)
+            found.containers += ItemContainer.containers(in: records)
+            found.signs += Sign.signs(in: records)
+            found.spawners += Spawner.spawners(in: records)
+            found.namedCreatures += Creature.creatures(in: records.entities).filter { $0.customName != nil }
         }
-        for chunk in try chunks(.entities, regionX: regionX, regionZ: regionZ) {
-            found.containers += ItemContainer.containers(inEntityChunk: chunk.nbt)
-            found.namedCreatures += Creature.creatures(inEntityChunk: chunk.nbt).filter { $0.customName != nil }
+        try forEachChunk(.entities, regionX: regionX, regionZ: regionZ) { _, _, nbt in
+            let entities = NormalizedEntities(nbt)
+            found.containers += ItemContainer.containers(in: entities)
+            found.namedCreatures += Creature.creatures(in: entities).filter { $0.customName != nil }
         }
         return found
     }

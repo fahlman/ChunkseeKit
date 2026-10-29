@@ -176,7 +176,11 @@ public struct ItemContainer: Sendable, Equatable, Codable {
 
     /// Containers among a chunk's block entities and older terrain-embedded entities.
     public static func containers(inChunk nbt: NBT) -> [ItemContainer] {
-        let blocks = SaveDataUpgrade.blockEntities(inChunk: nbt).compactMap { entity -> ItemContainer? in
+        containers(in: ChunkRecords(nbt, needs: .containers))
+    }
+
+    static func containers(in records: ChunkRecords) -> [ItemContainer] {
+        let blocks = (records.permitsContainers ? records.blocks.upgraded : []).compactMap { entity -> ItemContainer? in
             guard let kind = entity["id"]?.string, let position = entity.blockEntityPosition else {
                 return nil
             }
@@ -191,14 +195,18 @@ public struct ItemContainer: Sendable, Equatable, Codable {
                                  customName: entity["CustomName"].flatMap(TextComponent.plainText),
                                  lootTable: lootTable?.string, isSealedLoot: sealed && items.isEmpty, isEntity: false)
         }
-        return blocks + (SaveDataUpgrade.terrainEntityChunk(nbt).map(containers(inEntityChunk:)) ?? [])
+        return blocks + containers(in: records.entities)
     }
 
     /// Containers among an entity chunk's entities (`entities/` region files): container
     /// minecarts and boats, inventories, item displays and saved equipment, including nested passengers.
     public static func containers(inEntityChunk nbt: NBT) -> [ItemContainer] {
-        EntityTraversal.flatten(nbt["Entities"]?.list ?? []).compactMap { entity in
-            let entity = SaveDataUpgrade.entity(entity, dataVersion: nbt["DataVersion"]?.int)
+        containers(in: NormalizedEntities(nbt))
+    }
+
+    static func containers(in entities: NormalizedEntities) -> [ItemContainer] {
+        entities.records.compactMap { record in
+            let entity = record.nbt
             guard let kind = entity["id"]?.string, let pos = entity["Pos"]?.list, pos.count == 3,
                   let savedX = pos[0].double, let savedY = pos[1].double, let savedZ = pos[2].double,
                   let position = BlockPosition(x: savedX, y: savedY, z: savedZ) else {

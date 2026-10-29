@@ -255,6 +255,16 @@ Predictions do not know later border movement, live portal-block validity or cre
 
 `Dimension.scan(region:options:)` owns the combined terrain/entity/POI traversal and returns
 `RegionFacts`. Each present chunk payload is decoded once using the shared format readers.
+`NormalizedChunk` owns its immutable interpretation: `ChunkRecords` supplies independent saved
+records, and `TerrainChunkInput` supplies layout/palette upgrades for terrain validation. The
+combined scan does not prepare a second block-entity projection for its terrain-only `Chunk`.
+Container and creature projections share flattened, upgraded entity records, and public `Chunk`
+values retain their block-entity identities for repeated lookups. Records-only queries request
+only their needed upgrades; signs retain saved text/identity fields and spawner-only reads avoid
+walking unrelated inventories. `SavedChunkFields` owns root/Level selection, including existing
+field-specific malformed-input precedence. Raw NBT APIs and saved files remain unchanged.
+This #314 ownership change adds no supported format or numeric conversion; the separate
+field-codec audit in foundation step 4a must establish game evidence before changing those rules.
 Typed terrain facts expose used biome IDs, an explicitly chosen middle-column biome sample,
 per-ID block counts/section bounds, heightmaps and generation metadata. UI categories, cave-area
 joining and search stay outside the core. Incomplete generation contributes metadata, not terrain

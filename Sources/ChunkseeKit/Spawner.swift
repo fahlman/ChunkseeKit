@@ -19,12 +19,13 @@ public struct Spawner: Sendable, Equatable, Codable {
 
     /// The spawners among a chunk's block entities.
     public static func spawners(inChunk nbt: NBT) -> [Spawner] {
-        Chunk.blockEntities(in: nbt).compactMap { entity in
+        spawners(in: ChunkRecords(nbt, needs: .spawners))
+    }
+
+    static func spawners(in records: ChunkRecords) -> [Spawner] {
+        zip(records.blocks.saved, records.blocks.upgraded).compactMap { saved, entity in
             // BaseSpawner can omit its nullable SpawnData. Preserve known empty spawners too.
-            guard entity["SpawnData"]?.compound != nil || entity["id"]?.string == "minecraft:mob_spawner",
-                  let position = entity.blockEntityPosition else { return nil }
-            // Upgrade only actual spawner records; unrelated container inventories can be large.
-            let entity = SaveDataUpgrade.blockEntity(entity, dataVersion: nbt["DataVersion"]?.int)
+            guard NormalizedBlockEntities.isSpawner(saved), let position = saved.blockEntityPosition else { return nil }
             let spawnData = entity["SpawnData"]
             let mob = (spawnData?["entity"] ?? spawnData)?["id"]?.string
             return Spawner(x: position.x, y: position.y, z: position.z, mob: mob)

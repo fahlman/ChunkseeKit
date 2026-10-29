@@ -4,7 +4,7 @@ extension Chunk {
     /// Saved ticks near a chunk, including pre-1.18 metadata under `Level`. This does not decode
     /// legacy terrain. Root metadata wins when an upgraded chunk retains a vestigial `Level`.
     public static func inhabitedTime(in nbt: NBT) -> Int? {
-        nbt["InhabitedTime"]?.int ?? nbt["Level"]?["InhabitedTime"]?.int
+        SavedChunkFields(nbt).inhabitedTime
     }
 
     /// Entries a time-spent scan doesn't need: everything big, leaving `InhabitedTime`.

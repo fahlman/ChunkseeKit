@@ -259,9 +259,11 @@ public struct Chunk: Sendable {
     /// light arrays or the chunk's NBT. Reuse it when neighboring terrain needs these biomes.
     public var biomeSnapshot: ChunkBiomeSnapshot { ChunkBiomeSnapshot(sections: sections) }
     /// Saved order is preserved, including entries with unavailable identity or position.
-    public var blockEntities: [BlockEntity] { SaveDataUpgrade.blockEntities(inChunk: nbt).map(BlockEntity.init(nbt:)) }
+    public let blockEntities: [BlockEntity]
     /// Saved input retained for typed readers within the library.
     let nbt: NBT
+    let structureStartsNBT: NBT?
+    let embeddedEntityChunk: NBT?
 
     /// Chunk entries that terrain readers (blocks, biomes, heightmaps) don't use: ticks, light,
     /// structures, entities and generation bookkeeping. Pass to `RegionFile.chunkNBT(localX:localZ:skipping:)`
@@ -312,7 +314,11 @@ public struct Chunk: Sendable {
     }
 
     public init(nbt: NBT) throws {
-        let nbt = SaveDataUpgrade.chunk(nbt)
+        try self.init(input: TerrainChunkInput(nbt))
+    }
+
+    init(input: TerrainChunkInput) throws {
+        let nbt = input.nbt
         let dataVersion = nbt["DataVersion"]?.int
         // Supported wrapped palettes have already been normalized. Remaining wrapped sections
         // use a different storage format; a vestigial Level.Structures alone is harmless.
@@ -325,10 +331,13 @@ public struct Chunk: Sendable {
         self.z = z
         self.status = (nbt["status"] ?? nbt["Status"])?.string
         self.lastUpdate = nbt["LastUpdate"]?.int
-        self.inhabitedTime = Self.inhabitedTime(in: nbt)
+        self.inhabitedTime = input.inhabitedTime
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
         self.nbt = nbt
+        self.blockEntities = input.blockEntities
+        self.structureStartsNBT = input.structureStarts
+        self.embeddedEntityChunk = input.embeddedEntityChunk
     }
 
     public func section(atBlockY y: Int) -> ChunkSection? {
@@ -345,14 +354,9 @@ public struct Chunk: Sendable {
         section(atBlockY: y)?.biome(x: x & 15, y: y & 15, z: z & 15)
     }
 
-    /// Block entities from the chunk's interpreted format.
-    static func blockEntities(in nbt: NBT) -> [NBT] {
-        nbt["block_entities"]?.list ?? nbt["Level"]?["TileEntities"]?.list ?? []
-    }
-
     /// The first block entity at chunk-local x/z and absolute y, if any.
     public func blockEntity(x: Int, y: Int, z: Int) -> BlockEntity? {
-        SaveDataUpgrade.blockEntities(inChunk: nbt).lazy.map(BlockEntity.init(nbt:)).first {
+        blockEntities.first {
             guard let position = $0.position else { return false }
             return position.x & 15 == x & 15 && position.y == y && position.z & 15 == z & 15
         }

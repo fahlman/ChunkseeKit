@@ -59,7 +59,11 @@ public struct Creature: Sendable, Equatable, Codable {
     /// The version selects saved-name upgrades, not a type list or health-default catalog.
     /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
     public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
-        let nbt = SaveDataUpgrade.entity(nbt, dataVersion: dataVersion)
+        self.init(normalized: NormalizedEntity(nbt, dataVersion: dataVersion), enchantments: enchantments)
+    }
+
+    init?(normalized entity: NormalizedEntity, enchantments: [String: EnchantmentDefinition] = [:]) {
+        let nbt = entity.nbt
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
               !identifier.path.isEmpty,
               let pos = nbt["Pos"]?.list?.compactMap(\.double), pos.count == 3 else { return nil }
@@ -87,11 +91,15 @@ public struct Creature: Sendable, Equatable, Codable {
     /// Living mobs among an entity chunk's entities, including all nested passengers.
     /// Each mob keeps its own saved position and the chunk's data version.
     public static func creatures(inEntityChunk nbt: NBT, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
-        creatures(in: nbt["Entities"]?.list ?? [], dataVersion: nbt["DataVersion"]?.int, enchantments: enchantments)
+        creatures(in: NormalizedEntities(nbt), enchantments: enchantments)
     }
 
     static func creatures(in entities: [NBT], dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
-        EntityTraversal.flatten(entities).compactMap { Creature($0, dataVersion: dataVersion, enchantments: enchantments) }
+        creatures(in: NormalizedEntities(entities, dataVersion: dataVersion), enchantments: enchantments)
+    }
+
+    static func creatures(in entities: NormalizedEntities, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
+        entities.records.compactMap { Creature(normalized: $0, enchantments: enchantments) }
     }
 }
 
@@ -210,9 +218,7 @@ extension Dimension {
         var result: [Creature] = []
         try forEachChunk(.terrain, regionX: regionX, regionZ: regionZ,
                          skipping: Chunk.keysNotNeededForEmbeddedEntities) { _, _, nbt in
-            if let entities = SaveDataUpgrade.terrainEntityChunk(nbt) {
-                result += Creature.creatures(inEntityChunk: entities, enchantments: enchantments)
-            }
+            result += Creature.creatures(in: ChunkRecords(nbt, needs: .creatures).entities, enchantments: enchantments)
         }
         try forEachChunk(.entities, regionX: regionX, regionZ: regionZ) { _, _, nbt in
             result += Creature.creatures(inEntityChunk: nbt, enchantments: enchantments)
