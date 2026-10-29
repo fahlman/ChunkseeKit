@@ -1451,6 +1451,13 @@ those fields are interpreted as mob records. Raw entity reads preserve all recor
 are retained without a blanket recognition flag. Missing facts remain nil, and this does not
 broaden existing version-specific health defaults. Fixtures.mob supplies realistic synthetic
 mob records for the shared test-support library.
+The unreleased #316 flag-reader correction follows `Mob.readAdditionalSaveData` and
+`ValueInput.getBooleanOr`: each membership field accepts any numeric tag through the shared
+primitive-boolean reader. Readable false values still establish a field; missing or nonnumeric
+fields do not acquire Minecraft's loading defaults. `NoAI` alone remains insufficient because
+the serializer omits it when false. Public entity, passenger, player-carried and region/Index
+paths share this boundary. RegionFacts revision 31 invalidates earlier omissions from readable
+floating flags; terrain, light, assets and generated identities remain unchanged.
 RegionFacts interpretation 16 discards earlier classifications, top-level-only entity scans and
 omitted saved fields, including wild-mob appearance/equipment and unpublished 8–15. The separate
 26.4 preparation needs a fresh version when integrating.
