@@ -328,13 +328,31 @@ field families remain separate audit work, not evidence for blanket accessor rep
 
 The field declarations and conversions are backed by retained official bytecode and 190
 saved named-root inputs through real `NbtIo`, `CompoundTag`, `TagValueInput` and `NbtOps` readers
-on #316. `ChunkPrimitiveSample` preserves all 180 numeric outcomes with source/input/result
+on #316. `SavedNumericSample` preserves all 180 numeric outcomes with source/input/result
 hashes; public chunk, light, column and combined-region tests consume them. Missing/nonnumeric
 cases, wrapped precedence and selective-read policy have separate coverage. Terrain revision 2
 invalidates coordinates/sections/light validity; region-facts revision 30 covers its independent
 inhabited-time interpretation. Light inherits the changed terrain identity without a copied
 revision bump. Generated facts and the asset contract do not change. Required build/tests,
 paired copied-world timing and independent review remain the publication gates for this slice.
+
+The unreleased #316 player-progress correction declares five directly assigned saved fields:
+
+| Saved field | Game reader | Saved-data result |
+|---|---|---|
+| `foodLevel` | `FoodData.readAdditionalSaveData` → `ValueInput.getIntOr` | Primitive signed 32-bit conversion, widened to public `Int` |
+| `XpLevel`, `XpTotal` | `Player.readAdditionalSaveData` → `ValueInput.getIntOr` | The same primitive integer conversion |
+| `foodSaturationLevel`, `XpP` | The respective methods above → `ValueInput.getFloatOr` | Direct game Float conversion, then widened to public `Double` |
+
+These reads assign their fields without a range clamp. Missing/nonnumeric saved values stay
+nil instead of acquiring Minecraft's load defaults. The existing `compoundInt` and `javaFloat`
+adapters own the conversions; the completed game-reader matrix proves the primitive/codec
+Float agreement, including direct integer rounding and input-zero canonicalization.
+`SavedNumericSample` retains the captured int/byte/long/boolean/Float results. Public PlayerInfo
+and compressed World.players file tests cover those results, independent missing fields,
+unclamped saved values and unchanged raw bytes. Health projection, selected-slot validation,
+mode, position and DataVersion remain separate field audit work. These five player metadata
+values are not part of RegionFacts, terrain, light or asset archives; no cache contract changes.
 
 `ItemContainer.lootTable` retains the saved table ID for unopened-loot presentation, including
 chest minecarts; readers keep the existing sealed-loot and empty-container behavior. RegionFacts

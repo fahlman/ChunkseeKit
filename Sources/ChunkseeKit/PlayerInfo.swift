@@ -110,15 +110,15 @@ extension PlayerInfo {
     public var health: Double? { nbt["Health"]?.double }
     /// Extra health from golden apples and the like, shown as golden hearts.
     public var absorption: Double? { nbt["AbsorptionAmount"]?.double }
-    /// Hunger in half-drumsticks, 0–20.
-    public var foodLevel: Int? { nbt["foodLevel"]?.int }
+    /// Saved hunger in half-drumsticks, normally 0–20.
+    public var foodLevel: Int? { nbt["foodLevel"]?.compoundInt.map(Int.init) }
     /// Hidden food reserve used up before hunger drops.
-    public var saturation: Double? { nbt["foodSaturationLevel"]?.double }
-    public var experienceLevel: Int? { nbt["XpLevel"]?.int }
-    /// Progress toward the next level, 0–1.
-    public var experienceProgress: Double? { nbt["XpP"]?.double }
+    public var saturation: Double? { nbt["foodSaturationLevel"]?.javaFloat.map(Double.init) }
+    public var experienceLevel: Int? { nbt["XpLevel"]?.compoundInt.map(Int.init) }
+    /// Saved progress toward the next level, normally 0–1.
+    public var experienceProgress: Double? { nbt["XpP"]?.javaFloat.map(Double.init) }
     /// Experience points collected since the player last died.
-    public var experienceTotal: Int? { nbt["XpTotal"]?.int }
+    public var experienceTotal: Int? { nbt["XpTotal"]?.compoundInt.map(Int.init) }
     public var gameMode: GameMode? { nbt["playerGameType"]?.int.flatMap(GameMode.init(rawValue:)) }
     /// The selected hotbar slot, 0–8.
     public var selectedSlot: Int? { nbt["SelectedItemSlot"]?.int }
