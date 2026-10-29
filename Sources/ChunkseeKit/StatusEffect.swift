@@ -50,7 +50,7 @@ extension PlayerInfo {
     /// The selected hotbar item, or an explicit saved main-hand equipment item when present.
     public var mainHandItem: ItemStack? {
         if let mainHand = equipment["mainhand"] { return mainHand }
-        guard let selectedSlot, PlayerInventorySection.hotbar.slotRange.contains(selectedSlot) else { return nil }
+        guard let selectedSlot else { return nil }
         return inventorySlots(in: .hotbar)[selectedSlot]
     }
 
