@@ -45,7 +45,12 @@ import Testing
     @Test func scannedFloatingFlagsRetainEveryMobCategoryInTheDimensionIndex() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
+            "LevelName": .string("Mob categories"), "DataVersion": .int(Int32.max)
+        ])]), to: root.appendingPathComponent("level.dat"))
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("dimensions/minecraft/overworld"),
+                                                withIntermediateDirectories: true)
+        let dimension = try #require(World(contentsOf: root).dimension("overworld"))
         let coordinate = RegionPosition(x: 0, z: 0), catalog = NotableBlock.Catalog(tags: [:])
         let owner = UUID()
         let records: [NBT] = (0..<4).map { index in

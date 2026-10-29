@@ -51,7 +51,12 @@ import Testing
     @Test func chunkRegionAndCachePathsRetainNumericMobRecordsAndRawEntities() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
+            "LevelName": .string("Mob flags"), "DataVersion": .int(Int32.max)
+        ])]), to: root.appendingPathComponent("level.dat"))
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("dimensions/minecraft/overworld"),
+                                                withIntermediateDirectories: true)
+        let dimension = try #require(World(contentsOf: root).dimension("overworld"))
         let mobs = SavedNumericSample.all.enumerated().map { mob($0.element.tag, suffix: "mob_\($0.offset)") }
         let vehicle = NBT.compound(["id": .string("minecraft:oak_boat"), "Passengers": .list(mobs)])
         let nonMob = NBT.compound(["id": .string("minecraft:item"), "Health": .float(5),
