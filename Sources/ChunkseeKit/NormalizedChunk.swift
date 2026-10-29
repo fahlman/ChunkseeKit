@@ -22,7 +22,8 @@ struct SavedChunkFields: Sendable {
         } else {
             embeddedEntityChunk = nil
         }
-        inhabitedTime = nbt["InhabitedTime"]?.int ?? nbt["Level"]?["InhabitedTime"]?.int
+        inhabitedTime = (nbt["InhabitedTime"]?.compoundLong
+            ?? nbt["Level"]?["InhabitedTime"]?.compoundLong).map(Int.init)
         structureStarts = nbt["structures"]?["starts"] ?? nbt["Level"]?["Structures"]?["Starts"]
     }
 

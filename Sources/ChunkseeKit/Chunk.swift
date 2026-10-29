@@ -161,8 +161,8 @@ public struct ChunkSection: Sendable {
     public var hasPerBlockBiomes: Bool { biomes?.hasPerBlockBiomes == true }
 
     init(_ nbt: NBT) throws {
-        guard let y = nbt["Y"]?.int else { throw ChunkError.missingField("sections[].Y") }
-        self.y = y
+        guard let y = nbt["Y"]?.compoundByte else { throw ChunkError.missingField("sections[].Y") }
+        self.y = Int(y)
 
         if let states = nbt["block_states"], let palette = states["palette"]?.list {
             blockStates = try PalettedContainer(palette: palette.map(BlockState.init(paletteEntry:)),
@@ -233,10 +233,10 @@ public struct BlockEntity: Sendable, Equatable {
 
 /// A decoded terrain chunk, including older Level-wrapped named palettes.
 public struct Chunk: Sendable {
-    /// Cache contract for decoded terrain, biomes, heightmaps and surface traversal. Bump the
+    /// Cache contract for terrain, biomes, heightmaps, saved-light fields and surface traversal. Bump the
     /// revision when these readers or their shared format/upgrade rules change meaning.
     public static let interpretationVersion = InterpretationVersion(
-        domain: "terrain", revision: 1, generatedFacts: GeneratedInterpretationDigests.terrain,
+        domain: "terrain", revision: 2, generatedFacts: GeneratedInterpretationDigests.terrain,
         dependencies: [])
 
     /// Saved metadata, when present; structural decoding does not require a version label.
@@ -252,7 +252,7 @@ public struct Chunk: Sendable {
     public let inhabitedTime: Int?
     /// Whether the save marks its light data as valid. Missing or skipped flags are false;
     /// this says nothing about light in an omitted or malformed section array.
-    public var isLightOn: Bool { nbt["isLightOn"]?.bool ?? false }
+    public var isLightOn: Bool { nbt["isLightOn"]?.compoundBoolean ?? false }
     /// Sections sorted by Y.
     public let sections: [ChunkSection]
     /// An immutable view retaining only biome palettes and section heights, without blocks,
@@ -325,12 +325,14 @@ public struct Chunk: Sendable {
         guard nbt["Level"]?["Sections"] == nil else {
             throw ChunkError.unsupportedLegacyFormat(dataVersion: dataVersion)
         }
-        guard let x = nbt["xPos"]?.int, let z = nbt["zPos"]?.int else { throw ChunkError.missingField("xPos/zPos") }
+        guard let x = nbt["xPos"]?.compoundInt, let z = nbt["zPos"]?.compoundInt else {
+            throw ChunkError.missingField("xPos/zPos")
+        }
         self.dataVersion = dataVersion
-        self.x = x
-        self.z = z
+        self.x = Int(x)
+        self.z = Int(z)
         self.status = (nbt["status"] ?? nbt["Status"])?.string
-        self.lastUpdate = nbt["LastUpdate"]?.int
+        self.lastUpdate = (nbt["LastUpdate"]?.compoundLong).map(Int.init)
         self.inhabitedTime = input.inhabitedTime
         self.sections = try (nbt["sections"]?.list ?? []).map(ChunkSection.init).sorted { $0.y < $1.y }
         self.minSectionY = nbt["yPos"]?.int ?? sections.first?.y ?? 0
