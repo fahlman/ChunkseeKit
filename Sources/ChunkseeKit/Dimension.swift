@@ -106,7 +106,7 @@ public struct Dimension: Sendable {
     /// The same query using terrain from this dimension with entity fields retained, avoiding a second
     /// region read. The separate entity file is read normally; raw entity fields stay intact.
     public func entities(in chunk: Chunk) throws -> [NBT] {
-        var result = EntityTraversal.flatten(SaveDataUpgrade.terrainEntityChunk(chunk.nbt)?["Entities"]?.list ?? [])
+        var result = EntityTraversal.flatten(chunk.embeddedEntityChunk?["Entities"]?.list ?? [])
         if let separate = try entityChunk(x: chunk.x, z: chunk.z) {
             result += EntityTraversal.flatten(separate["Entities"]?.list ?? [])
         }
@@ -118,7 +118,7 @@ public struct Dimension: Sendable {
         let position = ChunkPosition(x: x, z: z)
         var result: [NBT] = []
         if let terrain = try rawChunk(.terrain, at: position, skipping: Chunk.keysNotNeededForEmbeddedEntities),
-           let entities = SaveDataUpgrade.terrainEntityChunk(terrain) { result.append(entities) }
+           let entities = SavedChunkFields(terrain).embeddedEntityChunk { result.append(entities) }
         if let separate = try entityChunk(x: x, z: z) { result.append(separate) }
         return result
     }

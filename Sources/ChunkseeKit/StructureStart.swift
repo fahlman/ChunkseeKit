@@ -46,7 +46,11 @@ public struct StructureStart: Sendable, Equatable {
     /// Other pieces don't have a universal placement flag, so missing evidence is not a reason to
     /// discard a structure. Callers showing explored terrain should also check the chunk's status.
     public static func starts(inChunk nbt: NBT) -> [StructureStart] {
-        guard let starts = (nbt["structures"]?["starts"] ?? nbt["Level"]?["Structures"]?["Starts"])?.compound else { return [] }
+        starts(in: SavedChunkFields(nbt).structureStarts)
+    }
+
+    static func starts(in nbt: NBT?) -> [StructureStart] {
+        guard let starts = nbt?.compound else { return [] }
         return starts.compactMap { key, start in
             let id = start["id"]?.string ?? key
             guard id != "INVALID", let chunkX = start["ChunkX"]?.int, let chunkZ = start["ChunkZ"]?.int else { return nil }
@@ -76,7 +80,7 @@ public struct StructureStart: Sendable, Equatable {
 
 extension Chunk {
     /// Structures that begin in this chunk.
-    public var structureStarts: [StructureStart] { StructureStart.starts(inChunk: nbt) }
+    public var structureStarts: [StructureStart] { StructureStart.starts(in: structureStartsNBT) }
 
     /// Entries a structure scan doesn't need: the block data, and everything in
     /// `keysNotNeededForTerrain` except `structures` itself. Pass to

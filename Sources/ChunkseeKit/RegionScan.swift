@@ -35,15 +35,14 @@ extension Dimension {
         }
 
         let unreadable = try visit(.terrain, skipping: omitted) { x, z, nbt in
-            facts.containers += ItemContainer.containers(inChunk: nbt)
-            facts.signs += Sign.signs(inChunk: nbt)
-            facts.spawners += Spawner.spawners(inChunk: nbt)
-            if let entities = SaveDataUpgrade.terrainEntityChunk(nbt) {
-                facts.creatures += Creature.creatures(inEntityChunk: entities, enchantments: options.enchantments)
-            }
-            facts.inhabitedTimes[z * 32 + x] = Chunk.inhabitedTime(in: nbt) ?? 0
+            let input = NormalizedChunk(nbt)
+            facts.containers += ItemContainer.containers(in: input.records)
+            facts.signs += Sign.signs(in: input.records)
+            facts.spawners += Spawner.spawners(in: input.records)
+            facts.creatures += Creature.creatures(in: input.records.entities, enchantments: options.enchantments)
+            facts.inhabitedTimes[z * 32 + x] = input.records.inhabitedTime ?? 0
             let chunk: Chunk
-            do { chunk = try Chunk(nbt: nbt) }
+            do { chunk = try Chunk(input: input.terrain) }
             catch ChunkError.unsupportedLegacyFormat { facts.formats.legacy += 1; return }
             catch { facts.formats.unreadableTerrain += 1; return }
             facts.formats.readable += 1
@@ -54,8 +53,9 @@ extension Dimension {
         }
         facts.formats.unreadableTerrain += unreadable
         let unreadableEntities = try visit(.entities) { _, _, nbt in
-            facts.containers += ItemContainer.containers(inEntityChunk: nbt)
-            facts.creatures += Creature.creatures(inEntityChunk: nbt, enchantments: options.enchantments)
+            let entities = NormalizedEntities(nbt)
+            facts.containers += ItemContainer.containers(in: entities)
+            facts.creatures += Creature.creatures(in: entities, enchantments: options.enchantments)
         }
         facts.formats.unreadableEntities = unreadableEntities
         let unreadablePOIs = try visit(.pointsOfInterest) { _, _, nbt in

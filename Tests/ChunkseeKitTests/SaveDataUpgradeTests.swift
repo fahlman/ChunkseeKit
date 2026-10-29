@@ -497,7 +497,7 @@ import ChunkseeKitTestSupport
             if record.kind == "spawnerNames" {
                 #expect(Spawner.spawners(inChunk: actual) == Spawner.spawners(inChunk: expected))
                 #expect(Spawner.spawners(inChunk: actual).count == 1)
-                #expect(SaveDataUpgrade.blockEntities(inChunk: actual).first?["SpawnPotentials"]?[0]?["Entity"]?["id"]
+                #expect(ChunkRecords(actual).blocks.upgraded.first?["SpawnPotentials"]?[0]?["Entity"]?["id"]
                     == output["SpawnPotentials"]?[0]?["data"]?["entity"]?["id"])
             } else {
                 #expect(ItemContainer.containers(inChunk: actual) == ItemContainer.containers(inChunk: expected))
