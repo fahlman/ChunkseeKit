@@ -99,11 +99,113 @@ import ChunkseeKitTestSupport
     @Test func maximumLevelRoundTripsAndOldSnapshotsStillDecode() throws {
         let legacy = Data(#"{"hasMaximumHealthModifier":false,"slots":["any"]}"#.utf8)
         let old = try JSONDecoder().decode(EnchantmentDefinition.self, from: legacy)
-        #expect(old.maximumLevel == nil && old.hasMaximumHealthModifier == false && old.slots == ["any"])
+        #expect(old.description == nil && old.maximumLevel == nil
+                && old.hasMaximumHealthModifier == false && old.slots == ["any"])
         let current = try #require(EnchantmentDefinition(data: Data(#"{"max_level":1,"slots":["any"]}"#.utf8)))
         #expect(try JSONDecoder().decode(EnchantmentDefinition.self, from: JSONEncoder().encode(current)) == current)
         #expect(RegionScanOptions(enchantments: ["example:single": old]) !=
                 RegionScanOptions(enchantments: ["example:single": current]))
+    }
+
+    @Test func descriptionsRetainTheDeclaredComponentInsteadOfInventingATranslationKey() throws {
+        let definitions = try assets([
+            entry("minecraft:mending", #"{"max_level":1,"description":{"translate":"enchantment.minecraft.mending"}}"#),
+            entry("example:custom", #"{"max_level":4,"description":{"translate":"pack.other_name","fallback":"Fallback %s","with":[17,1.25,0.1,true,{"text":"Guest"}],"extra":[{"text":"!"}]}}"#),
+            entry("example:literal", #"{"description":"{\"text\":\"literal JSON-looking name\"}"}"#),
+            entry("example:empty", #"{"description":""}"#),
+        ]).enchantmentDefinitions()
+        #expect(definitions["minecraft:mending"]?.description ==
+                .translated(key: "enchantment.minecraft.mending", fallback: nil, arguments: []))
+        let custom: TextComponent.Content = .sequence([
+            .translated(key: "pack.other_name", fallback: "Fallback %s",
+                        arguments: [.integer(17), .float(1.25), .number(0.1), .boolean(true), .component(.literal("Guest"))]),
+            .literal("!"),
+        ])
+        #expect(definitions["example:custom"]?.description == custom)
+        #expect(definitions["example:custom"]?.maximumLevel == 4)
+        #expect(definitions["example:literal"]?.description == .literal(#"{"text":"literal JSON-looking name"}"#))
+        #expect(definitions["example:empty"]?.description == .literal(""))
+    }
+
+    @Test func unreadableDescriptionsPreserveIndependentLevelAndHealthFacts() throws {
+        for value in ["null", "true", "42", "[]", "{}", #"{"translate":false}"#,
+                      #"{"selector":"@s"}"#, #"{"keybind":"key.jump"}"#,
+                      #"{"text":"Partial","extra":[{"selector":"@s"}]}"#] {
+            let text = #"{"description":\#(value),"max_level":3,"slots":["head"],"effects":{"minecraft:attributes":[{"attribute":"minecraft:max_health"}]}}"#
+            let definition = try #require(EnchantmentDefinition(data: Data(text.utf8)))
+            #expect(definition.description == nil)
+            #expect(definition.maximumLevel == 3 && definition.slots == ["head"])
+            #expect(definition.hasMaximumHealthModifier == true)
+        }
+        #expect(EnchantmentDefinition(data: Data(neutral.utf8))?.description == nil)
+    }
+
+    @Test func descriptionsFollowEnabledFolderAndZIPPriorityIncludingInvalidOverrides() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let reader = try assets([
+            entry("example:changed", #"{"description":{"translate":"game.changed"},"max_level":1}"#),
+            entry("example:invalid", #"{"description":"Lower name","max_level":5}"#),
+            entry("example:absent", #"{"description":"Lower absent name","max_level":2}"#),
+        ])
+        let pack = root.appendingPathComponent("datapacks/custom")
+        try write(metadata, at: "pack.mcmeta", under: pack)
+        try write(#"{"description":"Folder name","max_level":3}"#,
+                  at: "data/example/enchantment/changed.json", under: pack)
+        try write(#"{"description":{"selector":"@s"},"max_level":4}"#,
+                  at: "data/example/enchantment/invalid.json", under: pack)
+        try write(#"{"max_level":6}"#, at: "data/example/enchantment/absent.json", under: pack)
+        let folderWorld = try world(root, packs: ["vanilla", "file/custom"])
+        let folder = try folderWorld.enchantmentDefinitions(assets: reader)
+        #expect(folder["example:changed"]?.description == .literal("Folder name"))
+        #expect(folder["example:invalid"]?.description == nil && folder["example:invalid"]?.maximumLevel == 4)
+        #expect(folder["example:absent"]?.description == nil && folder["example:absent"]?.maximumLevel == 6)
+        let archive = try TestZIP.zip([
+            .init(path: "pack.mcmeta", text: metadata),
+            entry("example:changed", #"{"description":{"translate":"pack.zip_name","fallback":"ZIP fallback"},"max_level":7}"#),
+        ])
+        try Fixtures.write(archive, to: root.appendingPathComponent("datapacks/high.zip"))
+        let zipWorld = try world(root, packs: ["vanilla", "file/custom", "file/high.zip"])
+        let zip = try zipWorld.enchantmentDefinitions(assets: reader)
+        #expect(zip["example:changed"]?.description ==
+                .translated(key: "pack.zip_name", fallback: "ZIP fallback", arguments: []))
+        #expect(zip["example:changed"]?.maximumLevel == 7)
+        #expect(try zipWorld.enchantmentDefinitions(assets: nil) == zip)
+        let disabled = try world(root, packs: ["vanilla"])
+        #expect(try disabled.enchantmentDefinitions(assets: reader)["example:changed"]?.description ==
+                .translated(key: "game.changed", fallback: nil, arguments: []))
+    }
+
+    @Test func descriptionArchivesPreserveComponentsAndTypedArguments() throws {
+        let definition = try #require(EnchantmentDefinition(data: Data(
+            #"{"description":["Name ",{"translate":"pack.name","fallback":"%s","with":["literal",9223372036854775807,1.25,0.1,false,{"text":"Nested"}]}],"max_level":2,"slots":["any"]}"#.utf8)))
+        #expect(try JSONDecoder().decode(EnchantmentDefinition.self, from: JSONEncoder().encode(definition)) == definition)
+        #expect(try PropertyListDecoder().decode(EnchantmentDefinition.self, from: PropertyListEncoder().encode(definition)) == definition)
+        let nonfinite = try #require(EnchantmentDefinition(data: Data(
+            #"{"description":{"translate":"pack.name","with":[1e9999,-1e9999]}}"#.utf8)))
+        #expect(nonfinite.description != nil)
+        let encoder = JSONEncoder(), decoder = JSONDecoder()
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+        #expect(try decoder.decode(EnchantmentDefinition.self, from: encoder.encode(nonfinite)) == nonfinite)
+    }
+
+    @Test func descriptionBudgetsAreSharedWithoutHidingOtherMetadata() throws {
+        var deep: Any = "Leaf"
+        for _ in 0..<64 { deep = ["text": "Parent", "extra": [deep]] }
+        let deepData = try JSONSerialization.data(withJSONObject: ["description": deep, "max_level": 3])
+        let deepDefinition = try #require(EnchantmentDefinition(data: deepData))
+        #expect(deepDefinition.description == nil && deepDefinition.maximumLevel == 3)
+
+        let wide = String(decoding: try JSONSerialization.data(withJSONObject: [
+            "description": Array(repeating: "Leaf", count: 32_768), "max_level": 4,
+        ]), as: UTF8.self)
+        let definitions = try assets([entry("example:a", wide), entry("example:b", wide)]).enchantmentDefinitions()
+        #expect(definitions["example:a"]?.description != nil)
+        #expect(definitions["example:b"]?.description == nil)
+        #expect(definitions.count == 2 && definitions.values.allSatisfy {
+            $0.maximumLevel == 4 && $0.hasMaximumHealthModifier == false
+        })
     }
 
     @Test func directAndNestedAttributesAreDistinguishedFromUnrelatedEffects() throws {
@@ -190,6 +292,15 @@ import ChunkseeKitTestSupport
         #expect(try dimension.scan(region: region, options: .init(enchantments: changed)).creatures.first?.maxHealth == nil)
         let restored = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
         #expect(restored.options == options && restored.creatures == facts.creatures)
+        let named = try current.enchantmentDefinitions(assets: assets([
+            entry("minecraft:protection", neutral.replacingOccurrences(of: #""slots""#, with: #""description":"A pack name","slots""#)),
+        ]))
+        let namedOptions = RegionScanOptions(enchantments: named)
+        let namedFacts = try dimension.scan(region: region, options: namedOptions)
+        #expect(namedFacts.creatures == facts.creatures && namedOptions != options)
+        let namedArchive = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(namedFacts))
+        #expect(namedArchive.options == namedOptions && namedArchive.creatures == facts.creatures)
+        #expect(namedArchive.options.enchantments["minecraft:protection"]?.description == .literal("A pack name"))
         let uuid = UUID(), playerPath = current.playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
         var player = entity.compound ?? [:]
         player["ShoulderEntityLeft"] = entity

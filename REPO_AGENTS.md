@@ -1036,6 +1036,19 @@ use the game's Float precision. Mob appearance/collar/equipment and pet sitting-
 also belong here. All stored fields remain optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
+`EnchantmentDefinition.description` retains the definition's actual display component through
+the shared `TextComponent.Content` interpreter (#327); it never guesses a language key from
+the enchantment ID. Description work shares a 65,536-visit budget across the bounded registry
+query, with 64 component levels and the existing file/count/byte limits. Missing, malformed,
+dynamic or over-budget text leaves only the description unavailable; independent level, slot
+and health facts remain readable. Content and its typed arguments are Codable snapshots, distinct
+from Minecraft JSON interpretation. Old definition archives decode with nil descriptions.
+RegionFacts already archives the complete definitions in RegionScanOptions, so descriptions
+participate in that existing cache identity and can invalidate older or changed definition
+snapshots; the saved creature and health interpretation is unchanged. No region/chunk traversal,
+component interpretation or interpretation-version counter changes here. This additive API
+requires a minor release before fahlman/Chunksee#438 can adopt it; no release is claimed yet.
+
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
 and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime
 fills only a missing valid Overworld record; ambiguous aliases are omitted after that fallback,

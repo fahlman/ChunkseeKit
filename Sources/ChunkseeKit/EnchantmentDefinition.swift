@@ -2,6 +2,9 @@ import Foundation
 
 /// Readable facts from one data-defined enchantment. No enchantment-ID catalog is used.
 public struct EnchantmentDefinition: Sendable, Hashable, Codable {
+    /// The definition's display component, before language lookup or layout. Missing,
+    /// malformed, dynamic or over-budget text is unavailable without discarding other facts.
+    public let description: TextComponent.Content?
     /// The definition's maximum level, after the game's integer conversion and 1...255 range check.
     /// This is definition metadata, not a restriction on the level stored on an item.
     public let maximumLevel: Int?
@@ -12,8 +15,14 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
     public let slots: [String]?
 
     public init?(data: Data) {
+        var textBudget = ResourceReadBudget()
+        self.init(data: data, textBudget: &textBudget)
+    }
+
+    private init?(data: Data, textBudget: inout ResourceReadBudget) {
         guard data.count <= ZipResources.maximumResourceSize,
               let json = try? AssetJSON.object(from: data) else { return nil }
+        description = json["description"].flatMap { try? TextComponent.content($0, budget: &textBudget) }
         // Enchantment.EnchantmentDefinition.CODEC uses intRange(1, 255) for max_level.
         let level = try? AssetJSON.integer(json["max_level"])
         maximumLevel = level.flatMap { (1...255).contains($0) ? $0 : nil }
@@ -37,10 +46,12 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
     fileprivate static func read(in packs: [WorldResourcePack]) throws -> [String: Self] {
         let registry = try WorldResourcePack.Registry(directory: "enchantment", in: packs)
         var remaining = 64 * 1024 * 1024
+        // Exhausted description work must not discard otherwise readable definition facts.
+        var textBudget = ResourceReadBudget()
         return try registry.readAll(maximumCount: 4096) { data in
             guard data.count <= remaining else { remaining = 0; return nil }
             remaining -= data.count
-            return Self(data: data)
+            return Self(data: data, textBudget: &textBudget)
         }
     }
 }
@@ -56,7 +67,8 @@ extension GameAssets {
 extension World {
     /// Reads the enabled data packs over the supplied current-game jar, using the shared
     /// resource-priority and invalid-override policy. Limits: 64 packs, 4,096 definitions,
-    /// 16 MiB per file and 64 MiB total. No game-version-specific definition list is applied.
+    /// 16 MiB per file and 64 MiB total. Descriptions share 65,536 component/argument visits,
+    /// with at most 64 component levels. No game-version-specific definition list is applied.
     /// Retain this immutable snapshot for player/mob reads and include it in region options.
     public func enchantmentDefinitions(assets: GameAssets?) throws -> [String: EnchantmentDefinition] {
         guard let packs = try resourcePacks(assets: assets) else { return [:] }
