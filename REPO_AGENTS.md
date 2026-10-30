@@ -1238,6 +1238,18 @@ trade-price and sold-out numeric defaults remain a separate #222 code-fact findi
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.
 
+`World.readMapItems()` returns a `MapItemRead` with readable maps, unresolved IDs and directory
+listing completeness. `mapItems()` delegates to that one discovery owner and keeps its existing
+readable-fallback behavior. Missing directories establish empty listings; other listing errors
+leave absence unproven. A failed preferred file remains unresolved even if a lower-priority map
+is readable, and a failed higher-priority listing leaves lower-priority values unresolved too.
+Refresh clients can retain their prior values for those IDs and avoid removing absent IDs after
+incomplete discovery. Only the game's canonical decimal filename is accepted in either layout;
+leading zeros and a leading plus sign cannot substitute for the file the game reads. A bad
+lower-priority copy does not invalidate a readable preferred map. This additive #324 API supports the app's approved
+saved-map snapshot work in fahlman/Chunksee#469, requires a minor release before app adoption,
+and changes no map decoding, pixels, region/chunk reads or cache interpretation.
+
 `MapItem.rgb(forColor:)` owns saved-map byte interpretation. The single GameFacts release tool
 extracts MapColor's base palette and Brightness multipliers, including transparent/unused
 slots, and independently calls getColorFromPackedId for every possible saved byte. The public
