@@ -3,14 +3,15 @@ import Foundation
 extension TextComponent {
     /// Interpretable resource text before the client selects a language or lays it out.
     /// Styles and click/hover actions are omitted. Dynamic game-context content is unavailable.
-    public indirect enum Content: Sendable, Hashable {
+    /// Codable archives this typed value; `content(json:)` interprets Minecraft's JSON format.
+    public indirect enum Content: Sendable, Hashable, Codable {
         case literal(String)
         case translated(key: String, fallback: String?, arguments: [Argument])
         case sequence([Content])
     }
 
-    /// Translation arguments retain their primitive type or nested component.
-    public enum Argument: Sendable, Hashable {
+    /// Translation arguments retain their primitive type or nested component when archived too.
+    public enum Argument: Sendable, Hashable, Codable {
         case string(String)
         case integer(Int64)
         case float(Float)

@@ -294,6 +294,9 @@ RegionScanOptions sorts its block-ID set when encoding
 and includes the whole enchantment definitions; nil and empty filters remain distinct.
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
+Non-finite numbers encode as the strings Infinity, -Infinity and NaN, matching typed JSON archives;
+finite encodings and existing identities stay unchanged. Inputs admitting both numeric values and
+literal strings in one encoded position must preserve type tags, as TextComponent.Argument does.
 Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
 terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
 including its owning reader revision and generated/dependent identities. Changed covered output
@@ -1035,6 +1038,23 @@ interpretation is bounded to 64 levels/65,536 steps. No condition or live functi
 use the game's Float precision. Mob appearance/collar/equipment and pet sitting-order interpretation
 also belong here. All stored fields remain optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
+
+`EnchantmentDefinition.description` retains the definition's actual display component through
+the shared `TextComponent.Content` interpreter (#327); Enchantment.DIRECT_CODEC reads that field
+through ComponentSerialization.CODEC. It never guesses a language key from the enchantment ID.
+Description work shares a 65,536-visit budget across the bounded registry
+query, with 64 component levels and the existing file/count/byte limits. Missing, malformed,
+dynamic or over-budget text leaves only the description unavailable; independent level, slot
+and health facts remain readable. Content and its typed arguments are Codable snapshots, distinct
+from Minecraft JSON interpretation. Old definition archives decode with nil descriptions.
+RegionFacts already archives the complete definitions in RegionScanOptions, so descriptions
+participate in that existing cache identity and can invalidate older or changed definition
+snapshots; the saved creature and health interpretation is unchanged. No region/chunk traversal,
+component interpretation or interpretation-version counter changes here. This additive API
+requires a minor release before fahlman/Chunksee#438 can adopt it; no release is claimed yet.
+Non-finite description arguments retain stable, distinct complete option identities through
+InterpretationKey instead of disabling the cache. Tests cover the real registry reader, changed
+argument kinds, independent rereads and RegionFacts archive reopening.
 
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
 and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime
