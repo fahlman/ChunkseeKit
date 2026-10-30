@@ -22,6 +22,7 @@ public struct EnchantmentDefinition: Sendable, Hashable, Codable {
     private init?(data: Data, textBudget: inout ResourceReadBudget) {
         guard data.count <= ZipResources.maximumResourceSize,
               let json = try? AssetJSON.object(from: data) else { return nil }
+        // Enchantment.DIRECT_CODEC reads description through ComponentSerialization.CODEC.
         description = json["description"].flatMap { try? TextComponent.content($0, budget: &textBudget) }
         // Enchantment.EnchantmentDefinition.CODEC uses intRange(1, 255) for max_level.
         let level = try? AssetJSON.integer(json["max_level"])

@@ -1037,8 +1037,9 @@ also belong here. All stored fields remain optional, so older cached creatures s
 but must be reread for the values. See README for format coverage and availability.
 
 `EnchantmentDefinition.description` retains the definition's actual display component through
-the shared `TextComponent.Content` interpreter (#327); it never guesses a language key from
-the enchantment ID. Description work shares a 65,536-visit budget across the bounded registry
+the shared `TextComponent.Content` interpreter (#327); Enchantment.DIRECT_CODEC reads that field
+through ComponentSerialization.CODEC. It never guesses a language key from the enchantment ID.
+Description work shares a 65,536-visit budget across the bounded registry
 query, with 64 component levels and the existing file/count/byte limits. Missing, malformed,
 dynamic or over-budget text leaves only the description unavailable; independent level, slot
 and health facts remain readable. Content and its typed arguments are Codable snapshots, distinct
