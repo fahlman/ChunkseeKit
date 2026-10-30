@@ -1376,14 +1376,21 @@ remain on #255. Paired copied-current-world timing is required before publishing
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the
 final ID-derived fallback. GameLanguage is an immutable Sendable, Equatable snapshot; equality
-compares every effective translation after fallback and key migration plus the requested language's
-own declaration, independent of the source
+compares every effective translation after fallback and key migration, the declared replacement keys,
+and the requested language's own declaration, independent of the source
 or query history (#292). Clients can retain their snapshot identity across unchanged rereads.
 `declaredLanguageCode` exposes the requested files' own `language.code` before key migration,
 with the same namespace/indexed-file precedence and without inheriting English's declaration.
 It may differ from the resource filename; absent declarations remain nil while readable translations
 and per-key English fallback stay available. The app owns interpreting this code as a locale and
 choosing a language. This additive #300 API needs a minor release and adds no file reads or parser.
+`replacementKey(for:)` exposes the direct old-to-new key declaration from the same bounded
+deprecated-translation metadata read. Clients naming older saved identifiers can use that key
+explicitly without copying the metadata parser or maintaining a rename list. The query does not
+follow chains or promise a translated destination, and the translation subscript keeps its
+existing removal/rename semantics. Missing or malformed metadata supplies no replacements.
+This additive #333 API needs a minor release before app adoption on fahlman/Chunksee#438;
+it changes no saved data, region reads, rendering or interpretation versions.
 Its subscript returns
 nil only when no readable translation remains. The jar supplies language resources across its
 namespaces; an optional installation folder supplies the jar version's launcher metadata,

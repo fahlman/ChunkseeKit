@@ -4,6 +4,7 @@ import Foundation
 /// layout, argument substitution and the final ID-based fallback belong to the client.
 public struct GameLanguage: Sendable, Equatable {
     fileprivate let values: [String: String]
+    fileprivate let renamedKeys: [String: String]
 
     /// The requested language's own `language.code`, without inheriting English's declaration.
     /// This may differ from its resource filename. Nil means that the requested files supplied
@@ -13,6 +14,12 @@ public struct GameLanguage: Sendable, Equatable {
 
     /// The selected language's value, then English; nil when neither supplies this key.
     public subscript(key: String) -> String? { values[key] }
+
+    /// The direct replacement declared by the game's deprecated-translation metadata.
+    /// This does not follow a chain or guarantee that the replacement has a translation.
+    /// Direct subscripting still reflects the game's removals and renames; clients naming
+    /// older saved identifiers can explicitly look up this replacement when one is supplied.
+    public func replacementKey(for key: String) -> String? { renamedKeys[key] }
 }
 
 extension GameAssets {
@@ -78,15 +85,17 @@ private struct GameLanguageReader {
             }
             if selected == locale { declaredLanguageCode = declaration }
         }
+        var renamedKeys: [String: String] = [:]
         // The game applies these data-supplied removals/renames after merging all languages.
         if let data = archive("assets/minecraft/lang/deprecated.json"),
            let rules = try? AssetJSON.decode(Deprecated.self, from: data) {
+            renamedKeys = rules.renamed
             for key in rules.removed { values[key] = nil }
             for (old, new) in rules.renamed.sorted(by: { $0.key < $1.key }) {
                 values[new] = values.removeValue(forKey: old)
             }
         }
-        return GameLanguage(values: values, declaredLanguageCode: declaredLanguageCode)
+        return GameLanguage(values: values, renamedKeys: renamedKeys, declaredLanguageCode: declaredLanguageCode)
     }
 
     private struct Deprecated: Decodable {
