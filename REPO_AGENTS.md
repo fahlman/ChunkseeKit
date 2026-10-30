@@ -1649,13 +1649,14 @@ Ryan approved this process on 2026-10-09.
 
 ## Toolchain and platforms
 
-Rechecked on 2026-10-18 against [Apple's releases](https://developer.apple.com/news/releases/),
+Rechecked on 2026-10-30 against [Apple's App Store listing](https://apps.apple.com/us/app/xcode/id497799835?mt=12),
 [its SDK table](https://developer.apple.com/xcode/system-requirements), and the
 [Swift releases](https://www.swift.org/install/macos/), then compared with the installed tools
-and the project's settings. Xcode 27.2 and Swift snapshots are previews, not the stable toolchain.
+and the project's settings. Xcode 27.2 is the final App Store release. Compiler and SDK
+versions below are from the selected final installation.
 
-- **Compiler:** Xcode 27.1 (`27A9275`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
+- **Compiler:** Xcode 27.2 (`27B52`) and Apple Swift 6.4.2 (`swiftlang-6.4.2.1.9`). The
   package requires `swift-tools-version: 6.4`.
 - **Swift language mode:** 6, set explicitly with `swiftLanguageModes: [.v6]`.
-- **SDK:** macOS 27.0 SDK. The package doesn't pin an SDK version.
+- **SDK:** macOS 27.2 SDK. The package doesn't pin an SDK version.
 - **Minimum macOS:** 27, set with `platforms: [.macOS(.v27)]`. The package is Mac only.
