@@ -294,6 +294,9 @@ RegionScanOptions sorts its block-ID set when encoding
 and includes the whole enchantment definitions; nil and empty filters remain distinct.
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
+Non-finite numbers encode as the strings Infinity, -Infinity and NaN, matching typed JSON archives;
+finite encodings and existing identities stay unchanged. Inputs admitting both numeric values and
+literal strings in one encoded position must preserve type tags, as TextComponent.Argument does.
 Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
 terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
 including its owning reader revision and generated/dependent identities. Changed covered output
@@ -1049,6 +1052,9 @@ participate in that existing cache identity and can invalidate older or changed 
 snapshots; the saved creature and health interpretation is unchanged. No region/chunk traversal,
 component interpretation or interpretation-version counter changes here. This additive API
 requires a minor release before fahlman/Chunksee#438 can adopt it; no release is claimed yet.
+Non-finite description arguments retain stable, distinct complete option identities through
+InterpretationKey instead of disabling the cache. Tests cover the real registry reader, changed
+argument kinds, independent rereads and RegionFacts archive reopening.
 
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
 and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime

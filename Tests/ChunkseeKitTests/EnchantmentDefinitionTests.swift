@@ -208,6 +208,29 @@ import ChunkseeKitTestSupport
         })
     }
 
+    @Test func nonfiniteDescriptionsKeepCompleteScanInputsIdentifiable() throws {
+        func options(_ argument: String) throws -> RegionScanOptions {
+            let source = #"{"description":{"translate":"pack.name","with":[\#(argument)]},"max_level":3,"slots":["head"]}"#
+            return try RegionScanOptions(enchantments: assets([entry("example:large", source)]).enchantmentDefinitions())
+        }
+        let positive = try options("1e9999"), negative = try options("-1e9999")
+        let literal = try options(#""Infinity""#), finite = try options("1")
+        #expect(positive.enchantments["example:large"]?.description ==
+            .translated(key: "pack.name", fallback: nil, arguments: [.float(.infinity)]))
+        let identity = try InterpretationKey.identity(of: positive)
+        #expect(try identity == InterpretationKey.identity(of: options("1e9999")))
+        let keys = try [positive, negative, literal, finite].map { try InterpretationKey.identity(of: $0) }
+        #expect(Set(keys).count == keys.count)
+
+        let facts = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0), options: positive)
+        let encoder = JSONEncoder(), decoder = JSONDecoder()
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+        let reopened = try decoder.decode(RegionFacts.self, from: encoder.encode(facts))
+        #expect(reopened.options == positive)
+        #expect(try InterpretationKey.identity(of: reopened.options) == identity)
+    }
+
     @Test func directAndNestedAttributesAreDistinguishedFromUnrelatedEffects() throws {
         func read(_ text: String) throws -> EnchantmentDefinition { try #require(EnchantmentDefinition(data: Data(text.utf8))) }
         #expect(try read(neutral).hasMaximumHealthModifier == false)

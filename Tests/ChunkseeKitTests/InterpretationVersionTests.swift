@@ -15,7 +15,25 @@ import Testing
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
         #expect(try InterpretationKey.identity(of: original)
             == "009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33")
-        #expect(throws: EncodingError.self) { try InterpretationKey.identity(of: Double.nan) }
+        #expect(try InterpretationKey.identity(of: [1.25, -2.5])
+            == "6bf41ffa52c6edc6600452cd4f3ce54983f8b48cbc9761f8c15debf2d97e562b")
+    }
+
+    @Test func nonfiniteNumbersHaveStableDistinctIdentities() throws {
+        let values: [Double] = [.infinity, -.infinity, .nan]
+        let keys = try values.map { try InterpretationKey.identity(of: $0) }
+        #expect(Set(keys).count == values.count)
+        #expect(try InterpretationKey.identity(of: Float.infinity) == keys[0])
+        #expect(try InterpretationKey.identity(of: -Float.infinity) == keys[1])
+        #expect(try InterpretationKey.identity(of: Float.nan) == keys[2])
+    }
+
+    @Test func encodingFailuresStillPropagateWithoutAFallbackIdentity() throws {
+        struct Invalid: Encodable {
+            enum Failure: Error { case rejected }
+            func encode(to encoder: any Encoder) throws { throw Failure.rejected }
+        }
+        #expect(throws: Invalid.Failure.self) { try InterpretationKey.identity(of: Invalid()) }
     }
 
     @Test func publishedContractsSurviveReopeningAndRemainDistinct() throws {
