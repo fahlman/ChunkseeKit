@@ -222,12 +222,20 @@ import ChunkseeKitTestSupport
         let keys = try [positive, negative, literal, finite].map { try InterpretationKey.identity(of: $0) }
         #expect(Set(keys).count == keys.count)
 
-        let facts = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0), options: positive)
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let current = try world(root, packs: ["vanilla"])
+        let dimension = try #require(current.dimension("overworld")), region = RegionPosition(x: 0, z: 0)
+        let entity = saved("example:large")
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(["Entities": .list([entity])]))]),
+                           to: dimension.regionURL(.entities, at: region))
+        let facts = try dimension.scan(region: region, options: positive)
+        #expect(facts.creatures.count == 1 && facts.options == positive)
         let encoder = JSONEncoder(), decoder = JSONDecoder()
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
         decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
         let reopened = try decoder.decode(RegionFacts.self, from: encoder.encode(facts))
-        #expect(reopened.options == positive)
+        #expect(reopened.options == positive && reopened.creatures == facts.creatures)
         #expect(try InterpretationKey.identity(of: reopened.options) == identity)
     }
 
