@@ -1244,8 +1244,9 @@ readable-fallback behavior. Missing directories establish empty listings; other 
 leave absence unproven. A failed preferred file remains unresolved even if a lower-priority map
 is readable, and a failed higher-priority listing leaves lower-priority values unresolved too.
 Refresh clients can retain their prior values for those IDs and avoid removing absent IDs after
-incomplete discovery. Same-priority readable aliases resolve their ID; a bad lower-priority copy
-does not invalidate a readable preferred map. This additive #324 API supports the app's approved
+incomplete discovery. Only the game's canonical decimal filename is accepted in either layout;
+leading zeros and a leading plus sign cannot substitute for the file the game reads. A bad
+lower-priority copy does not invalidate a readable preferred map. This additive #324 API supports the app's approved
 saved-map snapshot work in fahlman/Chunksee#469, requires a minor release before app adoption,
 and changes no map decoding, pixels, region/chunk reads or cache interpretation.
 

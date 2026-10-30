@@ -87,14 +87,25 @@ import Testing
         #expect(absent.maps == read.maps && absent.unresolvedIDs.isEmpty && absent.isListingComplete)
     }
 
-    @Test func samePriorityReadableNamesResolveAnIDRegardlessOfEnumerationOrder() throws {
-        let world = try makeWorld()
-        defer { try? FileManager.default.removeItem(at: world.url) }
-        try map("data/minecraft/maps/1.dat", in: world)
-        try Data([1, 2, 3]).write(to: world.url.appendingPathComponent("data/minecraft/maps/01.dat"))
-        let read = world.readMapItems()
-        #expect(read.maps.map(\.id) == [1] && read.unresolvedIDs.isEmpty && read.isListingComplete)
-        #expect(world.mapItems() == read.maps)
+    @Test func noncanonicalNamesCannotReplaceAFailedGameFileOrIntroduceAnotherMap() throws {
+        for (directory, prefix) in [("data/minecraft/maps", ""), ("data", "map_")] {
+            let world = try makeWorld()
+            defer { try? FileManager.default.removeItem(at: world.url) }
+            for stem in ["01", "+1", "0001", "003"] {
+                try map("\(directory)/\(prefix)\(stem).dat", in: world, center: 100)
+            }
+            try map("\(directory)/\(prefix)2.dat", in: world, center: 20)
+            for stem in ["1", "02"] {
+                try Data([1, 2, 3]).write(to: world.url.appendingPathComponent("\(directory)/\(prefix)\(stem).dat"))
+            }
+            let read = world.readMapItems()
+            #expect(read.maps.map(\.id) == [2] && read.unresolvedIDs == [1] && read.isListingComplete)
+            #expect(world.mapItems() == read.maps)
+            try map("\(directory)/\(prefix)1.dat", in: world, center: 10)
+            let repaired = world.readMapItems()
+            #expect(repaired.maps.map(\.id) == [1, 2] && repaired.maps.map(\.centerX) == [10, 20])
+            #expect(repaired.unresolvedIDs.isEmpty && repaired.isListingComplete)
+        }
     }
 
     @Test func unreadableLegacyFileDoesNotDisqualifyAReadablePreferredMap() throws {

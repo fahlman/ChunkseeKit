@@ -115,8 +115,9 @@ extension World {
             }
             var failed: Set<Int> = [], readHere: Set<Int> = []
             for name in names {
-                guard name.hasPrefix(prefix), name.hasSuffix(".dat"),
-                      let id = Int(name.dropFirst(prefix.count).dropLast(4)), maps[id] == nil else { continue }
+                guard name.hasPrefix(prefix), name.hasSuffix(".dat") else { continue }
+                let stem = name.dropFirst(prefix.count).dropLast(4)
+                guard let id = Int(stem), stem == String(id), maps[id] == nil else { continue }
                 if let nbt = try? NBT.read(contentsOf: folder.appendingPathComponent(name)),
                    let map = MapItem(id: id, nbt: nbt) {
                     maps[id] = map
@@ -125,9 +126,7 @@ extension World {
                     failed.insert(id)
                 }
             }
-            // Equivalent filenames in one directory share its priority; a readable one resolves
-            // that directory. A lower-priority fallback cannot resolve a failed preferred read.
-            unresolved.formUnion(failed.subtracting(readHere))
+            unresolved.formUnion(failed)
             if !listingComplete { unresolved.formUnion(readHere) }
         }
         return MapItemRead(maps: maps.values.sorted { $0.id < $1.id },
