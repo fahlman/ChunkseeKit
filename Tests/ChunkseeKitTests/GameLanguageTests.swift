@@ -269,4 +269,64 @@ import ChunkseeKitTestSupport
         #expect(try assets(version: "../outside").languageCodes(minecraftDirectory: root) == ["en_us"])
         #expect(try assets(version: "../outside").language("fr_fr", minecraftDirectory: root)["block.minecraft.stone"] == "Stone")
     }
+
+    @Test func legacyRuleKeysExposeTheGamesReplacementWithSelectedAndEnglishNames() throws {
+        let language = try assets([
+            .init(path: "assets/example/lang/en_us.json", text: #"{"gamerule.keepInventory":"Keep inventory after death","gamerule.doDaylightCycle":"Advance time"}"#),
+            .init(path: "assets/example/lang/fr_fr.json", text: #"{"gamerule.keepInventory":"Conserver l'inventaire"}"#),
+            .init(path: "assets/minecraft/lang/deprecated.json", text: #"{"removed":[],"renamed":{"gamerule.keepInventory":"gamerule.minecraft.keep_inventory","gamerule.doDaylightCycle":"gamerule.minecraft.advance_time"}}"#),
+        ]).language("fr_fr")
+        let inventory = try #require(language.replacementKey(for: "gamerule.keepInventory"))
+        let time = try #require(language.replacementKey(for: "gamerule.doDaylightCycle"))
+        #expect(inventory == "gamerule.minecraft.keep_inventory")
+        #expect(time == "gamerule.minecraft.advance_time")
+        #expect(language[inventory] == "Conserver l'inventaire")
+        #expect(language[time] == "Advance time")
+        #expect(language["gamerule.keepInventory"] == nil && language["gamerule.doDaylightCycle"] == nil)
+        #expect(language.replacementKey(for: inventory) == nil)
+        #expect(language.replacementKey(for: "gamerule.unknown") == nil)
+    }
+
+    @Test func replacementMetadataDoesNotInventTranslationsOrFollowChains() throws {
+        let language = try assets([
+            .init(path: "assets/example/lang/en_us.json", text: #"{"removed":"Gone","destination":"Discarded","first":"Moved","identity":"Kept"}"#),
+            .init(path: "assets/minecraft/lang/deprecated.json", text: #"{"removed":["removed"],"renamed":{"absent":"destination","removed":"removed.destination","first":"second","second":"last","identity":"identity"}}"#),
+        ]).language("en_us")
+        #expect(language.replacementKey(for: "removed") == "removed.destination")
+        #expect(language["removed"] == nil && language["removed.destination"] == nil)
+        #expect(language.replacementKey(for: "absent") == "destination")
+        #expect(language["absent"] == nil && language["destination"] == nil)
+        #expect(language.replacementKey(for: "first") == "second")
+        #expect(language.replacementKey(for: "second") == "last")
+        #expect(language["first"] == nil && language["second"] == nil && language["last"] == "Moved")
+        #expect(language.replacementKey(for: "identity") == "identity" && language["identity"] == "Kept")
+    }
+
+    @Test func missingOrMalformedReplacementMetadataKeepsDirectTranslations() throws {
+        #expect(try assets().language("en_us").replacementKey(for: "block.minecraft.stone") == nil)
+        for metadata in ["not JSON", "{}", #"{"removed":[],"renamed":[]}"#,
+                         #"{"removed":[],"renamed":{"block.minecraft.stone":3}}"#] {
+            let language = try assets([
+                .init(path: "assets/minecraft/lang/deprecated.json", text: metadata),
+            ]).language("en_us")
+            #expect(language.replacementKey(for: "block.minecraft.stone") == nil)
+            #expect(language["block.minecraft.stone"] == "Stone")
+        }
+    }
+
+    @Test func equalityIncludesReplacementMetadataWithoutTranslatedValues() throws {
+        func language(_ destination: String) throws -> GameLanguage {
+            let rules: [String: Any] = ["removed": [], "renamed": ["old": destination]]
+            let metadata = try JSONSerialization.data(withJSONObject: rules)
+            return try assets([
+                .init(path: "assets/minecraft/lang/deprecated.json", text: String(decoding: metadata, as: UTF8.self)),
+            ]).language("en_us")
+        }
+        let first = try language("first"), second = try language("second")
+        #expect(first["old"] == nil && first["first"] == nil && second["second"] == nil)
+        #expect(first["block.minecraft.stone"] == second["block.minecraft.stone"])
+        #expect(first.replacementKey(for: "old") == "first" && second.replacementKey(for: "old") == "second")
+        #expect(first != second)
+        #expect(first == (try language("first")))
+    }
 }
