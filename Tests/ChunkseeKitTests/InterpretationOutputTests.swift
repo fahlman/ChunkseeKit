@@ -91,8 +91,8 @@ import Testing
         let checks: [[Bool?]]
     }
 
-    @Test func lightOutputMatchesItsRevision() throws {
-        let rules = try [false, true].map { skylight in
+    private func lightRules() throws -> [MonsterSpawnLight] {
+        try [false, true].map { skylight in
             let type = try #require(DimensionType(.compound([
                 "min_y": .int(-64), "height": .int(384), "logical_height": .int(384),
                 "has_ceiling": .byte(0), "has_skylight": .byte(skylight ? 1 : 0),
@@ -100,6 +100,10 @@ import Testing
             ])))
             return try #require(MonsterSpawnLight(type: type, skyLightLevel: 11))
         }
+    }
+
+    @Test func lightOutputMatchesItsRevision() throws {
+        let rules = try lightRules()
         let points = [-17, -16, -1, 0, 15, 16, 32].flatMap { y in
             (0..<16).map { (x: $0, y: y, z: $0 % 2) }
         }
@@ -136,6 +140,152 @@ import Testing
         try check(facts, version: RegionFacts.interpretationVersion,
                   baselines: [regionFacts29: "c0e7507380146274ce8e2148ed89e1c5bf65dd0d7f3a0559690c482ee5019ec3",
                               regionFacts30: "6653e5f8c3ae0d15d8cd7e85a909ea3b1c4d1bf048b68439fd37e5f7c2869957"])
+    }
+
+    private struct NumericCase {
+        let id: String
+        let input: NBT
+        /// Query the captured game section, so a changed section reader cannot move the probe too.
+        let probeY: Int
+    }
+
+    /// These inputs extend the ordinary fixtures above without replacing their old baselines.
+    /// The numeric oracle is SavedNumericSample; missing fields and layout precedence reuse #316.
+    private func numericCases() throws -> [NumericCase] {
+        let fixtures = ChunkPrimitiveFieldTests()
+        var cases = try SavedNumericSample.all.map { sample in
+            NumericCase(id: "numeric/" + sample.id, input: try fixtures.saved(sample), probeY: sample.byteValue * 16)
+        }
+        let one = try #require(SavedNumericSample.all.first { $0.id == "byte:1" })
+        for field in ["xPos", "zPos", "Y", "LastUpdate", "InhabitedTime", "isLightOn"] {
+            for (index, invalid) in fixtures.absentOrNonnumeric.enumerated() {
+                var input = try #require(fixtures.saved(one).compound)
+                if field == "Y" {
+                    var section = try #require(input["sections"]?.list?.first?.compound)
+                    section["Y"] = invalid
+                    input["sections"] = .list([.compound(section)])
+                } else { input[field] = invalid }
+                cases.append(.init(id: "invalid/\(field)/\(index)", input: .compound(input), probeY: 16))
+            }
+        }
+        let rootTimes = fixtures.absentOrNonnumeric + [.double(-0.5), .float(-0.5), .long(0)]
+        for (index, time) in rootTimes.enumerated() {
+            var input: [String: NBT] = [
+                "xPos": .int(0), "zPos": .int(0), "sections": .list([.compound(["Y": .string("bad")])]),
+                "Level": .compound(["InhabitedTime": .double(-1.5)]),
+            ]
+            input["InhabitedTime"] = time
+            cases.append(.init(id: "fallback/\(index)", input: .compound(input), probeY: 0))
+        }
+        var section = try #require(Fixtures.section(y: 0, palette: [.string("minecraft:stone")]).compound)
+        section["Y"] = .short(260)
+        let wrapped = NBT.compound(["DataVersion": .int(Int32.max), "InhabitedTime": .double(-0.5), "Level": .compound([
+            "xPos": .double(-0.5), "zPos": .long(4_294_967_297), "Status": .string("full"),
+            "Sections": .list([.compound(section)]), "InhabitedTime": .float(-0.5), "LastUpdate": .double(-1.5),
+            "isLightOn": .int(256),
+        ])])
+        cases.append(.init(id: "wrapped", input: wrapped, probeY: 64))
+        for sample in SavedNumericSample.all {
+            let legacy = NBT.compound(["DataVersion": .int(1343), "Level": .compound([
+                "xPos": .int(0), "zPos": .int(0), "Status": .string("full"),
+                "Sections": .list([.compound(["Y": .byte(0), "Blocks": .byteArray([Int8](repeating: 1, count: 4096))])]),
+                "InhabitedTime": sample.tag,
+            ])])
+            cases.append(.init(id: "legacy/" + sample.id, input: legacy, probeY: 0))
+        }
+        return cases
+    }
+
+    private func numericText<Value: CustomStringConvertible>(_ value: Value?) -> String? {
+        value?.description
+    }
+
+    @Test func numericTerrainOutputMatchesItsRevision() throws {
+        var rows: [[String?]] = []
+        for sample in try numericCases() {
+            let bytes = sample.input.serialized(), input = try NBT.read(bytes).value
+            let chunk = try? Chunk(nbt: input)
+            // Include rejection and independent records: a terrain failure must not hide saved time.
+            rows.append([
+                sample.id, chunk == nil ? "unreadable" : "readable",
+                numericText(chunk?.x), numericText(chunk?.z),
+                chunk.map { $0.sections.map { String($0.y) }.joined(separator: ",") },
+                numericText(chunk?.minSectionY), chunk?.status,
+                numericText(chunk?.lastUpdate), numericText(chunk?.inhabitedTime), numericText(chunk?.isLightOn),
+                numericText(chunk?.surfaceY(x: 0, z: 0)),
+                chunk?.block(x: 0, y: sample.probeY, z: 0)?.description,
+                chunk?.biomeSnapshot.biome(x: 0, y: sample.probeY, z: 0),
+                numericText(Chunk.inhabitedTime(in: input)),
+            ])
+            #expect(input.serialized() == bytes)
+        }
+        #expect(rows.count == 434)
+        try check(rows, version: Chunk.interpretationVersion,
+                  baselines: [terrain2: "ffef99876ac54f98aef4107fa75bbb9963fc79e95379962d0fcbc2faa7f78e84"])
+    }
+
+    @Test func numericLightOutputMatchesItsRevision() throws {
+        let rules = try lightRules()
+        let profiles: [(String, Set<String>)] = [
+            ("full", []), ("terrainAndLight", Chunk.keysNotNeededForTerrainAndLight),
+            ("terrain", Chunk.keysNotNeededForTerrain), ("biomes", Chunk.keysNotNeededForBiomes),
+        ]
+        var rows: [[String?]] = []
+        for sample in try numericCases() {
+            let bytes = sample.input.serialized()
+            for (profile, skipping) in profiles {
+                let chunk = try? Chunk(nbt: NBT.read(bytes, skipping: skipping).value)
+                rows.append([
+                    sample.id, profile, numericText(chunk?.isLightOn),
+                    numericText(chunk?.blockLight(x: 0, y: sample.probeY, z: 0)),
+                    numericText(chunk?.resolvedBlockLight(x: 0, y: sample.probeY, z: 0)),
+                    numericText(chunk?.skyLight(x: 0, y: sample.probeY, z: 0)),
+                    numericText(chunk.flatMap { rules[0].canPass(in: $0, x: 0, y: sample.probeY, z: 0) }),
+                    numericText(chunk.flatMap { rules[1].canPass(in: $0, x: 0, y: sample.probeY, z: 0) }),
+                ])
+            }
+        }
+        #expect(rows.count == 1736)
+        try check(rows, version: MonsterSpawnLight.interpretationVersion,
+                  baselines: [light1Terrain2: "19c9400af6529cb7162d22380b42b519fd3a80c0cef456e24be2334adbe2c5a8"])
+    }
+
+    @Test func numericRegionArchiveOutputMatchesItsRevision() throws {
+        let cases = try numericCases()
+        try #require(cases.count <= 1024)
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root), position = RegionPosition(x: 0, z: 0)
+        let bytes = try Fixtures.region(cases.enumerated().map { index, sample in
+            .init(localX: index % 32, localZ: index / 32, nbt: sample.input)
+        })
+        let url = dimension.regionURL(.terrain, at: position)
+        try Fixtures.write(bytes, to: url)
+        let scanned = try dimension.scan(region: position)
+        let facts = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(scanned))
+        #expect(try InterpretationKey.identity(of: facts) == InterpretationKey.identity(of: scanned))
+        #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
+        #expect(try Data(contentsOf: url) == Data(bytes))
+        let chunks = Dictionary(uniqueKeysWithValues: facts.chunks.map { ($0.position, $0) })
+        var rows: [[String?]] = [[
+            "formats", String(facts.formats.readable), String(facts.formats.legacy),
+            String(facts.formats.unreadableTerrain), String(facts.formats.unreadableEntities),
+            String(facts.formats.unreadablePointsOfInterest), facts.paletteBlockIDs.sorted().joined(separator: ","),
+        ]]
+        for (index, sample) in cases.enumerated() {
+            let chunk = chunks[ChunkPosition(x: index % 32, z: index / 32)]
+            let deposit = chunk?.blockDeposits.first
+            rows.append([
+                sample.id, chunk == nil ? "unreadable" : "readable", String(facts.inhabitedTimes[index]),
+                numericText(chunk?.position.x), numericText(chunk?.position.z), chunk?.status,
+                deposit?.id, numericText(deposit?.count), numericText(deposit?.minY), numericText(deposit?.maxY),
+                chunk?.sampledBiome, chunk?.biomes.joined(separator: ","), numericText(chunk?.isFullyGenerated),
+            ])
+            #expect((chunk?.blockDeposits.count ?? 0) <= 1)
+        }
+        #expect(rows.count == 435)
+        try check(rows, version: RegionFacts.interpretationVersion,
+                  baselines: [regionFacts30: "bcfe02de242dd9693b9846f1d226df840ab1b9a93225bdd767dea5fce2d9e321"])
     }
 
     private struct MaterialOutput: Encodable {
