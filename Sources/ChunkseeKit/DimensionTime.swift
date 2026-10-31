@@ -9,41 +9,7 @@ public struct DimensionTime: Sendable, Equatable {
     public let timelines: Timelines
 
     /// Unresolved registry references. A tag is distinct from an ordered list of timeline IDs.
-    public enum Timelines: Sendable, Equatable {
-        case tag(String)
-        case list([String])
-
-        fileprivate init?(single: String) {
-            if single.hasPrefix("#") {
-                guard let id = Identifier(String(single.dropFirst())) else { return nil }
-                self = .tag(id.description)
-            } else {
-                guard let id = Identifier(single) else { return nil }
-                self = .list([id.description])
-            }
-        }
-
-        fileprivate init?(nbt: NBT) {
-            if let single = nbt.string { self.init(single: single) }
-            else if let values = nbt.list {
-                let strings = values.compactMap(\.string)
-                guard strings.count == values.count else { return nil }
-                self.init(list: strings)
-            } else { return nil }
-        }
-
-        fileprivate init?(json: Any) {
-            if let single = json as? String { self.init(single: single) }
-            else if let values = json as? [String] { self.init(list: values) }
-            else { return nil }
-        }
-
-        fileprivate init?(list: [String]) {
-            let ids = list.compactMap { Identifier($0)?.description }
-            guard ids.count == list.count else { return nil }
-            self = .list(ids)
-        }
-    }
+    public typealias Timelines = RegistryReferences
 
     private init(hasSkylight: Bool, hasFixedTime: Bool?, defaultClock: Identifier?, timelines: Timelines?) {
         self.hasSkylight = hasSkylight
@@ -93,22 +59,5 @@ extension DimensionTime: Decodable {
                       hasFixedTime: fields.decodeIfPresent(Bool.self, forKey: .hasFixedTime),
                       defaultClock: fields.decodeIfPresent(Identifier.self, forKey: .defaultClock),
                       timelines: fields.decodeIfPresent(Timelines.self, forKey: .timelines))
-    }
-}
-
-extension DimensionTime.Timelines: Decodable {
-    public init(from decoder: any Decoder) throws {
-        let value = try decoder.singleValueContainer()
-        if let text = try? value.decode(String.self) {
-            guard let parsed = Self(single: text) else {
-                throw DecodingError.dataCorruptedError(in: value, debugDescription: "Invalid timeline reference")
-            }
-            self = parsed
-        } else {
-            guard let parsed = Self(list: try value.decode([String].self)) else {
-                throw DecodingError.dataCorruptedError(in: value, debugDescription: "Invalid timeline list")
-            }
-            self = parsed
-        }
     }
 }
