@@ -1561,7 +1561,12 @@ The unreleased #235 reader retains variant strings, saved collar dyes and equipm
 owner or type inventory. Numeric appearances use the generated schemas in GeneratedMobAppearance;
 an unknown value leaves only that fact unavailable. Current/legacy equipment parsing has one
 owner in EntityEquipment. Existing collar defaults and sitting-order policy stay intact. Saved ChestedHorse creates a
-descriptive storage item only when a readable saved storage slot is absent.
+descriptive storage item only when a readable saved storage slot is absent. Its flag uses the
+shared primitive-boolean reader, following AbstractChestedHorse.readAdditionalSaveData's
+ValueInput.getBooleanOr(false): numeric tags narrow to a byte, floating tags use the game's
+floor conversion, and missing or nonnumeric flags add no chest. Explicit saved storage still
+wins and unfamiliar type IDs stay readable. The #316 correction advances RegionFacts to 32
+for changed descriptive equipment; terrain, light, asset and generated identities stay intact.
 
 The #278 additive `CreatureAppearance.colorSource(for:)` supplies a renderer RGB multiplier or
 adult texture ID for a known saved variant. The single release tool extracts the sheep wool

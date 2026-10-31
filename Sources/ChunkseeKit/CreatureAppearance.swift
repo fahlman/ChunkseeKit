@@ -79,7 +79,8 @@ enum CreatureData {
 
     static func equipment(_ nbt: NBT) -> [String: ItemStack]? {
         var items = EntityEquipment.creature(nbt)
-        if nbt["ChestedHorse"]?.bool == true {
+        // AbstractChestedHorse reads this flag with ValueInput.getBooleanOr(false).
+        if nbt["ChestedHorse"]?.compoundBoolean == true {
             if items == nil { items = [:] }
             if items?["storage"] == nil { items?["storage"] = ItemStack(id: GeneratedEquipmentFacts.attachedChestItem) }
         }
