@@ -71,7 +71,7 @@ public struct Creature: Sendable, Equatable, Codable {
         // Unlike Health or Owner, they identify the mob record written by the game. Reading
         // that format admits new IDs without maintaining a creature list. See Tools/EntityTypes.
         guard ["CanPickUpLoot", "PersistenceRequired", "LeftHanded"].allSatisfy({
-            nbt[$0]?.bool != nil
+            nbt[$0]?.compoundBoolean != nil
         }) else { return nil }
         let id = identifier.description
         self.init(id: id, x: pos[0], y: pos[1], z: pos[2],

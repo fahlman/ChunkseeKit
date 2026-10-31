@@ -1,5 +1,6 @@
 import ChunkseeIndex
 import ChunkseeKit
+import ChunkseeKitTestSupport
 import Foundation
 import Testing
 
@@ -39,5 +40,41 @@ import Testing
         #expect(CreatureEntry(creature) == nil)
         creature.x = 0; creature.z = Double(Int32.max) + 1
         #expect(CreatureEntry(creature) == nil)
+    }
+
+    @Test func scannedFloatingFlagsRetainEveryMobCategoryInTheDimensionIndex() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
+            "LevelName": .string("Mob categories"), "DataVersion": .int(Int32.max)
+        ])]), to: root.appendingPathComponent("level.dat"))
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("dimensions/minecraft/overworld"),
+                                                withIntermediateDirectories: true)
+        let dimension = try #require(World(contentsOf: root).dimension("overworld"))
+        let coordinate = RegionPosition(x: 0, z: 0), catalog = NotableBlock.Catalog(tags: [:])
+        let owner = UUID()
+        let records: [NBT] = (0..<4).map { index in
+            var fields: [String: NBT] = [
+                "id": .string("future:mob_\(index)"), "Pos": .list([.double(Double(index)), .double(64), .double(0)]),
+                "CanPickUpLoot": .float(0.5), "PersistenceRequired": .double(-0.5), "LeftHanded": .double(.nan)
+            ]
+            if index > 0 { fields["CustomName"] = .string("Visitor") }
+            if index > 1 { fields["Owner"] = Fixtures.uuidInts(owner) }
+            if index > 2 {
+                fields["VillagerData"] = .compound(["profession": .string("minecraft:farmer")])
+            }
+            return .compound(fields)
+        }
+        let input = NBT.compound(["DataVersion": .int(Int32.max), "Entities": .list(records)])
+        let file = dimension.regionURL(.entities, at: coordinate)
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: input)]), to: file)
+        let bytes = try Data(contentsOf: file)
+        let facts = try dimension.scan(region: coordinate, options: .init(blockIDs: catalog.blockIDs))
+        let region = RegionIndex(facts, caveBiomeIDs: [], notableBlocks: catalog)
+        let index = DimensionIndex(dimension: dimension.id, caveBiomeIDs: [], notableBlocks: catalog)
+            .updating(available: [coordinate], selected: nil, replacements: [region])
+        #expect(index.creatures.map(\.creature.id) == (0..<4).map { "future:mob_\($0)" })
+        #expect(index.creatures.map(\.group) == [.mob, .named, .pet, .villager])
+        #expect(try Data(contentsOf: file) == bytes)
     }
 }
