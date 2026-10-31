@@ -315,6 +315,13 @@ Sources and interpretation:
   The shared generated block defaults supply omitted properties at runtime. These facts are not
   an existence catalog, texture-coverage estimate, fluid simulation or version gate.
 
+`BlockStateValues` owns the property reduction shared by the tint, fluid and upper-face
+extractors. It removes a property only when projecting it away leaves one equal result for
+every remaining combination, including explicit unknown results. The extractors keep their
+own state collection, provenance and output fields. The helper is compiled and hashed by
+the same release entrypoint; moving this rule must preserve canonical extracted facts, generated
+tables and interpretation digests byte for byte, with only tool provenance changing.
+
 - LayerDefinitions and the game's special-renderer model builders supply baked model polygons,
   UVs, skin dimensions and static inventory poses. The extractor calls each supported model's
   actual setupAnim method, walks its transformed ModelPart tree and records the original and
