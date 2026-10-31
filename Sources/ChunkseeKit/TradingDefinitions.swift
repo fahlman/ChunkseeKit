@@ -20,27 +20,26 @@ public struct TradingDefinitions: Sendable, Equatable {
             guard budget.consume(1), case .data(let data) = try sets.resource(id),
                   let json = json(data, budget: &budget) as? [String: Any],
                   let amount = try Amount.read(json["amount"], in: amounts, budget: &budget, visiting: &visiting),
-                  json["trades"] != nil else { continue }
+                  let raw = json["trades"] else { continue }
+            guard let reference = try RegistryReferences(json: raw,
+                tag: { GameAssets.resourceID($0)?.description }, members: { direct in
+                    guard direct.count <= 4096, budget.consume(direct.count) else { return nil }
+                    var found: [String] = []
+                    for raw in direct {
+                        guard let id = try? AssetJSON.identifier(raw),
+                              case .value = try trade(id.description, in: trades, budget: &budget) else { return nil }
+                        found.append(id.description)
+                    }
+                    return found
+                }) else { continue }
             let members: [String]?
-            if let reference = json["trades"] as? String, reference.hasPrefix("#"),
-               let tagID = GameAssets.resourceID(String(reference.dropFirst())) {
-                if case .value(let tag) = try tags.read(tagID.description, budget: &budget, element: { id, budget in
+            switch reference {
+            case .tag(let tagID):
+                if case .value(let tag) = try tags.read(tagID, budget: &budget, element: { id, budget in
                     try trade(id, in: trades, budget: &budget)
                 }) { members = tag.members.map(\.id) }
                 else { members = nil }
-            } else {
-                let direct = (json["trades"] as? [Any]) ?? (json["trades"] as? String).map { [$0] }
-                if let direct, direct.count <= 4096, budget.consume(direct.count) {
-                    var found: [String] = [], valid = true
-                    for raw in direct {
-                        guard let id = try? AssetJSON.identifier(raw),
-                              case .value = try trade(id.description, in: trades, budget: &budget) else {
-                            valid = false; break
-                        }
-                        found.append(id.description)
-                    }
-                    members = valid ? found : nil
-                } else { members = nil }
+            case .list(let direct): members = direct
             }
             // Empty candidates settle the answer independently of a dynamic amount. Otherwise
             // only a known constant amount establishes selection; no random/context roll is made.
