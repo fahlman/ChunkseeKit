@@ -488,6 +488,16 @@ when the source list exceeds the shared 64-pack bound. Cancellation also stops i
 This metadata query adds no tag expansion, registry
 validation, timeline evaluation, cache or presentation owner. App lighting remains on fahlman/Chunksee#357.
 
+`RegistryReferences` owns the tag-or-ordered-list shape shared by dimension timelines and trade
+sets, including the JSON, NBT and public Decodable paths. `DimensionTime.Timelines` remains a
+source-compatible alias with the same cases and conformances; the shared public type is additive.
+Identifier owns syntax normalization. Metadata retains unresolved IDs even when they are not
+usable file paths. Trading retains GameAssets.resourceID's path validation, whole-list budget
+charge and ordered per-member resource reads, including reads before a later malformed member.
+The shared parser accepts consumer readers so consolidation does not eagerly validate a list and
+change later answers near the query budget. Tag expansion, null/default policy and trade amount
+evaluation stay with their existing owners. No generated data or interpretation identity changes.
+
 `LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
 fahlman/Chunksee#357. GameAssets reads definitions independently of version labels; the same immutable sampler
 handles scalar, RGB and discrete tracks, preserving clock identity, periodic wrap and ordered
