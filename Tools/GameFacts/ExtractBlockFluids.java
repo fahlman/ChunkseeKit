@@ -5,7 +5,6 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -83,25 +82,11 @@ final class ExtractBlockFluids {
             if (observations.putIfAbsent(key, result) != null) throw new IllegalStateException("Duplicate block state");
         }
         JsonObject finish() {
-            var names = new ArrayList<>(properties.stream().map(Property::getName).toList());
-            Map<List<String>, JsonElement> values = observations;
-            // Drop only properties proven irrelevant across every registered state, including
-            // unknown answers. An unrelated malformed saved property must not hide a known fact.
-            for (int index = names.size() - 1; index >= 0; index--) {
-                var projected = new LinkedHashMap<List<String>, JsonElement>();
-                boolean independent = true;
-                for (var entry : values.entrySet()) {
-                    var key = new ArrayList<>(entry.getKey());
-                    key.remove(index);
-                    var previous = projected.putIfAbsent(key, entry.getValue());
-                    if (previous != null && !previous.equals(entry.getValue())) { independent = false; break; }
-                }
-                if (independent) { names.remove(index); values = projected; }
-            }
+            var reduced = BlockStateValues.reduce(properties.stream().map(Property::getName).toList(), observations);
             var result = new JsonObject();
-            result.add("properties", GSON.toJsonTree(names));
+            result.add("properties", GSON.toJsonTree(reduced.properties()));
             var entries = new JsonArray();
-            values.entrySet().stream().sorted(Comparator.comparing(e -> GSON.toJson(e.getKey()))).forEach(entry -> {
+            reduced.values().entrySet().stream().sorted(Comparator.comparing(e -> GSON.toJson(e.getKey()))).forEach(entry -> {
                 var value = new JsonObject();
                 value.add("values", GSON.toJsonTree(entry.getKey()));
                 value.add("result", entry.getValue());

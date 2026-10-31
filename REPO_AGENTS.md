@@ -704,6 +704,13 @@ All 28 registered blocks' 1,676 state/index cases, 30 compact-default cases, 8,8
 and 40,401 swamp positions match an independent official-26.3 probe. These tint APIs are unreleased
 for #361; app adoption, biome selection/blending, rendering/cache identity and timing remain there.
 
+`Tools/GameFacts/BlockStateValues` owns the release tool's property reduction for block tints,
+fluid identity and upper-face support. Extractors supply their actual observations, including
+explicit unknown answers, and retain their own provenance/output fields. The shared reverse-order
+projection removes a property only when every remaining combination has one equal result.
+This ownership change preserves generated data and interpretation identities; the helper is
+included in the release entrypoint's compiler inputs and tool provenance.
+
 `GameAssets.containsBlockDefinition(_:)` owns selected-jar blockstate-file evidence, excluding
 GeneratedNonBlockDefinitions from BlockStateDefinitions.STATIC_DEFINITIONS after registered-block
 precedence. No registered-block list is bundled. The shared validated resource path and ZIP directory
