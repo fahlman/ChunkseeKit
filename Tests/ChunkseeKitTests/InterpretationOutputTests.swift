@@ -206,6 +206,7 @@ import Testing
             let bytes = sample.input.serialized(), input = try NBT.read(bytes).value
             let chunk = try? Chunk(nbt: input)
             // Include rejection and independent records: a terrain failure must not hide saved time.
+            // The fixture's saved floor clips surface queries, even when direct block access succeeds.
             rows.append([
                 sample.id, chunk == nil ? "unreadable" : "readable",
                 numericText(chunk?.x), numericText(chunk?.z),
@@ -221,7 +222,7 @@ import Testing
         }
         #expect(rows.count == 434)
         try check(rows, version: Chunk.interpretationVersion,
-                  baselines: [terrain2: "ffef99876ac54f98aef4107fa75bbb9963fc79e95379962d0fcbc2faa7f78e84"])
+                  baselines: [terrain2: "d04dd6272c3deabe0292f97923df3b080ede05e742fd85ec3ee651b9f82ca409"])
     }
 
     @Test func numericLightOutputMatchesItsRevision() throws {
@@ -285,7 +286,7 @@ import Testing
         }
         #expect(rows.count == 435)
         try check(rows, version: RegionFacts.interpretationVersion,
-                  baselines: [regionFacts30: "bcfe02de242dd9693b9846f1d226df840ab1b9a93225bdd767dea5fce2d9e321"])
+                  baselines: [regionFacts30: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
     }
 
     private struct MaterialOutput: Encodable {
