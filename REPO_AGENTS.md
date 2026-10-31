@@ -657,6 +657,12 @@ tool extracts actual BlockColors registrations and BlockTintSource.colorInWorld 
 every registered state, including constants, flower indexes, upper-plant biome offsets, stem age
 and redstone power. It retains only properties that affect this method; unrelated malformed
 fields do not hide known colors. Omitted values use the same generated defaults as block models.
+`BlockStateFact` supplies the shared property-key lookup for tints, fluids and upper-face support.
+`BlockState.generatedFact(in:)` owns their raw-ID/canonical-alias lookup, also used by the air flag
+and block-entity renderer flag. Already-parsed model identifiers stay with `BlockProperties`,
+whose shared saved-over-default lookup still supplies every property-dependent reader. The tint
+adapter preserves its generated fixed/state representation and missing-index rule; no generated
+table, public API or interpretation identity changes in this ownership consolidation.
 Known blocks with no source at a nonnegative index return the game's ModelBlockRenderer
 missing-source result (white, preserving cherry/pale-oak texture colors). Unknown code behavior,
 malformed color-driving values and negative indexes remain unavailable. These facts apply across
