@@ -118,27 +118,29 @@ import Testing
         }
     }
 
-    @Test func tallPlantsUseTheLowerHalfBiomeAndVerifiedCompactDefault() {
+    @Test(arguments: ["", ":", "minecraft:"])
+    func tallPlantsUseTheLowerHalfBiomeAndVerifiedCompactDefault(prefix: String) {
         for id in ["large_fern", "tall_grass"] {
-            #expect(BlockState(id).tintSource(at: 0) == .biome(.grass, yOffset: 0))
-            #expect(BlockState(id, properties: ["half": "upper"]).tintSource(at: 0) == .biome(.grass, yOffset: -1))
-            #expect(BlockState(id, properties: ["half": "sideways"]).tintSource(at: 0) == nil)
+            #expect(BlockState(prefix + id).tintSource(at: 0) == .biome(.grass, yOffset: 0))
+            #expect(BlockState(prefix + id, properties: ["half": "upper"]).tintSource(at: 0) == .biome(.grass, yOffset: -1))
+            #expect(BlockState(prefix + id, properties: ["half": "sideways"]).tintSource(at: 0) == nil)
         }
     }
 
-    @Test func stateDrivenColorsKeepAgeAndPowerAndRejectMalformedValues() {
-        #expect(BlockState("redstone_wire").tintSource(at: 0) == .constant(0x4c0000))
-        #expect(BlockState("redstone_wire", properties: ["power": "15"]).tintSource(at: 0) == .constant(0xff3200))
+    @Test(arguments: ["", ":", "minecraft:"])
+    func stateDrivenColorsKeepAgeAndPowerAndRejectMalformedValues(prefix: String) {
+        #expect(BlockState(prefix + "redstone_wire").tintSource(at: 0) == .constant(0x4c0000))
+        #expect(BlockState(prefix + "redstone_wire", properties: ["power": "15"]).tintSource(at: 0) == .constant(0xff3200))
         for id in ["melon_stem", "pumpkin_stem"] {
-            #expect(BlockState(id).tintSource(at: 0) == .constant(0x00ff00))
-            #expect(BlockState(id, properties: ["age": "7"]).tintSource(at: 0) == .constant(0xe0c71c))
+            #expect(BlockState(prefix + id).tintSource(at: 0) == .constant(0x00ff00))
+            #expect(BlockState(prefix + id, properties: ["age": "7"]).tintSource(at: 0) == .constant(0xe0c71c))
         }
         for id in ["attached_melon_stem", "attached_pumpkin_stem"] {
-            #expect(BlockState(id).tintSource(at: 0) == .constant(0xe0c71c))
+            #expect(BlockState(prefix + id).tintSource(at: 0) == .constant(0xe0c71c))
         }
         for raw in ["-1", "16", "01", "0.0", "NaN", "999999999999999999999999"] {
-            #expect(BlockState("redstone_wire", properties: ["power": raw]).tintSource(at: 0) == nil)
-            #expect(BlockState("melon_stem", properties: ["age": raw]).tintSource(at: 0) == nil)
+            #expect(BlockState(prefix + "redstone_wire", properties: ["power": raw]).tintSource(at: 0) == nil)
+            #expect(BlockState(prefix + "melon_stem", properties: ["age": raw]).tintSource(at: 0) == nil)
         }
     }
 
