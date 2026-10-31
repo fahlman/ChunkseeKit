@@ -99,30 +99,18 @@ final class ExtractBlockTints {
             return previous == null;
         }
         JsonObject finish() {
-            var names = new ArrayList<>(properties.stream().map(Property::getName).toList());
-            Map<List<String>, JsonObject> values = observations;
             // relevantProperties can include particle-only inputs. Retain only dependencies
             // of colorInWorld, so an unrelated malformed property cannot hide a known tint.
-            for (int index = names.size() - 1; index >= 0; index--) {
-                var projected = new LinkedHashMap<List<String>, JsonObject>();
-                boolean independent = true;
-                for (var entry : values.entrySet()) {
-                    var key = new ArrayList<>(entry.getKey());
-                    key.remove(index);
-                    var previous = projected.putIfAbsent(key, entry.getValue());
-                    if (previous != null && !previous.equals(entry.getValue())) { independent = false; break; }
-                }
-                if (independent) { names.remove(index); values = projected; }
-            }
+            var reduced = BlockStateValues.reduce(properties.stream().map(Property::getName).toList(), observations);
             var result = new JsonObject();
             // JVM hidden lambda suffixes contain process-specific identities, not provenance.
             String implementation = source.getClass().getName();
             int lambda = implementation.indexOf("$$Lambda");
             if (lambda >= 0) implementation = implementation.substring(0, lambda) + ".lambda";
             result.addProperty("source", "BlockColors.createDefault -> " + implementation + ".colorInWorld");
-            result.add("properties", GSON.toJsonTree(names));
+            result.add("properties", GSON.toJsonTree(reduced.properties()));
             var entries = new JsonArray();
-            values.entrySet().stream().sorted(Comparator.comparing(e -> GSON.toJson(e.getKey()))).forEach(entry -> {
+            reduced.values().entrySet().stream().sorted(Comparator.comparing(e -> GSON.toJson(e.getKey()))).forEach(entry -> {
                 var value = new JsonObject();
                 value.add("values", GSON.toJsonTree(entry.getKey()));
                 value.add("tint", entry.getValue());
