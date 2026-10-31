@@ -80,21 +80,56 @@ public struct MapItem: Sendable, Hashable, Encodable {
     }
 }
 
+/// Readable saved maps and the uncertainty needed to distinguish failed reads from removal.
+public struct MapItemRead: Sendable {
+    /// The best readable value for each ID, sorted by ID, including readable legacy fallbacks.
+    public let maps: [MapItem]
+    /// IDs whose preferred value could not be established. A readable fallback may appear in
+    /// `maps`; a refreshing client can retain its previous value for these IDs instead.
+    public let unresolvedIDs: Set<Int>
+    /// False when a directory could not be listed. Absent IDs then do not establish removal.
+    /// Missing directories are successful empty listings, not failures.
+    public let isListingComplete: Bool
+}
+
 extension World {
     /// Every readable map, by id. Files that aren't maps (`last_id.dat`, `idcounts.dat`) or
     /// can't be read are skipped.
     public func mapItems() -> [MapItem] {
-        var maps: [MapItem] = []
+        readMapItems().maps
+    }
+
+    /// Reads the same maps as `mapItems()`, preserving failed discovery and preferred-file
+    /// reads so callers can refresh a retained snapshot without treating failure as deletion.
+    public func readMapItems() -> MapItemRead {
+        var maps: [Int: MapItem] = [:], unresolved: Set<Int> = []
+        var listingComplete = true
         for (directory, prefix) in [("data/minecraft/maps", ""), ("data", "map_")] {
             let folder = url.appendingPathComponent(directory)
-            for name in (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [] {
-                guard name.hasPrefix(prefix), name.hasSuffix(".dat"),
-                      let id = Int(name.dropFirst(prefix.count).dropLast(4)), !maps.contains(where: { $0.id == id }),
-                      let nbt = try? NBT.read(contentsOf: folder.appendingPathComponent(name)),
-                      let map = MapItem(id: id, nbt: nbt) else { continue }
-                maps.append(map)
+            let names: [String]
+            do { names = try FileManager.default.contentsOfDirectory(atPath: folder.path) }
+            catch {
+                let code = (error as? CocoaError)?.code
+                if code != .fileReadNoSuchFile && code != .fileNoSuchFile { listingComplete = false }
+                continue
             }
+            var failed: Set<Int> = [], readHere: Set<Int> = []
+            for name in names {
+                guard name.hasPrefix(prefix), name.hasSuffix(".dat") else { continue }
+                let stem = name.dropFirst(prefix.count).dropLast(4)
+                guard let id = Int(stem), stem == String(id), maps[id] == nil else { continue }
+                if let nbt = try? NBT.read(contentsOf: folder.appendingPathComponent(name)),
+                   let map = MapItem(id: id, nbt: nbt) {
+                    maps[id] = map
+                    readHere.insert(id)
+                } else {
+                    failed.insert(id)
+                }
+            }
+            unresolved.formUnion(failed)
+            if !listingComplete { unresolved.formUnion(readHere) }
         }
-        return maps.sorted { $0.id < $1.id }
+        return MapItemRead(maps: maps.values.sorted { $0.id < $1.id },
+                           unresolvedIDs: unresolved, isListingComplete: listingComplete)
     }
 }

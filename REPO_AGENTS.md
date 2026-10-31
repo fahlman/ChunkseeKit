@@ -294,6 +294,9 @@ RegionScanOptions sorts its block-ID set when encoding
 and includes the whole enchantment definitions; nil and empty filters remain distinct.
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
+Non-finite numbers encode as the strings Infinity, -Infinity and NaN, matching typed JSON archives;
+finite encodings and existing identities stay unchanged. Inputs admitting both numeric values and
+literal strings in one encoded position must preserve type tags, as TextComponent.Argument does.
 Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
 terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
 including its owning reader revision and generated/dependent identities. Changed covered output
@@ -473,6 +476,16 @@ noise defaults have been removed. Inline facts remain readable without game reso
 when the source list exceeds the shared 64-pack bound. Cancellation also stops inline-only queries.
 This metadata query adds no tag expansion, registry
 validation, timeline evaluation, cache or presentation owner. App lighting remains on fahlman/Chunksee#357.
+
+`RegistryReferences` owns the tag-or-ordered-list shape shared by dimension timelines and trade
+sets, including the JSON, NBT and public Decodable paths. `DimensionTime.Timelines` remains a
+source-compatible alias with the same cases and conformances; the shared public type is additive.
+Identifier owns syntax normalization. Metadata retains unresolved IDs even when they are not
+usable file paths. Trading retains GameAssets.resourceID's path validation, whole-list budget
+charge and ordered per-member resource reads, including reads before a later malformed member.
+The shared parser accepts consumer readers so consolidation does not eagerly validate a list and
+change later answers near the query budget. Tag expansion, null/default policy and trade amount
+evaluation stay with their existing owners. No generated data or interpretation identity changes.
 
 `LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
 fahlman/Chunksee#357. GameAssets reads definitions independently of version labels; the same immutable sampler
@@ -654,6 +667,12 @@ tool extracts actual BlockColors registrations and BlockTintSource.colorInWorld 
 every registered state, including constants, flower indexes, upper-plant biome offsets, stem age
 and redstone power. It retains only properties that affect this method; unrelated malformed
 fields do not hide known colors. Omitted values use the same generated defaults as block models.
+`BlockStateFact` supplies the shared property-key lookup for tints, fluids and upper-face support.
+`BlockState.generatedFact(in:)` owns their raw-ID/canonical-alias lookup, also used by the air flag
+and block-entity renderer flag. Already-parsed model identifiers stay with `BlockProperties`,
+whose shared saved-over-default lookup still supplies every property-dependent reader. The tint
+adapter preserves its generated fixed/state representation and missing-index rule; no generated
+table, public API or interpretation identity changes in this ownership consolidation.
 Known blocks with no source at a nonnegative index return the game's ModelBlockRenderer
 missing-source result (white, preserving cherry/pale-oak texture colors). Unknown code behavior,
 malformed color-driving values and negative indexes remain unavailable. These facts apply across
@@ -1036,6 +1055,23 @@ use the game's Float precision. Mob appearance/collar/equipment and pet sitting-
 also belong here. All stored fields remain optional, so older cached creatures still decode
 but must be reread for the values. See README for format coverage and availability.
 
+`EnchantmentDefinition.description` retains the definition's actual display component through
+the shared `TextComponent.Content` interpreter (#327); Enchantment.DIRECT_CODEC reads that field
+through ComponentSerialization.CODEC. It never guesses a language key from the enchantment ID.
+Description work shares a 65,536-visit budget across the bounded registry
+query, with 64 component levels and the existing file/count/byte limits. Missing, malformed,
+dynamic or over-budget text leaves only the description unavailable; independent level, slot
+and health facts remain readable. Content and its typed arguments are Codable snapshots, distinct
+from Minecraft JSON interpretation. Old definition archives decode with nil descriptions.
+RegionFacts already archives the complete definitions in RegionScanOptions, so descriptions
+participate in that existing cache identity and can invalidate older or changed definition
+snapshots; the saved creature and health interpretation is unchanged. No region/chunk traversal,
+component interpretation or interpretation-version counter changes here. This additive API
+requires a minor release before fahlman/Chunksee#438 can adopt it; no release is claimed yet.
+Non-finite description arguments retain stable, distinct complete option identities through
+InterpretationKey instead of disabling the cache. Tests cover the real registry reader, changed
+argument kinds, independent rereads and RegionFacts archive reopening.
+
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
 and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime
 fills only a missing valid Overworld record; ambiguous aliases are omitted after that fallback,
@@ -1238,6 +1274,18 @@ trade-price and sold-out numeric defaults remain a separate #222 code-fact findi
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.
 
+`World.readMapItems()` returns a `MapItemRead` with readable maps, unresolved IDs and directory
+listing completeness. `mapItems()` delegates to that one discovery owner and keeps its existing
+readable-fallback behavior. Missing directories establish empty listings; other listing errors
+leave absence unproven. A failed preferred file remains unresolved even if a lower-priority map
+is readable, and a failed higher-priority listing leaves lower-priority values unresolved too.
+Refresh clients can retain their prior values for those IDs and avoid removing absent IDs after
+incomplete discovery. Only the game's canonical decimal filename is accepted in either layout;
+leading zeros and a leading plus sign cannot substitute for the file the game reads. A bad
+lower-priority copy does not invalidate a readable preferred map. This additive #324 API supports the app's approved
+saved-map snapshot work in fahlman/Chunksee#469, requires a minor release before app adoption,
+and changes no map decoding, pixels, region/chunk reads or cache interpretation.
+
 `MapItem.rgb(forColor:)` owns saved-map byte interpretation. The single GameFacts release tool
 extracts MapColor's base palette and Brightness multipliers, including transparent/unused
 slots, and independently calls getColorFromPackedId for every possible saved byte. The public
@@ -1344,14 +1392,21 @@ remain on #255. Paired copied-current-world timing is required before publishing
 `GameAssets.language(_:minecraftDirectory:)` owns reading translation strings for every key
 category, with English then requested-locale precedence. The app owns language choice and the
 final ID-derived fallback. GameLanguage is an immutable Sendable, Equatable snapshot; equality
-compares every effective translation after fallback and key migration plus the requested language's
-own declaration, independent of the source
+compares every effective translation after fallback and key migration, the declared replacement keys,
+and the requested language's own declaration, independent of the source
 or query history (#292). Clients can retain their snapshot identity across unchanged rereads.
 `declaredLanguageCode` exposes the requested files' own `language.code` before key migration,
 with the same namespace/indexed-file precedence and without inheriting English's declaration.
 It may differ from the resource filename; absent declarations remain nil while readable translations
 and per-key English fallback stay available. The app owns interpreting this code as a locale and
 choosing a language. This additive #300 API needs a minor release and adds no file reads or parser.
+`replacementKey(for:)` exposes the direct old-to-new key declaration from the same bounded
+deprecated-translation metadata read. Clients naming older saved identifiers can use that key
+explicitly without copying the metadata parser or maintaining a rename list. The query does not
+follow chains or promise a translated destination, and the translation subscript keeps its
+existing removal/rename semantics. Missing or malformed metadata supplies no replacements.
+This additive #333 API needs a minor release before app adoption on fahlman/Chunksee#438;
+it changes no saved data, region reads, rendering or interpretation versions.
 Its subscript returns
 nil only when no readable translation remains. The jar supplies language resources across its
 namespaces; an optional installation folder supplies the jar version's launcher metadata,
@@ -1631,13 +1686,14 @@ Ryan approved this process on 2026-10-09.
 
 ## Toolchain and platforms
 
-Rechecked on 2026-10-18 against [Apple's releases](https://developer.apple.com/news/releases/),
+Rechecked on 2026-10-30 against [Apple's App Store listing](https://apps.apple.com/us/app/xcode/id497799835?mt=12),
 [its SDK table](https://developer.apple.com/xcode/system-requirements), and the
 [Swift releases](https://www.swift.org/install/macos/), then compared with the installed tools
-and the project's settings. Xcode 27.2 and Swift snapshots are previews, not the stable toolchain.
+and the project's settings. Xcode 27.2 is the final App Store release. Compiler and SDK
+versions below are from the selected final installation.
 
-- **Compiler:** Xcode 27.1 (`27A9275`) and Apple Swift 6.4 (`swiftlang-6.4.0.34.1`). The
+- **Compiler:** Xcode 27.2 (`27B52`) and Apple Swift 6.4.2 (`swiftlang-6.4.2.1.9`). The
   package requires `swift-tools-version: 6.4`.
 - **Swift language mode:** 6, set explicitly with `swiftLanguageModes: [.v6]`.
-- **SDK:** macOS 27.0 SDK. The package doesn't pin an SDK version.
+- **SDK:** macOS 27.2 SDK. The package doesn't pin an SDK version.
 - **Minimum macOS:** 27, set with `platforms: [.macOS(.v27)]`. The package is Mac only.

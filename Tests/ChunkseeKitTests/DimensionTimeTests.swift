@@ -45,6 +45,36 @@ import Testing
         #expect(types["test:list"]?.time?.timelines == .list(["minecraft:day", "custom:moon", "minecraft:day"]))
     }
 
+    @Test func unresolvedReferencesPreserveIdentifierSyntaxAcrossAllInputPaths() throws {
+        let cases: [(Any, NBT, DimensionTime.Timelines)] = [
+            ("#:day", .string("#:day"), .tag("minecraft:day")),
+            (":day", .string(":day"), .list(["minecraft:day"])),
+            ([String](), .list(.string, []), .list([])),
+            (["day", "custom:moon", ":day"], .list(.string, [.string("day"), .string("custom:moon"), .string(":day")]),
+             .list(["minecraft:day", "custom:moon", "minecraft:day"])),
+            ("", .string(""), .list(["minecraft:"])),
+            ("#", .string("#"), .tag("minecraft:")),
+            ("test:../moon", .string("test:../moon"), .list(["test:../moon"])),
+            ("#test:../moon", .string("#test:../moon"), .tag("test:../moon"))
+        ]
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var types: [String: NBT] = [:], entries: [TestZIP.Entry] = []
+        for (index, value) in cases.enumerated() {
+            let raw = try JSONSerialization.data(withJSONObject: value.0, options: .fragmentsAllowed)
+            #expect(try JSONDecoder().decode(DimensionTime.Timelines.self, from: raw) == value.2)
+            types["test:inline\(index)"] = definition(["timelines": value.1])
+            types["test:resource\(index)"] = .string("test:resource\(index)")
+            entries.append(entry("test:resource\(index)", try json(["timelines": value.0])))
+        }
+        let world = try world(root, types: types)
+        let read = try world.dimensionTypes(assets: assets(entries))
+        for (index, value) in cases.enumerated() {
+            #expect(read["test:inline\(index)"]?.time?.timelines == value.2)
+            #expect(read["test:resource\(index)"]?.time?.timelines == value.2)
+        }
+    }
+
     @Test func selectedJarSuppliesDefinitionsAndAbsentResourcesStayUnknown() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -112,6 +142,7 @@ import Testing
             ["has_skylight": .string("true")], ["has_fixed_time": .float(1)],
             ["default_clock": .string("Bad ID")], ["default_clock": .compound([:])],
             ["timelines": .list(.string, [.string("#tag")])], ["timelines": .string("#Bad Tag")],
+            ["timelines": .list(.string, [.string("day"), .string("#tag")])],
             ["timelines": .list(.int, [.int(1)])], ["timelines": .compound([:])]
         ]
         let types = Dictionary(uniqueKeysWithValues: bad.enumerated().map { ("test:bad\($0.offset)", definition($0.element)) })
@@ -126,7 +157,8 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let bad: [[String: Any]] = [
             ["has_skylight": "true"], ["has_skylight": NSNull()], ["has_fixed_time": 1],
-            ["default_clock": "Bad ID"], ["timelines": ["#tag"]], ["timelines": [1]], ["timelines": [:]]
+            ["default_clock": "Bad ID"], ["timelines": ["#tag"]], ["timelines": [1]], ["timelines": [:]],
+            ["timelines": ["day", "#tag"]], ["timelines": ["day", 1]], ["timelines": "#Bad Tag"]
         ]
         let entries = try bad.enumerated().map { entry("test:bad\($0.offset)", try json($0.element)) }
         let types = Dictionary(uniqueKeysWithValues: bad.indices.map { ("test:bad\($0)", NBT.string("test:bad\($0)")) })
