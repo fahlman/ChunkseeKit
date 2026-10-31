@@ -64,6 +64,47 @@ import Testing
         }
     }
 
+    @Test(arguments: ["", ":", "minecraft:"])
+    func referencesNormalizeAliasesWhileKeepingTagAndListFormsDistinct(prefix: String) throws {
+        let resources: [TestZIP.Entry] = [
+            .init(path: "data/minecraft/villager_trade/offer.json", text: offer.text),
+            .init(path: "data/minecraft/tags/villager_trade/offers.json", text: #"{"values":["offer"]}"#)
+        ]
+        let cases: [Any] = [prefix + "offer", [prefix + "offer", prefix + "offer"], "#" + prefix + "offers"]
+        for members in cases {
+            let definitions = try jar(sets(trades: members) + resources).tradingDefinitions()
+            #expect(try villager("farmer").supportsTrading(using: definitions) == true)
+        }
+    }
+
+    @Test func malformedAndUnsafeReferencesKeepTradeAvailabilityUnknown() throws {
+        let cases: [Any] = [
+            "", "#", "test:../offer", "#test:../offer", "test:foo//offer",
+            ["#test:root"], ["test:offer", "#test:root"], ["test:offer", 1],
+            ["test:offer", NSNull()], true, NSNull(), ["id": "test:offer"]
+        ]
+        for members in cases {
+            let definitions = try jar(sets(trades: members) + [offer, tag("root", ["test:offer"])]).tradingDefinitions()
+            #expect(try villager("farmer").supportsTrading(using: definitions) == nil)
+        }
+    }
+
+    @Test func malformedLaterMembersRetainEarlierReadsInTheSharedBudget() throws {
+        var malformed = Array(repeating: "test:offer", count: 4096)
+        malformed[4095] = "invalid id"
+        let entries = try sets(trades: malformed)
+            + sets(trades: Array(repeating: "test:offer", count: 4096), profession: "fletcher") + [offer]
+        let definitions = try jar(entries).tradingDefinitions()
+        #expect(try villager("farmer").supportsTrading(using: definitions) == nil)
+        var fletcher = try villager("fletcher")
+        for level in [1, 2] {
+            fletcher.level = level
+            #expect(fletcher.supportsTrading(using: definitions) == true)
+        }
+        fletcher.level = 3
+        #expect(fletcher.supportsTrading(using: definitions) == nil)
+    }
+
     @Test func constantAmountsUseGameIntegerCoercion() throws {
         for (amount, expected) in [(1.5, true), (0.9, false), (4294967297.9, true), (2147483648.0, false)] {
             for value: Any in [amount, ["type": "constant", "value": amount]] {
@@ -154,9 +195,11 @@ import Testing
         #expect(try Data(contentsOf: file) == before)
     }
 
-    @Test func cancellationPropagatesAndOversizedSelectionsStayUnknown() async throws {
-        let assets = try jar(sets(trades: Array(repeating: "test:offer", count: 4097)) + [offer])
-        #expect(try villager("farmer").supportsTrading(using: assets.tradingDefinitions()) == nil)
+    @Test(arguments: [4096, 4097])
+    func cancellationPropagatesAndSelectionsRespectTheMemberLimit(count: Int) async throws {
+        let assets = try jar(sets(trades: Array(repeating: "test:offer", count: count)) + [offer])
+        let expected: Bool? = count == 4096 ? true : nil
+        #expect(try villager("farmer").supportsTrading(using: assets.tradingDefinitions()) == expected)
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
             return try assets.tradingDefinitions()
@@ -168,9 +211,9 @@ import Testing
         .init(path: "data/test/villager_trade/offer.json", text: #"{"wants":{"id":"wheat"},"gives":{"id":"emerald"}}"#)
     }
 
-    private func sets(trades: Any, amount: Any = 2) throws -> [TestZIP.Entry] {
+    private func sets(trades: Any, amount: Any = 2, profession: String = "farmer") throws -> [TestZIP.Entry] {
         let data = try JSONSerialization.data(withJSONObject: ["amount": amount, "trades": trades])
-        return (1...5).map { .init(path: "data/minecraft/trade_set/farmer/level_\($0).json", text: String(decoding: data, as: UTF8.self)) }
+        return (1...5).map { .init(path: "data/minecraft/trade_set/\(profession)/level_\($0).json", text: String(decoding: data, as: UTF8.self)) }
     }
 
     private func tag(_ name: String, _ members: [Any], replace: Bool = false) throws -> TestZIP.Entry {
