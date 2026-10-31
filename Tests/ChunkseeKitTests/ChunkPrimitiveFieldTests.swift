@@ -4,7 +4,7 @@ import Testing
 @testable import ChunkseeKit
 
 @Suite struct ChunkPrimitiveFieldTests {
-    private func saved(_ sample: SavedNumericSample) throws -> NBT {
+    func saved(_ sample: SavedNumericSample) throws -> NBT {
         var section = try #require(Fixtures.section(y: 0, palette: [.string("minecraft:stone")]).compound)
         section["Y"] = sample.tag
         section["BlockLight"] = .byteArray([Int8](repeating: 0x33, count: 2048))
@@ -60,7 +60,7 @@ import Testing
         #expect(try Data(contentsOf: url) == Data(bytes))
     }
 
-    private var absentOrNonnumeric: [NBT?] {
+    var absentOrNonnumeric: [NBT?] {
         [nil, .string(""), .string("1"), .string("true"), .compound([:]), .list([]),
          .list([.int(1)]), .byteArray([1]), .intArray([1]), .longArray([1])]
     }
