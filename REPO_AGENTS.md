@@ -304,6 +304,17 @@ fails until a new reviewed contract/baseline is recorded; retain previous entrie
 an old contract's digest. Generated/dependent changes need no copied reader-counter bump.
 Reader and generated-source identity checks cover invalidation and reuse, but unexercised
 decoder paths still require independent review of the version contract.
+The #320 numeric-output fixtures also bind the captured SavedNumericSample inputs to those
+contracts. Terrain covers coordinates, section/surface/biome access, saved times and light
+validity; light covers both spawn-light rules through all four selective-read profiles; region
+output comes from a real scan followed by archive decoding. Missing/nonnumeric fields, root/Level
+precedence, and inhabited time beside malformed or unsupported terrain remain in these fixed
+inputs. The original ordinary-output fixtures and their baselines are retained. These new
+fixtures cover the declared cached chunk primitive families from #316, not every possible saved
+field or the uncached player projections. Their baseline meanings come from captured game
+results and the already-declared fixture contracts, never from recomputing numeric conversions
+in another reader. Extending the input matrix is a new fixture baseline, not a reason to replace
+an old contract's output digest.
 The versioned envelope is the new Codable boundary, with options and dimension/region identity;
 consumers also key all three file fingerprints and their own transform version. Older model
 conformances remain source-compatible until separately migrated. The new API is available in
