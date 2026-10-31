@@ -29,7 +29,7 @@ public struct BlockState: Hashable, Sendable, CustomStringConvertible {
     /// Minecraft's code flag used by its surface-height predicate, independently of the air tag.
     /// Unknown block code returns nil. Generated facts apply across save and game versions.
     public var isAir: Bool? {
-        GeneratedAirBlocks.values[id] ?? Identifier(id).flatMap { GeneratedAirBlocks.values[$0.description] }
+        generatedFact(in: GeneratedAirBlocks.values)
     }
 
     /// Accepts every palette entry shape seen across versions:
