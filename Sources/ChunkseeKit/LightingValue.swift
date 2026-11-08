@@ -28,10 +28,10 @@ extension Float: LightingValue {
     static func interpolate(_ from: Float, _ to: Float, _ progress: Float) -> Float { from + progress * (to - from) }
     static func apply(_ modifier: LightingModifier, to base: Float, argument: Float) -> Float {
         switch modifier {
-        case .override: argument
-        case .add: base + argument
-        case .subtract: base - argument
-        case .multiply: base * argument
+        case .override: return argument
+        case .add: return base + argument
+        case .subtract: return base - argument
+        case .multiply: return base * argument
         case .minimum, .maximum:
             // Minecraft uses Math.min/max: propagate either NaN and order signed zeros.
             if base.isNaN { return base }
