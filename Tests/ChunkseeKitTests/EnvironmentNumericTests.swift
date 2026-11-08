@@ -64,4 +64,24 @@ import Testing
             try TimelineTrack<SIMD3<Float>>(json: color, period: nil, budget: &budget, overrideRange: nil)
         }
     }
+
+    @Test func extremaMatchTheGameForNaNAndSignedZero() throws {
+        // Captured EnvironmentAttributeMap.CODEC outputs in environment-overflow-proof-1.
+        for modifier in ["minimum", "maximum"] {
+            let input = NBT.compound(["attributes": .compound([
+                "visual/sky_light_factor": .compound(["modifier": .string(modifier), "argument": .float(.nan)])
+            ])])
+            let map = try EnvironmentAttributeMap<SkyLighting.Attribute>(nbt: input)
+            #expect(try map.applying(.skyLightFactor, to: Float(1), overrideRange: 0...1).isNaN)
+        }
+        let cases: [(String, String, UInt32, UInt32)] = [
+            ("minimum", "-0.0", 0x00000000, 0x80000000),
+            ("maximum", "0.0", 0x80000000, 0x00000000)
+        ]
+        for (modifier, token, base, expected) in cases {
+            let json = "{\"attributes\":{\"visual/sun_angle\":{\"modifier\":\"\(modifier)\",\"argument\":\(token)}}}"
+            let map = try EnvironmentAttributeMap<SkyLighting.Attribute>(json: AssetJSON.object(from: Data(json.utf8)))
+            #expect(try map.applying(.sunAngle, to: Float(bitPattern: base)).bitPattern == expected)
+        }
+    }
 }

@@ -32,8 +32,15 @@ extension Float: LightingValue {
         case .add: base + argument
         case .subtract: base - argument
         case .multiply: base * argument
-        case .minimum: min(base, argument)
-        case .maximum: max(base, argument)
+        case .minimum, .maximum:
+            // Minecraft uses Math.min/max: propagate either NaN and order signed zeros.
+            if base.isNaN { return base }
+            if argument.isNaN { return argument }
+            if base == 0, argument == 0 {
+                let sign: FloatingPointSign = modifier == .minimum ? .minus : .plus
+                return base.sign == sign ? base : argument
+            }
+            return modifier == .minimum ? min(base, argument) : max(base, argument)
         }
     }
 }

@@ -541,6 +541,8 @@ Lighting's JSON FLOAT adapter also preserves overflow to infinity until its modi
 value checks. Scalar minimum and clamped RGB subtraction can produce finite results from those
 arguments in both formats. Other AssetJSON number/channel callers retain their finite-only
 contract. TimelineTrack retains its existing finite-keyframe policy at frame construction.
+The shared Float extrema also preserve Java Math.min/max NaN propagation and signed-zero order,
+verified through the actual environment field codecs alongside the overflow modifier cases.
 This slice changes no public API, region/chunk traversal, saved-light decoding, rendering or
 serialized RegionFacts. The affected dimension facts are recomputed, and resolved monster-light
 rules remain whole-value cache inputs. Generated facts and all interpretation identities stay
