@@ -126,6 +126,25 @@ import Testing
         #expect(inline.skyLightColor.z.bitPattern == 0x3b808081)
     }
 
+    @Test func overflowingJSONAndNativeModifierArgumentsKeepTheSameFiniteResult() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let native: [String: NBT] = [
+            "visual/sky_light_factor": operation("minimum", .float(.infinity)),
+            "visual/sky_light_color": operation("subtract", .list(.float, [.float(.infinity), .float(0), .float(0)]))
+        ]
+        let world = try world(root, types: ["test:inline": definition(["attributes": .compound(native)]),
+                                           "test:resource": .string("test:resource")])
+        let jar = try assets([entry("test:resource", json(["attributes": [
+            "visual/sky_light_factor": ["modifier": "minimum", "argument": 1e100],
+            "visual/sky_light_color": ["modifier": "subtract", "argument": [1e100, 0, 0]]
+        ]]))])
+        let types = try world.dimensionTypes(assets: jar)
+        let inline = try #require(types["test:inline"]?.baseSkyLighting)
+        #expect(types["test:resource"]?.baseSkyLighting == inline)
+        #expect(inline.skyLightFactor == 1 && inline.skyLightColor == SIMD3(0, 1, 1))
+    }
+
     @Test func malformedNBTLightingDoesNotDiscardIndependentBuildAndTimeMetadata() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -42,9 +42,15 @@ enum AssetJSON {
     }
 
     static func number(_ value: Any?) throws -> Float {
+        let number = try float(value)
+        guard number.isFinite else { throw AssetReadError.invalidData }
+        return number
+    }
+
+    static func float(_ value: Any?) throws -> Float {
         // Gson's typed FLOAT field parses the original decimal directly, without a Double
         // intermediate. Native saved attributes have their own tagged format adapter.
-        guard let value = value as? Number, let number = Float(value.literal), number.isFinite else {
+        guard let value = value as? Number, let number = Float(value.literal) else {
             throw AssetReadError.invalidData
         }
         return number
@@ -57,10 +63,10 @@ enum AssetJSON {
         return number
     }
 
-    static func numbers(_ value: Any?, count: Int) throws -> [Float] {
+    static func numbers(_ value: Any?, count: Int, read: (Any?) throws -> Float = AssetJSON.number) throws -> [Float] {
         let values = try array(value)
         guard values.count == count else { throw AssetReadError.invalidData }
-        return try values.map(number)
+        return try values.map(read)
     }
 
     static func color(_ value: Any?) throws -> UInt32 {
@@ -84,7 +90,7 @@ enum AssetJSON {
     /// STRING_RGB_VEC3_COLOR keeps list channels as floats, unlike the packed RGB codec.
     static func colorVector(_ value: Any?) throws -> SIMD3<Float> {
         if value is [Any] {
-            let channels = try numbers(value, count: 3)
+            let channels = try numbers(value, count: 3, read: AssetJSON.float)
             return SIMD3(channels[0], channels[1], channels[2])
         }
         let color = try stringColor(value)

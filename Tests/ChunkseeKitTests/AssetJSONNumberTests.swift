@@ -50,6 +50,7 @@ import ChunkseeKitTestSupport
             #expect((try? AssetJSON.integer(value)) == fixture.integer, "\(fixture.json)")
             let expectedFloat = fixture.floatBits.map(Float.init(bitPattern:)).flatMap { $0.isFinite ? $0.bitPattern : nil }
             #expect((try? AssetJSON.number(value))?.bitPattern == expectedFloat, "\(fixture.json)")
+            #expect((try? AssetJSON.float(value))?.bitPattern == fixture.floatBits, "\(fixture.json)")
             let json = "{\"max_level\":" + fixture.json + ",\"slots\":[\"head\"],\"effects\":{}}"
             let definition = try #require(EnchantmentDefinition(data: Data(json.utf8)))
             #expect(definition.maximumLevel == fixture.level, "\(fixture.json)")

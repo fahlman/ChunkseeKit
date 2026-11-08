@@ -537,6 +537,10 @@ labelled factory inputs, in direct/override/add forms for angle, ranged factor a
 Captured outputs supply the regression expectations; public dimension reads verify intact
 build/time metadata, JSON agreement and unchanged saved files. AssetJSON no longer accepts
 NSNumber numeric fallbacks; parsed JSON keeps the single original-token owner.
+Lighting's JSON FLOAT adapter also preserves overflow to infinity until its modifier and final
+value checks. Scalar minimum and clamped RGB subtraction can produce finite results from those
+arguments in both formats. Other AssetJSON number/channel callers retain their finite-only
+contract. TimelineTrack retains its existing finite-keyframe policy at frame construction.
 This slice changes no public API, region/chunk traversal, saved-light decoding, rendering or
 serialized RegionFacts. The affected dimension facts are recomputed, and resolved monster-light
 rules remain whole-value cache inputs. Generated facts and all interpretation identities stay

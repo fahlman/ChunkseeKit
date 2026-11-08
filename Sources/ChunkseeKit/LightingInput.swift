@@ -13,7 +13,7 @@ enum LightingInput {
 
     func number() throws -> Float {
         switch self {
-        case .json(let value): return try AssetJSON.number(value)
+        case .json(let value): return try AssetJSON.float(value)
         case .nbt(let value):
             guard let number = value.javaFloat else { throw InvalidLighting.data }
             // Attribute ranges and final finite-lighting requirements have separate owners.

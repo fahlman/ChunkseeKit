@@ -1,4 +1,5 @@
 @testable import ChunkseeKit
+import Foundation
 import Testing
 
 @Suite struct EnvironmentNumericTests {
@@ -50,5 +51,17 @@ import Testing
         // All finite values, infinities and signed zero retain their exact captured bits.
         if Float(bitPattern: bits).isNaN { #expect(actual.isNaN) }
         else { #expect(actual.bitPattern == bits) }
+    }
+
+    @Test func timelineKeyframesKeepTheirExistingFiniteRequirement() throws {
+        let scalar = try AssetJSON.object(from: Data(#"{"modifier":"minimum","keyframes":[{"ticks":0,"value":1e100}]}"#.utf8))
+        let color = try AssetJSON.object(from: Data(#"{"modifier":"subtract","keyframes":[{"ticks":0,"value":[1e100,0,0]}]}"#.utf8))
+        var budget = 10
+        #expect(throws: (any Error).self) {
+            try TimelineTrack<Float>(json: scalar, period: nil, budget: &budget, overrideRange: nil)
+        }
+        #expect(throws: (any Error).self) {
+            try TimelineTrack<SIMD3<Float>>(json: color, period: nil, budget: &budget, overrideRange: nil)
+        }
     }
 }
