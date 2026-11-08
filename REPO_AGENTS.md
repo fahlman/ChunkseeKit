@@ -1552,8 +1552,8 @@ Language values can retain numeric spelling that cannot be converted to an integ
 game readers and public file/archive tests cover fractions, narrowing, exponent limits, invalid
 siblings, optional metadata and exact language spelling. GameAssets interpretation revision 2
 invalidates older resource-derived results. Chunk and RegionFacts interpretation are unchanged.
-Native NBT environment attributes retain their existing scalar bridge pending #316's field audit;
-this JSON change does not claim that the separate NBT/NSNumber migration is finished.
+Native NBT environment attributes now use the separately verified #316 format adapter described
+above; the remaining saved numeric field families still require their own audits on #316.
 
 The supported Unicode encodings share decoded member selection. Only AssetJSON
 calls the Foundation JSON readers for game input. RegionFacts interpretation 28 invalidates
