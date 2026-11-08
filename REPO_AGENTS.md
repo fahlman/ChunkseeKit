@@ -1511,13 +1511,29 @@ duplicate JSON keys on #297; this is not a claim that every JSON/NBT number path
 
 The #297 JSON member-selection owner replaces an earlier decoded member as it parses, including
 escaped-equivalent names and nested objects. Losing values still must be syntactically valid.
-Raw resource/text readers retain original number tokens; Foundation-backed
-statistics, language, tag and pack readers retain their scalar contracts through number-fragment
-decoding, without rewriting their complete documents. Existing Decodable
-metadata passes through the same selection owner with numeric spelling intact. Its iterative
-normalizer lets Foundation retain its numeric conversions without recursive worker-stack growth.
-Game numeric token limits remain confined to the raw-number readers; existing Foundation adapters
-retain their own limits. The supported Unicode encodings share decoded member selection. Only AssetJSON
+All JSON readers retain original number tokens through AssetJSON.Number. The #322 correction
+removes the separate Foundation scalar mode: statistic counts and JSON DataVersion use the same
+integer conversion as resource fields, while language values use Gson's primitive string form.
+Statistic entries and categories are read independently; malformed values do not hide readable
+neighbors or unfamiliar identifiers. Legacy numeric counts reach the same conversion after the
+game's StatsCounterFix retains them. Missing or unreadable saved DataVersion remains nil, rather
+than exposing a load-time fallback as saved metadata. Advancement completion stays a strict saved
+boolean; its existing readable progress and name-upgrade policies are unchanged.
+
+Installed version.json uses the GsonHelper primitive readers, including narrowing world_version,
+independently of GameAssets.Version's unchanged public Decodable representation. Other Decodable
+inputs pass through the same member-selection owner with numeric spelling intact; the iterative
+normalizer preserves their declared Decodable contracts without recursive worker-stack growth.
+Existing document syntax bounds and resource-reader numeric token limits remain distinct from
+conversion; Gson's decimal length/scale limits apply only when a numeric codec consumes a token.
+Language values can retain numeric spelling that cannot be converted to an integer. The actual
+game readers and public file/archive tests cover fractions, narrowing, exponent limits, invalid
+siblings, optional metadata and exact language spelling. GameAssets interpretation revision 2
+invalidates older resource-derived results. Chunk and RegionFacts interpretation are unchanged.
+Native NBT environment attributes retain their existing scalar bridge pending #316's field audit;
+this JSON change does not claim that the separate NBT/NSNumber migration is finished.
+
+The supported Unicode encodings share decoded member selection. Only AssetJSON
 calls the Foundation JSON readers for game input. RegionFacts interpretation 28 invalidates
 legacy JSON sign/book/name facts produced with first-member selection. App adoption also needs
 tile invalidation for changed resource definitions. Native NBT text and numeric types are unchanged.

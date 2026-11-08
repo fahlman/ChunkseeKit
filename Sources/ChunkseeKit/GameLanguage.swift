@@ -148,11 +148,7 @@ private struct GameLanguageReader {
     private static func append(_ data: Data, to values: inout [String: String], declaration: inout String?) {
         guard let object = object(data) else { return }
         for (key, value) in object {
-            let text: String
-            if let string = value as? String { text = string }
-            else if let boolean = try? AssetJSON.boolean(value) { text = boolean ? "true" : "false" }
-            else if let number = try? AssetJSON.jsonNumber(value) { text = number.stringValue }
-            else { continue }
+            guard let text = try? AssetJSON.primitiveString(value) else { continue }
             // Language.loadFromJson converts numeric format placeholders to string ones.
             let translated = unsupportedFormat.stringByReplacingMatches(in: text,
                 range: NSRange(text.startIndex..., in: text), withTemplate: "%$1s")
@@ -162,7 +158,7 @@ private struct GameLanguageReader {
     }
 
     private static func object(_ data: Data) -> [String: Any]? {
-        (try? AssetJSON.foundationValue(from: data)) as? [String: Any]
+        (try? AssetJSON.value(from: data, limitsNumbers: false)) as? [String: Any]
     }
 
     private static func component(_ value: String) -> Bool {

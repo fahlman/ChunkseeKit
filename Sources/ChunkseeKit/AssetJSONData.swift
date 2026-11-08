@@ -36,8 +36,9 @@ extension AssetJSON {
         }
 
         /// Exact decimal coefficient/scale under Gson NumberLimits, normalized without
-        /// rounding. The parser already bounds number tokens before any codec reads them.
+        /// rounding. Conversion limits do not apply to a language value kept as text.
         private var decimal: (negative: Bool, digits: Substring, scale: Int)? {
+            guard literal.utf8.count <= 10_000 else { return nil }
             let negative = literal.first == "-"
             let unsigned = negative ? literal.dropFirst() : literal[...]
             let parts = unsigned.lowercased().split(separator: "e", omittingEmptySubsequences: false)
@@ -54,48 +55,38 @@ extension AssetJSON {
         }
     }
 
-    static func value(from data: Data) throws -> Any {
-        try value(from: data, numbers: .game)
-    }
-
-    /// Existing Foundation-backed fields keep their scalar conversions. Only number fragments
-    /// need Foundation decoding; string-heavy language/tag files need no rewritten document.
-    static func foundationValue(from data: Data) throws -> Any {
-        try value(from: data, numbers: .foundation)
-    }
-
     static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {
         try JSONDecoder().decode(type, from: normalized(data))
     }
 
-    private static func value(from data: Data, numbers: NumberDecoding) throws -> Any {
+    /// Every reader receives the same exact number tokens. Existing document readers keep
+    /// their syntax bounds; resource codecs additionally enforce JsonReader's token limits.
+    static func value(from data: Data, limitsNumbers: Bool = true) throws -> Any {
         if data.prefix(4).contains(0) || data.first == 0xFF || data.first == 0xFE {
             // Keep the Unicode encodings Foundation previously accepted, while selecting
             // duplicate decoded names through the same parser as UTF-8 game files.
             for encoding in [String.Encoding.utf16LittleEndian, .utf16BigEndian, .utf32LittleEndian, .utf32BigEndian] {
                 if let text = String(data: data, encoding: encoding),
-                   let result = try? parse(Data(text.utf8), numbers: numbers) { return result }
+                   let result = try? parse(Data(text.utf8), limitsNumbers: limitsNumbers) { return result }
             }
             throw AssetReadError.invalidData
         }
-        return try parse(data, numbers: numbers)
+        return try parse(data, limitsNumbers: limitsNumbers)
     }
 
-    private static func parse(_ data: Data, numbers: NumberDecoding) throws -> Any {
+    private static func parse(_ data: Data, limitsNumbers: Bool) throws -> Any {
         try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), numbers: numbers)
+            var parser = Parser(bytes: raw.bindMemory(to: UInt8.self), limitsNumbers: limitsNumbers)
             return try parser.read()
         }
     }
-
-    private enum NumberDecoding { case game, foundation, decoder }
 
     private enum JSONOutput { case value(Any), byte(UInt8) }
 
     /// Re-encode the selected tree without rounding numbers. An explicit stack keeps ignored
     /// deeply nested metadata safe on the same small worker stacks as the parser.
     private static func normalized(_ data: Data) throws -> Data {
-        var pending: [JSONOutput] = [.value(try value(from: data, numbers: .decoder))]
+        var pending: [JSONOutput] = [.value(try value(from: data, limitsNumbers: false))]
         var output = Data()
         while let next = pending.popLast() {
             switch next {
@@ -127,7 +118,7 @@ extension AssetJSON {
     /// their own bytes before the parsed value leaves it.
     private struct Parser {
         let bytes: UnsafeBufferPointer<UInt8>
-        let numbers: NumberDecoding
+        let limitsNumbers: Bool
         var cursor = 0
 
         private struct Container {
@@ -217,19 +208,14 @@ extension AssetJSON {
             case 34: return try string()
             case 116:
                 try literal("true")
-                if numbers == .foundation { return NSNumber(value: true) }
                 return true
             case 102:
                 try literal("false")
-                if numbers == .foundation { return NSNumber(value: false) }
                 return false
             case 110: try literal("null"); return NSNull()
             case 45, 48...57:
                 let start = cursor
-                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: numbers == .game)
-                if numbers == .foundation {
-                    return try JSONSerialization.jsonObject(with: Data(bytes[start..<cursor]), options: [.fragmentsAllowed])
-                }
+                cursor = try AssetJSON.endOfNumber(bytes, from: start, limitsNumbers: limitsNumbers)
                 return Number(literal: String(decoding: bytes[start..<cursor], as: UTF8.self))
             default: throw AssetReadError.invalidData
             }
@@ -275,8 +261,8 @@ extension AssetJSON {
 
     private static func digit(_ value: UInt8) -> Bool { (48...57).contains(value) }
 
-    /// Game-number readers add StrictJsonParser's token limits. Existing Foundation adapters
-    /// keep their own numeric bounds; both paths validate JSON spelling and delimiters here.
+    /// Resource readers add StrictJsonParser's token limits; existing document syntax remains
+    /// unchanged. Both paths validate spelling and retain the same Number representation.
     private static func endOfNumber<Bytes: RandomAccessCollection>(_ bytes: Bytes, from start: Int, limitsNumbers: Bool) throws -> Int
         where Bytes.Element == UInt8, Bytes.Index == Int {
         var cursor = start

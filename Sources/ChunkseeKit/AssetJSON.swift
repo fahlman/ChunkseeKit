@@ -23,12 +23,27 @@ enum AssetJSON {
         return value
     }
 
+    /// GsonHelper's string fields accept every primitive, preserving numeric spelling.
+    /// Codec.STRING fields continue to use the strict string reader above.
+    static func primitiveString(_ value: Any?) throws -> String {
+        if let text = value as? String { return text }
+        if let number = value as? Number { return number.literal }
+        return try boolean(value) ? "true" : "false"
+    }
+
+    /// GsonHelper's boolean fields use Boolean.parseBoolean on non-boolean primitives.
+    static func primitiveBoolean(_ value: Any?) throws -> Bool {
+        try primitiveString(value).lowercased() == "true"
+    }
+
     static func identifier(_ value: Any?) throws -> Identifier {
         guard let value = value as? String, let id = GameAssets.resourceID(value) else { throw AssetReadError.invalidData }
         return id
     }
 
-    static func jsonNumber(_ value: Any?) throws -> NSNumber {
+    // Native NBT attributes still use their existing bridge until their field audit (#316).
+    // Parsed JSON numbers never reach this adapter.
+    private static func nativeNumber(_ value: Any?) throws -> NSNumber {
         guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID() else { throw AssetReadError.invalidData }
         return value
     }
@@ -41,7 +56,7 @@ enum AssetJSON {
         if let value = value as? Number {
             guard let parsed = Float(value.literal) else { throw AssetReadError.invalidData }
             number = parsed
-        } else { number = try jsonNumber(value).floatValue }
+        } else { number = try nativeNumber(value).floatValue }
         guard number.isFinite else { throw AssetReadError.invalidData }
         return number
     }
@@ -94,7 +109,7 @@ enum AssetJSON {
         }
         // Native NBT attributes retain their existing scalar conversion. Resource JSON,
         // including dimension attributes, reaches Number before Foundation discards digits.
-        guard let integer = Int32(exactly: try jsonNumber(value).doubleValue) else { throw AssetReadError.invalidData }
+        guard let integer = Int32(exactly: try nativeNumber(value).doubleValue) else { throw AssetReadError.invalidData }
         return Int(integer)
     }
 

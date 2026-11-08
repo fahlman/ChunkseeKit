@@ -25,17 +25,22 @@ public struct PlayerStatistics: Sendable, Equatable {
     }
 
     public init(json data: Data) throws {
-        guard let root = try AssetJSON.foundationValue(from: data) as? [String: Any] else {
+        guard let root = try AssetJSON.value(from: data, limitsNumbers: false) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
-        dataVersion = root["DataVersion"] as? Int
-        if let stats = root["stats"] as? [String: [String: Int]] {
-            values = SaveDataUpgrade.statistics(stats, dataVersion: dataVersion)
+        dataVersion = try? AssetJSON.integer(root["DataVersion"])
+        if let stats = root["stats"] as? [String: Any] {
+            // The game's map codec keeps readable entries after a member fails. Unknown
+            // identifiers remain saved facts even when an installed registry lacks them.
+            let readable = stats.compactMapValues { value -> [String: Int]? in
+                (value as? [String: Any])?.compactMapValues { try? AssetJSON.integer($0) }
+            }
+            values = SaveDataUpgrade.statistics(readable, dataVersion: dataVersion)
             return
         }
         var custom: [String: Int] = [:]
         for (key, value) in root {
-            guard let count = value as? Int, key.hasPrefix("stat.") else { continue }
+            guard key.hasPrefix("stat."), let count = try? AssetJSON.integer(value) else { continue }
             let id = key.contains(where: \.isNumber) ? key : Self.modernID(legacy: String(key.dropFirst(5)))
             custom[id] = count
         }
@@ -94,14 +99,14 @@ public struct AdvancementProgress: Sendable, Equatable {
     /// Reads every entry of an advancements file, upgrading saved names and sorting by id.
     /// Ambiguous name collisions retain their original keys and progress.
     public static func list(json data: Data) throws -> [AdvancementProgress] {
-        guard let root = try AssetJSON.foundationValue(from: data) as? [String: Any] else {
+        guard let root = try AssetJSON.value(from: data, limitsNumbers: false) as? [String: Any] else {
             throw CocoaError(.coderReadCorrupt)
         }
-        let interpreted = SaveDataUpgrade.advancements(root, dataVersion: root["DataVersion"] as? Int)
+        let interpreted = SaveDataUpgrade.advancements(root, dataVersion: try? AssetJSON.integer(root["DataVersion"]))
         return interpreted.compactMap { id, value -> AdvancementProgress? in
             guard let entry = value as? [String: Any] else { return nil }
             let criteria = (entry["criteria"] as? [String: String] ?? [:]).compactMapValues(SavedDate.parse)
-            return AdvancementProgress(id: id, isDone: entry["done"] as? Bool ?? false, criteria: criteria)
+            return AdvancementProgress(id: id, isDone: (try? AssetJSON.boolean(entry["done"])) ?? false, criteria: criteria)
         }.sorted { $0.id < $1.id }
     }
 }

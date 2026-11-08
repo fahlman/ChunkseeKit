@@ -80,7 +80,7 @@ struct ResourceTagReader {
                                element: (String, inout ResourceReadBudget) throws -> ResourceRead<Void>) throws -> ResourceRead<GameTag> {
         guard let stack = try resources.stack(id, budget: &budget, decode: { data, budget -> (value: [Entry], replace: Bool)? in
             do {
-                let root = try AssetJSON.object(AssetJSON.foundationValue(from: data))
+                let root = try AssetJSON.object(AssetJSON.value(from: data, limitsNumbers: false))
                 let values = try AssetJSON.array(root["values"])
                 guard values.count <= 4096, budget.consume(values.count) else { return nil }
                 return (try values.map(Entry.init), try Entry.flag(root["replace"], default: false))

@@ -7,7 +7,7 @@ public struct GameAssets: Sendable {
     /// color palette. Bump for handwritten reader changes; generated facts update automatically.
     /// The selected files and resolved definitions remain separate cache inputs.
     public static let interpretationVersion = InterpretationVersion(
-        domain: "assets", revision: 1, generatedFacts: GeneratedInterpretationDigests.assets,
+        domain: "assets", revision: 2, generatedFacts: GeneratedInterpretationDigests.assets,
         dependencies: [])
 
     public let version: Version
@@ -30,14 +30,27 @@ public struct GameAssets: Sendable {
             id = try values.decode(String.self, forKey: .id)
             dataVersion = try values.decode(Int32.self, forKey: .dataVersion)
             isStable = try? values.decode(Bool.self, forKey: .isStable)
-            if let text = try? values.decode(String.self, forKey: .buildTime) {
+            buildTime = Self.buildDate(try? values.decode(String.self, forKey: .buildTime))
+        }
+
+        /// Installed version.json uses GsonHelper, independently of this value's public
+        /// Decodable representation. In particular, world_version narrows rather than rejects.
+        fileprivate init(json: [String: Any]) throws {
+            id = try AssetJSON.primitiveString(json["id"])
+            dataVersion = Int32(try AssetJSON.integer(json["world_version"]))
+            isStable = try? AssetJSON.primitiveBoolean(json["stable"])
+            buildTime = Self.buildDate(try? AssetJSON.primitiveString(json["build_time"]))
+        }
+
+        private static func buildDate(_ text: String?) -> Date? {
+            if let text {
                 let format = ISO8601DateFormatter()
                 format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 let fractional = format.date(from: text)
                 format.formatOptions = [.withInternetDateTime]
-                buildTime = fractional ?? format.date(from: text)
+                return fractional ?? format.date(from: text)
             } else {
-                buildTime = nil
+                return nil
             }
         }
     }
@@ -58,7 +71,8 @@ public struct GameAssets: Sendable {
 
     private init?(resources: ZipResources) {
         guard let metadata = resources.read("version.json"),
-              let version = try? AssetJSON.decode(Version.self, from: metadata), !version.id.isEmpty else { return nil }
+              let version = try? Version(json: AssetJSON.object(AssetJSON.value(from: metadata, limitsNumbers: false))),
+              !version.id.isEmpty else { return nil }
         self.resources = resources
         self.version = version
     }
