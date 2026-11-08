@@ -35,7 +35,7 @@ struct TimelineTrack<Value: LightingValue>: Sendable, Equatable {
             let frame = try AssetJSON.object(raw)
             let ticks = try AssetJSON.integer(frame["ticks"])
             guard ticks >= 0, period.map({ ticks <= $0 }) ?? true else { throw InvalidLighting.data }
-            let value = try Value.argument(frame["value"], modifier: modifier, overrideRange: overrideRange)
+            let value = try Value.argument(.json(frame["value"]), modifier: modifier, overrideRange: overrideRange)
             return Frame(ticks: ticks, value: value)
         }
         let first = frames[0], last = frames[frames.count - 1]
