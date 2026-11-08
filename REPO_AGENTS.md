@@ -524,6 +524,31 @@ independently readable. Folder/ZIP/jar priority is shared with the other resourc
 version labels do not gate these facts. Unrelated attributes, complete registry validation, final
 clamping, weather/spatial layers, cache ownership and app rendering remain outside this reader.
 
+The #316 environment-attribute correction retains native NBT until LightingInput selects the
+field's codec. FLOAT consumes NBT.javaFloat directly; packed RGB consumes NBT.javaInt before
+extracting channels. Three-channel lists and native arrays retain FLOAT conversion, including
+the existing single empty-key mixed-list wrapper. Hex strings share the JSON color parser.
+LightingValue still owns modifier dispatch, arithmetic and per-attribute override ranges;
+ordinary modifiers use their own argument codec. Final SkyLighting and monster-light values
+retain their existing finite-value requirements. A nonfinite packed numeric input can become
+a valid finite color, so that restriction never precedes the INT conversion.
+The actual EnvironmentAttributeMap.CODEC proof covers 190 preserved binary fixtures and 15
+labelled factory inputs, in direct/override/add forms for angle, ranged factor and RGB fields.
+Captured outputs supply the regression expectations; public dimension reads verify intact
+build/time metadata, JSON agreement and unchanged saved files. AssetJSON no longer accepts
+NSNumber numeric fallbacks; parsed JSON keeps the single original-token owner.
+Lighting's JSON FLOAT adapter also preserves overflow to infinity until its modifier and final
+value checks. Scalar minimum and clamped RGB subtraction can produce finite results from those
+arguments in both formats. Other AssetJSON number/channel callers retain their finite-only
+contract. TimelineTrack retains its existing finite-keyframe policy at frame construction.
+The shared Float extrema also preserve Java Math.min/max NaN propagation and signed-zero order,
+verified through the actual environment field codecs alongside the overflow modifier cases.
+This slice changes no public API, region/chunk traversal, saved-light decoding, rendering or
+serialized RegionFacts. The affected dimension facts are recomputed, and resolved monster-light
+rules remain whole-value cache inputs. Generated facts and all interpretation identities stay
+unchanged. It requires the ordinary package checks; no renderer/region-read timing is claimed
+or required for this slice. Other saved numeric fields remain on #316.
+
 The unreleased #181 extension adds `World.savedSkyLighting(assets:)`: base and timeline layers at
 named saved ticks, through existing dimension/clock readers. WorldResourcePack owns both
 first-present definitions and low-to-high resource stacks, including listing/containment and
@@ -1500,7 +1525,7 @@ selection; other changed resource projections are recomputed. Paired copied-worl
 shared text refactor. The remaining #295 migration routes model face tint/rotation, element light emission,
 dimension/noise limits, sea levels and spawn-light providers through that same raw-number owner.
 Dimension environment attributes preserve their original number tokens for FLOAT and packed RGB
-conversion; their NBT adapter retains its existing native-scalar behavior. Model vectors and
+conversion; their native NBT path now uses the separately verified #316 format adapter. Model vectors and
 transforms also parse the original decimal directly as Float. Required field validation still
 rejects invalid bounds; malformed optional lighting, time, scale and sea-level fields do not hide
 other readable facts. Dimension JSON is parsed once and shared by its projections, including
@@ -1533,8 +1558,8 @@ Language values can retain numeric spelling that cannot be converted to an integ
 game readers and public file/archive tests cover fractions, narrowing, exponent limits, invalid
 siblings, optional metadata and exact language spelling. GameAssets interpretation revision 2
 invalidates older resource-derived results. Chunk and RegionFacts interpretation are unchanged.
-Native NBT environment attributes retain their existing scalar bridge pending #316's field audit;
-this JSON change does not claim that the separate NBT/NSNumber migration is finished.
+Native NBT environment attributes now use the separately verified #316 format adapter described
+above; the remaining saved numeric field families still require their own audits on #316.
 
 The supported Unicode encodings share decoded member selection. Only AssetJSON
 calls the Foundation JSON readers for game input. RegionFacts interpretation 28 invalidates

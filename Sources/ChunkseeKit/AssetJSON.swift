@@ -41,23 +41,18 @@ enum AssetJSON {
         return id
     }
 
-    // Native NBT attributes still use their existing bridge until their field audit (#316).
-    // Parsed JSON numbers never reach this adapter.
-    private static func nativeNumber(_ value: Any?) throws -> NSNumber {
-        guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID() else { throw AssetReadError.invalidData }
-        return value
+    static func number(_ value: Any?) throws -> Float {
+        let number = try float(value)
+        guard number.isFinite else { throw AssetReadError.invalidData }
+        return number
     }
 
-    static func number(_ value: Any?) throws -> Float {
+    static func float(_ value: Any?) throws -> Float {
         // Gson's typed FLOAT field parses the original decimal directly, without a Double
-        // intermediate. Saved NBT attributes supply native scalars; retain their adapter's
-        // conversion and the finite-value requirement for both paths.
-        let number: Float
-        if let value = value as? Number {
-            guard let parsed = Float(value.literal) else { throw AssetReadError.invalidData }
-            number = parsed
-        } else { number = try nativeNumber(value).floatValue }
-        guard number.isFinite else { throw AssetReadError.invalidData }
+        // intermediate. Native saved attributes have their own tagged format adapter.
+        guard let value = value as? Number, let number = Float(value.literal) else {
+            throw AssetReadError.invalidData
+        }
         return number
     }
 
@@ -68,10 +63,10 @@ enum AssetJSON {
         return number
     }
 
-    static func numbers(_ value: Any?, count: Int) throws -> [Float] {
+    static func numbers(_ value: Any?, count: Int, read: (Any?) throws -> Float = AssetJSON.number) throws -> [Float] {
         let values = try array(value)
         guard values.count == count else { throw AssetReadError.invalidData }
-        return try values.map(number)
+        return try values.map(read)
     }
 
     static func color(_ value: Any?) throws -> UInt32 {
@@ -95,21 +90,15 @@ enum AssetJSON {
     /// STRING_RGB_VEC3_COLOR keeps list channels as floats, unlike the packed RGB codec.
     static func colorVector(_ value: Any?) throws -> SIMD3<Float> {
         if value is [Any] {
-            let channels = try numbers(value, count: 3)
+            let channels = try numbers(value, count: 3, read: AssetJSON.float)
             return SIMD3(channels[0], channels[1], channels[2])
         }
         let color = try stringColor(value)
-        return SIMD3(Float((color >> 16) & 255), Float((color >> 8) & 255), Float(color & 255)) / 255
+        return RGBColor.vector(color)
     }
 
     static func integer(_ value: Any?) throws -> Int {
-        if let value = value as? Number {
-            guard let integer = value.int32 else { throw AssetReadError.invalidData }
-            return Int(integer)
-        }
-        // Native NBT attributes retain their existing scalar conversion. Resource JSON,
-        // including dimension attributes, reaches Number before Foundation discards digits.
-        guard let integer = Int32(exactly: try nativeNumber(value).doubleValue) else { throw AssetReadError.invalidData }
+        guard let value = value as? Number, let integer = value.int32 else { throw AssetReadError.invalidData }
         return Int(integer)
     }
 

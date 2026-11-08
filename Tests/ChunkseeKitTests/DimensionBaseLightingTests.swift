@@ -85,6 +85,66 @@ import Testing
         for (index, color) in colors.enumerated() { #expect(read["test:color\(index)"]?.baseSkyLighting?.skyLightColor == color.1) }
     }
 
+    @Test func nativePackedColorsChooseTheIntegerCodecBeforeFloatingConversion() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        // Actual EnvironmentAttributeMap.CODEC outputs from the #316 field proof. A large
+        // Long retains its low bits; a fractional or nonfinite number is still a packed INT.
+        let colors: [(NBT, SIMD3<Float>)] = [
+            (.long(9_007_199_254_740_993), SIMD3(0, 0, Float(bitPattern: 0x3b808081))),
+            (.float(1.5), SIMD3(0, 0, Float(bitPattern: 0x3b808081))),
+            (.double(.infinity), SIMD3(repeating: 1)),
+            (.double(.nan), SIMD3(repeating: 0))
+        ]
+        let types = Dictionary(uniqueKeysWithValues: colors.enumerated().map {
+            ("test:numeric\($0.offset)", definition(["attributes": .compound(["visual/sky_light_color": $0.element.0])]))
+        })
+        let world = try world(root, types: types)
+        let path = root.appendingPathComponent("level.dat")
+        let saved = try Data(contentsOf: path)
+        let read = try world.dimensionTypes(assets: nil)
+        for (index, color) in colors.enumerated() {
+            let type = try #require(read["test:numeric\(index)"])
+            #expect(type.baseSkyLighting?.skyLightColor == color.1)
+            #expect(type.buildRange == -64...319 && type.time?.hasSkylight == true)
+        }
+        #expect(try Data(contentsOf: path) == saved)
+    }
+
+    @Test func nativeAndJSONLargePackedColorsHaveTheSameMeaning() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let packed: Int64 = 9_007_199_254_740_993
+        let world = try world(root, types: [
+            "test:inline": definition(["attributes": .compound(["visual/sky_light_color": .long(packed)])]),
+            "test:resource": .string("test:resource")
+        ])
+        let jar = try assets([entry("test:resource", json(["attributes": ["visual/sky_light_color": packed]]))])
+        let types = try world.dimensionTypes(assets: jar)
+        let inline = try #require(types["test:inline"]?.baseSkyLighting)
+        #expect(types["test:resource"]?.baseSkyLighting == inline)
+        #expect(inline.skyLightColor.z.bitPattern == 0x3b808081)
+    }
+
+    @Test func overflowingJSONAndNativeModifierArgumentsKeepTheSameFiniteResult() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let native: [String: NBT] = [
+            "visual/sky_light_factor": operation("minimum", .float(.infinity)),
+            "visual/sky_light_color": operation("subtract", .list(.float, [.float(.infinity), .float(0), .float(0)]))
+        ]
+        let world = try world(root, types: ["test:inline": definition(["attributes": .compound(native)]),
+                                           "test:resource": .string("test:resource")])
+        let jar = try assets([entry("test:resource", json(["attributes": [
+            "visual/sky_light_factor": ["modifier": "minimum", "argument": 1e100],
+            "visual/sky_light_color": ["modifier": "subtract", "argument": [1e100, 0, 0]]
+        ]]))])
+        let types = try world.dimensionTypes(assets: jar)
+        let inline = try #require(types["test:inline"]?.baseSkyLighting)
+        #expect(types["test:resource"]?.baseSkyLighting == inline)
+        #expect(inline.skyLightFactor == 1 && inline.skyLightColor == SIMD3(0, 1, 1))
+    }
+
     @Test func malformedNBTLightingDoesNotDiscardIndependentBuildAndTimeMetadata() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

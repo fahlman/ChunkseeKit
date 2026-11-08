@@ -4,6 +4,10 @@ enum RGBColor {
         UInt32(bitPattern: value) & 0x00ff_ffff
     }
 
+    static func vector(_ color: UInt32) -> SIMD3<Float> {
+        SIMD3(Float((color >> 16) & 255), Float((color >> 8) & 255), Float(color & 255)) / 255
+    }
+
     static func channels(_ values: [Float]) -> UInt32? {
         guard values.count == 3, values.allSatisfy({ $0.isFinite && (0...1).contains($0) }) else { return nil }
         // ARGB.as8BitChannel uses floor(channel * 255) at Float precision.

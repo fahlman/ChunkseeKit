@@ -8,7 +8,7 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable> where Att
     func applying<Value: LightingValue>(_ attribute: Attribute, to base: Value,
                                         overrideRange: ClosedRange<Float>? = nil) throws -> Value {
         guard let entry = entries[attribute] else { return base }
-        let argument = try Value.argument(entry.argument.raw, modifier: entry.modifier, overrideRange: overrideRange)
+        let argument = try Value.argument(entry.argument, modifier: entry.modifier, overrideRange: overrideRange)
         return try Value.apply(entry.modifier, to: base, argument: argument)
     }
 
@@ -36,17 +36,17 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable> where Att
 
     private struct Entry {
         let modifier: LightingModifier
-        let argument: Argument
+        let argument: LightingInput
 
         init(nbt: NBT) throws {
             if nbt.compound != nil {
                 guard let text = nbt["modifier"]?.string, let modifier = LightingModifier(rawValue: text),
                       let raw = nbt["argument"] else { throw InvalidLighting.data }
                 self.modifier = modifier
-                argument = try Argument(nbt: raw)
+                argument = .nbt(raw)
             } else {
                 modifier = .override
-                argument = try Argument(nbt: nbt)
+                argument = .nbt(nbt)
             }
         }
 
@@ -55,44 +55,11 @@ struct EnvironmentAttributeMap<Attribute: Hashable & RawRepresentable> where Att
                 guard let text = fields["modifier"] as? String, let modifier = LightingModifier(rawValue: text),
                       let raw = fields["argument"] else { throw InvalidLighting.data }
                 self.modifier = modifier
-                argument = Argument(json: raw)
+                argument = .json(raw)
             } else {
                 modifier = .override
-                argument = Argument(json: json)
+                argument = .json(json)
             }
         }
-    }
-
-    /// Both encodings feed the same strict scalar, RGB and phase codecs used by timelines.
-    /// Only supported primitive forms are adapted; this is not a recursive JSON/NBT bridge.
-    private struct Argument {
-        let raw: Any
-
-        init(nbt: NBT) throws {
-            if let text = nbt.string { raw = text }
-            else if let number = nbt.double { raw = number }
-            else {
-                switch nbt {
-                case .list(_, let values):
-                    guard values.count == 3 else { throw InvalidLighting.data }
-                    let numbers = values.compactMap { $0.unwrappedListElement.double }
-                    guard numbers.count == 3 else { throw InvalidLighting.data }
-                    raw = numbers
-                case .byteArray(let values):
-                    guard values.count == 3 else { throw InvalidLighting.data }
-                    raw = values.map(Double.init)
-                case .intArray(let values):
-                    guard values.count == 3 else { throw InvalidLighting.data }
-                    raw = values.map(Double.init)
-                case .longArray(let values):
-                    guard values.count == 3 else { throw InvalidLighting.data }
-                    raw = values.map(Double.init)
-                default: throw InvalidLighting.data
-                }
-            }
-        }
-
-        // Keep the original JSON number tokens for the shared FLOAT/INT codecs.
-        init(json: Any) { raw = json }
     }
 }
