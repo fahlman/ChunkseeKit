@@ -113,16 +113,11 @@ import Testing
         }
     }
 
-    @Test func gsonMetadataPrimitivesStaySeparateFromPublicDecoding() throws {
+    @Test func metadataPrimitivesUseGsonConversions() throws {
         let game = try #require(GameAssets(data: Data(TestZIP.zip([
             .init(path: "version.json", text: #"{"id":1.50,"world_version":1.50,"stable":"TrUe","build_time":"2026-01-01T12:00:00Z"}"#),
         ]))))
         #expect(game.version.id == "1.50" && game.version.dataVersion == 1 && game.version.isStable == true)
         #expect(game.version.buildTime == ISO8601DateFormatter().date(from: "2026-01-01T12:00:00Z"))
-        let decoded = try JSONDecoder().decode(GameAssets.Version.self, from: Data(#"{"id":"fixture","world_version":1}"#.utf8))
-        #expect(decoded.dataVersion == 1)
-        #expect(throws: (any Error).self) {
-            try JSONDecoder().decode(GameAssets.Version.self, from: Data(#"{"id":"fixture","world_version":1.50}"#.utf8))
-        }
     }
 }

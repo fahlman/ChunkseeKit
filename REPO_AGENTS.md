@@ -1517,12 +1517,15 @@ integer conversion as resource fields, while language values use Gson's primitiv
 Statistic entries and categories are read independently; malformed values do not hide readable
 neighbors or unfamiliar identifiers. Legacy numeric counts reach the same conversion after the
 game's StatsCounterFix retains them. Missing or unreadable saved DataVersion remains nil, rather
-than exposing a load-time fallback as saved metadata. Advancement completion stays a strict saved
+than exposing a load-time fallback as saved metadata. Advancement completion becomes a strict saved
 boolean; its existing readable progress and name-upgrade policies are unchanged.
 
-Installed version.json uses the GsonHelper primitive readers, including narrowing world_version,
-independently of GameAssets.Version's unchanged public Decodable representation. Other Decodable
-inputs pass through the same member-selection owner with numeric spelling intact; the iterative
+Installed version.json has one reader using the GsonHelper primitive conversions, including
+narrowing world_version. GameAssets.Version no longer conforms to Decodable: clients obtain it
+from GameAssets.version so a second decoder cannot apply conflicting rules to the same metadata.
+This public API removal requires a minor release and downstream tests that decoded Version
+directly must instead read a synthetic game archive. Other Decodable inputs pass through the
+same member-selection owner with numeric spelling intact; the iterative
 normalizer preserves their declared Decodable contracts without recursive worker-stack growth.
 Existing document syntax bounds and resource-reader numeric token limits remain distinct from
 conversion; Gson's decimal length/scale limits apply only when a numeric codec consumes a token.

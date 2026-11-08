@@ -13,7 +13,7 @@ public struct GameAssets: Sendable {
     public let version: Version
     let resources: ZipResources
 
-    public struct Version: Sendable, Equatable, Decodable {
+    public struct Version: Sendable, Equatable {
         public let id: String
         public let dataVersion: Int32
         /// The game's release classification, independent of its name. Nil when unavailable.
@@ -21,20 +21,7 @@ public struct GameAssets: Sendable {
         /// The game's build instant, for ordering installed versions without parsing names.
         public let buildTime: Date?
 
-        private enum CodingKeys: String, CodingKey {
-            case id, dataVersion = "world_version", isStable = "stable", buildTime = "build_time"
-        }
-
-        public init(from decoder: any Decoder) throws {
-            let values = try decoder.container(keyedBy: CodingKeys.self)
-            id = try values.decode(String.self, forKey: .id)
-            dataVersion = try values.decode(Int32.self, forKey: .dataVersion)
-            isStable = try? values.decode(Bool.self, forKey: .isStable)
-            buildTime = Self.buildDate(try? values.decode(String.self, forKey: .buildTime))
-        }
-
-        /// Installed version.json uses GsonHelper, independently of this value's public
-        /// Decodable representation. In particular, world_version narrows rather than rejects.
+        /// Installed version.json uses GsonHelper; world_version narrows rather than rejects.
         fileprivate init(json: [String: Any]) throws {
             id = try AssetJSON.primitiveString(json["id"])
             dataVersion = Int32(try AssetJSON.integer(json["world_version"]))
