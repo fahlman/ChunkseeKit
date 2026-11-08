@@ -42,7 +42,7 @@ import Testing
             """.utf8)
             let file = root.appendingPathComponent("players/stats/\(id.uuidString.lowercased()).json")
             try Fixtures.write(Array(input), to: file)
-            let result = try #require(world.statistics(for: id))
+            let result = try #require(try world.statistics(for: id))
             #expect(result.dataVersion == sample.integer, "\(sample.token)")
             var custom = ["minecraft:play_time": 7]
             custom["minecraft:jump"] = sample.integer
@@ -70,7 +70,7 @@ import Testing
     @Test func installedVersionUsesTheGamesIntegerReader() throws {
         for sample in samples {
             let metadata = "{\"id\":\"fixture\",\"world_version\":\(sample.token),\"stable\":true}"
-            let game = GameAssets(data: Data(TestZIP.zip([.init(path: "version.json", text: metadata)])))
+            let game = try GameAssets(data: Data(TestZIP.zip([.init(path: "version.json", text: metadata)])))
             #expect(game.map { Int($0.version.dataVersion) } == sample.integer, "\(sample.token)")
             if sample.integer != nil { #expect(game?.version.id == "fixture" && game?.version.isStable == true) }
         }
@@ -104,7 +104,7 @@ import Testing
             """.utf8)
             let file = root.appendingPathComponent("players/advancements/\(id.uuidString.lowercased()).json")
             try Fixtures.write(Array(data), to: file)
-            let values = try #require(world.advancements(for: id))
+            let values = try #require(try world.advancements(for: id))
             let renamed = try #require(values.first { $0.id == "minecraft:recipes/misc/sugar_from_sugar_cane" })
             #expect(renamed.isDone && renamed.criteria.count == 1)
             let unknown = try #require(values.first { $0.id == "example:unknown" })
