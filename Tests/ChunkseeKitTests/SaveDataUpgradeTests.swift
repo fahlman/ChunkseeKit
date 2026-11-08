@@ -371,7 +371,9 @@ import ChunkseeKitTestSupport
         func counts(_ items: [ItemStack]) -> [Int] { items.flatMap(\.allItems).map(\.count) }
         func upgradedJSON() throws -> Data {
             var fields = try #require(JSONSerialization.jsonObject(with: Data(record.output.utf8)) as? [String: Any])
-            fields["DataVersion"] = Int.max
+            // A saved JSON version uses Java's int width. Int.max would narrow to -1
+            // and incorrectly ask the reader to upgrade this already-upgraded fixture.
+            fields["DataVersion"] = Int32.max
             return try JSONSerialization.data(withJSONObject: fields)
         }
         switch record.kind {

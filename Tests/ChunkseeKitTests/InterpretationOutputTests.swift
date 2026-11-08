@@ -15,6 +15,8 @@ import Testing
         generatedFacts: "ecf3d4cb262728a6dc1418c48cb262fa32d4415dcdb64287ea520c87ba1b8702", dependencies: [])
     private let assets1 = InterpretationVersion(domain: "assets", revision: 1,
         generatedFacts: "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c", dependencies: [])
+    private let assets2 = InterpretationVersion(domain: "assets", revision: 2,
+        generatedFacts: "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c", dependencies: [])
     private var light1: InterpretationVersion {
         .init(domain: "light", revision: 1,
             generatedFacts: "e665beb8560af59ac4835d84dcd2a21b455e44c097d2e82853c5fb88bc626ccc", dependencies: [terrain1])
@@ -343,6 +345,7 @@ import Testing
         let colors = (0..<256).map { MapItem.rgb(forColor: UInt8($0)).map { [$0.red, $0.green, $0.blue] } }
         try check(AssetOutput(material: material, biome: biome, mapColors: colors),
                   version: GameAssets.interpretationVersion,
-                  baselines: [assets1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
+                  baselines: [assets1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4",
+                              assets2: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
     }
 }

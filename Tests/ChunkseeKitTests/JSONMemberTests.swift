@@ -28,7 +28,7 @@ import ChunkseeKitTestSupport
         }
     }
 
-    @Test func metadataLanguageAndTagsShareSelectionWithoutChangingFieldTypes() throws {
+    @Test func metadataLanguageAndTagsShareDecodedMemberSelection() throws {
         let entries: [TestZIP.Entry] = [
             .init(path: "version.json", text: #"{"id":"old","id":"last","world_version":1,"world_version":999999,"stable":false,"stable":true}"#),
             .init(path: "assets/minecraft/lang/en_us.json", text: #"{"same":"first","\u0073ame":"last","renamed":"old","renamed":"value","S0:x":"first","S0:x":"last marker","N123":"literal","empty":"first","empty":null,"number":1,"number":2}"#),
@@ -45,13 +45,14 @@ import ChunkseeKitTestSupport
         let tag = try #require(try game.tag("test:picked", in: "block"))
         #expect(tag.members.map(\.id) == ["test:last"] && tag.members.first?.required == false)
         #expect(try game.advancementDefinitions(for: ["test:picked"])["test:picked"]?.title == .literal("last"))
-        let fractionalVersion = TestZIP.Entry(path: "version.json", text: #"{"id":"fixture","world_version":1,"world_version":1.5}"#)
-        #expect(try GameAssets(data: Data(TestZIP.zip([fractionalVersion]))) == nil)
+        let fractionalVersion = TestZIP.Entry(path: "version.json", text: #"{"id":"fixture","world_version":2,"world_version":1.5}"#)
+        #expect(try GameAssets(data: Data(TestZIP.zip([fractionalVersion])))?.version.dataVersion == 1)
     }
 
     @Test func savedStatisticsAdvancementsAndNamesUseTheLastValue() throws {
-        let stats = try PlayerStatistics(json: Data(#"{"stats":{"minecraft:custom":{"minecraft:play_time":1,"minecraft:play_time":9007199254740993}},"DataVersion":1,"DataVersion":999999}"#.utf8))
-        #expect(stats.dataVersion == 999999 && stats.playTime == 9_007_199_254_740_993)
+        let stats = try PlayerStatistics(json: Data(#"{"stats":{"minecraft:custom":{"minecraft:play_time":2,"minecraft:play_time":9007199254740993}},"DataVersion":1,"DataVersion":999999}"#.utf8))
+        // The last number is exact until the statistic codec narrows its low 32 bits.
+        #expect(stats.dataVersion == 999999 && stats.playTime == 1)
         let advancements = try AdvancementProgress.list(json: Data(#"{"test:done":{"done":false,"done":true,"criteria":{"one":"2026-10-01 00:00:00 +0000","one":"2026-10-02 00:00:00 +0000"}}}"#.utf8))
         #expect(advancements.count == 1 && advancements[0].isDone && advancements[0].criteria.count == 1)
         let cache = #"[{"uuid":"bad","uuid":"52dfb519-de9c-47e6-bc6c-bb053cc423e7","name":"first","\u006eame":"last"}]"#
@@ -76,8 +77,8 @@ import ChunkseeKitTestSupport
         let stats = #"{"stats":{"minecraft:custom":{"minecraft:play_time":42}},"unused":["# + nested + "]}"
         #expect(try PlayerStatistics(json: Data(stats.utf8)).playTime == 42)
 
-        // JSONDecoder can skip a long numeric field it never decodes. Sharing member
-        // selection must not apply the game-number codec's token bound to that adapter.
+        // An ignored metadata number is never consumed by a numeric codec. Sharing member
+        // selection must not apply a converted field's bound to that unused value.
         let metadata = #"{"id":"old","id":"last","world_version":999999,"unused":"# +
             String(repeating: "1", count: 1_024) + "}"
         let entries = [TestZIP.Entry(path: "version.json", text: metadata)]

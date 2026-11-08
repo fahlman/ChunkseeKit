@@ -12,7 +12,7 @@ import Testing
         ]))))
     }
 
-    @Test func releaseClassificationComesFromTheBooleanNotTheName() throws {
+    @Test func releaseClassificationComesFromMetadataNotTheName() throws {
         for stable in [false, true] {
             let game = try assets("""
                 {"id":"arbitrary-name","world_version":42,"stable":\(stable),"build_time":"2000-01-01T00:00:00+00:00"}
@@ -35,14 +35,17 @@ import Testing
     }
 
     @Test func missingMetadataDoesNotDiscardReadableGameFiles() throws {
-        for fields in ["", ##", "stable": null, "build_time": null"##,
-                       ##", "stable": "true", "build_time": 42"##,
-                       ##", "stable": 1, "build_time": "not-a-date""##] {
+        let cases: [(fields: String, stable: Bool?)] = [
+            ("", nil), (##", "stable": null, "build_time": null"##, nil),
+            (##", "stable": "true", "build_time": 42"##, true),
+            (##", "stable": 1, "build_time": "not-a-date""##, false),
+        ]
+        for (fields, stable) in cases {
             let game = try assets("""
                 {"id":"fixture","world_version":42\(fields)}
                 """)
             #expect(game.version.id == "fixture" && game.version.dataVersion == 42)
-            #expect(game.version.isStable == nil && game.version.buildTime == nil)
+            #expect(game.version.isStable == stable && game.version.buildTime == nil)
             #expect(game.model("example:item/token") != nil)
         }
     }

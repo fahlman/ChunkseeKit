@@ -234,7 +234,7 @@ enum WorldResourcePack {
             data = metadata
             result = .zip(resources)
         }
-        guard let json = (try? AssetJSON.foundationValue(from: data)) as? [String: Any],
+        guard let json = (try? AssetJSON.value(from: data, limitsNumbers: false)) as? [String: Any],
               json["pack"] is [String: Any], json["overlays"] == nil, json["filter"] == nil else { return .unavailable }
         return result
     }
