@@ -260,8 +260,8 @@ records, and `TerrainChunkInput` supplies layout/palette upgrades for terrain va
 combined scan does not prepare a second block-entity projection for its terrain-only `Chunk`.
 Container and creature projections share flattened, upgraded entity records, and public `Chunk`
 values retain their block-entity identities for repeated lookups. Records-only queries request
-only their needed upgrades; signs retain saved text/identity fields and spawner-only reads avoid
-walking unrelated inventories. `SavedChunkFields` owns root/Level selection, including existing
+only their needed upgrades; signs keep saved identity/position while sharing upgraded text, and
+sign/spawner-only reads avoid walking unrelated inventories. `SavedChunkFields` owns root/Level selection, including existing
 field-specific malformed-input precedence. Raw NBT APIs and saved files remain unchanged.
 The #314 ownership change added no supported format or numeric conversion. The #316 field-codec
 audit in foundation step 4a establishes each game's reader before changing a field family.
@@ -1316,6 +1316,11 @@ trade-price and sold-out numeric defaults remain a separate #222 code-fact findi
 `MapItem` owns banner positions: complete three-int arrays (verified in 26.3) and the existing
 coordinate compounds. Omitted saved color/name remain optional; 26.3 omits white/unnamed defaults.
 No map pixels or world files are changed when reading banners.
+Banner names use the root saved-data version and Minecraft's generated absent-version fallback.
+The extracted field-rename boundary determines when uppercase `Name` feeds the later text
+conversion; after that boundary it remains readable remainder data. Lowercase `name` uses
+the shared historical text conversion. Actual whole-root fixer outputs cover both spellings,
+their collision, the field/text boundaries and the missing-version fallback.
 
 `World.readMapItems()` returns a `MapItemRead` with readable maps, unresolved IDs and directory
 listing completeness. `mapItems()` delegates to that one discovery owner and keeps its existing
@@ -1481,13 +1486,28 @@ absent, malformed or dynamic titles remain nil without discarding saved advancem
 `TextComponent.Content` retains literal/translated components, fallback strings, typed arguments,
 arrays and extra siblings under the existing text owner. The client chooses language and performs
 substitution/layout; styles and actions are not retained. Keybind, score, selector, NBT and object
-components need game context and remain unavailable. Saved NBT and older JSON-wrapped text
-use the same interpreter through format adapters; plainText renders that content with its existing
+components need game context and remain unavailable. Saved NBT strings are always literal.
+`SaveDataUpgrade` converts historical JSON-string fields once before the shared interpreter;
+plainText renders that content with its existing
 translation-key output and formatting-code removal. Explicit type dispatch and malformed-content
 handling now also reach saved names/signs/books. RegionFacts interpretation 26 invalidates the old
 projections. Paired copied-world timing is also required for this shared saved-reader change.
 DisplayInfo, ComponentSerialization and TranslatableContents establish these formats, including
 explicit type dispatch and lenient fallback.
+`SavedTextUpgrade` owns that historical conversion. Its applicability and earlier name/sign/book
+encodings come from actual registered fixes through the single release tool, never hand-entered
+version numbers or content catalogs. Only declared fields are visited; custom data and nested
+literal strings are not reparsed. Written-book titles remain Filterable strings, while written
+pages are components. The shared bounded JSON parser has a separate lenient saved-text entrypoint;
+ordinary resource parsing keeps its existing syntax rules. Native numeric kinds and heterogeneous
+NBT list wrappers follow JsonOps/NbtOps. Raw file APIs and save bytes remain unchanged.
+The NBT `TextComponent.content`/`plainText` contract no longer guesses JSON from a prefix. Callers
+with standalone JSON use `content(json:)`; saved records use their containing file's versioned
+reader. This behavioral API correction requires a minor release notice. RegionFacts revision 33
+and its generated saved-text digest invalidate earlier name/sign/book projections. The generated
+fixtures capture actual text and complete-record fixer results; public-reader tests cover selective
+sign reads, full region scans, cached round trips and unchanged files. Required checks and paired
+copied-world timing remain release gates.
 Reads are bounded to 64 packs, 4,096 requested IDs, 16 MiB per resource, 64 MiB per query,
 64 component levels and 65,536 text/argument visits. These additive APIs are tracked on #290;
 saved progress remains unchanged, and no existing public API is removed.
@@ -1500,8 +1520,8 @@ workers; Foundation still validates escaped strings. Foundation-supported non-UT
 decoded to UTF-8 for the same parser. Existing trailing-comma behavior is unchanged; duplicate
 members select the last decoded name. JSONSerialization's NSDecimalNumber conversion loses
 precision, while a Double-only decoder loses the original
-integer/fraction distinction. Standalone JSON, advancement definitions and legacy JSON inside
-saved NBT share this adapter. Native NBT retains its integer/Float/Double kind and follows
+integer/fraction distinction. Standalone JSON and advancement definitions use this adapter;
+historical saved JSON uses its separate lenient entrypoint during SaveDataUpgrade. Native NBT retains its integer/Float/Double kind and follows
 FloatTag/DoubleTag.load's signed-zero canonicalization. Nonfinite numeric arguments remain
 readable, as the game's PRIMITIVE_ARG_CODEC permits; plainText still projects translation keys.
 RegionFacts interpretation 27 invalidates earlier saved-text omissions. Existing resource/text

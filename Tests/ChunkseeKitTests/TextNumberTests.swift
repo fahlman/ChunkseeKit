@@ -1,4 +1,4 @@
-import ChunkseeKit
+@testable import ChunkseeKit
 import ChunkseeKitTestSupport
 import Foundation
 import Testing
@@ -51,12 +51,16 @@ import Testing
             let definition = "{\"display\":{\"title\":" + component + "}}"
             let data = Data(component.utf8)
             let standalone = TextComponent.content(json: data)
-            let legacy = TextComponent.content(.string(component))
+            let saved = NBT.compound(["id": .string("minecraft:stone"), "count": .int(1),
+                                      "components": .compound(["minecraft:custom_name": .string(component)])])
+            let upgraded = SaveDataUpgrade.item(saved, dataVersion: GeneratedSavedText.boundary - 1)
+            let legacyNBT = try #require(upgraded["components"]?["minecraft:custom_name"])
+            let legacy = TextComponent.content(legacyNBT)
             let title = AdvancementDefinition(data: Data(definition.utf8))?.title
             for value in [standalone, legacy, title] {
                 #expect(try argument(in: value) == fixture.argument, "\(fixture.literal)")
             }
-            #expect(TextComponent.plainText(.string(component)) == "test.number")
+            #expect(TextComponent.plainText(legacyNBT) == "test.number")
             entries.append(.init(path: "data/test/advancement/number_\(index).json", text: definition))
         }
         let game = try #require(GameAssets(data: Data(TestZIP.zip(entries))))

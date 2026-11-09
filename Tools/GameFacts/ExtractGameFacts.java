@@ -82,6 +82,7 @@ public final class ExtractGameFacts {
         facts.add("portals", ExtractPortalFacts.extract());
         facts.add("nonBlockDefinitions", ExtractBlockDefinitionFacts.extract());
         facts.add("saveRenames", ExtractSaveRenames.extract(Integer.parseInt(args[2])));
+        facts.add("savedText", ExtractSavedText.extract(Integer.parseInt(args[2])));
         facts.add("legacyChunks", ExtractLegacyChunkFacts.extract(Integer.parseInt(args[2])));
         Files.writeString(Path.of(args[0]), new GsonBuilder().setPrettyPrinting().create().toJson(facts) + "\n");
     }
@@ -143,7 +144,7 @@ public final class ExtractGameFacts {
         return result;
     }
 
-    private static Object field(Object object, String name) throws Exception {
+    static Object field(Object object, String name) throws Exception {
         for (Class<?> type = object.getClass(); type != null; type = type.getSuperclass()) {
             try {
                 Field field = type.getDeclaredField(name);

@@ -11,6 +11,9 @@ and block seed methods, tints, fluid states, upper-face support, air flags, bloc
 and profession trade-set associations, natural-spawn defaults, statistic formatter units, potion-color and health defaults,
 absent block-light defaults, saved-map palette colors/brightness, legacy effect/banner identities,
 and non-block rendering definitions.
+Saved-text facts also extract the map-banner field-rename boundary and SavedDataStorage's
+actual absent-version argument to NbtUtils.getDataVersion. Full saved-map roots, including
+both name spellings and their collision, pass through the actual fix chain at those boundaries.
 Enchantment IDs/contents and item-model definitions are always read at runtime from data.
 The rest of the migration is tracked on fahlman/ChunkseeKit#222. This tool is used during
 development/release preparation; ChunkseeKit has no Java or new package dependency at runtime.
@@ -26,7 +29,7 @@ The tool checks the client SHA-1 against the launcher's download metadata and re
 It compiles the extractor, bootstraps the official registries without creating a world, and
 writes `DyeColor.swift`, `GeneratedMobAppearance.swift`, `GeneratedCreatureColors.swift`, `GeneratedEnchantmentEffects.swift`,
 `GeneratedItemModelFacts.swift`, `GeneratedBlockDefaults.swift`, `GeneratedSpawnEggs.swift`, `GeneratedBlockItems.swift`,
-`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedBlockEntityRenderers.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, and test-only `GeneratedSaveRenameProofs.swift`
+`GeneratedEquipmentFacts.swift`, `GeneratedBlockModelSeeds.swift`, `GeneratedBlockTints.swift`, `GeneratedBlockFluids.swift`, `GeneratedAirBlocks.swift`, `GeneratedBlockEntityRenderers.swift`, `GeneratedSpecialItemModels.swift`, `GeneratedTradingFacts.swift`, `GeneratedMobSpawnFacts.swift`, `GeneratedNonBlockDefinitions.swift`, `GeneratedSaveRenames.swift`, `GeneratedSavedText.swift`, and test-only `GeneratedSaveRenameProofs.swift` and `GeneratedSavedTextProofs.swift`
 plus `GeneratedLegacyChunkFacts.swift`, the test-only `GeneratedCreatureColorProofs.swift` and
 `GeneratedLegacyChunkProofs.swift`, `GeneratedStatisticUnits.swift`, the test-only
 `GeneratedStatisticUnitProofs.swift`, `GeneratedPotionColors.swift`, the test-only
@@ -144,6 +147,17 @@ Sources and interpretation:
   than requiring identical serialized palette padding. These proofs omit loader-only generation
   context and describe the original saved build range; contextual below-zero regeneration remains
   separate #255 work. Runtime decoding has no Java dependency and never rewrites a save.
+
+- `UnflattenTextComponentFix` supplies the registered saved-text format boundary. The earlier
+  `EntityCustomNameToComponentFix`, `BlockEntityCustomNameToComponentFix`,
+  `ItemCustomNameToComponentFix`, `ItemLoreFix`, `SignTextStrictJsonFix` and
+  `WrittenBookPagesStrictJsonFix` supply their own encoding boundaries and code-only exceptions.
+  These exceptions describe historical text encoding, never what entities or items exist.
+  Native NBT fixture bytes come from actual DataFixers calls before and at those transitions;
+  complete item, entity, block-entity and player records exercise the declared fields. Unexpected
+  record-upgrade errors stop generation. Invalid root text-component failures are retained as
+  explicit expected errors. JsonOps/NbtOps supply numeric kinds and heterogeneous-list wrapping.
+  Runtime normalization uses these generated facts once and leaves native strings literal.
 
 - `DataFixers` supplies its ordered `LegacyBlockRenameFix`, `ItemRenameFix` and biome
   `NamespacedTypeRenameFix` instances. Captured equality maps/strings and the class's literal

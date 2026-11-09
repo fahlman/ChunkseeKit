@@ -11,7 +11,8 @@ import Testing
                                       "extra": .list([.string("§r\nnext ")])])]),
         ])
         #expect(TextComponent.plainText(component) == " Back  side\nnext ")
-        #expect(TextComponent.plainText(.string(#"{"text":"§aOld ","extra":[{"text":"§lBox§r"}]}"#)) == "Old Box")
+        let old = SavedTextUpgrade.component(.string(#"{"text":"§aOld ","extra":[{"text":"§lBox§r"}]}"#))
+        #expect(TextComponent.plainText(old) == "Old Box")
         #expect(TextComponent.plainText(.list([.string("§"), .string("aSummer"), .string("§r")])) == "Summer")
         #expect(TextComponent.plainText(.string("§a§l§r")) == nil)
         #expect(TextComponent.plainText(.string(" §r ")) == "  ")
@@ -31,7 +32,7 @@ import Testing
         func block(_ id: String, _ extra: [String: NBT]) -> NBT {
             .compound(["id": .string(id), "x": .int(0), "y": .int(64), "z": .int(0)].merging(extra) { $1 })
         }
-        let chunk = Fixtures.chunk(x: 0, z: 0, sections: [], extra: ["block_entities": .list([
+        let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: GeneratedSavedText.boundary - 1, sections: [], extra: ["block_entities": .list([
             block("minecraft:chest", ["CustomName": .string("§6Treasure§r"), "Items": .list([item, oldItem])]),
             block("minecraft:sign", ["front_text": .compound(["messages": .list([.string("§aNorth§r")])])]),
             block("minecraft:sign", ["Text1": .string(#"{"text":"§eOld ","extra":["sign§r"]}"#)]),

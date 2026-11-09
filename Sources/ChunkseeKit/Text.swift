@@ -2,8 +2,8 @@ import Foundation
 
 /// Minecraft text components: plain saved text and language-independent resource content.
 public enum TextComponent {
-    /// Accepts a literal string, a JSON-encoded component (older worlds), an NBT compound with
-    /// `text`/`translate` and `extra`, or a list of components. Removes legacy `§` formatting
+    /// Accepts a literal string, an NBT compound with `text`/`translate` and `extra`, or a list
+    /// of components. Save readers upgrade older JSON text first. Removes legacy `§` formatting
     /// codes after joining the fragments, preserving their spaces and line breaks.
     public static func plainText(_ nbt: NBT) -> String? {
         guard let content = content(nbt) else { return nil }
@@ -55,19 +55,27 @@ public struct Sign: Sendable, Equatable, Codable {
     }
 
     /// Reads a sign block entity: `front_text`/`back_text` (1.20+) or `Text1`…`Text4` (older).
+    /// Text must already have been upgraded using its containing save's version.
     public init?(blockEntity nbt: NBT) {
-        let hasTextFields = nbt["front_text"]?.compound != nil || nbt["back_text"]?.compound != nil
+        self.init(blockEntity: nbt, text: nbt)
+    }
+
+    static func hasTextFields(_ nbt: NBT) -> Bool {
+        nbt["front_text"]?.compound != nil || nbt["back_text"]?.compound != nil
             || (1...4).contains { nbt["Text\($0)"] != nil }
-        guard hasTextFields, let kind = nbt["id"]?.string,
+    }
+
+    private init?(blockEntity nbt: NBT, text: NBT) {
+        guard Self.hasTextFields(nbt), let kind = nbt["id"]?.string,
               let position = nbt.blockEntityPosition else { return nil }
         func lines(_ side: NBT?) -> [String] {
-            (side?["messages"]?.list ?? []).map { TextComponent.plainText($0) ?? "" }
+            (side?["messages"]?.list ?? []).map { TextComponent.plainText($0.unwrappedListElement) ?? "" }
         }
-        var front = lines(nbt["front_text"])
+        var front = lines(text["front_text"])
         if nbt["front_text"] == nil {
-            front = (1...4).map { nbt["Text\($0)"].flatMap(TextComponent.plainText) ?? "" }
+            front = (1...4).map { text["Text\($0)"].flatMap(TextComponent.plainText) ?? "" }
         }
-        self.init(kind: kind, x: position.x, y: position.y, z: position.z, front: front, back: lines(nbt["back_text"]))
+        self.init(kind: kind, x: position.x, y: position.y, z: position.z, front: front, back: lines(text["back_text"]))
     }
 
     /// Whether either side has any text.
@@ -79,7 +87,8 @@ public struct Sign: Sendable, Equatable, Codable {
     }
 
     static func signs(in records: ChunkRecords) -> [Sign] {
-        records.blocks.saved.compactMap(Sign.init(blockEntity:)).filter(\.hasText)
+        zip(records.blocks.saved, records.blocks.upgraded)
+            .compactMap { Sign(blockEntity: $0, text: $1) }.filter(\.hasText)
     }
 }
 
@@ -107,9 +116,11 @@ extension ItemStack {
         // Titles and pages may be stored as `{raw, filtered}` for chat filtering, or bare.
         func raw(_ nbt: NBT) -> NBT { nbt["raw"] ?? nbt }
         if let written = components["minecraft:written_book_content"] {
-            return BookContent(title: written["title"].map(raw).flatMap(TextComponent.plainText),
+            // WrittenBookContent's title is a Filterable<String>, unlike its component pages.
+            let title = written["title"].map(raw).flatMap(\.string).flatMap { TextComponent.plainText(.string($0)) }
+            return BookContent(title: title,
                                author: written["author"]?.string,
-                               pages: (written["pages"]?.list ?? []).map { TextComponent.plainText(raw($0)) ?? "" })
+                               pages: (written["pages"]?.list ?? []).map { TextComponent.plainText(raw($0.unwrappedListElement)) ?? "" })
         }
         if let writable = components["minecraft:writable_book_content"] {
             // A book and quill's pages are plain strings, never text components.
@@ -120,7 +131,7 @@ extension ItemStack {
             return BookContent(pages: pages.map { $0.string ?? "" })
         }
         return BookContent(title: components["title"]?.string, author: components["author"]?.string,
-                           pages: pages.map { TextComponent.plainText($0) ?? "" })
+                           pages: pages.map { TextComponent.plainText($0.unwrappedListElement) ?? "" })
     }
 }
 

@@ -45,7 +45,7 @@ import Testing
 
         let legacy = try #require(ItemStack(.compound(["id": .string("minecraft:written_book"), "Count": .byte(1), "tag": .compound([
             "title": .string("Old Tales"), "author": .string("Notch"), "pages": .list([.string(#"{"text":"Once"}"#)]),
-        ])])))
+        ])]), dataVersion: GeneratedSavedText.bookBoundary))
         #expect(legacy.book == BookContent(title: "Old Tales", author: "Notch", pages: ["Once"]))
 
         #expect(ItemStack(.compound(["id": .string("minecraft:diamond"), "count": .int(1)]))?.book == nil)

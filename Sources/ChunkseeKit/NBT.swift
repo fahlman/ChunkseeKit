@@ -101,6 +101,20 @@ extension NBT {
         return value
     }
 
+    /// Represent a logical ListTag using the same homogeneous on-disk wrapper convention
+    /// as mixed saved lists. A compound that itself looks like a wrapper needs another layer
+    /// so a single unwrapping operation preserves that compound's identity.
+    static func listPreservingTypes(_ values: [NBT]) -> NBT {
+        let type = values.first?.tagType ?? .end
+        let mixed = values.contains { $0.tagType != type }
+        let wrappedCompound = values.contains { $0.compound?.count == 1 && $0[""] != nil }
+        guard mixed || wrappedCompound else { return .list(type, values) }
+        return .list(.compound, values.map { value in
+            if let fields = value.compound, !(fields.count == 1 && fields[""] != nil) { return value }
+            return .compound(["": value])
+        })
+    }
+
     public var byteArray: [Int8]? {
         if case .byteArray(let v) = self { return v }
         return nil

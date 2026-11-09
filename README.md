@@ -1009,6 +1009,14 @@ components, including item/container names, signs, map banners and written book 
 and line breaks are preserved when components are joined. Unsigned writable-book pages remain
 literal strings. Creature names retain their existing outer-whitespace trimming.
 
+Saved NBT strings are literal, including `"Sword"`, `[1]` and `{}`. Region/world readers use the
+containing file's version to convert historical JSON text once before interpreting it. Standalone
+saved items and creatures need their versioned initializers; `Sign.signs(inChunk:)` reads the
+chunk's version. `TextComponent.content(_:)`, `plainText(_:)` and `Sign(blockEntity:)` accept native
+or already upgraded NBT and do not guess JSON from a string's first character. For standalone
+JSON components, use `TextComponent.content(json:)`. This changes the older prefix-guessing API
+behavior. Written-book titles are plain strings, even when their pages contain components.
+
 ```swift
 // One pass over a region reads both its containers and its signs.
 let contents = try overworld.contents(regionX: 0, regionZ: 0)
