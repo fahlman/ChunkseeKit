@@ -16,7 +16,14 @@ struct ZipBytes: Sendable {
     init(contentsOf url: URL) throws {
         let file = try File(url)
         storage = .file(file)
-        count = file.identity.count
+        count = file.identity.byteCount
+    }
+
+    var sourceIdentity: GameAssets.SourceIdentity? {
+        switch storage {
+        case .data: nil
+        case .file(let file): file.identity
+        }
     }
 
     var isUnchanged: Bool {
@@ -41,7 +48,7 @@ struct ZipBytes: Sendable {
     /// payload CRCs independently verify the bytes against the validated directory.
     private final class File: Sendable {
         let descriptor: Int32
-        let identity: Identity
+        let identity: GameAssets.SourceIdentity
 
         init(_ url: URL) throws {
             guard url.isFileURL else { throw URLError(.unsupportedURL) }
@@ -51,7 +58,7 @@ struct ZipBytes: Sendable {
             }
             guard descriptor >= 0 else { throw Self.error() }
             do {
-                identity = try Identity(descriptor)
+                identity = try GameAssets.SourceIdentity(descriptor: descriptor)
                 self.descriptor = descriptor
             } catch {
                 Darwin.close(descriptor)
@@ -62,7 +69,7 @@ struct ZipBytes: Sendable {
         deinit { Darwin.close(descriptor) }
 
         var isUnchanged: Bool {
-            withExtendedLifetime(self) { (try? Identity(descriptor)) == identity }
+            withExtendedLifetime(self) { (try? GameAssets.SourceIdentity(descriptor: descriptor)) == identity }
         }
 
         func read(_ range: Range<Int>) throws -> Data {
@@ -82,29 +89,6 @@ struct ZipBytes: Sendable {
         }
 
         private static func error() -> POSIXError { POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-
-        struct Identity: Sendable, Equatable {
-            let device: dev_t
-            let inode: ino_t
-            let count: Int
-            let mode: mode_t
-            let modifiedSeconds: time_t
-            let modifiedNanoseconds: Int
-            let changedSeconds: time_t
-            let changedNanoseconds: Int
-
-            init(_ descriptor: Int32) throws {
-                var value = stat()
-                guard fstat(descriptor, &value) == 0 else { throw File.error() }
-                guard value.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
-                      let count = Int(exactly: value.st_size), count >= 0 else { throw POSIXError(.EINVAL) }
-                device = value.st_dev; inode = value.st_ino; self.count = count; mode = value.st_mode
-                modifiedSeconds = value.st_mtimespec.tv_sec
-                modifiedNanoseconds = value.st_mtimespec.tv_nsec
-                changedSeconds = value.st_ctimespec.tv_sec
-                changedNanoseconds = value.st_ctimespec.tv_nsec
-            }
-        }
     }
 }
 

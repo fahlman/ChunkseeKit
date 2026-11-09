@@ -13,6 +13,15 @@ public struct GameAssets: Sendable {
     public let version: Version
     let resources: ZipResources
 
+    /// Metadata captured from the opened file, or nil for immutable Data-backed resources.
+    /// Compare with SourceIdentity(contentsOf:) before reusing a reader for a current path.
+    public var sourceIdentity: SourceIdentity? { resources.sourceIdentity }
+
+    /// Whether the opened source still passes the same check used around every resource read.
+    /// Data-backed sources are immutable and always unchanged. A file reader follows its opened
+    /// inode, so this alone does not prove that its original path still names that file.
+    public var isUnchanged: Bool { resources.isUnchanged }
+
     public struct Version: Sendable, Equatable {
         public let id: String
         public let dataVersion: Int32

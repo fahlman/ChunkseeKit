@@ -778,6 +778,17 @@ The final reader closes the descriptor, including rejected initialization paths.
 metadata boundaries, replacement, in-place edits/truncation, concurrent copies, malformed resources
 and handle lifetime. Separate memory/latency measurement remains pending; no measured saving is claimed.
 
+The #348 additive API makes `GameAssets.SourceIdentity` the single owner of the archive's
+file-validity facts. Path discovery and the opened descriptor use the same regular-file check,
+device/inode, size, mode, and nanosecond modification/change times. Clients compare the current
+path identity with `GameAssets.sourceIdentity` and can query `isUnchanged` for the opened reader.
+Data-backed readers have no file identity and are always unchanged. The Hashable identity includes
+an opaque stable `cacheKey`; clients add the source URL and their interpretation inputs rather
+than copying the metadata rule. It is a metadata identity, not a content hash or archive validation.
+This preserves ZIP reads and interpretation versions; no save decoder or renderer changes. The
+app removes its duplicated stat implementation after this API's minor release. Public-path tests
+cover unchanged reuse, restoration with unchanged size/mtime, replacement, edits, and invalid files.
+
 `GameAssets.defaultItemModel` resolves a caller-requested static fallback variant from item
 definitions using that same model owner. `AssetItem` retains ordered model parts and typed tint
 sources. Display-context selects use their explicit GUI case (string or list), otherwise the
