@@ -182,7 +182,9 @@ extension AssetJSON {
             while true {
                 if let ready = result {
                     guard !containers.isEmpty else {
-                        try whitespace()
+                        // JsonParser.parseReader restores LEGACY_STRICT before checking the
+                        // remainder. Comments inside the value are lenient; trailing ones fail.
+                        try whitespace(allowComments: false)
                         guard cursor == bytes.count else { throw AssetReadError.invalidData }
                         return ready
                     }
@@ -230,13 +232,13 @@ extension AssetJSON {
             }
         }
 
-        private mutating func whitespace() throws {
+        private mutating func whitespace(allowComments: Bool = true) throws {
             while cursor < bytes.count {
                 switch bytes[cursor] {
                 case 9, 10, 13, 32: cursor += 1
-                case 35 where lenient:
+                case 35 where lenient && allowComments:
                     skipLine()
-                case 47 where lenient && cursor + 1 < bytes.count:
+                case 47 where lenient && allowComments && cursor + 1 < bytes.count:
                     if bytes[cursor + 1] == 47 { skipLine() }
                     else if bytes[cursor + 1] == 42 {
                         cursor += 2

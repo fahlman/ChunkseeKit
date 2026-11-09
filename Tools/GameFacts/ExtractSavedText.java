@@ -98,6 +98,8 @@ final class ExtractSavedText {
                 "[1,true,\"A\",{\"text\":\"B\"}]",
                 "{\"text\":\"A\",\"extra\":[1,true,\"B\",{\"text\":\"C\"}]}",
                 "{\"text\":\"A\",\"extra\":[1,true,null,\"B\"]}",
+                "[[\"A\",1],{\"text\":\"B\",\"extra\":[[\"C\",1]]}]",
+                "{\"selector\":\"@s\",\"separator\":[1,\"A\"]}",
                 "{\"translate\":\"test.args\",\"with\":[\"[1]\",\"\\\"Sword\\\"\",{\"text\":\"{}\"}]}",
                 "{translate:'test.args';with:[1;2]}", "{text=>Sword}",
                 "/* before */ {text: /* value */ 'Sword'} // after", "# before\n{text:'Sword'}",
@@ -143,7 +145,8 @@ final class ExtractSavedText {
         record(samples, "player", References.PLAYER, """
             {Inventory:[{id:'minecraft:stone',count:1,Slot:0,components:{'minecraft:custom_name':'"Sword"'}}],
              EnderItems:[{id:'minecraft:stone',count:1,Slot:0,components:{'minecraft:custom_name':'"Sword"'}}],
-             ShoulderEntityLeft:{id:'minecraft:parrot',CustomName:'{"text":"[1]"}'}}
+             ShoulderEntityLeft:{id:'minecraft:parrot',CustomName:'{"text":"[1]"}',Pos:[0,64,0],
+               CanPickUpLoot:false,PersistenceRequired:false,LeftHanded:false}}
             """, boundary, currentVersion);
         // SavedDataStorage upgrades the complete root before handing its data payload to
         // MapItemSavedData. Paired banner spellings distinguish which declared field reaches

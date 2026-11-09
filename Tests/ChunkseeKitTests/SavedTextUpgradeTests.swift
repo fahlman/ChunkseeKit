@@ -119,8 +119,8 @@ import Testing
         let expected = try player(#require(sample.output), version: sample.targetVersion)
         #expect(actual.inventory.map(\.customName) == expected.inventory.map(\.customName))
         #expect(actual.enderChest.map(\.customName) == expected.enderChest.map(\.customName))
-        #expect(actual.nbt["ShoulderEntityLeft"]?["CustomName"].flatMap(TextComponent.content)
-                == expected.nbt["ShoulderEntityLeft"]?["CustomName"].flatMap(TextComponent.content))
+        #expect(actual.shoulderPets.count == 1 && expected.shoulderPets.count == 1)
+        #expect(actual.shoulderPets.map(\.customName) == expected.shoulderPets.map(\.customName))
     }
 
     @Test(arguments: GeneratedSavedTextProofs.samples.filter { $0.kind == "map" })

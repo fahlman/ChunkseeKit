@@ -132,7 +132,9 @@ enum SavedTextUpgrade {
                     let keys = fields.keys.sorted()
                     pending.append(.compound(keys))
                     for key in keys.reversed() {
-                        pending.append(.value(fields[key]!, component: component && (key == "extra" || key == "separator")))
+                        // A malformed optional typed field remains remainder data in DFU;
+                        // filtering it would turn an invalid extra component into valid text.
+                        pending.append(.value(fields[key]!, component: false))
                     }
                 } else if let values = value as? [Any] {
                     pending.append(.list(values.count, components: component))
