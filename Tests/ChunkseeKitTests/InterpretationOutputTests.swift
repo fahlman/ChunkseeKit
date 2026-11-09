@@ -41,6 +41,10 @@ import Testing
         .init(domain: "regionFacts", revision: 32,
             generatedFacts: "1f879b3155b000dd66139087f8ee3d12bcff5d3dd6f649e13508aab0676064c7", dependencies: [terrain2])
     }
+    private var regionFacts33: InterpretationVersion {
+        .init(domain: "regionFacts", revision: 33,
+            generatedFacts: "6afb63a4e924041cd0ea6d94cd632680b32fa2cae558224f66fe6d62ac54b287", dependencies: [terrain2])
+    }
 
     private func check(_ output: some Encodable, version: InterpretationVersion,
                        baselines: [InterpretationVersion: String]) throws {
@@ -151,7 +155,9 @@ import Testing
                   baselines: [regionFacts29: "c0e7507380146274ce8e2148ed89e1c5bf65dd0d7f3a0559690c482ee5019ec3",
                               regionFacts30: "6653e5f8c3ae0d15d8cd7e85a909ea3b1c4d1bf048b68439fd37e5f7c2869957",
                               regionFacts31: "d5df7b6ccf913fa15ff32ad7078d5208c37f54fe0fc5d498354c9df686deb234",
-                              regionFacts32: "7cbd924ddac97848c95b700aac28a5771da4e0997ae116e867831cd0de51fa5b"])
+                              regionFacts32: "7cbd924ddac97848c95b700aac28a5771da4e0997ae116e867831cd0de51fa5b",
+                              // The archive embeds its complete interpretation identity.
+                              regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520"])
     }
 
     private struct NumericCase {
@@ -300,7 +306,8 @@ import Testing
         try check(rows, version: RegionFacts.interpretationVersion,
                   baselines: [regionFacts30: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts31: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
-                              regionFacts32: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
+                              regionFacts32: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
+                              regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
     }
 
     private struct MaterialOutput: Encodable {
