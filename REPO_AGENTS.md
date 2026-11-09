@@ -1149,6 +1149,12 @@ matches Minecraft's DebugEntryDayCount/F3 counter. Public additive APIs require 
 release; app adoption remains #232 item 5. No serialized facts or RegionFacts version changes.
 
 `PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
+`PlayerInfo.shortIdentifier(for:)` owns the eight-character lowercase UUID display fallback
+shared by clients. It accepts a UUID without requiring a saved player record; full UUIDs remain
+the identity for lookup and storage. The CLI's item and book searches use it, preserving their
+output; other commands retain full UUIDs. This additive API is unreleased for
+fahlman/Chunksee#438 (Claude-F450). App adoption follows a reviewed Kit release, separately
+from the current frozen comparison stack. No reader or cache interpretation changes.
 PlayerInfo, LevelInfo and Chunk keep their full saved NBT internal; typed accessors own its keys.
 ItemStack likewise keeps its components internal, preserving typed accessors, raw-input initializers
 and the existing Codable representation.

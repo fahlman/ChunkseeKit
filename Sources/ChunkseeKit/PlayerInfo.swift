@@ -43,6 +43,12 @@ public struct PlayerInfo: Sendable {
     let nbt: NBT
     let enchantments: [String: EnchantmentDefinition]
 
+    /// A compact display fallback when a player's name is unavailable. This is not a unique
+    /// identity; retain the full UUID for lookup and storage. No saved player record is needed.
+    public static func shortIdentifier(for uuid: UUID) -> String {
+        uuid.uuidString.prefix(8).lowercased()
+    }
+
     /// Supply current world enchantment definitions to interpret equipped enchantments' health effects.
     public init(uuid: UUID, nbt: NBT, lastSaved: Date? = nil, enchantments: [String: EnchantmentDefinition] = [:]) {
         let nbt = SaveDataUpgrade.player(nbt, dataVersion: nbt["DataVersion"]?.int)
