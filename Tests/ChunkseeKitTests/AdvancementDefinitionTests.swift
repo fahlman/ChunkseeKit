@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import ChunkseeKit
+@testable import ChunkseeKit
 import ChunkseeKitTestSupport
 
 @Suite struct AdvancementDefinitionTests {
@@ -70,11 +70,12 @@ import ChunkseeKitTestSupport
             "extra": .list([.compound(["text": .string("!")])]),
         ])
         let expected = TextComponent.content(json: Data(json.utf8))
+        let legacy = SavedTextUpgrade.Context(dataVersion: GeneratedSavedText.boundary - 1).component(.string(json))
         #expect(expected != nil)
         #expect(TextComponent.content(nbt) == expected)
-        #expect(TextComponent.content(.string(json)) == expected)
+        #expect(TextComponent.content(legacy) == expected)
         #expect(TextComponent.plainText(nbt) == "block.minecraft.chest!")
-        #expect(TextComponent.plainText(.string(json)) == "block.minecraft.chest!")
+        #expect(TextComponent.plainText(legacy) == "block.minecraft.chest!")
         #expect(TextComponent.plainText(.string("§aSummer\n§lHouse")) == "Summer\nHouse")
         #expect(TextComponent.content(.string("[draft]")) == .literal("[draft]"))
         #expect(TextComponent.content(.compound(["text": .string(#"{"text":"literal"}"#)])) == .literal(#"{"text":"literal"}"#))

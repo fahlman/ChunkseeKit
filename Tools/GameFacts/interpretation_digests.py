@@ -32,6 +32,7 @@ FACT_DOMAINS = {
     "GeneratedNonBlockDefinitions.swift": ("assets",),
     "GeneratedPortalFacts.swift": ("assets",),
     "GeneratedSaveRenames.swift": ("terrain", "assets", "regionFacts"),
+    "GeneratedSavedText.swift": ("regionFacts",),
     "GeneratedLegacyChunkFacts.swift": ("terrain", "light", "regionFacts"),
 }
 DOMAINS = ("terrain", "light", "assets", "regionFacts")

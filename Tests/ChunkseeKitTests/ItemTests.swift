@@ -30,7 +30,7 @@ import Testing
             "display": .compound(["Name": .string(#"{"text":"Old ","extra":[{"text":"Box"}]}"#)]),
             "BlockEntityTag": .compound(["Items": .list([.compound(["id": .string("minecraft:gold_ingot"), "Count": .byte(9)])])]),
         ])])
-        let stack = try #require(ItemStack(legacy))
+        let stack = try #require(ItemStack(legacy, dataVersion: GeneratedSavedText.itemNameBoundary))
         #expect(stack.count == 2 && stack.customName == "Old Box" && stack.contents.first?.count == 9)
         #expect(TextComponent.plainText(.compound(["text": .string("A"), "extra": .list([.string("B")])])) == "AB")
         #expect(TextComponent.plainText(.string("plain")) == "plain")

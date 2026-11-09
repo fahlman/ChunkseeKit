@@ -30,10 +30,10 @@ struct SavedChunkFields: Sendable {
     var containerBlockEntities: [NBT] { permitsContainers ? blockEntities : [] }
 }
 
-/// Both views are immutable: text and spawner eligibility retain their saved-field semantics,
-/// while item and entity identities use the game's generated upgrades exactly once.
+/// Both views are immutable: record eligibility retains its saved-field semantics, while
+/// text, items and entity identities use the game's generated upgrades exactly once.
 struct NormalizedBlockEntities: Sendable {
-    enum Upgrades: Sendable { case none, spawners, all }
+    enum Upgrades: Sendable { case none, selected(signs: Bool, spawners: Bool), all }
     let saved: [NBT]
     let upgraded: [NBT]
 
@@ -42,10 +42,12 @@ struct NormalizedBlockEntities: Sendable {
         switch upgrades {
         case .none:
             upgraded = saved
-        case .spawners:
-            // A spawner-only request does not walk unrelated, potentially large inventories.
-            upgraded = saved.map {
-                Self.isSpawner($0) ? SaveDataUpgrade.blockEntity($0, dataVersion: dataVersion) : $0
+        case .selected(let signs, let spawners):
+            // A sign/spawner request does not walk unrelated, potentially large inventories.
+            upgraded = saved.map { entity in
+                if spawners && Self.isSpawner(entity) { return SaveDataUpgrade.blockEntity(entity, dataVersion: dataVersion) }
+                if signs && Sign.hasTextFields(entity) { return SaveDataUpgrade.sign(entity, dataVersion: dataVersion) }
+                return entity
             }
         case .all:
             upgraded = SaveDataUpgrade.blockEntities(saved, dataVersion: dataVersion)
@@ -98,7 +100,8 @@ struct ChunkRecords: Sendable {
         let fields = SavedChunkFields(nbt)
         let readsBlocks = !needs.intersection([.containers, .signs, .spawners]).isEmpty
         let upgrades: NormalizedBlockEntities.Upgrades = needs.contains(.containers) && fields.permitsContainers
-            ? .all : (needs.contains(.spawners) ? .spawners : .none)
+            ? .all : (!needs.intersection([.signs, .spawners]).isEmpty
+                ? .selected(signs: needs.contains(.signs), spawners: needs.contains(.spawners)) : .none)
         blocks = NormalizedBlockEntities(readsBlocks ? fields.blockEntities : [],
                                          dataVersion: fields.dataVersion, upgrades: upgrades)
         permitsContainers = fields.permitsContainers

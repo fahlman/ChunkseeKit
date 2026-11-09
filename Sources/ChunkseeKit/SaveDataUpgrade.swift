@@ -35,6 +35,10 @@ enum SaveDataUpgrade {
         upgrade(nbt, as: .blockEntity, dataVersion: dataVersion)
     }
 
+    static func sign(_ nbt: NBT, dataVersion: Int?) -> NBT {
+        upgrade(nbt, as: .sign, dataVersion: dataVersion)
+    }
+
     static func statistics(_ values: [String: [String: Int]], dataVersion: Int?) -> [String: [String: Int]] {
         guard let custom = values["minecraft:custom"] else { return values }
         var values = values
@@ -91,8 +95,10 @@ enum SaveDataUpgrade {
         let flattensItems: Bool
         let convertsNumericItems: Bool
         let damageChanges: [String: [Int: Int]]
+        let text: SavedTextUpgrade.Context
 
         init(after version: Int) {
+            text = .init(dataVersion: version)
             attributeSteps = GeneratedSaveRenames.attributeSteps.filter { $0.version > version }
             flattensItems = version < GeneratedSaveRenames.itemNameBoundary
             convertsNumericItems = version < GeneratedSaveRenames.numericItemBoundary
@@ -209,7 +215,10 @@ enum SaveDataUpgrade {
             + Array(GeneratedSaveRenames.entityIntroductions.values)
             + Array(GeneratedSaveRenames.blockEntityIntroductions.values)
             + GeneratedSaveRenames.attributeSteps.map(\.version)
-            + [GeneratedSaveRenames.itemNameBoundary, GeneratedSaveRenames.numericItemBoundary])
+            + [GeneratedSaveRenames.itemNameBoundary, GeneratedSaveRenames.numericItemBoundary,
+               GeneratedSavedText.boundary, GeneratedSavedText.entityNameBoundary,
+               GeneratedSavedText.blockEntityNameBoundary, GeneratedSavedText.itemNameBoundary,
+               GeneratedSavedText.loreBoundary, GeneratedSavedText.signBoundary, GeneratedSavedText.bookBoundary])
         return boundaries.sorted().map { Plan(boundary: $0, names: Names(after: $0 - 1)) }
     }()
 
@@ -233,31 +242,33 @@ enum SaveDataUpgrade {
         case attributes, attribute, legacyItemAttributes, legacyItemAttribute, itemAttributes, itemAttribute
         case enchantments, enchantment
         case recipeBook, recipes, recipe
+        case text, texts, filteredText, filteredTexts, itemDisplay, legacyItemName, legacyLore, legacyLoreLine
+        case writtenBookTag, writtenBook, legacyBookPages, legacyBookPage, sign, signSide, legacySignLine
     }
 
     private enum Work {
         case visit(NBT, Shape)
         case compound([String: NBT], [String])
-        case list(NBTTagType, Int)
+        case list(NBTTagType, Int, text: Bool)
     }
 
     private static func upgrade(_ nbt: NBT, as shape: Shape, dataVersion: Int?) -> NBT {
         // Missing versions have the game's oldest-save meaning. Current/newer files return
         // before allocating a traversal or initializing the generated rename dictionaries.
         let version = dataVersion ?? -1
-        guard version < GeneratedSaveRenames.lastVersion else { return nbt }
+        guard version < max(GeneratedSaveRenames.lastVersion, GeneratedSavedText.boundary) else { return nbt }
         let names = names(after: version)
         var work: [Work] = [.visit(nbt, shape)]
         var results: [NBT] = []
         // An explicit stack preserves arbitrarily nested saved contents without consuming the
-        // thread's call stack. Only known format fields are visited; custom data/text is opaque.
+        // thread's call stack. Only declared format fields are visited; custom data is opaque.
         while let next = work.popLast() {
             switch next {
-            case .list(let type, let count):
+            case .list(let type, let count, let text):
                 let start = results.count - count
                 let values = Array(results[start...])
                 results.removeLast(count)
-                results.append(.list(type, values))
+                results.append(text ? .listPreservingTypes(values) : .list(type, values))
             case .compound(var fields, let keys):
                 let start = results.count - keys.count
                 for (offset, key) in keys.enumerated() { fields[key] = results[start + offset] }
@@ -265,9 +276,22 @@ enum SaveDataUpgrade {
                 results.append(.compound(fields))
             case .visit(let value, let shape):
                 if let child = listElement(shape), case .list(let type, let entries) = value {
-                    work.append(.list(type, entries.count))
-                    for entry in entries.reversed() { work.append(.visit(entry, child)) }
+                    let text = [.texts, .filteredTexts, .legacyLore, .legacyBookPages].contains(shape)
+                    work.append(.list(type, entries.count, text: text))
+                    for entry in entries.reversed() { work.append(.visit(text ? entry.unwrappedListElement : entry, child)) }
                     continue
+                }
+                if value.string != nil {
+                    let text: NBT?
+                    switch shape {
+                    case .text, .filteredText: text = names.text.component(value)
+                    case .legacyItemName: text = names.text.itemName(value)
+                    case .legacyLoreLine: text = names.text.lore(value)
+                    case .legacyBookPage: text = names.text.bookPage(value)
+                    case .legacySignLine: text = names.text.sign(value)
+                    default: text = nil
+                    }
+                    if let text { results.append(text); continue }
                 }
                 if shape == .biome, value.string != nil {
                     results.append(names.renamed(value, kind: .biome)); continue
@@ -292,12 +316,15 @@ enum SaveDataUpgrade {
                 case .enchantment:
                     if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .enchantment) }
                 case .entity, .entityTree:
+                    if let value = fields["CustomName"] { fields["CustomName"] = names.text.entityName(value, id: fields["id"]?.string) }
                     if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .entity) }
                 case .spawnData:
                     if fields["entity"] == nil, let id = fields["id"] {
+                        if let value = fields["CustomName"] { fields["CustomName"] = names.text.entityName(value, id: id.string) }
                         fields["id"] = names.renamed(id, kind: .entity)
                     }
                 case .blockEntity:
+                    if let value = fields["CustomName"] { fields["CustomName"] = names.text.blockEntityName(value, id: fields["id"]?.string) }
                     if let id = fields["id"] { fields["id"] = names.renamed(id, kind: .blockEntity) }
                 case .item:
                     fields["id"] = names.itemName(in: fields)
@@ -316,6 +343,10 @@ enum SaveDataUpgrade {
                 let children: [(String, Shape)]
                 if shape == .equipment {
                     children = fields.keys.sorted().map { ($0, .item) }
+                } else if shape == .item || shape == .potSide,
+                          fields["id"].flatMap(\.string).flatMap(Identifier.init)?.description == GeneratedSavedText.writtenBookID {
+                    let itemFields: [(String, Shape)] = [("tag", .writtenBookTag), ("components", .components)]
+                    children = itemFields.filter { fields[$0.0] != nil }
                 } else {
                     children = childFields(shape).filter { fields[$0.0] != nil }
                 }
@@ -344,6 +375,10 @@ enum SaveDataUpgrade {
         case .itemAttributes: .itemAttribute
         case .enchantments: .enchantment
         case .recipes: .recipe
+        case .texts: .text
+        case .filteredTexts: .filteredText
+        case .legacyLore: .legacyLoreLine
+        case .legacyBookPages: .legacyBookPage
         default: nil
         }
     }
@@ -358,19 +393,28 @@ enum SaveDataUpgrade {
         case .itemTag:
             [("BlockEntityTag", .blockEntity), ("EntityTag", .entityTree),
              ("Items", .items), ("ChargedProjectiles", .items), ("AttributeModifiers", .legacyItemAttributes),
-             ("Enchantments", .enchantments), ("StoredEnchantments", .enchantments)]
+             ("Enchantments", .enchantments), ("StoredEnchantments", .enchantments), ("display", .itemDisplay)]
+        case .writtenBookTag: childFields(.itemTag) + [("pages", .legacyBookPages)]
+        case .itemDisplay: [("Name", .legacyItemName), ("Lore", .legacyLore)]
+        case .writtenBook: [("pages", .filteredTexts)]
+        case .filteredText: [("raw", .text), ("filtered", .text)]
+        case .sign:
+            [("front_text", .signSide), ("back_text", .signSide)]
+                + (1...4).flatMap { [("Text\($0)", .legacySignLine), ("FilteredText\($0)", .legacySignLine)] }
+        case .signSide: [("messages", .texts), ("filtered_messages", .texts)]
         case .components:
             [("minecraft:container", .componentContainers), ("minecraft:bundle_contents", .items),
              ("minecraft:charged_projectiles", .items), ("minecraft:use_remainder", .item),
              ("minecraft:pot_decorations", .potDecorations), ("minecraft:entity_data", .entityTree),
              ("minecraft:block_entity_data", .blockEntity), ("minecraft:bees", .bees),
-             ("minecraft:attribute_modifiers", .itemAttributes)]
+             ("minecraft:attribute_modifiers", .itemAttributes), ("minecraft:custom_name", .text),
+             ("minecraft:item_name", .text), ("minecraft:lore", .texts), ("minecraft:written_book_content", .writtenBook)]
         case .itemAttributes: [("modifiers", .itemAttributes)]
         case .componentContainer: [("item", .item)]
         case .blockEntity:
             [("Items", .items), ("item", .item), ("Book", .item), ("RecordItem", .item),
              ("sherds", .itemNames), ("shards", .itemNames), ("SpawnData", .spawnData),
-             ("SpawnPotentials", .spawnPotentials), ("Bees", .bees), ("bees", .bees)]
+             ("SpawnPotentials", .spawnPotentials), ("Bees", .bees), ("bees", .bees)] + childFields(.sign)
         case .player: childFields(.entity) + [("recipeBook", .recipeBook)]
         case .recipeBook: [("recipes", .recipes), ("toBeDisplayed", .recipes)]
         case .entity:

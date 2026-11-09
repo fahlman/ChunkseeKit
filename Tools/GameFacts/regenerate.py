@@ -151,6 +151,51 @@ def legacy_chunk_proofs(facts, notice):
     return result + "    ]\n}\n"
 
 
+def saved_text_sources(facts, notice):
+    boundary = facts["boundary"]
+    if type(boundary) is not int or boundary <= 0:
+        raise ValueError("Invalid saved-text boundary")
+    source = notice + "// " + facts["source"] + ". Applied only to declared saved text fields.\n"
+    source += "enum GeneratedSavedText {\n"
+    source += f"    static let boundary = {boundary}\n"
+    default_version = facts["savedDataDefaultVersion"]
+    if type(default_version) is not int or default_version < 0:
+        raise ValueError("Invalid saved-data version fallback")
+    source += "    // SavedDataStorage.readTagFromDisk's NbtUtils.getDataVersion fallback.\n"
+    source += f"    static let savedDataDefaultVersion = {default_version}\n"
+    for kind, row in sorted(facts["encodings"].items()):
+        if kind not in {"entityName", "blockEntityName", "itemName", "lore", "sign", "book", "mapBannerFields"} or type(row["boundary"]) is not int or not 0 < row["boundary"] < boundary:
+            raise ValueError("Invalid historical text encoding boundary")
+        source += "    // " + row["source"] + ".\n"
+        source += f"    static let {kind}Boundary = {row['boundary']}\n"
+    for name, origin in [("jsonEntityNames", "EntityCustomNameToComponentFix.fixCustomName"),
+                         ("plainBlockEntityNames", "BlockEntityCustomNameToComponentFix.NAMEABLE_BLOCK_ENTITIES")]:
+        values = facts[name]
+        if not values or any(not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", value) for value in values):
+            raise ValueError("Invalid historical name format identity")
+        source += "    // " + origin + "; historical encoding only, never membership.\n"
+        source += f"    static let {name}: Set<String> = [" + ", ".join(map(quoted, sorted(values))) + "]\n"
+    source += "    // WrittenBookPagesStrictJsonFix's item predicate.\n"
+    source += f"    static let writtenBookID = {quoted(facts['writtenBookID'])}\n}}\n"
+    proofs = notice + "// Native NBT written by Minecraft after its actual data-fixer calls.\n"
+    proofs += "enum GeneratedSavedTextProofs {\n"
+    proofs += "    struct Sample: Sendable {\n"
+    proofs += "        let kind: String; let version: Int; let targetVersion: Int\n"
+    proofs += "        let input: String; let output: String?; let error: String?\n"
+    proofs += "    }\n    static let samples: [Sample] = [\n"
+    for row in facts["proofs"]:
+        if ("output" in row) == ("error" in row):
+            raise ValueError("Saved-text proof needs either actual output or actual failure")
+        output = quoted(row["output"]) if "output" in row else "nil"
+        error = quoted(row["error"]) if "error" in row else "nil"
+        proofs += (f"        .init(kind: {quoted(row['kind'])}, version: {row['version']}, "
+                   f"targetVersion: {row['targetVersion']}, input: {quoted(row['input'])}, "
+                   f"output: {output}, error: {error}),\n")
+    proofs += "    ]\n}\n"
+    return {"Sources/ChunkseeKit/GeneratedSavedText.swift": source,
+            "Tests/ChunkseeKitTests/GeneratedSavedTextProofs.swift": proofs}
+
+
 def save_renames_source(facts, notice):
     steps = facts["steps"]
     if not steps:
@@ -873,6 +918,7 @@ def generated_sources(facts, entities):
             "Sources/ChunkseeKit/GeneratedLegacyChunkFacts.swift": legacy_chunk_source(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedLegacyChunkProofs.swift": legacy_chunk_proofs(facts["legacyChunks"], notice),
             "Tests/ChunkseeKitTests/GeneratedSaveRenameProofs.swift": save_rename_proofs_source(facts["saveRenames"], notice)}
+    sources.update(saved_text_sources(facts["savedText"], notice))
     sources.update(interpretation_digest_source(sources))
     return sources
 
@@ -905,10 +951,10 @@ def main():
                     "Tools/GameFacts/ExtractBlockDefaults.java", "Tools/GameFacts/ExtractSpawnEggs.java", "Tools/GameFacts/ExtractBlockItems.java", "Tools/GameFacts/ExtractEquipmentFacts.java",
                     "Tools/GameFacts/ExtractBlockModelSeeds.java", "Tools/GameFacts/ExtractTradingFacts.java", "Tools/GameFacts/ExtractMobSpawnFacts.java", "Tools/GameFacts/ExtractStatisticUnits.java", "Tools/GameFacts/ExtractPotionColors.java", "Tools/GameFacts/ExtractHealthDefaults.java", "Tools/GameFacts/ExtractLightStorage.java", "Tools/GameFacts/ExtractMapColors.java", "Tools/GameFacts/ExtractLegacyContentIDs.java", "Tools/GameFacts/ExtractBlockDefinitionFacts.java", "Tools/GameFacts/ExtractPortalFacts.java",
                     "Tools/GameFacts/BlockStateValues.java", "Tools/GameFacts/ExtractBlockTints.java", "Tools/GameFacts/ExtractBlockFluids.java", "Tools/GameFacts/ExtractAirBlocks.java", "Tools/GameFacts/ExtractBlockEntityRenderers.java", "Tools/GameFacts/ExtractSpecialItemModels.java", "Tools/GameFacts/special_item_models.py",
-                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
+                    "Tools/GameFacts/ExtractEnchantmentEffects.java", "Tools/GameFacts/ExtractSaveRenames.java", "Tools/GameFacts/ExtractSavedText.java", "Tools/GameFacts/ExtractCreatureColors.java", "Tools/GameFacts/ExtractNumericItemIds.java", "Tools/GameFacts/ExtractEntityRenames.java", "Tools/GameFacts/ExtractEffectRenames.java", "Tools/GameFacts/ExtractProgressRenames.java", "Tools/GameFacts/ExtractLegacyChunkFacts.java", "Tools/EntityTypes/ExtractEntityTypes.java"]
     provenance = {"minecraft": version, "clientSHA1": client_hash,
                   "toolSHA256": {path: digest(root / path) for path in tool_sources},
-                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "health_defaults", "light_storage_defaults", "map_colors", "legacy_content_ids", "non_block_definitions", "portal_rules", "save_identifier_renames", "legacy_chunk_formats"]}
+                  "categories": ["dyes", "mob_appearance", "creature_color_sources", "enchantment_effect_formats", "item_model_prototypes", "block_default_properties", "block_model_seeds", "block_tints", "block_fluid_states", "air_flags", "block_entity_renderer_registrations", "special_item_models", "spawn_egg_relationships", "block_item_relationships", "equipment_attachments", "profession_trade_sets", "natural_spawn_defaults", "statistic_units", "potion_color_defaults", "health_defaults", "light_storage_defaults", "map_colors", "legacy_content_ids", "non_block_definitions", "portal_rules", "save_identifier_renames", "saved_text_formats", "legacy_chunk_formats"]}
     (evidence / "inputs.json").write_text(json.dumps({**provenance,
         "librariesSHA256": {str(path): digest(path) for path in libraries}}, indent=2) + "\n")
     commands = [

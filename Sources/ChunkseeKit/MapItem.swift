@@ -43,6 +43,8 @@ public struct MapItem: Sendable, Hashable, Encodable {
     public init?(id: Int, nbt: NBT) {
         let data = nbt["data"] ?? nbt
         guard case .byteArray(let bytes)? = data["colors"], bytes.count == Self.size * Self.size else { return nil }
+        let text = SavedTextUpgrade.Context(dataVersion: nbt["DataVersion"]?.compoundInt.map(Int.init)
+            ?? GeneratedSavedText.savedDataDefaultVersion)
         self.id = id
         let dimensionTag = data["dimension"]
         dimension = dimensionTag?.dimensionID
@@ -65,7 +67,7 @@ public struct MapItem: Sendable, Hashable, Encodable {
                 (x, y, z) = (oldX, oldY, oldZ)
             }
             return Banner(x: x, y: y, z: z, color: (banner["color"] ?? banner["Color"])?.string,
-                          name: (banner["name"] ?? banner["Name"]).flatMap(TextComponent.plainText))
+                          name: text.mapBannerName(banner).flatMap(TextComponent.plainText))
         }
     }
 

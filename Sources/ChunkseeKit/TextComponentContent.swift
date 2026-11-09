@@ -32,7 +32,8 @@ extension TextComponent {
         return try? content(json, budget: &budget)
     }
 
-    /// The same interpreter for saved NBT components and older JSON-encoded strings.
+    /// Interprets native or already upgraded NBT components. Strings are always literal;
+    /// save readers convert historical JSON text once using the containing file's version.
     /// NBT limits: 16 MiB per interpreted string, 64 MiB total, 64 component levels and
     /// 65,536 component/argument visits. Unused style/action fields are not traversed.
     public static func content(_ nbt: NBT) -> Content? {
@@ -51,15 +52,6 @@ extension TextComponent {
     private static func read(_ input: TextInput, depth: Int, budget: inout ResourceReadBudget) throws -> Content {
         guard depth < 64, budget.consume(1) else { throw AssetReadError.invalidData }
         if let literal = try input.readString(budget: &budget) {
-            // Preserve the saved-text API's legacy JSON-string wrapper. JSON component
-            // literals themselves are not reparsed, nor are a compound's text fields.
-            if case .nbt = input {
-                let trimmed = literal.trimmingCharacters(in: .whitespaces)
-                if let first = trimmed.first, "{[\"".contains(first),
-                   let json = try? jsonValue(from: Data(trimmed.utf8)) {
-                    return try read(.json(json), depth: depth, budget: &budget)
-                }
-            }
             return .literal(literal)
         }
         if let values = try input.list() {
@@ -164,7 +156,7 @@ private enum TextInput {
         case .nbt(let value):
             guard let values = value.list else { return nil }
             guard values.count <= 65_536 else { throw AssetReadError.invalidData }
-            return values.map(Self.nbt)
+            return values.map { .nbt($0.unwrappedListElement) }
         }
     }
 }

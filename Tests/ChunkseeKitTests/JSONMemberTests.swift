@@ -1,24 +1,27 @@
 import Foundation
 import Testing
-import ChunkseeKit
+@testable import ChunkseeKit
 import ChunkseeKitTestSupport
 
 @Suite struct JSONMemberTests {
     @Test func savedTextUsesLastDecodedMemberIncludingNestedObjectsAndNull() throws {
+        let historical = SavedTextUpgrade.Context(dataVersion: GeneratedSavedText.boundary - 1)
         for json in [#"{"text":"first","text":"last"}"#,
                      #"{"text":"first","\u0074ext":"last"}"#,
                      #"{"\u0074ext":"first","text":"last"}"#,
                      #"{"text":null,"text":"last"}"#] {
             #expect(TextComponent.content(json: Data(json.utf8)) == .literal("last"))
-            #expect(TextComponent.plainText(.string(json)) == "last")
-            let sign = Sign(blockEntity: .compound([
+            #expect(TextComponent.plainText(historical.component(.string(json))) == "last")
+            let savedSign = NBT.compound([
                 "id": .string("minecraft:oak_sign"), "x": .int(0), "y": .int(64), "z": .int(0), "Text1": .string(json)
-            ]))
+            ])
+            let sign = Sign.signs(inChunk: Fixtures.chunk(x: 0, z: 0, dataVersion: GeneratedSavedText.signBoundary,
+                sections: [], extra: ["block_entities": .list([savedSign])])).first
             #expect(sign?.front.first == "last")
         }
         #expect(TextComponent.content(json: Data(#"{"text":"first","text":null}"#.utf8)) == nil)
         let nested = #"{"text":"root","extra":[{"text":"old","text":"a"},{"text":"old","text":"b"}]}"#
-        #expect(TextComponent.plainText(.string(nested)) == "rootab")
+        #expect(TextComponent.plainText(historical.component(.string(nested))) == "rootab")
         let number = #"{"translate":"n","with":[1],"\u0077ith":[9007199254740993]}"#
         #expect(TextComponent.content(json: Data(number.utf8)) ==
             .translated(key: "n", fallback: nil, arguments: [.integer(9_007_199_254_740_993)]))
