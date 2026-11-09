@@ -10,6 +10,9 @@ struct ZipResources: Sendable {
     static let maximumResourceSize = 16 * 1024 * 1024
     static let maximumCompressedResourceSize = 2 * maximumResourceSize
 
+    var sourceIdentity: GameAssets.SourceIdentity? { source.sourceIdentity }
+    var isUnchanged: Bool { source.isUnchanged }
+
     private struct Entry: Sendable {
         let payload: Range<Int>
         let size: Int
