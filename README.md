@@ -220,14 +220,12 @@ The CLI uses these inputs; clients still supply localized names and display form
 
 `SearchQuery.Filter.includes(_:)` supplies creature-category membership, including villagers for
 trade searches. `WorldIndex.richestDeposits(matching:limit:in:)` selects the strongest matching
-deposits across dimensions from arrays ordered like `DimensionIndex.blocks`. It keeps each
+deposits across dimensions from arrays in any order. It keeps each
 result's dimension and height bounds. Deposits sort by count descending, then dimension ID,
 chunk X, chunk Z and block-group ID ascending. This makes ties at the result limit stable across
-unchanged saves. Clients supplying their own arrays use
-`DimensionIndex.ChunkDeposit.orderedBefore(_:in:_:in:)` with the same dimension for both values.
-The required tie order replaces the earlier unspecified order; custom arrays sorted only by
-count must adopt it. Clients choose the result limit, match localized block names to kinds, and
-convert selected chunks to map pins.
+unchanged saves. The selector ranks matches before limiting each dimension and the combined
+result, using the same internal ordering rule as `DimensionIndex.blocks`. Clients choose the
+result limit, match localized block names to kinds, and convert selected chunks to map pins.
 
 Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
 Core decoding and low-level file APIs stay in ChunkseeKit.

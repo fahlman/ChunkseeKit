@@ -36,16 +36,17 @@ extension SearchQuery.Filter {
 
 extension WorldIndex {
     /// Selects the strongest matching deposits across dimensions, retaining each dimension ID.
-    /// Inputs must follow ChunkDeposit.orderedBefore, as DimensionIndex.blocks does: count
-    /// descending, then chunk X, chunk Z and block-group ID ascending. Results use that same
-    /// order with dimension ID before coordinates, so ties at the limit have stable membership.
+    /// Inputs may be in any order. Results rank by count descending, then dimension ID, chunk X,
+    /// chunk Z and block-group ID ascending, so ties at the limit have stable membership.
     /// The client owns its display limit and conversion to map positions.
     public func richestDeposits(matching blocks: Set<NotableBlock>, limit: Int,
                                 in part: KeyPath<Dimension, [DimensionIndex.ChunkDeposit]>) -> [Placed<DimensionIndex.ChunkDeposit>] {
         guard limit > 0, !blocks.isEmpty else { return [] }
         var best: [Placed<DimensionIndex.ChunkDeposit>] = []
         for (dimension, value) in dimensions {
-            best += value[keyPath: part].lazy.filter { blocks.contains($0.deposit.block) }.prefix(limit)
+            var matches = value[keyPath: part].filter { blocks.contains($0.deposit.block) }
+            matches.sort { DimensionIndex.ChunkDeposit.orderedBefore($0, in: dimension, $1, in: dimension) }
+            best += matches.prefix(limit)
                 .map { Placed(dimension: dimension, value: $0) }
         }
         best.sort { DimensionIndex.ChunkDeposit.orderedBefore($0.value, in: $0.dimension,

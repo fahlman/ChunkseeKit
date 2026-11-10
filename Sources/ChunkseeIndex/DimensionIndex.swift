@@ -22,10 +22,9 @@ public struct DimensionIndex: Sendable {
         }
 
         /// Richest first, then dimension ID, chunk X, chunk Z and block-group ID ascending.
-        /// Use the same dimension for both values when preparing one dimension's array.
         /// A shared order keeps tied deposits stable before either selection limit is applied.
-        public static func orderedBefore(_ lhs: Self, in lhsDimension: String,
-                                         _ rhs: Self, in rhsDimension: String) -> Bool {
+        static func orderedBefore(_ lhs: Self, in lhsDimension: String,
+                                  _ rhs: Self, in rhsDimension: String) -> Bool {
             if lhs.deposit.count != rhs.deposit.count { return lhs.deposit.count > rhs.deposit.count }
             return (lhsDimension, lhs.chunk.x, lhs.chunk.z, lhs.deposit.block.rawValue)
                 < (rhsDimension, rhs.chunk.x, rhs.chunk.z, rhs.deposit.block.rawValue)

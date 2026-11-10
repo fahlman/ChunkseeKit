@@ -177,11 +177,10 @@ Saved sign whitespace and book line boundaries remain significant to phrase quer
 trim captions separately. Filter.includes shares creature/pet/villager/trade membership, with
 offer matching still required for trades. `DimensionIndex.ChunkDeposit.orderedBefore` owns
 count-descending deposit order, then dimension ID, chunk X, chunk Z and block-group ID ascending.
-Both DimensionIndex.blocks and WorldIndex.richestDeposits use it before limiting membership.
-The world query expects each dimension's canonical array; clients supplying their own arrays
-use the public comparator with the same dimension on both sides. This #351 change replaces the
-earlier unspecified tie order and tightens that input contract, so the additive comparator and
-behavior change require a minor release and client adoption. No region/chunk read, serialized
+Both DimensionIndex.blocks and WorldIndex.richestDeposits use this internal comparator.
+The world query accepts arrays in any order and ranks matches before limiting each dimension
+and the combined result. This #351 change stabilizes tied membership and removes the earlier
+caller-order precondition without changing public signatures. No region/chunk read, serialized
 fact, interpretation identity or renderer changes. The app
 retains its display limit, localized search labels and marker/title/detail construction. These
 additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.

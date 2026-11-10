@@ -87,16 +87,17 @@ import Testing
         }
     }
 
-    @Test func customDimensionArraysUseTheSharedOrderBeforeTheirLimit() {
+    @Test func unsortedDimensionArraysAreRankedBeforeTheirLimit() {
         struct Content: Sendable { var blocks: [DimensionIndex.ChunkDeposit] }
         let input = [deposit(.emerald, 4, x: 2, z: 0), deposit(.diamond, 4, x: -1, z: 2),
-                     deposit(.emerald, 4, x: -1, z: 0), deposit(.diamond, 4, x: -1, z: 0)]
+                     deposit(.emerald, 4, x: -1, z: 0), deposit(.diamond, 4, x: -1, z: 0),
+                     deposit(.coal, 90, x: 3, z: 0), deposit(.diamond, 9, x: 8, z: 8)]
         let id = "example:caves"
         for values in [input, Array(input.reversed())] {
-            let blocks = values.sorted { DimensionIndex.ChunkDeposit.orderedBefore($0, in: id, $1, in: id) }
-            let world = WorldIndex(dimensions: [id: Content(blocks: blocks)])
-            let best = world.richestDeposits(matching: [.diamond, .emerald], limit: 2, in: \.blocks)
-            #expect(best.map(\.value) == [deposit(.diamond, 4, x: -1, z: 0), deposit(.emerald, 4, x: -1, z: 0)])
+            let world = WorldIndex(dimensions: [id: Content(blocks: values)])
+            let best = world.richestDeposits(matching: [.diamond, .emerald], limit: 3, in: \.blocks)
+            #expect(best.map(\.value) == [deposit(.diamond, 9, x: 8, z: 8),
+                deposit(.diamond, 4, x: -1, z: 0), deposit(.emerald, 4, x: -1, z: 0)])
         }
     }
 
