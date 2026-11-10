@@ -71,7 +71,7 @@ public struct RegionFacts: Sendable, Codable {
     /// Bump the revision whenever a fact reader changes meaning, even with the same serialized
     /// shape. Generated facts and the terrain reader contribute their own identities.
     public static let interpretationVersion = InterpretationVersion(
-        domain: "regionFacts", revision: 33, generatedFacts: GeneratedInterpretationDigests.regionFacts,
+        domain: "regionFacts", revision: 34, generatedFacts: GeneratedInterpretationDigests.regionFacts,
         dependencies: [Chunk.interpretationVersion])
 
     public let dimension: String

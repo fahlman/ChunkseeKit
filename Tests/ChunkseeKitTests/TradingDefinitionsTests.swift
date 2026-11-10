@@ -17,9 +17,14 @@ import Testing
                 #expect(try villager(id).supportsTrading(using: definitions) == false)
                 #expect(try villager(id).supportsTrading(using: nil) == false)
             }
-            for id in ["example:beekeeper", "example:farmer", "minecraft:wandering_trader", "invalid id"] {
+            for id in ["example:beekeeper", "example:farmer", "minecraft:wandering_trader"] {
                 #expect(try villager(id).supportsTrading(using: definitions) == nil)
             }
+            let malformed = try villager("invalid id")
+            #expect(malformed.profession == "minecraft:none")
+            #expect(malformed.supportsTrading(using: definitions) == false)
+            #expect(malformed.supportsTrading(using: nil) == false)
+            #expect(malformed.savedData?.value?["profession"] == .string("invalid id"))
             #expect(try villager("farmer").supportsTrading(using: nil) == nil)
         }
     }

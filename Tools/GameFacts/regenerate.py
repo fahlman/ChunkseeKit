@@ -557,9 +557,28 @@ def trading_source(facts, notice):
     result = notice + "// " + facts["source"] + ". Trade contents are never bundled.\n"
     if type(facts["minimumLevel"]) is not int:
         raise ValueError("Invalid generated minimum villager level")
+    if type(facts["defaultLevel"]) is not int or facts["defaultLevel"] < facts["minimumLevel"]:
+        raise ValueError("Invalid generated default villager level")
+    for identifier in [facts["defaultProfession"], facts["defaultType"]] + list(facts["dataReaders"]):
+        if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
+            raise ValueError("Invalid villager data identifier: " + identifier)
+    if facts["defaultProfession"] not in facts["professions"]:
+        raise ValueError("Default villager data is not registered")
     result += "enum GeneratedTradingFacts {\n"
     result += "    // VillagerData constructor normalization, checked at signed-int boundaries.\n"
     result += f"    static let minimumLevel = {facts['minimumLevel']}\n"
+    result += "    // Villager.createDefaultVillagerData; zombie whole-record fallback has a random profession.\n"
+    result += f"    static let defaultProfession = {quoted(facts['defaultProfession'])}\n"
+    result += f"    static let defaultType = {quoted(facts['defaultType'])}\n"
+    result += f"    static let defaultLevel = {facts['defaultLevel']}\n"
+    result += "    // Inspected entity readers supply whole-record fallbacks, never creature membership.\n"
+    result += "    enum DataReader: Sendable { case villager, zombieVillager }\n"
+    result += "    static let dataReaders: [String: DataReader] = [\n"
+    for identifier, reader in sorted(facts["dataReaders"].items()):
+        if reader not in {"villager", "zombieVillager"}:
+            raise ValueError("Unsupported villager data reader: " + reader)
+        result += f"        {quoted(identifier)}: .{reader},\n"
+    result += "    ]\n"
     result += "    static let professions: [String: [Int: String]] = [\n"
     for profession, levels in sorted(facts["professions"].items()):
         for identifier in [profession] + list(levels.values()):

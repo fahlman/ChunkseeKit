@@ -5,26 +5,30 @@ import ChunkseeKit
 
 @Suite struct VillagerProfessionTests {
     @Test func savedProfessionUsesTheSharedIdentifierRules() throws {
-        let cases: [(String, Bool?)] = [
-            ("minecraft:none", true), ("none", true), (":none", true),
-            ("minecraft:farmer", false), ("farmer", false), ("minecraft:nitwit", false),
-            ("example:none", false), ("example:beekeeper", false),
-            ("", nil), ("minecraft:", nil), ("Minecraft:none", nil), ("not a profession", nil),
+        let cases: [(String, String, Bool?)] = [
+            ("minecraft:none", "minecraft:none", true), ("none", "none", true), (":none", ":none", true),
+            ("minecraft:farmer", "minecraft:farmer", false), ("farmer", "farmer", false),
+            ("minecraft:nitwit", "minecraft:nitwit", false),
+            ("example:none", "example:none", false), ("example:beekeeper", "example:beekeeper", false),
+            ("", "", nil), ("minecraft:", "minecraft:", nil),
+            ("Minecraft:none", "minecraft:none", true), ("not a profession", "minecraft:none", true),
         ]
-        for (saved, expected) in cases {
+        for (saved, expectedProfession, expected) in cases {
             let villager = try #require(Villager(.compound([
                 "VillagerData": .compound(["profession": .string(saved)]),
             ])))
             #expect(villager.isUnemployed == expected, "Saved profession: \(saved)")
-            #expect(villager.profession == saved)
+            #expect(villager.profession == expectedProfession)
+            #expect(villager.savedData?.value?["profession"] == .string(saved))
         }
     }
 
-    @Test func missingInvalidAndTraderRecordsDoNotInventEmployment() throws {
+    @Test func missingAndInvalidCompoundFieldsDefaultWithoutChangingTraderRecords() throws {
         let missing: [[String: NBT]] = [[:], ["profession": .int(0)]]
         for fields in missing {
             let villager = try #require(Villager(.compound(["VillagerData": .compound(fields)])))
-            #expect(villager.isUnemployed == nil && villager.profession == nil)
+            #expect(villager.isUnemployed == true && villager.profession == "minecraft:none")
+            #expect(villager.savedData?.value == .compound(fields))
         }
         let trader = try #require(Villager(.compound(["Offers": .compound(["Recipes": .list([
             .compound([
@@ -102,7 +106,8 @@ import ChunkseeKit
             let villager = try #require(Villager(.compound(nbt)))
             #expect(villager.supportsTrading(using: nil) == true)
             #expect(villager.trades.first?.isSoldOut == true)
-            #expect(villager.profession == profession)
+            #expect(villager.profession == (profession == "invalid value" ? "minecraft:none" : profession))
+            #expect(villager.savedData?.value?["profession"] == profession.map(NBT.string))
             #expect(villager.level == (profession == nil ? nil : 1))
         }
     }
