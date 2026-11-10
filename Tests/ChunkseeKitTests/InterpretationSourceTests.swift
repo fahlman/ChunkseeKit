@@ -13,7 +13,10 @@ import Testing
         let digest = try InterpretationKey.identity(of: files)
         let version = RegionFacts.interpretationVersion
         #expect(reviewedSources[version]?.contains(digest) == true,
-                "Region-facts source changed; review its complete cache contract. Source SHA-256: \(digest)")
+                """
+                Review the complete region-facts contract and add its reviewed source fingerprint,
+                including after a revision bump. Source SHA-256: \(digest)
+                """)
     }
 
     /// Keep earlier snapshots. A source-only refactor can keep the contract only after
@@ -39,7 +42,7 @@ import Testing
             try #require(values.isSymbolicLink == false)
             if values.isDirectory == true {
                 for child in try manager.contentsOfDirectory(at: url,
-                    includingPropertiesForKeys: Array(keys)) {
+                    includingPropertiesForKeys: Array(keys), options: .skipsHiddenFiles) {
                     try include(child)
                 }
             } else {
