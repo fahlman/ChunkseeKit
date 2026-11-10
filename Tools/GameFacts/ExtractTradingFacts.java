@@ -1,8 +1,10 @@
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.DataResult;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerData;
@@ -38,15 +40,18 @@ final class ExtractTradingFacts {
         if (!professions.containsKey(defaultProfession) || defaults.level() < minimumLevel) {
             throw new IllegalStateException("Unresolved villager defaults");
         }
+        var empty = VillagerData.CODEC.parse(NbtOps.INSTANCE, new CompoundTag()).result().orElseThrow();
+        requireSameDefaults(defaults, empty);
+        var invalidLevel = new CompoundTag();
+        invalidLevel.putString("level", "not a number");
+        var parsed = VillagerData.CODEC.parse(NbtOps.INSTANCE, invalidLevel);
+        if (!(parsed instanceof DataResult.Error<VillagerData> error)) {
+            throw new IllegalStateException("Changed VillagerData invalid-level codec result");
+        }
+        requireSameDefaults(defaults, error.partialValue().orElseThrow());
         result.addProperty("defaultProfession", defaultProfession);
         result.addProperty("defaultType", defaultType);
         result.addProperty("defaultLevel", defaults.level());
-        var types = new TreeSet<String>();
-        for (var type : BuiltInRegistries.VILLAGER_TYPE) {
-            types.add(BuiltInRegistries.VILLAGER_TYPE.getKey(type).toString());
-        }
-        if (!types.contains(defaultType)) throw new IllegalStateException("Unregistered default villager type");
-        result.add("types", new Gson().toJsonTree(types));
 
         // The existing entity-class extraction establishes the reader association. A new
         // override needs its own source proof; a familiar superclass is not enough.
@@ -64,7 +69,9 @@ final class ExtractTradingFacts {
             } else {
                 continue;
             }
-            if (readerOwner(type) != expected) {
+            // The outer fallback also depends on constructor initialization. An inherited
+            // reader alone does not prove a newly introduced subclass has the same defaults.
+            if (type != expected || readerOwner(type) != expected) {
                 throw new IllegalStateException("Unverified villager reader: " + type.getName());
             }
             readers.put(entry.getKey(), reader);
@@ -84,5 +91,13 @@ final class ExtractTradingFacts {
             } catch (NoSuchMethodException inherited) { }
         }
         throw new NoSuchMethodException(type.getName() + ".readAdditionalSaveData");
+    }
+
+    private static void requireSameDefaults(VillagerData expected, VillagerData actual) {
+        if (actual.level() != expected.level()
+                || !actual.profession().unwrapKey().equals(expected.profession().unwrapKey())
+                || !actual.type().unwrapKey().equals(expected.type().unwrapKey())) {
+            throw new IllegalStateException("VillagerData codec and entity defaults differ");
+        }
     }
 }

@@ -1298,14 +1298,27 @@ checked against 26.3, with explicit overrides and unbreakable/removed components
 Embedded singleplayer records, pet identities/owners and attribute-modifier replacement use that
 reader, so a legacy Most/Least pair and a current array identify the same player or modifier.
 
-`Villager` owns the missing-level default: a `VillagerData` compound with no `level` reads as 1,
-verified against the 26.3 codec. Explicit values are retained, and malformed/absent data does not
-invent a level. Consumers must rescan previously cached creatures to obtain the corrected value.
-The computed `Villager.isUnemployed` owns the explicit `minecraft:none` profession category,
-using Identifier's namespace and validation rules. Missing/empty/malformed values stay unknown;
-nitwits and custom professions remain distinct. This is not a work/trade capability check. Raw
-profession, Codable data and cache interpretation are unchanged. This additive API is available in v0.39.0;
-the app's job-label adoption is tracked on #51.
+`Villager` owns the saved-field projection from one immutable `VillagerSavedData` input. It
+computes profession, type and level once when reading or decoding that input, so views do not
+reparse NBT. The single GameFacts tool extracts `Villager.createDefaultVillagerData` and binds
+registered IDs to the inspected entity classes. A missing or unusable whole villager record
+uses those defaults; a zombie villager's random profession remains unknowable. A compound
+retains readable fields through codec partial results; level uses the shared NBT.javaInt owner
+and the generated minimum/default. Missing or malformed identifiers use the codec default,
+while readable custom IDs remain visible without claiming their registration. The extraction
+registry's absence is not authority to replace an installed custom ID. There is no version
+gate, mob membership catalog or biome/spawn inference.
+`Villager.savedData` retains the original field and entity ID. A present wrapper with a nil
+value means an absent saved field; no wrapper means unavailable provenance in an older archive
+or caller-edited projection. Mutating profession/type/level retains the explicit projected
+values and discards saved provenance, keeping one owner. Legacy standalone Codable records
+retain known fields without invented defaults. New records encode only the saved input plus
+the independent offers/trades. The computed `isUnemployed` uses the interpreted profession;
+nitwits and custom professions remain distinct. It does not establish work/trade capability.
+This #332 additive API and behavior correction requires a minor release and app adoption.
+RegionFacts interpretation 34 rejects earlier cached creatures, and the release tool updates
+the generated region-fact and asset digests. Public-path regressions cover both reader families,
+partial numeric results, raw values, custom IDs, old/new archives, explicit edits and region scans.
 
 `Villager.supportsTrading(using:)` combines saved offers with an immutable `TradingDefinitions`
 snapshot from `World.tradingDefinitions(assets:)` or `GameAssets.tradingDefinitions()`. Saved

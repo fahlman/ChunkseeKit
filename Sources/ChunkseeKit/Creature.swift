@@ -78,7 +78,7 @@ public struct Creature: Sendable, Equatable, Codable {
                   customName: nbt["CustomName"].flatMap(TextComponent.plainText)
                       .map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 },
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
-                  villager: Villager(nbt), health: nbt["Health"]?.double)
+                  villager: Villager(nbt, entityID: id), health: nbt["Health"]?.double)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
         maxHealth = EntityHealth.maximumHealth(nbt, species: id, isTamed: isTamed, enchantments: enchantments)
         uuid = nbt.uuid
@@ -105,10 +105,15 @@ public struct Creature: Sendable, Equatable, Codable {
 
 /// A villager's (or wandering trader's) profession and trades.
 public struct Villager: Sendable, Equatable, Codable {
-    /// e.g. `minecraft:farmer`, or `minecraft:none` for an unemployed villager.
-    public var profession: String?
-    /// Whether the saved profession is Minecraft's explicit `none` category. Missing, empty
-    /// or malformed identifiers are unknown. Nitwits have a distinct category and return false;
+    /// Readable saved profession or the game's default. A readable custom ID is retained
+    /// without asserting that the user's game registers it. Whole-record zombie defaults
+    /// have no knowable profession. Assigning a field replaces saved provenance with explicit values.
+    public var profession: String? {
+        get { dataValues.profession }
+        set { dataValues.profession = newValue }
+    }
+    /// Whether the interpreted profession is Minecraft's explicit `none` category.
+    /// Unavailable values remain unknown. Nitwits have a distinct category and return false;
     /// this does not determine whether a villager can work or trade.
     public var isUnemployed: Bool? {
         professionID.map { $0.namespace == "minecraft" && $0.path == "none" }
@@ -131,15 +136,48 @@ public struct Villager: Sendable, Equatable, Codable {
         guard let set = sets[max(GeneratedTradingFacts.minimumLevel, level)] else { return false }
         return definitions?.tradeSets[set]
     }
-    /// Saved level, normally 1 (novice) to 5 (master); an omitted VillagerData level defaults to 1.
-    public var level: Int?
-    /// The biome style, e.g. `minecraft:desert`.
-    public var type: String?
+    /// The game's interpreted level, using its numeric conversion, minimum and read fallback.
+    public var level: Int? {
+        get { dataValues.level }
+        set { dataValues.level = newValue }
+    }
+    /// Readable saved biome style or the game's default, e.g. `minecraft:desert`.
+    /// A readable custom ID remains visible without asserting its runtime registration.
+    public var type: String? {
+        get { dataValues.type }
+        set { dataValues.type = newValue }
+    }
+    /// Original field evidence. Nil for older archives or explicitly edited projections;
+    /// a present value whose `value` is nil records a genuinely absent saved field.
+    public var savedData: VillagerSavedData? {
+        if case .saved(let value, _) = dataSource { value } else { nil }
+    }
     /// Readable saved recipes, including the readable portion of an incomplete list.
     public var trades: [Trade]
     /// The game's initialized-list state and Kit's recipe readability. Nil in older standalone
     /// Codable records, which cannot establish whether an empty array was saved or uninitialized.
     public var offerState: OfferState?
+
+    private enum DataSource: Sendable, Equatable {
+        case saved(VillagerSavedData, VillagerDataValues)
+        case explicit(VillagerDataValues)
+
+        init(_ input: VillagerSavedData) {
+            // Saved inputs are immutable. Compute their projection once, so drawing labels
+            // never parses NBT or identifier syntax again. Editing discards this provenance.
+            self = .saved(input, input.interpreted)
+        }
+    }
+    private var dataSource: DataSource
+    private var dataValues: VillagerDataValues {
+        get {
+            switch dataSource {
+            case .saved(_, let value): value
+            case .explicit(let value): value
+            }
+        }
+        set { dataSource = .explicit(newValue) }
+    }
 
     public enum OfferState: String, Sendable, Codable {
         /// Offers was absent or not a compound; the game may initialize current definitions.
@@ -156,9 +194,15 @@ public struct Villager: Sendable, Equatable, Codable {
     }
 
     public init?(_ nbt: NBT) {
+        self.init(nbt, entityID: nbt["id"]?.string.flatMap(Identifier.init)?.description)
+    }
+
+    init?(_ nbt: NBT, entityID: String?) {
         let data = nbt["VillagerData"]
         let offers = nbt["Offers"]
-        guard data != nil || offers != nil else { return nil }
+        let saved = VillagerSavedData(entityID: entityID, value: data)
+        guard data != nil || offers != nil || saved.hasKnownReader else { return nil }
+        dataSource = DataSource(saved)
         let recipes = offers?["Recipes"]?.list
         let trades = (recipes ?? []).compactMap(Trade.init)
         if offers?.compound == nil {
@@ -170,15 +214,40 @@ public struct Villager: Sendable, Equatable, Codable {
             // partial list. Unreadable individual entries stay unknown to Kit's Trade reader.
             offerState = recipes == nil || recipes?.count == trades.count ? .complete : .incomplete
         }
-        profession = data?["profession"]?.string
-        // The VillagerData codec defaults an absent field, not a malformed one, to novice.
-        if let fields = data?.compound, fields["level"] == nil {
-            level = 1
-        } else {
-            level = data?["level"]?.int
-        }
-        type = data?["type"]?.string
         self.trades = trades
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case savedData, profession, type, level, trades, offerState
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        if let saved = try values.decodeIfPresent(VillagerSavedData.self, forKey: .savedData) {
+            dataSource = DataSource(saved)
+        } else {
+            // Older archives contain projections, not proof that an omitted field was absent
+            // in the original save. Keep their known values without manufacturing defaults.
+            dataSource = .explicit(.init(
+                profession: try values.decodeIfPresent(String.self, forKey: .profession),
+                type: try values.decodeIfPresent(String.self, forKey: .type),
+                level: try values.decodeIfPresent(Int.self, forKey: .level)))
+        }
+        trades = try values.decode([Trade].self, forKey: .trades)
+        offerState = try values.decodeIfPresent(OfferState.self, forKey: .offerState)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        if let savedData {
+            try values.encode(savedData, forKey: .savedData)
+        } else {
+            try values.encodeIfPresent(profession, forKey: .profession)
+            try values.encodeIfPresent(type, forKey: .type)
+            try values.encodeIfPresent(level, forKey: .level)
+        }
+        try values.encode(trades, forKey: .trades)
+        try values.encodeIfPresent(offerState, forKey: .offerState)
     }
 }
 

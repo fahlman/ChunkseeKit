@@ -27,19 +27,21 @@ import ChunkseeKit
         }
     }
 
-    @Test func explicitLevelsArePreservedAndMalformedLevelsStayUnavailable() throws {
+    @Test func explicitLevelsUseTheGameMinimumAndMalformedLevelsUseItsPartialDefault() throws {
         for value in [-1, 0, 1, 2, 3, 4, 5, 6] {
             let villager = try #require(creature(data: .compound(["level": .int(Int32(value))])).villager)
-            #expect(villager.level == value)
+            #expect(villager.level == max(1, value))
+            #expect(villager.savedData?.value?["level"] == .int(Int32(value)))
         }
         let malformed = try #require(creature(data: .compound(["level": .string("unknown")])).villager)
-        #expect(malformed.level == nil)
+        #expect(malformed.level == 1)
+        #expect(malformed.savedData?.value?["level"] == .string("unknown"))
     }
 
-    @Test func absentOrMalformedVillagerDataDoesNotInventALevel() throws {
-        #expect(try creature(data: nil).villager == nil)
+    @Test func wholeRecordDefaultsApplyToTheKnownVillagerReader() throws {
+        #expect(try creature(data: nil).villager?.level == 1)
         for data in [NBT.string("unknown"), .list([])] {
-            #expect(try creature(data: data).villager?.level == nil)
+            #expect(try creature(data: data).villager?.level == 1)
         }
         let trader = try #require(creature(data: nil, trader: true).villager)
         #expect(trader.level == nil && trader.trades.count == 1)

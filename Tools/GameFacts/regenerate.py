@@ -559,10 +559,10 @@ def trading_source(facts, notice):
         raise ValueError("Invalid generated minimum villager level")
     if type(facts["defaultLevel"]) is not int or facts["defaultLevel"] < facts["minimumLevel"]:
         raise ValueError("Invalid generated default villager level")
-    for identifier in [facts["defaultProfession"], facts["defaultType"]] + facts["types"] + list(facts["dataReaders"]):
+    for identifier in [facts["defaultProfession"], facts["defaultType"]] + list(facts["dataReaders"]):
         if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", identifier):
             raise ValueError("Invalid villager data identifier: " + identifier)
-    if facts["defaultProfession"] not in facts["professions"] or facts["defaultType"] not in facts["types"]:
+    if facts["defaultProfession"] not in facts["professions"]:
         raise ValueError("Default villager data is not registered")
     result += "enum GeneratedTradingFacts {\n"
     result += "    // VillagerData constructor normalization, checked at signed-int boundaries.\n"
@@ -571,8 +571,7 @@ def trading_source(facts, notice):
     result += f"    static let defaultProfession = {quoted(facts['defaultProfession'])}\n"
     result += f"    static let defaultType = {quoted(facts['defaultType'])}\n"
     result += f"    static let defaultLevel = {facts['defaultLevel']}\n"
-    result += "    // Positive registry evidence only; absence does not rule out an installed custom type.\n"
-    result += "    static let types: Set<String> = [" + ", ".join(quoted(value) for value in sorted(facts["types"])) + "]\n"
+    result += "    // Inspected entity readers supply whole-record fallbacks, never creature membership.\n"
     result += "    enum DataReader: Sendable { case villager, zombieVillager }\n"
     result += "    static let dataReaders: [String: DataReader] = [\n"
     for identifier, reader in sorted(facts["dataReaders"].items()):

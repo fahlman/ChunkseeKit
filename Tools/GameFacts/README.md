@@ -357,7 +357,16 @@ and test commands before publishing it.
 - BuiltInRegistries.VILLAGER_PROFESSION exposes each profession's `tradeSetsByLevel` map.
   Every registered link is checked against `getTrades`, which Villager.updateTrades calls for
   the current level. VillagerData supplies its minimum-level clamp, checked at integer boundaries.
-  Only this code association (including empty maps) is generated. Trade sets, their candidate
+  `Villager.createDefaultVillagerData` supplies its actual profession, type and level defaults;
+  the extractor verifies that empty-compound codec defaults and bad-level partial defaults agree.
+  Existing entity-class extraction supplies the ID-to-reader associations. Both the declared
+  reader owner and concrete class must match the inspected Villager/ZombieVillager classes;
+  a new subclass needs its own constructor/fallback proof even if it inherits the reader.
+  The zombie whole-record fallback's profession is random and is never sampled into a default.
+  No villager-type inventory is generated, and a readable saved ID cannot be rejected because
+  it is absent from the extraction game's registry. The source proof and 28-case field-reader
+  capture for #332 are retained in the issue's evidence, with spawn finalization out of scope.
+  These code associations and defaults are generated. Trade sets, their candidate
   tags and trade definitions are read at runtime, not inferred from folder names or copied
   from the jar. The public query describes potential trading, not rolled or currently usable offers.
 

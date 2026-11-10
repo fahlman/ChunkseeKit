@@ -1136,11 +1136,29 @@ totals that assumed vanilla enchantments were unchanged. These additive/defaulte
 a minor release; app resource/scan adoption follows fahlman/Chunksee#446.
 The result uses Minecraft's Float precision. No maximum is guessed from current health.
 
-Starting in v0.39.0, the computed `Villager.isUnemployed` interprets the saved profession's explicit
-`minecraft:none` category, using the shared identifier rules (so `none` means the same thing).
-Missing, empty or malformed identifiers return nil. Nitwits and custom professions remain
-distinct; false does not mean that the villager can work or trade. The raw `profession` and
-serialized data are retained, so older cached values use this interpretation without a rescan.
+`Villager.isUnemployed` interprets the resolved profession's explicit `minecraft:none` category,
+using the shared identifier rules (so `none` means the same thing). Unavailable professions
+return nil. Nitwits and custom professions remain distinct; false does not mean that the
+villager can work or trade.
+
+`Villager.profession`, `type` and `level` now project the game's saved-field interpretation.
+The single GameFacts tool extracts the actual defaults and the entity readers that supply
+whole-record fallbacks. A missing or unusable ordinary-villager record uses those defaults;
+a zombie villager's profession stays unknown because its initializer makes a random choice.
+A compound retains its independently readable fields when level decoding supplies a partial
+result. Missing or malformed identifiers use the field defaults; readable custom IDs retain
+their saved spelling because the extraction game's registry cannot prove their absence from
+the user's installation. No creature membership list or version gate is added.
+
+The optional `Villager.savedData` exposes the original field through `VillagerSavedData.value`,
+including non-compound values and numeric tag types. A present savedData with a nil value
+means the field was absent. A nil savedData means an older archive or a caller-edited projection
+does not establish the original field. Assigning profession, type or level keeps all projected
+values but retires that original-save provenance. Older standalone archives keep their known
+values without inventing missing defaults. New archives encode the saved input, not a second
+editable projection. This additive API and behavior change require a minor release and client
+adoption. RegionFacts interpretation 34 invalidates earlier creature caches; generated facts
+also contribute their release-tool digest.
 
 `Villager.supportsTrading(using:)` combines saved offers with an immutable `TradingDefinitions`
 snapshot from `World.tradingDefinitions(assets:)` or `GameAssets.tradingDefinitions()`. Saved
@@ -1166,10 +1184,10 @@ these facts. Older standalone Codable values decode with unknown offerState, pre
 trades without guessing whether an empty list was saved. RegionFacts interpretation 20 requires
 a rescan for this distinction; the new optional property and enum are additive public API.
 
-`Villager.level` defaults to 1 (Novice) only when a `VillagerData` compound omits `level`,
-matching the vanilla 26.3 codec. Explicit numeric values are preserved; malformed levels stay
-unavailable. A trader with offers but no `VillagerData` has no level. Previously cached creatures
-still decode as saved, so rescan them to obtain this corrected default.
+`Villager.level` uses the game's Java `Number.intValue` conversion and generated minimum.
+An absent or malformed level in a compound uses the codec's default, preserving readable
+profession and type. A trader with offers but no `VillagerData` has no inferred level.
+The original level tag remains in savedData for callers that need the saved value.
 
 All mobs expose readable saved `appearance`, `collarColor` and `equipment`, whether wild or owned.
 Saved `variant` strings (or string-valued `Variant`) are retained as-is for any type, including
