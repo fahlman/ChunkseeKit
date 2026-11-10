@@ -28,8 +28,15 @@ import Testing
         let regionFacts = InterpretationVersion(domain: "regionFacts", revision: 33,
             generatedFacts: "6afb63a4e924041cd0ea6d94cd632680b32fa2cae558224f66fe6d62ac54b287",
             dependencies: [terrain])
-        // Published source 30e2b22861a92da0fed92aa518340d617b850da9.
-        return [regionFacts: ["c05630d57eee90a0d9d3ae21a7469f1207d793fa99b4762f9258fa665fa94cd0"]]
+        let regionFacts34 = InterpretationVersion(domain: "regionFacts", revision: 34,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574",
+            dependencies: [terrain])
+        return [
+            // Published source 30e2b22861a92da0fed92aa518340d617b850da9.
+            regionFacts: ["c05630d57eee90a0d9d3ae21a7469f1207d793fa99b4762f9258fa665fa94cd0"],
+            // Published source 4b8e4b9795e0e71a785a4f25b58786af23d0b2fc.
+            regionFacts34: ["3ed0c074b4ef384408d82044c2e8f2de72d54093d8c48f7b485584e61c4cd004"],
+        ]
     }
 
     private func sourceFiles(at root: URL) throws -> [String: String] {
