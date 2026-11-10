@@ -17,6 +17,8 @@ import Testing
         generatedFacts: "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c", dependencies: [])
     private let assets2 = InterpretationVersion(domain: "assets", revision: 2,
         generatedFacts: "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c", dependencies: [])
+    private let assets2VillagerDefaults = InterpretationVersion(domain: "assets", revision: 2,
+        generatedFacts: "f3de48d22ee2c5331d70aa3384aa9bf309dec48627777ce616dd20f043adf115", dependencies: [])
     private var light1: InterpretationVersion {
         .init(domain: "light", revision: 1,
             generatedFacts: "e665beb8560af59ac4835d84dcd2a21b455e44c097d2e82853c5fb88bc626ccc", dependencies: [terrain1])
@@ -44,6 +46,10 @@ import Testing
     private var regionFacts33: InterpretationVersion {
         .init(domain: "regionFacts", revision: 33,
             generatedFacts: "6afb63a4e924041cd0ea6d94cd632680b32fa2cae558224f66fe6d62ac54b287", dependencies: [terrain2])
+    }
+    private var regionFacts34: InterpretationVersion {
+        .init(domain: "regionFacts", revision: 34,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574", dependencies: [terrain2])
     }
 
     private func check(_ output: some Encodable, version: InterpretationVersion,
@@ -157,7 +163,8 @@ import Testing
                               regionFacts31: "d5df7b6ccf913fa15ff32ad7078d5208c37f54fe0fc5d498354c9df686deb234",
                               regionFacts32: "7cbd924ddac97848c95b700aac28a5771da4e0997ae116e867831cd0de51fa5b",
                               // The archive embeds its complete interpretation identity.
-                              regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520"])
+                              regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520",
+                              regionFacts34: "1771b2cce9e3308c4e5a00ced2b402e0a7e4efba6d230cc3491597fc7ea805f2"])
     }
 
     private struct NumericCase {
@@ -307,7 +314,8 @@ import Testing
                   baselines: [regionFacts30: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts31: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts32: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
-                              regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
+                              regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
+                              regionFacts34: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
     }
 
     private struct MaterialOutput: Encodable {
@@ -353,6 +361,7 @@ import Testing
         try check(AssetOutput(material: material, biome: biome, mapColors: colors),
                   version: GameAssets.interpretationVersion,
                   baselines: [assets1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4",
-                              assets2: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
+                              assets2: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4",
+                              assets2VillagerDefaults: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
     }
 }
