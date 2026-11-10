@@ -44,7 +44,7 @@ import ChunkseeKit
     func textIncludesOffhandBooksAndFindKeepsEveryPlayerStore(_ legacy: Bool) throws {
         let root = try world()
         defer { try? FileManager.default.removeItem(at: root) }
-        let uuid = "01234567-89ab-cdef-0123-456789abcdef"
+        let uuid = "abcdef01-2345-6789-abcd-ef0123456789"
         var inventoryBook = book("Inventory", legacy: legacy).compound!
         inventoryBook["Slot"] = .byte(0)
         var offhandBook = book("Offhand", legacy: legacy).compound!
@@ -56,13 +56,13 @@ import ChunkseeKit
         let text = try Fixtures.runCLI(root, command: "text", arguments: ["needle"])
         #expect(text.status == 0)
         for title in ["Inventory", "Offhand", "Ender"] {
-            #expect(text.output.contains("\"Needle \(title)\" by Tester"))
+            #expect(text.output.contains("player abcdef01: \"Needle \(title)\" by Tester\n"))
         }
         #expect(text.output.split(separator: "\n").filter { $0.hasPrefix("player ") }.count == 3)
         let find = try Fixtures.runCLI(root, command: "find", arguments: ["needle"])
         #expect(find.status == 0)
         for title in ["Inventory", "Offhand", "Ender"] { #expect(find.output.contains("Needle \(title)")) }
-        #expect(find.output.contains("inventory:") && find.output.contains("ender chest:"))
+        #expect(find.output.contains("player abcdef01 inventory:") && find.output.contains("player abcdef01 ender chest:"))
     }
 
     @Test func bothSearchesIncludeEntityOnlyRegionsWithoutDuplicatingOverlap() throws {

@@ -18,7 +18,7 @@ func findCommand(_ world: World, _ arguments: Arguments) {
         for player in world.players() {
             for (label, items) in [("inventory", player.searchableInventory), ("ender chest", player.enderChest)] {
                 let found = summary(items)
-                if !found.isEmpty { print("player \(player.uuid.uuidString.prefix(8).lowercased()) \(label): \(found)") }
+                if !found.isEmpty { print("player \(PlayerInfo.shortIdentifier(for: player.uuid)) \(label): \(found)") }
             }
         }
         let dims = arguments.dimensions(2, in: world)
@@ -48,7 +48,7 @@ func textCommand(_ world: World, _ arguments: Arguments) {
         }
         for player in world.players() {
             for book in books(player.searchableInventory + player.enderChest) {
-                print("player \(player.uuid.uuidString.prefix(8).lowercased()): \(book)")
+                print("player \(PlayerInfo.shortIdentifier(for: player.uuid)): \(book)")
             }
         }
         let dims = arguments.dimensions(2, in: world)
