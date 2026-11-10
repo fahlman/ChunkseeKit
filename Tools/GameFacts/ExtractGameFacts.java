@@ -23,6 +23,7 @@ public final class ExtractGameFacts {
     public static void main(String[] args) throws Exception {
         if (args.length != 3) throw new IllegalArgumentException("Expected facts/entity-class paths and current data version");
         ExtractEntityTypes.main(new String[] {args[1]});
+        var entityTypes = JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject();
         var facts = new JsonObject();
         var dyes = new JsonArray();
         for (var color : DyeColor.values()) {
@@ -70,12 +71,11 @@ public final class ExtractGameFacts {
         facts.add("spawnEggs", ExtractSpawnEggs.extract());
         facts.add("blockItems", ExtractBlockItems.extract());
         facts.add("equipment", ExtractEquipmentFacts.extract());
-        facts.add("trading", ExtractTradingFacts.extract());
+        facts.add("trading", ExtractTradingFacts.extract(entityTypes));
         facts.add("mobSpawns", ExtractMobSpawnFacts.extract());
         facts.add("statisticUnits", ExtractStatisticUnits.extract());
         facts.add("potionColors", ExtractPotionColors.extract());
-        facts.add("healthDefaults", ExtractHealthDefaults.extract(
-            JsonParser.parseString(Files.readString(Path.of(args[1]))).getAsJsonObject()));
+        facts.add("healthDefaults", ExtractHealthDefaults.extract(entityTypes));
         facts.add("lightStorage", ExtractLightStorage.extract());
         facts.add("mapColors", ExtractMapColors.extract());
         facts.add("legacyContentIDs", ExtractLegacyContentIDs.extract(Integer.parseInt(args[2])));
