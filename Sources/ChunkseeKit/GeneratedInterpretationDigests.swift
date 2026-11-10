@@ -3,6 +3,6 @@
 enum GeneratedInterpretationDigests {
     static let terrain = "ecf3d4cb262728a6dc1418c48cb262fa32d4415dcdb64287ea520c87ba1b8702"
     static let light = "e665beb8560af59ac4835d84dcd2a21b455e44c097d2e82853c5fb88bc626ccc"
-    static let assets = "ef1322bcbb857bc0cbf1cba79338b436fa18acb2bc11c88f95287a16fb361d7c"
-    static let regionFacts = "6afb63a4e924041cd0ea6d94cd632680b32fa2cae558224f66fe6d62ac54b287"
+    static let assets = "f3de48d22ee2c5331d70aa3384aa9bf309dec48627777ce616dd20f043adf115"
+    static let regionFacts = "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574"
 }
