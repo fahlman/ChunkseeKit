@@ -309,6 +309,18 @@ fails until a new reviewed contract/baseline is recorded; retain previous entrie
 an old contract's digest. Generated/dependent changes need no copied reader-counter bump.
 Reader and generated-source identity checks cover invalidation and reuse, but unexercised
 decoder paths still require independent review of the version contract.
+InterpretationSourceTests also requires a reviewed source snapshot for the complete region-facts
+contract. It fingerprints nonhidden files in the core-library and CZlib source roots plus Package.swift,
+so a changed reader, added file or changed dependency declaration cannot rely only on fixtures
+that happen not to exercise it. This is deliberately conservative: unrelated core edits also
+request review. Hidden Finder/editor files are skipped because they are not package sources.
+It changes no runtime cache identity and does not decide whether meaning changed.
+Retain earlier source snapshots, and add a reviewed entry after a contract revision changes too.
+A new snapshot may keep the same contract only when independent
+review establishes unchanged interpretation; a meaning change still requires the owning revision
+and the existing output-baseline review. Tests, documentation and provenance outside those source
+roots do not affect the fingerprint. This first source-review gate covers region facts; it does
+not replace the terrain, light or asset contracts or their fixed-output tests.
 The #320 numeric-output fixtures also bind the captured SavedNumericSample inputs to those
 contracts. Terrain covers coordinates, section/surface/biome access, saved times and light
 validity; light covers both spawn-light rules through all four selective-read profiles; region
