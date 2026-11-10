@@ -20,6 +20,15 @@ public struct DimensionIndex: Sendable {
         public init(chunk: ChunkPosition, deposit: NotableBlock.Deposit) {
             self.chunk = chunk; self.deposit = deposit
         }
+
+        /// Richest first, then dimension ID, chunk X, chunk Z and block-group ID ascending.
+        /// A shared order keeps tied deposits stable before either selection limit is applied.
+        static func orderedBefore(_ lhs: Self, in lhsDimension: String,
+                                  _ rhs: Self, in rhsDimension: String) -> Bool {
+            if lhs.deposit.count != rhs.deposit.count { return lhs.deposit.count > rhs.deposit.count }
+            return (lhsDimension, lhs.chunk.x, lhs.chunk.z, lhs.deposit.block.rawValue)
+                < (rhsDimension, rhs.chunk.x, rhs.chunk.z, rhs.deposit.block.rawValue)
+        }
     }
 
     public let dimension: String
@@ -38,7 +47,7 @@ public struct DimensionIndex: Sendable {
     public private(set) var biomes: [ChunkPosition: String] = [:]
     public private(set) var caveBiomes: [ChunkPosition: [String]] = [:]
     public private(set) var biomeAreas: [BiomeArea] = []
-    /// Richest chunks first. Equal counts have no specified order.
+    /// Richest first, with equal counts ordered by chunk X, chunk Z and block-group ID ascending.
     public private(set) var blocks: [ChunkDeposit] = []
     /// The saved palette catalog of all retained regions; not a count of blocks present.
     public private(set) var paletteBlockIDs: Set<String> = []
@@ -102,7 +111,7 @@ public struct DimensionIndex: Sendable {
             + caveBiomeIDs.sorted().flatMap { biome in
                 BiomeArea.connected(in: next.caveBiomes.filter { $0.value.contains(biome) }.mapValues { _ in biome })
             }
-        next.blocks.sort { $0.deposit.count > $1.deposit.count }
+        next.blocks.sort { ChunkDeposit.orderedBefore($0, in: dimension, $1, in: dimension) }
         return next
     }
 }

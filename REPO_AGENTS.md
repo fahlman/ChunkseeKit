@@ -175,8 +175,13 @@ creature-filter membership and strongest-deposit selection across dimensions. Th
 PlayerInfo.searchableInventory, BookContent.searchText and Sign.searchLines from this module.
 Saved sign whitespace and book line boundaries remain significant to phrase queries; the app can
 trim captions separately. Filter.includes shares creature/pet/villager/trade membership, with
-offer matching still required for trades. WorldIndex.richestDeposits expects each dimension's
-canonical richest-first array and preserves the existing equal-count ordering freedom. The app
+offer matching still required for trades. `DimensionIndex.ChunkDeposit.orderedBefore` owns
+count-descending deposit order, then dimension ID, chunk X, chunk Z and block-group ID ascending.
+Both DimensionIndex.blocks and WorldIndex.richestDeposits use this internal comparator.
+The world query accepts arrays in any order and ranks matches before limiting each dimension
+and the combined result. This #351 change stabilizes tied membership and removes the earlier
+caller-order precondition without changing public signatures. No region/chunk read, serialized
+fact, interpretation identity or renderer changes. The app
 retains its display limit, localized search labels and marker/title/detail construction. These
 additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
 
