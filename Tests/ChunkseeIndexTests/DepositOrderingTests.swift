@@ -91,7 +91,7 @@ import Testing
         struct Content: Sendable { var blocks: [DimensionIndex.ChunkDeposit] }
         let input = [deposit(.emerald, 4, x: 2, z: 0), deposit(.diamond, 4, x: -1, z: 2),
                      deposit(.emerald, 4, x: -1, z: 0), deposit(.diamond, 4, x: -1, z: 0),
-                     deposit(.coal, 90, x: 3, z: 0), deposit(.diamond, 9, x: 8, z: 8)]
+                     deposit(.gold, 90, x: 3, z: 0), deposit(.diamond, 9, x: 8, z: 8)]
         let id = "example:caves"
         for values in [input, Array(input.reversed())] {
             let world = WorldIndex(dimensions: [id: Content(blocks: values)])
