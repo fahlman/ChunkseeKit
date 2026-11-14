@@ -1113,9 +1113,10 @@ apply independently of the save version.
 Health Boost is a permanent saved attribute modifier and is counted once. Applicable equipped-item
 modifiers combine with the saved modifiers in slot order, replacing the first matching identity
 before validation. Players and creatures share the same typed resolver and slot, broken/empty-item
-and removed-component rules. Unknown saved inputs remain unavailable: an unreadable mob equipment
-field is distinct from known empty equipment, and unsupported item or active-effect defaults
-never produce a partial total.
+and removed-component rules. A non-compound current mob equipment field uses the game's empty
+equipment fallback for health; the saved equipment display remains unavailable. Unreadable older
+equipment fields and unsupported item or active-effect defaults remain unavailable, without a
+partial total.
 
 Read the current definitions once with `try world.enchantmentDefinitions(assets: assets)`
 (enabled folder/ZIP packs over the supplied game jar), or `try assets.enchantmentDefinitions()`

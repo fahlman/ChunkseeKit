@@ -1121,9 +1121,11 @@ The unreleased #357 API removes stored Creature.maxHealth and defaulted definiti
 all saved-data readers. RegionScanOptions and its archive no longer contain enchantments.
 Region-facts revision 35 rejects old regional archives, so adoption performs one rescan; later
 definition changes resolve health without another region read. Unknown saved inputs stay separate
-from missing/health-affecting definitions, which can change on a later resolution. Unreadable mob
-equipment stays unavailable rather than being coalesced to known empty equipment. The base and
-permanent/equipped modifiers preserve generated defaults, load order, identity replacement and
+from missing/health-affecting definitions, which can change on a later resolution. A non-compound
+current equipment field uses the game's empty-equipment health fallback from
+LivingEntity.readAdditionalSaveData and TagValueInput.read; its saved display stays unavailable.
+Unreadable older equipment fields remain unknown because their upgrade behavior is unverified.
+The base and permanent/equipped modifiers preserve generated defaults, load order, identity replacement and
 rounding; malformed saved modifiers can still be replaced before validation. No raw entity NBT,
 computed maximum or definition dictionary is retained in MaximumHealthInputs.
 This breaking API change needs a minor release before separate app adoption on #357.

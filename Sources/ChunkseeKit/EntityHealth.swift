@@ -4,8 +4,10 @@ enum EntityHealth {
     static let healthNames: Set<String> = ["minecraft:max_health", "minecraft:generic.max_health", "generic.max_health", "generic.maxHealth"]
 
     static func creatureInputs(_ nbt: NBT, species: String, isTamed: Bool?, equipment: [String: ItemStack]?) -> MaximumHealthInputs? {
-        // An unreadable equipment field is not the same saved fact as known empty equipment.
-        guard let equipment else { return nil }
+        // LivingEntity.readAdditionalSaveData defaults a decode without a partial value to empty.
+        // TagValueInput.read has no partial map for a non-compound current field. The
+        // old-field upgrade behavior is not established, so that uncertainty stays unknown.
+        guard let equipment = equipment ?? (nbt["equipment"] != nil ? [:] : nil) else { return nil }
         let base = defaultMaximum(nbt, species: species)
         let untamedBase = GeneratedHealthDefaults.untamedBaseOverrides[species]
         // An unrecognized saved owner can still require the game's old-owner conversion.

@@ -130,13 +130,14 @@ import Testing
         #expect(restored.maximumHealth(enchantments: [:]) == nil)
         #expect(restored.maximumHealth(enchantments: definitions) == 20)
 
-        let unreadable: [NBT] = [
-            .string("unreadable"),
-            .compound(["body": item([:], id: "example:armor")]),
-            .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])]),
+        let unreadable: [[String: NBT]] = [
+            ["equipment": .compound(["body": item([:], id: "example:armor")])],
+            ["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])])],
+            ["ArmorItems": .string("unreadable")],
+            ["HandItems": .string("unreadable")],
         ]
-        for equipment in unreadable {
-            let creature = try pair(["equipment": equipment, "Health": .float(0)]).pet
+        for fields in unreadable {
+            let creature = try pair(fields.merging(["Health": .float(0)]) { $1 }).pet
             let cached = try JSONDecoder().decode(Creature.self, from: JSONEncoder().encode(creature))
             #expect(cached == creature && cached.health == 0 && cached.healthInputs == nil)
             #expect(cached.maximumHealth(enchantments: [:]) == nil)
@@ -144,9 +145,18 @@ import Testing
         }
         let empty = try pair(["equipment": .compound([:])]).pet
         #expect(empty.healthInputs != nil && empty.maximumHealth(enchantments: [:]) == 20)
+    }
+
+    @Test func malformedCurrentEquipmentUsesTheGamesEmptyHealthFallback() throws {
+        for equipment in [NBT.string("unreadable"), .int(1), .list([])] {
+            let creature = try pair(["equipment": equipment, "Health": .float(0)]).pet
+            let cached = try JSONDecoder().decode(Creature.self, from: JSONEncoder().encode(creature))
+            #expect(cached == creature && cached.health == 0 && cached.equipment == nil)
+            #expect(cached.healthInputs != nil && cached.maximumHealth(enchantments: [:]) == 20)
+        }
         let storageOnly = try pair(["equipment": .string("unreadable"), "ChestedHorse": .byte(1)]).pet
         #expect(storageOnly.equipment?["storage"] != nil)
-        #expect(storageOnly.healthInputs == nil && storageOnly.maximumHealth(enchantments: definitions) == nil)
+        #expect(storageOnly.healthInputs != nil && storageOnly.maximumHealth(enchantments: [:]) == 20)
     }
 
     @Test func oldHorseBodyConversionClearsTheChestSlotButLlamaConversionKeepsIt() throws {
