@@ -103,8 +103,8 @@ import ChunkseeKitTestSupport
                 && old.hasMaximumHealthModifier == false && old.slots == ["any"])
         let current = try #require(EnchantmentDefinition(data: Data(#"{"max_level":1,"slots":["any"]}"#.utf8)))
         #expect(try JSONDecoder().decode(EnchantmentDefinition.self, from: JSONEncoder().encode(current)) == current)
-        #expect(RegionScanOptions(enchantments: ["example:single": old]) !=
-                RegionScanOptions(enchantments: ["example:single": current]))
+        #expect(try InterpretationKey.identity(of: ["example:single": old]) !=
+                InterpretationKey.identity(of: ["example:single": current]))
     }
 
     @Test func descriptionsRetainTheDeclaredComponentInsteadOfInventingATranslationKey() throws {
@@ -208,17 +208,17 @@ import ChunkseeKitTestSupport
         })
     }
 
-    @Test func nonfiniteDescriptionsKeepCompleteScanInputsIdentifiable() throws {
-        func options(_ argument: String) throws -> RegionScanOptions {
+    @Test func nonfiniteDescriptionsKeepDefinitionIdentityAndSavedInputsIndependent() throws {
+        func definitions(_ argument: String) throws -> [String: EnchantmentDefinition] {
             let source = #"{"description":{"translate":"pack.name","with":[\#(argument)]},"max_level":3,"slots":["head"]}"#
-            return try RegionScanOptions(enchantments: assets([entry("example:large", source)]).enchantmentDefinitions())
+            return try assets([entry("example:large", source)]).enchantmentDefinitions()
         }
-        let positive = try options("1e9999"), negative = try options("-1e9999")
-        let literal = try options(#""Infinity""#), finite = try options("1")
-        #expect(positive.enchantments["example:large"]?.description ==
+        let positive = try definitions("1e9999"), negative = try definitions("-1e9999")
+        let literal = try definitions(#""Infinity""#), finite = try definitions("1")
+        #expect(positive["example:large"]?.description ==
             .translated(key: "pack.name", fallback: nil, arguments: [.float(.infinity)]))
         let identity = try InterpretationKey.identity(of: positive)
-        #expect(try identity == InterpretationKey.identity(of: options("1e9999")))
+        #expect(try identity == InterpretationKey.identity(of: definitions("1e9999")))
         let keys = try [positive, negative, literal, finite].map { try InterpretationKey.identity(of: $0) }
         #expect(Set(keys).count == keys.count)
 
@@ -229,14 +229,14 @@ import ChunkseeKitTestSupport
         let entity = saved("example:large")
         try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(["Entities": .list([entity])]))]),
                            to: dimension.regionURL(.entities, at: region))
-        let facts = try dimension.scan(region: region, options: positive)
-        #expect(facts.creatures.count == 1 && facts.options == positive)
-        let encoder = JSONEncoder(), decoder = JSONDecoder()
-        encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
-        decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
-        let reopened = try decoder.decode(RegionFacts.self, from: encoder.encode(facts))
-        #expect(reopened.options == positive && reopened.creatures == facts.creatures)
-        #expect(try InterpretationKey.identity(of: reopened.options) == identity)
+        let facts = try dimension.scan(region: region)
+        #expect(facts.creatures.count == 1)
+        // Resource descriptions, including nonfinite numbers, are not saved region inputs.
+        let reopened = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
+        #expect(reopened.options == facts.options && reopened.creatures == facts.creatures)
+        for snapshot in [positive, negative, literal, finite] {
+            #expect(reopened.creatures.first?.maximumHealth(enchantments: snapshot) == 20)
+        }
     }
 
     @Test func directAndNestedAttributesAreDistinguishedFromUnrelatedEffects() throws {
@@ -295,52 +295,63 @@ import ChunkseeKitTestSupport
         for (id, maximum) in [("minecraft:protection", 20.0), ("example:comfort", 20), ("example:health", nil),
                               ("example:missing", nil), ("example:boots", 20), ("example:future_slot", nil)] as [(String, Double?)] {
             let nbt = saved(id)
-            let creature = try #require(Creature(nbt, dataVersion: 5023, enchantments: definitions))
-            let player = PlayerInfo(uuid: UUID(), nbt: nbt, enchantments: definitions)
-            #expect(creature.maxHealth == maximum && player.maxHealth == maximum)
+            let creature = try #require(Creature(nbt, dataVersion: 5023))
+            let player = PlayerInfo(uuid: UUID(), nbt: nbt)
+            #expect(creature.maximumHealth(enchantments: definitions) == maximum && player.maximumHealth(enchantments: definitions) == maximum)
             #expect(creature.health == 17 && player.health == 17)
         }
-        #expect(Creature(saved("minecraft:protection"), dataVersion: 5023)?.maxHealth == nil)
-        #expect(PlayerInfo(uuid: UUID(), nbt: saved("minecraft:protection")).maxHealth == nil)
+        #expect(Creature(saved("minecraft:protection"), dataVersion: 5023)?.maximumHealth(enchantments: [:]) == nil)
+        #expect(PlayerInfo(uuid: UUID(), nbt: saved("minecraft:protection")).maximumHealth(enchantments: [:]) == nil)
     }
 
-    @Test func publicWorldAndRegionPathsCarryTheSnapshotIntoHealthAndCacheIdentity() throws {
+    @Test func publicWorldAndRegionPathsResolveCurrentDefinitionsWithoutRereading() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let current = try world(root, packs: ["vanilla"])
         let dimension = try #require(current.dimension("overworld"))
         let definitions = try current.enchantmentDefinitions(assets: assets([entry("minecraft:protection", neutral)]))
         let changed = try assets([entry("minecraft:protection", health)]).enchantmentDefinitions()
-        let entity = saved("minecraft:protection"), region = RegionPosition(x: 0, z: 0)
-        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(["Entities": .list([entity])]))]),
-                           to: dimension.regionURL(.entities, at: region))
-        let options = RegionScanOptions(enchantments: definitions)
-        let facts = try dimension.scan(region: region, options: options)
-        #expect(facts.creatures.first?.maxHealth == 20)
-        #expect(try dimension.creatures(chunkX: 0, chunkZ: 0, enchantments: definitions) == facts.creatures)
-        #expect(try dimension.creatures(regionX: 0, regionZ: 0, enchantments: definitions) == facts.creatures)
-        #expect(options != RegionScanOptions(enchantments: changed))
-        #expect(try dimension.scan(region: region, options: .init(enchantments: changed)).creatures.first?.maxHealth == nil)
-        let restored = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
-        #expect(restored.options == options && restored.creatures == facts.creatures)
-        let named = try current.enchantmentDefinitions(assets: assets([
+        let named = try assets([
             entry("minecraft:protection", neutral.replacingOccurrences(of: #""slots""#, with: #""description":"A pack name","slots""#)),
-        ]))
-        let namedOptions = RegionScanOptions(enchantments: named)
-        let namedFacts = try dimension.scan(region: region, options: namedOptions)
-        #expect(namedFacts.creatures == facts.creatures && namedOptions != options)
-        let namedArchive = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(namedFacts))
-        #expect(namedArchive.options == namedOptions && namedArchive.creatures == facts.creatures)
-        #expect(namedArchive.options.enchantments["minecraft:protection"]?.description == .literal("A pack name"))
+        ]).enchantmentDefinitions()
+        let entity = saved("minecraft:protection"), region = RegionPosition(x: 0, z: 0)
+        let regionPath = dimension.regionURL(.entities, at: region)
+        try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: .compound(["Entities": .list([entity])]))]),
+                           to: regionPath)
+        let facts = try dimension.scan(region: region)
+        #expect(try dimension.creatures(chunkX: 0, chunkZ: 0) == facts.creatures)
+        #expect(try dimension.creatures(regionX: 0, regionZ: 0) == facts.creatures)
+        let data = try JSONEncoder().encode(facts)
+        let restored = try JSONDecoder().decode(RegionFacts.self, from: data)
+        #expect(restored.options == facts.options && restored.creatures == facts.creatures)
+        let identity = try InterpretationKey.identity(of: restored)
+        // The file is gone before any resource-dependent resolution. Both a cold result
+        // and its warm archive must resolve without any route back to the region reader.
+        try FileManager.default.removeItem(at: regionPath)
+        for creatures in [facts.creatures, restored.creatures] {
+            let creature = try #require(creatures.first)
+            #expect(creature.maximumHealth(enchantments: definitions) == 20)
+            #expect(creature.maximumHealth(enchantments: changed) == nil)
+            #expect(creature.maximumHealth(enchantments: [:]) == nil)
+            #expect(creature.maximumHealth(enchantments: named) == 20)
+            #expect(creature.maximumHealth(enchantments: definitions) == 20)
+            #expect(creature.health == 17)
+        }
+        #expect(try InterpretationKey.identity(of: restored) == identity)
         let uuid = UUID(), playerPath = current.playerDataDirectory.appendingPathComponent(uuid.uuidString.lowercased() + ".dat")
         var player = entity.compound ?? [:]
         player["ShoulderEntityLeft"] = entity
         player["RootVehicle"] = .compound(["Entity": entity])
         try Fixtures.writeGzippedNBT(.compound(player), to: playerPath)
-        let readPlayer = try #require(current.players(enchantments: definitions).first)
-        #expect(readPlayer.maxHealth == 20)
-        #expect(readPlayer.shoulderPets.first?.maxHealth == 20)
-        #expect(readPlayer.rootVehicleCreatures.first?.maxHealth == 20)
+        let readPlayer = try #require(current.players().first)
+        try FileManager.default.removeItem(at: playerPath)
+        #expect(readPlayer.maximumHealth(enchantments: definitions) == 20)
+        #expect(readPlayer.maximumHealth(enchantments: changed) == nil)
+        for creature in readPlayer.shoulderPets + readPlayer.rootVehicleCreatures {
+            #expect(creature.maximumHealth(enchantments: definitions) == 20)
+            #expect(creature.maximumHealth(enchantments: changed) == nil)
+        }
+        #expect(readPlayer.shoulderPets.count == 1 && readPlayer.rootVehicleCreatures.count == 1)
     }
 
     @Test func effectTraversalAndDefinitionCountsAreBounded() throws {

@@ -74,7 +74,7 @@ import Testing
         #expect(info.equippedItems.mapValues(\.id) == [
             "head": "minecraft:diamond_helmet", "body": "minecraft:diamond_horse_armor", "mainhand": "minecraft:diamond_sword",
         ])
-        #expect(info.mainHandItem?.id == "minecraft:diamond_sword" && info.maxHealth == 26)
+        #expect(info.mainHandItem?.id == "minecraft:diamond_sword" && info.maximumHealth(enchantments: [:]) == 26)
         #expect(player().equippedItems.isEmpty)
     }
 
@@ -94,12 +94,12 @@ import Testing
                 modifier(0.25, slot: "head", id: "example:helmet_bonus", operation: "add_multiplied_total"),
             ])])]),
         ])
-        #expect(info.maxHealth == 47.5) // (20 + 4 + 8 + 6) × 1.25; unselected sword contributes nothing.
+        #expect(info.maximumHealth(enchantments: [:]) == 47.5) // (20 + 4 + 8 + 6) × 1.25; unselected sword contributes nothing.
         #expect(info.mainHandItem?.slot == 2)
         let unmatched = player(["SelectedItemSlot": .int(0), "Inventory": .list([
             item("diamond_sword", slot: 0, components: ["minecraft:attribute_modifiers": .list([modifier(100, slot: "head")])]),
         ])])
-        #expect(unmatched.maxHealth == 20)
+        #expect(unmatched.maximumHealth(enchantments: [:]) == 20)
     }
 
     @Test func savedHealthBoostIsNotRecreatedFromItsEffectAndLegacySlotsApply() {
@@ -107,12 +107,12 @@ import Testing
             "modifiers": .list([.compound(["id": .string("minecraft:effect.health_boost"), "amount": .double(4), "operation": .string("add_value")])])])]),
             "active_effects": .list([.compound(["id": .string("minecraft:health_boost"), "amplifier": .byte(1), "duration": .int(1000)])]),
         ])
-        #expect(info.maxHealth == 24) // Loading uses the saved +4, even if an edited effect says level II.
+        #expect(info.maximumHealth(enchantments: [:]) == 24) // Loading uses the saved +4, even if an edited effect says level II.
         let legacy = player(["Inventory": .list([.compound(["id": .string("minecraft:iron_helmet"), "Slot": .byte(103), "Count": .byte(1),
             "tag": .compound(["AttributeModifiers": .list([.compound([
                 "AttributeName": .string("generic.maxHealth"), "Amount": .double(10), "Operation": .int(0), "Slot": .string("head"),
             ])])])])])])
-        #expect(legacy.maxHealth == 30)
+        #expect(legacy.maximumHealth(enchantments: [:]) == 30)
     }
 
     @Test(arguments: [(NBT.byte(-1), 256), (.byte(-128), 129), (.byte(127), 128), (.int(255), 256)])
@@ -135,7 +135,7 @@ import Testing
             let info = player(["DataVersion": .int(2586), "Attributes": .list([.compound([
                 "Name": .string("generic.maxHealth"), "Base": .double(20), "Modifiers": .list([modifier]),
             ])]), "ActiveEffects": .list([.compound(["Id": .byte(21), "Amplifier": .byte(amplifier), "Duration": .int(1200)])])])
-            #expect(info.maxHealth == 20 + amount)
+            #expect(info.maximumHealth(enchantments: [:]) == 20 + amount)
         }
     }
 
@@ -159,24 +159,24 @@ import Testing
         let body = player(["equipment": .compound(["body": item("diamond_horse_armor", components: [
             "minecraft:attribute_modifiers": .list([modifier(10, slot: "armor")]),
         ])])])
-        #expect(body.maxHealth == 30)
+        #expect(body.maximumHealth(enchantments: [:]) == 30)
         let broken = player(["equipment": .compound(["head": item("diamond_helmet", components: [
             "minecraft:damage": .int(363), "minecraft:attribute_modifiers": .list([modifier(10, slot: "armor")]),
         ])])])
-        #expect(broken.maxHealth == 20)
+        #expect(broken.maximumHealth(enchantments: [:]) == 20)
     }
 
     @Test func maximumAndMainHandStayUnavailableWhenDataCannotResolveThem() {
-        #expect(PlayerInfo(uuid: uuid, nbt: .compound([:])).maxHealth == GeneratedHealthDefaultProofs.playerMaximum)
-        #expect(player().maxHealth == 20 && player().mainHandItem == nil)
+        #expect(PlayerInfo(uuid: uuid, nbt: .compound([:])).maximumHealth(enchantments: [:]) == GeneratedHealthDefaultProofs.playerMaximum)
+        #expect(player().maximumHealth(enchantments: [:]) == 20 && player().mainHandItem == nil)
         for version in [100, 5023, 6000] as [Int32] {
-            #expect(player(["DataVersion": .int(version)]).maxHealth == GeneratedHealthDefaultProofs.playerMaximum)
+            #expect(player(["DataVersion": .int(version)]).maximumHealth(enchantments: [:]) == GeneratedHealthDefaultProofs.playerMaximum)
         }
         let unsupported = player(["equipment": .compound(["head": item("diamond_helmet", components: ["minecraft:attribute_modifiers": .list([
             modifier(10, slot: "head", operation: "unknown_operation"),
         ])])])])
-        #expect(unsupported.maxHealth == nil)
-        #expect(player(["active_effects": .list([.compound(["id": .string("example:custom"), "duration": .int(100)])])]).maxHealth == nil)
+        #expect(unsupported.maximumHealth(enchantments: [:]) == nil)
+        #expect(player(["active_effects": .list([.compound(["id": .string("example:custom"), "duration": .int(100)])])]).maximumHealth(enchantments: [:]) == nil)
         let explicit = player(["SelectedItemSlot": .int(0), "Inventory": .list([item("iron_sword", slot: 0)]),
                                "equipment": .compound(["mainhand": item("diamond_sword")])])
         #expect(explicit.mainHandItem?.id == "minecraft:diamond_sword")

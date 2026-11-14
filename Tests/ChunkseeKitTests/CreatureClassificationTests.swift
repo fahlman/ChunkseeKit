@@ -39,10 +39,10 @@ import Testing
         for version in versions {
             let nbt = entity("future:new_mob", fields: mobFields.merging(["Health": .float(7)]) { $1 })
             let creature = try #require(Creature(nbt, dataVersion: version))
-            #expect(creature.id == "future:new_mob" && creature.health == 7 && creature.maxHealth == nil)
+            #expect(creature.id == "future:new_mob" && creature.health == 7 && creature.maximumHealth(enchantments: [:]) == nil)
         }
-        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 5023)?.maxHealth == 10)
-        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 999999)?.maxHealth == 10)
+        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 5023)?.maximumHealth(enchantments: [:]) == 10)
+        #expect(Creature(entity("minecraft:cat", fields: mobFields), dataVersion: 999999)?.maximumHealth(enchantments: [:]) == 10)
     }
 
     @Test func incompleteOrMalformedMobFieldsDoNotInventMembership() {
@@ -76,7 +76,7 @@ import Testing
         #expect(creature.id == "mymod:dragon")
         #expect(creature.x == 1 && creature.y == 64 && creature.z == 2)
         #expect(creature.customName == "Visitor" && creature.health == 12.5 && creature.uuid == owner)
-        #expect(creature.maxHealth == nil)
+        #expect(creature.maximumHealth(enchantments: [:]) == nil)
         #expect(try JSONDecoder().decode(Creature.self, from: JSONEncoder().encode(creature)) == creature)
     }
 

@@ -15,9 +15,9 @@ public struct Creature: Sendable, Equatable, Codable {
     public var villager: Villager?
     /// Saved current health in half-hearts; nil when unavailable, including older cached records.
     public var health: Double?
-    /// Maximum health in half-hearts, from saved attributes or generated game-code defaults.
-    /// Saved effect modifiers are included; unsupported transient equipment modifiers leave it nil.
-    public var maxHealth: Double?
+    /// Saved inputs for maximum health; resolve with the current game definitions.
+    /// nil means the saved inputs cannot establish a maximum.
+    public var healthInputs: MaximumHealthInputs?
     /// The saved sitting command for a pet wolf, cat or parrot, rather than its current pose.
     public var sittingOrder: Bool?
     /// Readable appearance facts, including coat/pattern, markings, colors and genes.
@@ -30,7 +30,7 @@ public struct Creature: Sendable, Equatable, Codable {
     /// The individual entity's stable identity, retained across movement and shared positions.
     public var uuid: UUID?
 
-    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, maxHealth: Double? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil) {
+    public init(id: String, x: Double, y: Double, z: Double, customName: String? = nil, owner: UUID? = nil, villager: Villager? = nil, health: Double? = nil, healthInputs: MaximumHealthInputs? = nil, sittingOrder: Bool? = nil, appearance: CreatureAppearance? = nil, collarColor: String? = nil, equipment: [String: ItemStack]? = nil, uuid: UUID? = nil) {
         self.id = id
         self.x = x
         self.y = y
@@ -39,7 +39,7 @@ public struct Creature: Sendable, Equatable, Codable {
         self.owner = owner
         self.villager = villager
         self.health = health
-        self.maxHealth = maxHealth
+        self.healthInputs = healthInputs
         self.sittingOrder = sittingOrder
         self.appearance = appearance
         self.collarColor = collarColor
@@ -57,12 +57,11 @@ public struct Creature: Sendable, Equatable, Codable {
 
     /// The saved mob format establishes membership independently of the game's version.
     /// The version selects saved-name upgrades, not a type list or health-default catalog.
-    /// Active enchantments require a resource-derived definition snapshot to establish maximum health.
-    public init?(_ nbt: NBT, dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) {
-        self.init(normalized: NormalizedEntity(nbt, dataVersion: dataVersion), enchantments: enchantments)
+    public init?(_ nbt: NBT, dataVersion: Int?) {
+        self.init(normalized: NormalizedEntity(nbt, dataVersion: dataVersion))
     }
 
-    init?(normalized entity: NormalizedEntity, enchantments: [String: EnchantmentDefinition] = [:]) {
+    init?(normalized entity: NormalizedEntity) {
         let nbt = entity.nbt
         guard let savedID = nbt["id"]?.string, let identifier = Identifier(savedID),
               !identifier.path.isEmpty,
@@ -80,26 +79,32 @@ public struct Creature: Sendable, Equatable, Codable {
                   owner: nbt["Owner"]?.uuid ?? nbt["OwnerUUID"]?.uuid,
                   villager: Villager(nbt, entityID: id), health: nbt["Health"]?.double)
         let isTamed: Bool? = owner != nil ? true : (nbt["Owner"] == nil && nbt["OwnerUUID"] == nil ? false : nil)
-        maxHealth = EntityHealth.maximumHealth(nbt, species: id, isTamed: isTamed, enchantments: enchantments)
         uuid = nbt.uuid
         if owner != nil { sittingOrder = CreatureData.sittingOrder(nbt, species: id) }
         appearance = CreatureData.appearance(nbt, species: id, villager: villager)
         collarColor = CreatureData.collarColor(nbt, species: id, isOwned: owner != nil)
-        equipment = CreatureData.equipment(nbt)
+        let savedEquipment = EntityEquipment.creature(nbt)
+        equipment = CreatureData.equipment(nbt, saved: savedEquipment)
+        healthInputs = EntityHealth.creatureInputs(nbt, species: id, isTamed: isTamed, equipment: savedEquipment)
+    }
+
+    /// Maximum health in half-hearts, resolved from saved inputs and current definitions.
+    public func maximumHealth(enchantments: [String: EnchantmentDefinition]) -> Double? {
+        healthInputs?.maximum(enchantments: enchantments)
     }
 
     /// Living mobs among an entity chunk's entities, including all nested passengers.
     /// Each mob keeps its own saved position and the chunk's data version.
-    public static func creatures(inEntityChunk nbt: NBT, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
-        creatures(in: NormalizedEntities(nbt), enchantments: enchantments)
+    public static func creatures(inEntityChunk nbt: NBT) -> [Creature] {
+        creatures(in: NormalizedEntities(nbt))
     }
 
-    static func creatures(in entities: [NBT], dataVersion: Int?, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
-        creatures(in: NormalizedEntities(entities, dataVersion: dataVersion), enchantments: enchantments)
+    static func creatures(in entities: [NBT], dataVersion: Int?) -> [Creature] {
+        creatures(in: NormalizedEntities(entities, dataVersion: dataVersion))
     }
 
-    static func creatures(in entities: NormalizedEntities, enchantments: [String: EnchantmentDefinition] = [:]) -> [Creature] {
-        entities.records.compactMap { Creature(normalized: $0, enchantments: enchantments) }
+    static func creatures(in entities: NormalizedEntities) -> [Creature] {
+        entities.records.compactMap { Creature(normalized: $0) }
     }
 }
 
@@ -276,21 +281,21 @@ public struct Trade: Sendable, Equatable, Codable {
 extension Dimension {
     /// Living mobs in one chunk's terrain and separate entity file, preserving each saved version.
     /// Unlike constructing creatures from raw `entities`, this retains the DataVersion context.
-    public func creatures(chunkX: Int, chunkZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
+    public func creatures(chunkX: Int, chunkZ: Int) throws -> [Creature] {
         try entityChunks(x: chunkX, z: chunkZ).flatMap {
-            Creature.creatures(inEntityChunk: $0, enchantments: enchantments)
+            Creature.creatures(inEntityChunk: $0)
         }
     }
 
     /// Living mobs in one region's older embedded records and separate entity file.
-    public func creatures(regionX: Int, regionZ: Int, enchantments: [String: EnchantmentDefinition] = [:]) throws -> [Creature] {
+    public func creatures(regionX: Int, regionZ: Int) throws -> [Creature] {
         var result: [Creature] = []
         try forEachChunk(.terrain, regionX: regionX, regionZ: regionZ,
                          skipping: Chunk.keysNotNeededForEmbeddedEntities) { _, _, nbt in
-            result += Creature.creatures(in: ChunkRecords(nbt, needs: .creatures).entities, enchantments: enchantments)
+            result += Creature.creatures(in: ChunkRecords(nbt, needs: .creatures).entities)
         }
         try forEachChunk(.entities, regionX: regionX, regionZ: regionZ) { _, _, nbt in
-            result += Creature.creatures(inEntityChunk: nbt, enchantments: enchantments)
+            result += Creature.creatures(inEntityChunk: nbt)
         }
         return result
     }

@@ -39,7 +39,7 @@ extension Dimension {
             facts.containers += ItemContainer.containers(in: input.records)
             facts.signs += Sign.signs(in: input.records)
             facts.spawners += Spawner.spawners(in: input.records)
-            facts.creatures += Creature.creatures(in: input.records.entities, enchantments: options.enchantments)
+            facts.creatures += Creature.creatures(in: input.records.entities)
             facts.inhabitedTimes[z * 32 + x] = input.records.inhabitedTime ?? 0
             let chunk: Chunk
             do { chunk = try Chunk(input: input.terrain) }
@@ -55,7 +55,7 @@ extension Dimension {
         let unreadableEntities = try visit(.entities) { _, _, nbt in
             let entities = NormalizedEntities(nbt)
             facts.containers += ItemContainer.containers(in: entities)
-            facts.creatures += Creature.creatures(in: entities, enchantments: options.enchantments)
+            facts.creatures += Creature.creatures(in: entities)
         }
         facts.formats.unreadableEntities = unreadableEntities
         let unreadablePOIs = try visit(.pointsOfInterest) { _, _, nbt in

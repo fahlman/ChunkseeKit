@@ -77,8 +77,8 @@ enum CreatureData {
         return "minecraft:" + (main == hidden ? main : GeneratedMobAppearance.pandaNormalVariant)
     }
 
-    static func equipment(_ nbt: NBT) -> [String: ItemStack]? {
-        var items = EntityEquipment.creature(nbt)
+    static func equipment(_ nbt: NBT, saved: [String: ItemStack]?) -> [String: ItemStack]? {
+        var items = saved
         // AbstractChestedHorse reads this flag with ValueInput.getBooleanOr(false).
         if nbt["ChestedHorse"]?.compoundBoolean == true {
             if items == nil { items = [:] }

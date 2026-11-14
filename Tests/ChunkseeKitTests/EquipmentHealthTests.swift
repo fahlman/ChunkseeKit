@@ -28,7 +28,7 @@ import Testing
     @Test func supportedBodyModifiersUseTheSameArithmeticAndSlotGroups() throws {
         for group in ["body", "armor", "any"] {
             let values = try pair(["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .list([modifier(4, slot: group)])])])])
-            #expect(values.pet.maxHealth == 24 && values.player.maxHealth == 24)
+            #expect(values.pet.maximumHealth(enchantments: [:]) == 24 && values.player.maximumHealth(enchantments: [:]) == 24)
         }
     }
 
@@ -39,22 +39,22 @@ import Testing
         let removed = item(["!minecraft:attribute_modifiers": .compound([:]), "minecraft:attribute_modifiers": .list([modifier(4, slot: "body")])])
         for gear in [wrongSlot, empty, broken, removed] {
             let values = try pair(["equipment": .compound(["body": gear])])
-            #expect(values.pet.maxHealth == 20 && values.player.maxHealth == 20)
+            #expect(values.pet.maximumHealth(enchantments: [:]) == 20 && values.player.maximumHealth(enchantments: [:]) == 20)
         }
         let legacyBody = try pair(["ArmorItem": item(["minecraft:attribute_modifiers": .list([modifier(100, slot: "body")])])])
-        #expect(legacyBody.pet.maxHealth == 120) // Saved equipment applies without a species inventory.
+        #expect(legacyBody.pet.maximumHealth(enchantments: [:]) == 120) // Saved equipment applies without a species inventory.
         let invalid = try pair(["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])])])
-        #expect(invalid.pet.maxHealth == nil && invalid.player.maxHealth == nil)
+        #expect(invalid.pet.maximumHealth(enchantments: [:]) == nil && invalid.player.maximumHealth(enchantments: [:]) == nil)
     }
 
     @Test func unsupportedModdedDefaultsHaveOneConservativePolicy() throws {
         let gear = item([:], id: "example:armor")
         let unsupported = try pair(["equipment": .compound(["body": gear])])
-        #expect(unsupported.pet.maxHealth == nil && unsupported.player.maxHealth == nil)
+        #expect(unsupported.pet.maximumHealth(enchantments: [:]) == nil && unsupported.player.maximumHealth(enchantments: [:]) == nil)
         let explicit = try pair(["equipment": .compound(["body": item(["minecraft:attribute_modifiers": .list([])], id: "example:armor")])])
-        #expect(explicit.pet.maxHealth == 20 && explicit.player.maxHealth == 20)
+        #expect(explicit.pet.maximumHealth(enchantments: [:]) == 20 && explicit.player.maximumHealth(enchantments: [:]) == 20)
         let effect = try pair(["active_effects": .list([.compound(["id": .string("example:health"), "duration": .int(100)])])])
-        #expect(effect.pet.maxHealth == nil && effect.player.maxHealth == nil)
+        #expect(effect.pet.maximumHealth(enchantments: [:]) == nil && effect.player.maximumHealth(enchantments: [:]) == nil)
     }
 
     @Test func legacyArmorAndHandListsReachEquipmentAndHealth() throws {
@@ -70,9 +70,9 @@ import Testing
                                "HandItems": .list([.compound([:]), shield]), "Inventory": .list([boots, shield])])
         #expect(values.pet.equipment?["feet"]?.id == "minecraft:iron_boots")
         #expect(values.pet.equipment?["offhand"]?.id == "minecraft:shield")
-        #expect(values.pet.maxHealth == 25 && values.player.maxHealth == 25)
+        #expect(values.pet.maximumHealth(enchantments: [:]) == 25 && values.player.maximumHealth(enchantments: [:]) == 25)
         let current = try pair(["equipment": .compound([:]), "ArmorItems": .list([boots])])
-        #expect(current.pet.equipment?.isEmpty == true && current.pet.maxHealth == 20)
+        #expect(current.pet.equipment?.isEmpty == true && current.pet.maximumHealth(enchantments: [:]) == 20)
     }
 
     @Test func replacementUsesSlotOrderAndDoesNotDuplicateSavedHealthBoost() throws {
@@ -87,7 +87,66 @@ import Testing
             ]),
             "active_effects": .list([.compound(["id": .string("minecraft:health_boost"), "amplifier": .byte(9), "duration": .int(100)])]),
         ])
-        #expect(values.pet.maxHealth == 26 && values.player.maxHealth == 26)
+        #expect(values.pet.maximumHealth(enchantments: [:]) == 26 && values.player.maximumHealth(enchantments: [:]) == 26)
+    }
+
+    @Test func cachedInputsReplaceMalformedSavedModifiersBeforeValidation() throws {
+        for amount in [NBT.string("unreadable"), .double(.nan), .double(.infinity)] {
+            let attributes = NBT.list([.compound([
+                "id": .string("minecraft:max_health"), "base": .double(20),
+                "modifiers": .list([.compound(["id": .string("example:health"), "amount": amount,
+                                              "operation": .string("unknown")])]),
+            ])])
+            let unknown = try pair(["attributes": attributes, "Health": .float(0)])
+            let replaced = try pair(["attributes": attributes, "Health": .float(0),
+                "equipment": .compound(["body": item([
+                    "minecraft:attribute_modifiers": .list([modifier(4, slot: "body")]),
+                ])]),
+            ])
+            let cases: [((pet: Creature, player: PlayerInfo), Double?)] = [(unknown, nil), (replaced, 24)]
+            for (values, expected) in cases {
+                for source in [values.pet.healthInputs, values.player.healthInputs] {
+                    let inputs = try #require(source)
+                    // Unreadable amounts remain unavailable without retaining NaN in Codable.
+                    let reopened = try JSONDecoder().decode(MaximumHealthInputs.self,
+                        from: JSONEncoder().encode(inputs))
+                    #expect(reopened == inputs)
+                    #expect(inputs.maximum(enchantments: [:]) == expected)
+                    #expect(reopened.maximum(enchantments: [:]) == expected)
+                }
+                #expect(values.pet.health == 0 && values.player.health == 0)
+            }
+        }
+    }
+
+    @Test func cachedSaveUncertaintyCannotBeRepairedByChangingDefinitions() throws {
+        let neutral = try #require(EnchantmentDefinition(data: Data(#"{"slots":["body"]}"#.utf8)))
+        let definitions = ["example:vitality": neutral]
+        let unresolved = try pair(["equipment": .compound(["body": item([
+            "minecraft:enchantments": .compound(["example:vitality": .int(2)]),
+        ])])]).pet
+        let restored = try JSONDecoder().decode(Creature.self, from: JSONEncoder().encode(unresolved))
+        #expect(restored.healthInputs != nil && restored == unresolved)
+        #expect(restored.maximumHealth(enchantments: [:]) == nil)
+        #expect(restored.maximumHealth(enchantments: definitions) == 20)
+
+        let unreadable: [NBT] = [
+            .string("unreadable"),
+            .compound(["body": item([:], id: "example:armor")]),
+            .compound(["body": item(["minecraft:attribute_modifiers": .string("unreadable")])]),
+        ]
+        for equipment in unreadable {
+            let creature = try pair(["equipment": equipment, "Health": .float(0)]).pet
+            let cached = try JSONDecoder().decode(Creature.self, from: JSONEncoder().encode(creature))
+            #expect(cached == creature && cached.health == 0 && cached.healthInputs == nil)
+            #expect(cached.maximumHealth(enchantments: [:]) == nil)
+            #expect(cached.maximumHealth(enchantments: definitions) == nil)
+        }
+        let empty = try pair(["equipment": .compound([:])]).pet
+        #expect(empty.healthInputs != nil && empty.maximumHealth(enchantments: [:]) == 20)
+        let storageOnly = try pair(["equipment": .string("unreadable"), "ChestedHorse": .byte(1)]).pet
+        #expect(storageOnly.equipment?["storage"] != nil)
+        #expect(storageOnly.healthInputs == nil && storageOnly.maximumHealth(enchantments: definitions) == nil)
     }
 
     @Test func oldHorseBodyConversionClearsTheChestSlotButLlamaConversionKeepsIt() throws {
@@ -98,12 +157,12 @@ import Testing
             for oldBody in [body, .compound([:])] {
                 let creature = try pair(["id": .string(id), "ArmorItems": armor, "ArmorItem": oldBody]).pet
                 #expect(creature.equipment?["chest"] == nil)
-                #expect(creature.maxHealth == (oldBody == body ? 23 : 20))
+                #expect(creature.maximumHealth(enchantments: [:]) == (oldBody == body ? 23 : 20))
             }
         }
         let llama = try pair(["id": .string("minecraft:llama"), "ArmorItems": armor, "DecorItem": body]).pet
         #expect(llama.equipment?["chest"]?.id == "minecraft:iron_chestplate")
-        #expect(llama.maxHealth == 123)
+        #expect(llama.maximumHealth(enchantments: [:]) == 123)
     }
 
     @Test func unsupportedActiveEnchantmentsDoNotReturnPartialHealth() throws {
@@ -117,12 +176,12 @@ import Testing
         ]
         for fields in components {
             let values = try pair(["equipment": .compound(["body": item(fields)])])
-            #expect(values.pet.maxHealth == nil && values.player.maxHealth == nil)
+            #expect(values.pet.maximumHealth(enchantments: [:]) == nil && values.player.maximumHealth(enchantments: [:]) == nil)
         }
         let boots = NBT.compound(["id": .string("minecraft:iron_boots"), "Count": .byte(1), "Slot": .byte(100),
             "tag": .compound(["Enchantments": .list([.compound(["id": .string("example:vitality"), "lvl": .short(2)])])])])
         let legacy = try pair(["ArmorItems": .list([boots]), "Inventory": .list([boots])])
-        #expect(legacy.pet.maxHealth == nil && legacy.player.maxHealth == nil)
+        #expect(legacy.pet.maximumHealth(enchantments: [:]) == nil && legacy.player.maximumHealth(enchantments: [:]) == nil)
     }
 
     @Test func storedRemovedEmptyAndBrokenEnchantmentsDoNotHideHealth() throws {
@@ -140,7 +199,7 @@ import Testing
         ]
         for gear in items {
             let values = try pair(["equipment": .compound(["body": gear])])
-            #expect(values.pet.maxHealth == 20 && values.player.maxHealth == 20)
+            #expect(values.pet.maximumHealth(enchantments: [:]) == 20 && values.player.maximumHealth(enchantments: [:]) == 20)
         }
         // Stored enchantments stay available for display/search without becoming equipped effects.
         for gear in items.prefix(3) {
@@ -149,7 +208,7 @@ import Testing
         // Without a resource snapshot even a vanilla ID cannot prove its definition unchanged.
         let unresolved = try pair(["equipment": .compound(["body": item([
             "minecraft:enchantments": .compound(["minecraft:protection": .int(4), "minecraft:mending": .int(1)])])])])
-        #expect(unresolved.pet.maxHealth == nil && unresolved.player.maxHealth == nil)
+        #expect(unresolved.pet.maximumHealth(enchantments: [:]) == nil && unresolved.player.maximumHealth(enchantments: [:]) == nil)
     }
 
     @Test func onlyTheEquippedSelectedItemIntroducesEnchantmentUncertainty() throws {
@@ -158,10 +217,10 @@ import Testing
         for selected in [Int32(0), 1] {
             let values = try pair(["Inventory": .list([gear]), "SelectedItemSlot": .int(selected),
                                    "Items": .list([gear])])
-            #expect(values.player.maxHealth == (selected == 0 ? nil : 20))
-            #expect(values.pet.maxHealth == 20)
+            #expect(values.player.maximumHealth(enchantments: [:]) == (selected == 0 ? nil : 20))
+            #expect(values.pet.maximumHealth(enchantments: [:]) == 20)
         }
         let held = try pair(["HandItems": .list([gear]), "equipment": .compound(["mainhand": gear])])
-        #expect(held.pet.maxHealth == nil && held.player.maxHealth == nil)
+        #expect(held.pet.maximumHealth(enchantments: [:]) == nil && held.player.maximumHealth(enchantments: [:]) == nil)
     }
 }

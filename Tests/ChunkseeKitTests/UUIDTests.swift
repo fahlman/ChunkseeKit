@@ -90,7 +90,7 @@ import Testing
                                                   "Slot": .byte(103), "tag": .compound([
                                                     "AttributeModifiers": .list([.compound(equipped)])])])]),
                 ]))
-                #expect(player.maxHealth == 30) // The equipment replaces +4 with +10, rather than adding both.
+                #expect(player.maximumHealth(enchantments: [:]) == 30) // The equipment replaces +4 with +10, rather than adding both.
             }
         }
     }

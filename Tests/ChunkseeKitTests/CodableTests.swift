@@ -34,8 +34,15 @@ import Testing
         let creature = try PropertyListDecoder().decode(Creature.self, from: bytes)
         #expect(creature.health == nil && creature.owner == owner && creature.customName == "Mittens")
         #expect(creature.x == 1 && creature.y == 64 && creature.z == 2)
-        #expect(creature.maxHealth == nil && creature.sittingOrder == nil && creature.appearance == nil)
+        #expect(creature.maximumHealth(enchantments: [:]) == nil && creature.sittingOrder == nil && creature.appearance == nil)
         #expect(creature.collarColor == nil && creature.equipment == nil)
         #expect(creature.uuid == nil)
+    }
+
+    @Test func anOldResolvedMaximumDoesNotSubstituteForSavedInputs() throws {
+        let bytes = Data(#"{"id":"minecraft:cat","x":1,"y":64,"z":2,"health":0,"maxHealth":10}"#.utf8)
+        let creature = try JSONDecoder().decode(Creature.self, from: bytes)
+        #expect(creature.health == 0 && creature.healthInputs == nil)
+        #expect(creature.maximumHealth(enchantments: [:]) == nil)
     }
 }

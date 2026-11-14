@@ -38,7 +38,7 @@ import ChunkseeKit
                                        "minecraft:zombie", "minecraft:pig", "minecraft:husk"])
         #expect(creatures.map(\.y) == [64.5, 64.25, 64, 65, 64, 66])
         #expect(creatures[1].owner == ownerID && creatures[1].customName == "Boat cat")
-        #expect(creatures[1].maxHealth == 10)
+        #expect(creatures[1].maximumHealth(enchantments: [:]) == 10)
     }
 
     @Test func unreadableParentsAndMalformedSiblingsDoNotHideReadableRiders() {
@@ -102,7 +102,7 @@ import ChunkseeKit
         #expect(mount.x == -8.5 && mount.y == 64 && mount.z == 2.5)
         #expect(mount.uuid == horseID && mount.owner == ownerID && mount.owner != playerID)
         #expect(mount.health == 21 && mount.customName == "Mount")
-        #expect(mobs.last?.maxHealth == 10 && player.dimension == "minecraft:overworld")
+        #expect(mobs.last?.maximumHealth(enchantments: [:]) == 10 && player.dimension == "minecraft:overworld")
     }
 
     @Test func incompletePlayerLocationOrAttachmentDoesNotDiscardSavedMobs() {
@@ -112,7 +112,7 @@ import ChunkseeKit
         ]))
         #expect(player.position == nil && player.dimension == "minecraft:overworld")
         #expect(player.rootVehicleCreatures.first?.id == "minecraft:cat")
-        #expect(player.rootVehicleCreatures.first?.maxHealth == 10)
+        #expect(player.rootVehicleCreatures.first?.maximumHealth(enchantments: [:]) == 10)
         for rootVehicle in [NBT.compound([:]), .string("malformed"), .compound(["Entity": .list([])])] {
             #expect(PlayerInfo(uuid: playerID, nbt: .compound(["RootVehicle": rootVehicle])).rootVehicleCreatures.isEmpty)
         }

@@ -26,7 +26,7 @@ import Testing
     private func expectSelection(_ player: PlayerInfo, slot: Int?, note: String) {
         #expect(player.selectedSlot == slot, "\(note)")
         #expect(player.mainHandItem?.slot == slot && player.equippedItems["mainhand"]?.slot == slot, "\(note)")
-        if let slot { #expect(player.maxHealth == Double(21 + slot), "\(note)") }
+        if let slot { #expect(player.maximumHealth(enchantments: [:]) == Double(21 + slot), "\(note)") }
         #expect(player.inventory.count == 9 && player.foodLevel == 19 && player.health == 17, "\(note)")
         #expect(player.position == .init(dimension: "minecraft:overworld", x: 5.25, y: 64, z: -7.5), "\(note)")
     }
@@ -91,7 +91,7 @@ import Testing
                 ])])])])])
             let player = PlayerInfo(uuid: UUID(), nbt: .compound(source))
             #expect(player.mainHandItem?.id == "minecraft:iron_sword")
-            #expect(player.equippedItems["mainhand"]?.id == "minecraft:iron_sword" && player.maxHealth == 32)
+            #expect(player.equippedItems["mainhand"]?.id == "minecraft:iron_sword" && player.maximumHealth(enchantments: [:]) == 32)
             #expect(player.inventory.count == 9)
         }
     }
