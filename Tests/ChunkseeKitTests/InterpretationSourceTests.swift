@@ -39,8 +39,12 @@ import Testing
             regionFacts: ["c05630d57eee90a0d9d3ae21a7469f1207d793fa99b4762f9258fa665fa94cd0"],
             // Published source 4b8e4b9795e0e71a785a4f25b58786af23d0b2fc.
             regionFacts34: ["3ed0c074b4ef384408d82044c2e8f2de72d54093d8c48f7b485584e61c4cd004"],
-            // Source a36a7d6a1e307ae2d9aa45a855938736f7f160d0, independently reviewed on #357.
-            regionFacts35: ["438ed31afd03de0227db610f9a4cc37c1cadb9ca65ca44c97e979d05626566e7"],
+            // Source a36a7d6a1e307ae2d9aa45a855938736f7f160d0 and the documentation-only F574
+            // correction, independently reviewed on #357. Both retain the revision-35 contract.
+            regionFacts35: [
+                "438ed31afd03de0227db610f9a4cc37c1cadb9ca65ca44c97e979d05626566e7",
+                "ac0b6d32689f5780001382fffea3b7ebbb8ae5cba77e6e909ed7e991b07f0bc9",
+            ],
         ]
     }
 
