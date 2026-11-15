@@ -136,17 +136,16 @@ import Testing
         #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
     }
 
-    @Test func completeScanOptionsHaveStableUnorderedInputsAndDistinctDefinitions() throws {
-        let first = try #require(EnchantmentDefinition(data: Data(#"{"max_level":1}"#.utf8)))
-        let second = try #require(EnchantmentDefinition(data: Data(#"{"max_level":2}"#.utf8)))
-        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]),
-                                        enchantments: ["example:a": first, "example:b": second])
-        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]),
-                                         enchantments: ["example:b": second, "example:a": first])
+    @Test func completeScanOptionsHaveStableUnorderedInputs() throws {
+        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]), biomeSampleY: 20, height: 384)
+        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]), biomeSampleY: 20, height: 384)
         #expect(original == reordered)
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
         var changed = original
-        changed.enchantments["example:a"] = second
+        changed.biomeSampleY = 21
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
+        changed = original
+        changed.height = 256
         #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
         #expect(try InterpretationKey.identity(of: RegionScanOptions(blockIDs: nil))
             != InterpretationKey.identity(of: RegionScanOptions(blockIDs: [])))

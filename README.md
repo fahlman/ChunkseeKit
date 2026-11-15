@@ -728,8 +728,9 @@ and chunk read paths do not change. A minor release and consumer adoption are re
 the compact JSON formatting and recursive dictionary-key ordering; clients never configure
 an encoder for keys. Compute immutable catalog identities once when publishing them. These new
 conformances do not add a separate decodable persistence contract for game values.
-RegionScanOptions encodes its unordered block-ID set in sorted order and includes its complete
-enchantment definitions; nil (all blocks) remains distinct from an empty set (no block counting).
+RegionScanOptions encodes its unordered block-ID set in sorted order; nil (all blocks) remains
+distinct from an empty set (no block counting). Enchantment definitions are resolved after reading
+the saved health inputs and do not belong in a region cache key.
 Region archives likewise sort their block-ID sets without changing the decoded facts or envelope
 shape. Ordered arrays retain their order; custom Encodable inputs must define any set ordering.
 An encoding failure throws rather than returning a shared fallback key.
@@ -1042,8 +1043,8 @@ and players do not have this mob record in normal game saves.
 This rule has no built-in entity catalog or per-version type list. New and modded IDs use the
 same reader, and readable saved position, name, health, owner and UUID are retained without a
 blanket “unrecognized” label. Missing health remains nil. IDs use Minecraft's canonical namespace
-rules. The data version still governs existing version-specific facts such as omitted health
-defaults; it does not gate mob membership.
+rules. The data version selects saved-format upgrades and does not gate mob membership.
+Generated health defaults apply independently of it.
 
 This is a reader of the saved record, not a reconstruction of Minecraft's entity registry.
 Incomplete or hand-edited records without the mob fields cannot establish membership, and a
@@ -1100,25 +1101,29 @@ for creature in try overworld.creatures(regionX: 0, regionZ: 0) {
 }
 ```
 
-Creature `health` and `maxHealth` use half-hearts. Maximum health comes from the saved attribute
-and its permanent modifiers, including the legacy `Attributes` format. Verified defaults fill
-an omitted attribute for cats (10), parrots (6) and wolves (8) in exactly 26.1/4786, 26.1.1/4788,
-26.1.2/4790, 26.2/4903 and 26.3/5023. The other documented pet defaults apply only in 26.3/5023. Unknown species/versions
-need an explicit maximum attribute; no defaults are inferred for adjacent snapshot versions.
-The official clients' attribute builders and taming load paths were checked for these versions.
-In these verified versions, an unowned wolf's loaded base is reset to 8 even when the save records another base; its permanent
-modifiers remain. An owned wolf preserves its saved base. A saved owner that cannot be identified
-leaves that wolf maximum unavailable rather than treating it as untamed. Health Boost is a permanent saved
-attribute modifier and is counted once from that list. Applicable equipped-item modifiers are
-combined with the saved modifiers, in slot order with duplicate identities replaced. Players
-and creatures share slot-group, broken/empty-item and removed-component rules. Unsupported
-modded item or active-effect defaults leave the maximum unavailable instead of returning a partial total.
-Equipped active enchantments use a resource snapshot, not a vanilla-ID list. Read it once with
-`try world.enchantmentDefinitions(assets: assets)` (enabled folder/ZIP packs over the supplied
-game jar), or `try assets.enchantmentDefinitions()` for a jar alone. Pass the snapshot as
-`enchantments:` to `world.players`, `PlayerInfo`, `Creature(entity, dataVersion: ...)`, the
-chunk/region creature queries, or `RegionScanOptions`. The same snapshot reaches a player's
-shoulder mobs and root-vehicle passengers.
+Creature `health` and `maximumHealth(enchantments:)` use half-hearts. Current health is a saved
+fact. `healthInputs` retains typed attribute and equipment inputs; it never stores a resolved
+maximum or a resource-definition snapshot. The base comes from saved attributes or the generated
+game-code defaults. Unknown types need a readable saved base. An unowned wolf's generated loading
+rule resets its base while retaining permanent modifiers; an owned wolf keeps the saved base.
+An unidentified saved owner leaves that wolf's maximum unavailable. Cube-mob size establishes its
+generated base before saved attributes, so an explicit saved base wins. These generated rules
+apply independently of the save version.
+
+Health Boost is a permanent saved attribute modifier and is counted once. Applicable equipped-item
+modifiers combine with the saved modifiers in slot order, replacing the first matching identity
+before validation. Players and creatures share the same typed resolver and slot, broken/empty-item
+and removed-component rules. A non-compound current mob equipment field uses the game's empty
+equipment fallback for health; the saved equipment display remains unavailable. Unreadable older
+equipment fields and unsupported item or active-effect defaults remain unavailable, without a
+partial total.
+
+Read the current definitions once with `try world.enchantmentDefinitions(assets: assets)`
+(enabled folder/ZIP packs over the supplied game jar), or `try assets.enchantmentDefinitions()`
+for a jar alone. Pass them explicitly to `creature.maximumHealth(enchantments: definitions)` or
+`player.maximumHealth(enchantments: definitions)`. A player's shoulder and root-vehicle creatures
+use the same operation. Passing an empty dictionary explicitly means no definitions are available.
+The saved-data readers no longer take a definition argument.
 
 `EnchantmentDefinition.hasMaximumHealthModifier` reads direct attribute effects and nested
 conditional/all-of effects. A declared maximum-health modifier leaves the maximum unavailable;
@@ -1130,14 +1135,19 @@ registered classes through Tools/GameFacts; enchantment contents stay in the gam
 Health Boost and other mob-effect modifiers are permanent saved attributes, already counted once.
 
 Stored book enchantments, removed enchantments and empty/broken equipment do not contribute.
-This applies to current, wrapped and legacy item formats. Without a supplied definition snapshot,
-an active enchantment now leaves maximum health unavailable even for a familiar vanilla ID, since
-a world pack may have replaced it. No missing definition silently falls back to a built-in list.
-The snapshot is part of RegionScanOptions equality, hashing and its persisted archive; reload it
-when the game resources or enabled packs change. RegionFacts interpretation 18 invalidates old
-totals that assumed vanilla enchantments were unchanged. These additive/defaulted APIs require
-a minor release; app resource/scan adoption follows fahlman/Chunksee#446.
-The result uses Minecraft's Float precision. No maximum is guessed from current health.
+This applies to current, wrapped and legacy item formats. A missing definition leaves maximum
+health unavailable even for a familiar vanilla ID, since a world pack may have replaced it.
+No missing definition silently falls back to a built-in list. When definitions change, resolve
+health again from the same saved inputs, including inputs decoded from a warm `RegionFacts`
+archive. No region file read or changed region cache key is needed.
+
+The unreleased #357 change removes the stored/defaulted `Creature.maxHealth` and player
+`maxHealth` property, the definition arguments on player/creature readers, and
+`RegionScanOptions.enchantments`. Use the explicit resolution methods above. Region-facts
+interpretation 35 rejects earlier archives; adoption causes one rescan to obtain typed inputs.
+Standalone old creature records without those inputs keep maximum health unavailable. This is a
+breaking API change requiring a minor release before the separate app adoption. The result uses
+Minecraft's Float precision. No maximum is guessed from current health.
 
 `Villager.isUnemployed` interprets the resolved profession's explicit `minecraft:none` category,
 using the shared identifier rules (so `none` means the same thing). Unavailable professions
@@ -1318,12 +1328,13 @@ let overworldBiomes = try world.possibleBiomes(in: "minecraft:overworld", assets
 // Every saved world in every installation's game folder (backups aren't included).
 let worlds = World.saved(under: minecraft).compactMap { try? World(contentsOf: $0) }
 
+let enchantments = try world.enchantmentDefinitions(assets: assets)
 for player in world.players() {                         // most recently saved first
     print(names[player.uuid]?.name ?? "unknown name")
     print(player.uuid, player.position?.dimension ?? "?", player.position?.x ?? 0, player.position?.z ?? 0)
     print("  died at", player.lastDeath as Any, "respawns at", player.respawn as Any)
     print("  ", player.gameMode as Any, player.health ?? 0, player.foodLevel ?? 0, player.experienceLevel ?? 0)
-    print("  maximum health", player.maxHealth as Any)  // half-hearts; nil if unavailable
+    print("  maximum health", player.maximumHealth(enchantments: enchantments) as Any)  // half-hearts; nil if unavailable
     for effect in player.activeEffects {
         print(effect.id, effect.level, effect.durationTicks) // ticks at save time; -1 is infinite
     }

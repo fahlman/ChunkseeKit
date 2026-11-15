@@ -20,7 +20,7 @@ import Testing
             "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(40)])]),
             "equipment": .compound(["body": item("wolf_armor", ["minecraft:damage": .int(17)])]),
         ])
-        #expect(wolf.health == 40 && wolf.maxHealth == 40 && wolf.sittingOrder == true)
+        #expect(wolf.health == 40 && wolf.maximumHealth(enchantments: [:]) == 40 && wolf.sittingOrder == true)
         #expect(wolf.appearance == CreatureAppearance(variant: "minecraft:pale") && wolf.collarColor == "orange")
         #expect(wolf.equipment?["body"]?.durability == ItemDurability(remaining: 47, maximum: 64))
         let bytes = try PropertyListEncoder().encode(RegionContents(containers: [], signs: [], namedCreatures: [wolf]))
@@ -29,10 +29,10 @@ import Testing
 
     @Test func catAndParrotRetainTheirSavedDetails() throws {
         let cat = try pet("cat", ["variant": .string("minecraft:siamese"), "Sitting": .byte(0)])
-        #expect(cat.maxHealth == 10 && cat.sittingOrder == false && cat.collarColor == "red")
+        #expect(cat.maximumHealth(enchantments: [:]) == 10 && cat.sittingOrder == false && cat.collarColor == "red")
         #expect(cat.appearance?.variant == "minecraft:siamese" && cat.equipment == [:])
         let parrot = try pet("parrot", ["Variant": .int(3), "CollarColor": .byte(1), "Sitting": .byte(1)])
-        #expect(parrot.appearance?.variant == "minecraft:yellow_blue" && parrot.maxHealth == 6)
+        #expect(parrot.appearance?.variant == "minecraft:yellow_blue" && parrot.maximumHealth(enchantments: [:]) == 6)
         #expect(parrot.sittingOrder == true && parrot.collarColor == "orange" && parrot.equipment == [:])
         let emptyWolf = try pet("wolf")
         #expect(emptyWolf.equipment?.isEmpty == true && emptyWolf.sittingOrder == false)
@@ -79,7 +79,7 @@ import Testing
                 .compound(["Amount": .double(0.25), "Operation": .int(2)]),
             ]),
         ])])], version: nil)
-        #expect(wolf.maxHealth == 45)
+        #expect(wolf.maximumHealth(enchantments: [:]) == 45)
         let cat = try pet("cat", ["attributes": .list([.compound([
             "id": .string("minecraft:generic.max_health"), "base": .double(10), "modifiers": .list([
                 .compound(["amount": .double(2), "operation": .string("add_value")]),
@@ -87,25 +87,25 @@ import Testing
                 .compound(["amount": .double(1), "operation": .string("add_multiplied_total")]),
             ]),
         ])])])
-        #expect(cat.maxHealth == 36)
+        #expect(cat.maximumHealth(enchantments: [:]) == 36)
     }
 
     @Test func generatedDefaultsPassThroughTheEntityChunkReader() throws {
         let entity = Fixtures.mob(["id": .string("minecraft:cat"), "Health": .float(7), "Pos": .list([.double(0), .double(64), .double(0)])])
         let chunk = NBT.compound(["DataVersion": .int(5023), "Entities": .list([entity])])
-        #expect(Creature.creatures(inEntityChunk: chunk).first?.maxHealth == 10)
-        #expect(Creature(entity)?.maxHealth == 10)
-        #expect(try pet("cat", version: 100).maxHealth == 10)
-        #expect(try pet("cat", version: 6000).maxHealth == 10)
+        #expect(Creature.creatures(inEntityChunk: chunk).first?.maximumHealth(enchantments: [:]) == 10)
+        #expect(Creature(entity)?.maximumHealth(enchantments: [:]) == 10)
+        #expect(try pet("cat", version: 100).maximumHealth(enchantments: [:]) == 10)
+        #expect(try pet("cat", version: 6000).maximumHealth(enchantments: [:]) == 10)
     }
 
     @Test func unknownMaximumStaysUnavailableAndExplicitEquipmentIsIncluded() throws {
         let unknown = try pet("cat", ["attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .string("unknown")])])])
-        #expect(unknown.maxHealth == nil)
+        #expect(unknown.maximumHealth(enchantments: [:]) == nil)
         let gear = try pet("wolf", ["equipment": .compound(["body": item("wolf_armor", ["minecraft:attribute_modifiers": .list([
             .compound(["type": .string("minecraft:max_health"), "amount": .double(10), "operation": .string("add_value")]),
         ])])])])
-        #expect(gear.maxHealth == 18)
+        #expect(gear.maximumHealth(enchantments: [:]) == 18)
     }
 
     @Test func savedHealthBoostModifierIsIncludedOnce() throws {
@@ -115,14 +115,14 @@ import Testing
             ])])]),
             "active_effects": .list([.compound(["id": .string("minecraft:health_boost"), "amplifier": .byte(0), "duration": .int(1200)])]),
         ])
-        #expect(cat.maxHealth == 14)
+        #expect(cat.maximumHealth(enchantments: [:]) == 14)
     }
 
     @Test(arguments: [("wolf", 8.0), ("horse", 53), ("donkey", 53), ("mule", 53), ("llama", 53),
                       ("trader_llama", 53), ("skeleton_horse", 15), ("zombie_horse", 25), ("camel", 32),
                       ("camel_husk", 32), ("nautilus", 15), ("zombie_nautilus", 15)])
     func omittedMaximumUsesTheLoadedSpeciesDefault(species: String, maximum: Double) throws {
-        #expect(try pet(species).maxHealth == maximum)
+        #expect(try pet(species).maximumHealth(enchantments: [:]) == maximum)
     }
 
     @Test func nautilusAndCamelHuskHaveApplicableSaddleAndArmorRows() throws {
@@ -137,7 +137,7 @@ import Testing
         let base = 25.786716356710073
         let horse = try pet("horse", ["Health": .float(Float(base)),
             "attributes": .list([.compound(["id": .string("minecraft:max_health"), "base": .double(base)])])])
-        #expect(horse.maxHealth == horse.health)
+        #expect(horse.maximumHealth(enchantments: [:]) == horse.health)
     }
 
     @Test func invalidDetailsStayUnavailableAndWildAnimalsKeepReadableAppearance() throws {

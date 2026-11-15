@@ -72,7 +72,7 @@ import Testing
         #expect(facts.containers.count == 2 && facts.signs.count == 1 && facts.spawners.count == 1)
         #expect(facts.containers.first(where: \.isEntity)?.uuid == UUID(uuidString: "00000001-0000-0002-0000-000300000004"))
         #expect(facts.creatures == Creature.creatures(inEntityChunk: entityChunk))
-        #expect(facts.creatures.first?.health == 6 && facts.creatures.first?.maxHealth != nil)
+        #expect(facts.creatures.first?.health == 6 && facts.creatures.first?.maximumHealth(enchantments: [:]) != nil)
         #expect(facts.pointsOfInterest == PointOfInterest.records(inChunk: poiChunk))
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: region.x, regionZ: region.z)))
         #expect(facts.structures == (try Chunk(nbt: terrain())).structureStarts)
@@ -158,6 +158,15 @@ import Testing
         let data = try JSONEncoder().encode(facts)
         var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let currentVersion = object["version"]
+        var resolvedHealthArchive = object
+        var previousVersion = try #require(currentVersion as? [String: Any])
+        previousVersion["revision"] = 34
+        resolvedHealthArchive["version"] = previousVersion
+        resolvedHealthArchive["enchantments"] = [String: Any]()
+        resolvedHealthArchive["creatures"] = [["id": "minecraft:cat", "x": 0, "y": 64, "z": 0,
+                                               "health": 6, "maxHealth": 10] as [String: Any]]
+        let previous = try JSONSerialization.data(withJSONObject: resolvedHealthArchive)
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: previous) }
         object["version"] = RegionFacts.interpretationVersion.revision
         let stale = try JSONSerialization.data(withJSONObject: object)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(RegionFacts.self, from: stale) }

@@ -75,23 +75,26 @@ enum EntityEquipment {
     }
 }
 
-/// Applicable unsaved modifiers from equipped items; arithmetic stays in EntityHealth.
+/// Applicable saved equipment inputs; resource definitions are consulted only when resolving.
 enum EquipmentHealth {
-    static func modifiers(in equipment: [String: ItemStack], enchantments: [String: EnchantmentDefinition]) -> [NBT]? {
-        var found: [NBT] = []
+    struct Inputs {
+        var modifiers: [HealthModifier] = []
+        var enchantments: [HealthEnchantment] = []
+    }
+
+    static func inputs(in equipment: [String: ItemStack]) -> Inputs? {
+        var found = Inputs()
         for slot in EntityEquipment.slots {
             guard let item = equipment[slot], item.count > 0 else { continue }
             if let durability = item.durability, durability.remaining == 0 { continue }
-            guard let modifiers = modifiers(item, slot: slot, enchantments: enchantments) else { return nil }
-            found += modifiers
+            guard let modifiers = modifiers(item, slot: slot) else { return nil }
+            found.modifiers += modifiers.map(HealthModifier.init)
+            found.enchantments += item.activeEnchantments.keys.sorted().map { HealthEnchantment(id: $0, slot: slot) }
         }
         return found
     }
 
-    private static func modifiers(_ item: ItemStack, slot: String, enchantments: [String: EnchantmentDefinition]) -> [NBT]? {
-        guard item.activeEnchantments.keys.allSatisfy({ id in
-            Identifier(id).flatMap { enchantments[$0.description] }?.preservesSavedMaximum(in: slot) == true
-        }) else { return nil }
+    private static func modifiers(_ item: ItemStack, slot: String) -> [NBT]? {
         if item.components?["!minecraft:attribute_modifiers"] != nil { return [] }
         let component = item.components?["minecraft:attribute_modifiers"]
         let legacy = item.components?["AttributeModifiers"]

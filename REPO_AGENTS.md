@@ -295,8 +295,9 @@ Consumers retain whole interpretation values plus their actual inputs. `RegionSc
 they do not gain a new Decodable contract. `InterpretationKey.identity(of:)` is the single owner
 of persisted SHA-256 identities, compact JSON formatting and recursive dictionary-key ordering.
 Consumers call it once per immutable catalog publication and never configure their own encoder.
-RegionScanOptions sorts its block-ID set when encoding
-and includes the whole enchantment definitions; nil and empty filters remain distinct.
+RegionScanOptions sorts its block-ID set when encoding; nil and empty filters remain distinct.
+Enchantment definitions are resolved from typed health inputs after reading, so they no longer
+participate in the region scan or its persisted identity.
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
 Non-finite numbers encode as the strings Infinity, -Infinity and NaN, matching typed JSON archives;
@@ -1087,7 +1088,7 @@ EntityType and ServerPlayer save/load code verifies these rules, including the e
 single-player-carrying root vehicles from entity storage. The CLI combines these facts with
 region creatures and shoulder pets; app adoption follows a published library release.
 
-`Creature.health` and `maxHealth` use half-hearts. Maximum health reads saved attributes and
+`Creature.health` and `maximumHealth(enchantments:)` use half-hearts. Maximum-health inputs read saved attributes and
 permanent modifiers, with omitted bases supplied by the generated DefaultAttributes registry
 independently of the save version. The same owner supplies player defaults and the MAX_HEALTH
 range. Unowned wolves apply the generated taming-side-effect base after saved attributes; owned
@@ -1101,25 +1102,35 @@ earlier cached health omissions; adopting apps must invalidate derived tile/proj
 `Dimension.creatures(chunkX:chunkZ:)` retains the entity chunk's saved version, as the existing
 per-region creature read does; raw `entities` remains unchanged.
 Health Boost is included once through the permanent saved attribute modifiers. `EntityEquipment`
-owns current slots and legacy player/creature equipment reading; `EquipmentHealth` selects applicable
-equipped modifiers for both APIs. Empty/broken items, removed components and wrong-slot modifiers
+owns current slots and legacy player/creature equipment reading; `EquipmentHealth` extracts applicable
+equipped modifiers and active enchantment IDs/slots for both APIs. Empty/broken items, removed components and wrong-slot modifiers
 do not contribute. Unsupported item/effect/active-enchantment defaults leave either maximum
 unavailable. ItemStack shares current/wrapped/legacy enchantment parsing while keeping stored
 book enchantments separate from equipped effects. EnchantmentDefinition reads health-relevant
 effects and optional `maximumLevel` from GameAssets and the world's enabled packs; no
 enchantment-ID list remains. Maximum level follows the definition codec's integer 1...255 range;
 missing or invalid values do not discard the other readable facts or restrict saved item levels.
-This additive API is tracked on #289 for the app's data-derived level suffixes. Old Codable
-snapshots decode with nil maximum; changed definitions already change RegionScanOptions identity,
-so no scan interpretation bump is needed. Direct
+This additive API is tracked on #289 for the app's data-derived level suffixes. Old definition Codable
+snapshots decode with nil maximum level. Direct
 and conditional attribute effects are interpreted through generated codec/class associations.
 Unknown formats/functions and missing definitions leave the maximum unavailable; known wrong-slot
-effects do not apply. PlayerInfo, shoulder/root-vehicle mobs, Creature and regional scans accept
-the same immutable snapshot. RegionScanOptions owns the snapshot as a hashable/serialized cache
-input; interpretation 18 invalidates totals that assumed vanilla definitions were unchanged.
-Clients without a snapshot now get nil for active enchantments, including familiar IDs.
-This deliberate availability change and the additive/defaulted APIs need a minor release;
-app loading/cache adoption is fahlman/Chunksee#446. Queries use existing pack priority and
+effects do not apply. PlayerInfo and Creature
+resolve their typed MaximumHealthInputs through one operation with an explicit definition snapshot.
+Shoulder/root-vehicle mobs and regional scans retain those same inputs without definitions.
+The unreleased #357 API removes stored Creature.maxHealth and defaulted definition arguments from
+all saved-data readers. RegionScanOptions and its archive no longer contain enchantments.
+Region-facts revision 35 rejects old regional archives, so adoption performs one rescan; later
+definition changes resolve health without another region read. Unknown saved inputs stay separate
+from missing/health-affecting definitions, which can change on a later resolution. A non-compound
+current equipment field uses the game's empty-equipment health fallback from
+LivingEntity.readAdditionalSaveData and TagValueInput.read; its saved display stays unavailable.
+Unreadable older equipment fields remain unknown because their upgrade behavior is unverified.
+The base and permanent/equipped modifiers preserve generated defaults, load order, identity replacement and
+rounding; malformed saved modifiers can still be replaced before validation. No raw entity NBT,
+computed maximum or definition dictionary is retained in MaximumHealthInputs.
+This breaking API change needs a minor release before separate app adoption on #357.
+Clients explicitly passing an empty snapshot still get nil for active enchantments, including
+familiar IDs. Queries use existing pack priority and
 invalid-override handling, with 4,096 definitions/64 MiB total/16 MiB per-file bounds. Effect
 interpretation is bounded to 64 levels/65,536 steps. No condition or live function is executed. Maximums
 use the game's Float precision. Mob appearance/collar/equipment and pet sitting-order interpretation
@@ -1134,14 +1145,13 @@ query, with 64 component levels and the existing file/count/byte limits. Missing
 dynamic or over-budget text leaves only the description unavailable; independent level, slot
 and health facts remain readable. Content and its typed arguments are Codable snapshots, distinct
 from Minecraft JSON interpretation. Old definition archives decode with nil descriptions.
-RegionFacts already archives the complete definitions in RegionScanOptions, so descriptions
-participate in that existing cache identity and can invalidate older or changed definition
-snapshots; the saved creature and health interpretation is unchanged. No region/chunk traversal,
+Definition snapshots retain descriptions in their own identities. They are no longer archived in
+RegionScanOptions, so description-only changes do not invalidate saved region facts. No region/chunk traversal,
 component interpretation or interpretation-version counter changes here. This additive API
 requires a minor release before fahlman/Chunksee#438 can adopt it; no release is claimed yet.
-Non-finite description arguments retain stable, distinct complete option identities through
-InterpretationKey instead of disabling the cache. Tests cover the real registry reader, changed
-argument kinds, independent rereads and RegionFacts archive reopening.
+Non-finite description arguments retain stable, distinct definition identities through
+InterpretationKey. Tests cover the real registry reader, changed argument kinds and resolving
+the same RegionFacts archive with each definition snapshot.
 
 `World.clockTimes()` owns named saved-clock whole ticks, normalizing IDs through Identifier
 and using the existing savedData/NBT readers. `dayTime()` consumes that owner. Legacy DayTime
@@ -1165,7 +1175,7 @@ and absent timing retains raw ticks instead of assuming a day length. Zero-based
 matches Minecraft's DebugEntryDayCount/F3 counter. Public additive APIs require a minor
 release; app adoption remains #232 item 5. No serialized facts or RegionFacts version changes.
 
-`PlayerInfo.activeEffects`, `maxHealth` and `mainHandItem` expose saved player details.
+`PlayerInfo.activeEffects`, `maximumHealth(enchantments:)` and `mainHandItem` expose saved player details.
 `PlayerInfo.shortIdentifier(for:)` owns the eight-character lowercase UUID display fallback
 shared by clients. It accepts a UUID without requiring a saved player record; full UUIDs remain
 the identity for lookup and storage. The CLI's item and book searches use it, preserving their

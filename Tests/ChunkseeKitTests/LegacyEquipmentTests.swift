@@ -83,7 +83,7 @@ import ChunkseeKitTestSupport
         let facts = try dimension.scan(region: region)
         let creature = try #require(facts.creatures.first)
         #expect(creature.equipment?.mapValues(\.id) == ["body": "example:armor", "saddle": "minecraft:saddle", "storage": "minecraft:chest"])
-        #expect(creature.maxHealth == 24)
+        #expect(creature.maximumHealth(enchantments: [:]) == 24)
         #expect(Set(facts.containers.flatMap(\.items).map(\.id)) == ["example:armor", "minecraft:saddle"])
         let encoded = try JSONEncoder().encode(facts)
         let restored = try JSONDecoder().decode(RegionFacts.self, from: encoded)

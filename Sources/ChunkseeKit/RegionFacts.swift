@@ -8,16 +8,12 @@ public struct RegionScanOptions: Sendable, Hashable, Encodable {
     public var biomeSampleY: Int?
     /// The dimension's actual build height, when known. Never infer it from occupied sections.
     public var height: Int?
-    /// Immutable resource-derived health facts. A changed definition changes the cache input.
-    public var enchantments: [String: EnchantmentDefinition]
 
-    public init(blockIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil,
-                enchantments: [String: EnchantmentDefinition] = [:]) {
+    public init(blockIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil) {
         self.blockIDs = blockIDs; self.biomeSampleY = biomeSampleY; self.height = height
-        self.enchantments = enchantments
     }
 
-    private enum CodingKeys: String, CodingKey { case blockIDs, biomeSampleY, height, enchantments }
+    private enum CodingKeys: String, CodingKey { case blockIDs, biomeSampleY, height }
 
     /// Sets have no semantic order. Keep their persisted identity stable without requiring
     /// clients to copy option fields. InterpretationKey owns the persisted dictionary ordering.
@@ -26,7 +22,6 @@ public struct RegionScanOptions: Sendable, Hashable, Encodable {
         try values.encodeIfPresent(blockIDs?.sorted(), forKey: .blockIDs)
         try values.encodeIfPresent(biomeSampleY, forKey: .biomeSampleY)
         try values.encodeIfPresent(height, forKey: .height)
-        try values.encode(enchantments, forKey: .enchantments)
     }
 }
 
@@ -71,7 +66,7 @@ public struct RegionFacts: Sendable, Codable {
     /// Bump the revision whenever a fact reader changes meaning, even with the same serialized
     /// shape. Generated facts and the terrain reader contribute their own identities.
     public static let interpretationVersion = InterpretationVersion(
-        domain: "regionFacts", revision: 34, generatedFacts: GeneratedInterpretationDigests.regionFacts,
+        domain: "regionFacts", revision: 35, generatedFacts: GeneratedInterpretationDigests.regionFacts,
         dependencies: [Chunk.interpretationVersion])
 
     public let dimension: String
@@ -107,8 +102,7 @@ public struct RegionFacts: Sendable, Codable {
                 debugDescription: "RegionFacts contains an invalid grid size"))
         }
         self.init(dimension: archive.dimension, region: archive.region,
-                  options: .init(blockIDs: archive.blockIDs.map { Set($0) }, biomeSampleY: archive.biomeSampleY, height: archive.height,
-                                 enchantments: archive.enchantments))
+                  options: .init(blockIDs: archive.blockIDs.map { Set($0) }, biomeSampleY: archive.biomeSampleY, height: archive.height))
         containers = archive.containers; signs = archive.signs; spawners = archive.spawners
         structures = archive.structures.map(\.value); creatures = archive.creatures
         pointsOfInterest = archive.pointsOfInterest; chunks = archive.chunks.map(\.value)
@@ -126,7 +120,6 @@ private struct Archive: Codable {
     var blockIDs: [String]?
     var biomeSampleY: Int?
     var height: Int?
-    var enchantments: [String: EnchantmentDefinition]
     var containers: [ItemContainer]
     var signs: [Sign]
     var spawners: [Spawner]
@@ -141,7 +134,6 @@ private struct Archive: Codable {
     init(_ value: RegionFacts) {
         version = RegionFacts.interpretationVersion; dimension = value.dimension; region = value.region
         blockIDs = value.options.blockIDs?.sorted(); biomeSampleY = value.options.biomeSampleY; height = value.options.height
-        enchantments = value.options.enchantments
         containers = value.containers; signs = value.signs; spawners = value.spawners
         structures = value.structures.map(StructureRecord.init); creatures = value.creatures
         pointsOfInterest = value.pointsOfInterest; chunks = value.chunks.map(ChunkRecord.init)

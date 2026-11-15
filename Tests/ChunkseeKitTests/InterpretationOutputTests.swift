@@ -51,6 +51,10 @@ import Testing
         .init(domain: "regionFacts", revision: 34,
             generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574", dependencies: [terrain2])
     }
+    private var regionFacts35: InterpretationVersion {
+        .init(domain: "regionFacts", revision: 35,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574", dependencies: [terrain2])
+    }
 
     private func check(_ output: some Encodable, version: InterpretationVersion,
                        baselines: [InterpretationVersion: String]) throws {
@@ -164,7 +168,8 @@ import Testing
                               regionFacts32: "7cbd924ddac97848c95b700aac28a5771da4e0997ae116e867831cd0de51fa5b",
                               // The archive embeds its complete interpretation identity.
                               regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520",
-                              regionFacts34: "1771b2cce9e3308c4e5a00ced2b402e0a7e4efba6d230cc3491597fc7ea805f2"])
+                              regionFacts34: "1771b2cce9e3308c4e5a00ced2b402e0a7e4efba6d230cc3491597fc7ea805f2",
+                              regionFacts35: "332a6537d38f40549930defbdebae1dbc2dcf14fed89e2de4742877550d125b7"])
     }
 
     private struct NumericCase {
@@ -315,7 +320,8 @@ import Testing
                               regionFacts31: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts32: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
-                              regionFacts34: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
+                              regionFacts34: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
+                              regionFacts35: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
     }
 
     private struct MaterialOutput: Encodable {

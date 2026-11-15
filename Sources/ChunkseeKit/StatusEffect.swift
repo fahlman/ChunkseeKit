@@ -54,20 +54,17 @@ extension PlayerInfo {
         return inventorySlots(in: .hotbar)[selectedSlot]
     }
 
-    /// Saved maximum health in half-hearts, including permanent effects and applicable equipment.
-    /// Unknown defaults or unsupported modifiers leave it unavailable.
-    public var maxHealth: Double? { PlayerHealth.maximum(self) }
-}
-
-private enum PlayerHealth {
-    static func maximum(_ player: PlayerInfo) -> Double? {
-        guard EntityHealth.supportsEffects(player.nbt) else { return nil }
+    /// Saved inputs, independent of the selected resource definitions.
+    public var healthInputs: MaximumHealthInputs? {
         // Health Boost is already a permanent saved attribute modifier, including legacy UUIDs.
-        guard let modifiers = EquipmentHealth.modifiers(in: player.equippedItems, enchantments: player.enchantments) else { return nil }
-        return EntityHealth.value(player.nbt, defaultBase: GeneratedHealthDefaults.bases[GeneratedHealthDefaults.player],
-                                  additionalModifiers: modifiers)
+        EntityHealth.inputs(nbt, defaultBase: GeneratedHealthDefaults.bases[GeneratedHealthDefaults.player],
+                            baseOverride: nil, equipment: equippedItems)
     }
 
+    /// Maximum health in half-hearts, or nil when saved inputs or current definitions are unavailable.
+    public func maximumHealth(enchantments: [String: EnchantmentDefinition]) -> Double? {
+        healthInputs?.maximum(enchantments: enchantments)
+    }
 }
 
 extension StatusEffect {

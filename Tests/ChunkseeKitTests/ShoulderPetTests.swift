@@ -26,7 +26,7 @@ import Testing
                                        try #require(Creature(right, dataVersion: 5023))])
         #expect(player.shoulderPets.map(\.owner) == [owner, owner])
         #expect(Set(player.shoulderPets.compactMap(\.uuid)).count == 2)
-        #expect(player.shoulderPets.allSatisfy { $0.maxHealth == 6 && $0.health == 4 })
+        #expect(player.shoulderPets.allSatisfy { $0.maximumHealth(enchantments: [:]) == 6 && $0.health == 4 })
         #expect(player.shoulderPets.first?.appearance?.variant == "minecraft:gray")
         #expect(player.position?.x == 12 && player.shoulderPets.first?.x == -100)
     }
@@ -38,7 +38,7 @@ import Testing
             ]))
             #expect(player.position == nil)
             #expect(player.shoulderPets.count == 1)
-            #expect(player.shoulderPets.first?.maxHealth == 6)
+            #expect(player.shoulderPets.first?.maximumHealth(enchantments: [:]) == 6)
         }
     }
 

@@ -70,7 +70,7 @@ extension World {
     /// resource-priority and invalid-override policy. Limits: 64 packs, 4,096 definitions,
     /// 16 MiB per file and 64 MiB total. Descriptions share 65,536 component/argument visits,
     /// with at most 64 component levels. No game-version-specific definition list is applied.
-    /// Retain this immutable snapshot for player/mob reads and include it in region options.
+    /// Retain this immutable snapshot and pass it explicitly when resolving maximum health.
     public func enchantmentDefinitions(assets: GameAssets?) throws -> [String: EnchantmentDefinition] {
         guard let packs = try resourcePacks(assets: assets) else { return [:] }
         return try EnchantmentDefinition.read(in: packs)
