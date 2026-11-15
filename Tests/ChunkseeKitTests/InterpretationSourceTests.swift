@@ -31,11 +31,16 @@ import Testing
         let regionFacts34 = InterpretationVersion(domain: "regionFacts", revision: 34,
             generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574",
             dependencies: [terrain])
+        let regionFacts35 = InterpretationVersion(domain: "regionFacts", revision: 35,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574",
+            dependencies: [terrain])
         return [
             // Published source 30e2b22861a92da0fed92aa518340d617b850da9.
             regionFacts: ["c05630d57eee90a0d9d3ae21a7469f1207d793fa99b4762f9258fa665fa94cd0"],
             // Published source 4b8e4b9795e0e71a785a4f25b58786af23d0b2fc.
             regionFacts34: ["3ed0c074b4ef384408d82044c2e8f2de72d54093d8c48f7b485584e61c4cd004"],
+            // Source a36a7d6a1e307ae2d9aa45a855938736f7f160d0, independently reviewed on #357.
+            regionFacts35: ["438ed31afd03de0227db610f9a4cc37c1cadb9ca65ca44c97e979d05626566e7"],
         ]
     }
 
