@@ -52,7 +52,7 @@ public struct Dimension: Sendable {
             let code = (error as? CocoaError)?.code
             return RegionFileListing(files: [], isComplete: code == .fileReadNoSuchFile || code == .fileNoSuchFile)
         }
-        let files = names.compactMap { name in
+        let files: [(x: Int, z: Int, url: URL)] = names.compactMap { name in
             RegionFile.parseCoordinates(name).map { ($0.x, $0.z, directory.appendingPathComponent(name)) }
         }.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
         return RegionFileListing(files: files, isComplete: true)
