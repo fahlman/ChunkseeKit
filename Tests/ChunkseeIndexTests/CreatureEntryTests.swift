@@ -73,8 +73,9 @@ import Testing
         let region = RegionIndex(facts, caveBiomeIDs: [], notableBlocks: catalog)
         let index = DimensionIndex(dimension: dimension.id, caveBiomeIDs: [], notableBlocks: catalog)
             .updating(available: [coordinate], selected: nil, replacements: [region])
-        #expect(index.creatures.map(\.creature.id) == (0..<4).map { "future:mob_\($0)" })
-        #expect(index.creatures.map(\.group) == [.mob, .named, .pet, .villager])
+        let retained = try #require(index.regions[coordinate]).creatures
+        #expect(retained.map(\.creature.id) == (0..<4).map { "future:mob_\($0)" })
+        #expect(retained.map(\.group) == [.mob, .named, .pet, .villager])
         #expect(try Data(contentsOf: file) == bytes)
     }
 }
