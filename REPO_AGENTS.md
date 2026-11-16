@@ -259,10 +259,14 @@ it changes no public signature or RegionFacts value. POI, map banners and paired
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
 legacy terrain support. These public APIs are available starting in v0.30.0.
-The unreleased #360 cleanup removes the unused `SaveVersion` catalog, its `DataVersion` alias
-and `Dimension.dataDirectory`. The two fixture callers retain their numeric values in test
-support/tests, where synthetic save inputs belong. This requires a minor release for the public
-API removals; no reader behavior, saved field or cache interpretation changes. The four test-only
+The unreleased #360 cleanup removes `SaveVersion`, its `DataVersion` alias and
+`Dimension.dataDirectory`, which have no production callers inside Kit. Kit's two fixture
+callers retain their numeric values in test support/tests. The app still uses `SaveVersion`
+at 35 sites in 18 test files at its frozen #586 head. App main also uses
+`DataVersion.flatChunkRoot` in production until #586 lands. The app's separate adoption PR
+must follow #586 and replace those test references with their existing literal fixture values;
+it must not introduce another release catalog. This requires a minor release for the public
+API removals; no Kit reader behavior, saved field or cache interpretation changes. The four test-only
 conveniences `GameAssets.biomeDefinition`, `World.biomeDefinitions(for:assets:)`,
 `GameAssets.lightingTimeline` and `Chunk.surfaceHeights(height:)` are internal in this cleanup,
 along with the jar-only helper's `LightingTimeline` result type. Their existing behavior tests

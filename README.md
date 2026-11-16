@@ -2157,8 +2157,12 @@ as arbitrary strings. Raw NBT, region and compression APIs remain public. These 
 available starting in v0.30.0.
 
 The unreleased #360 cleanup removes `SaveVersion`, its `DataVersion` alias and
-`Dimension.dataDirectory`, which have no production callers. Synthetic fixtures keep their
-existing numeric input versions in test support and tests. Four test-only conveniences become
+`Dimension.dataDirectory`, which have no production callers inside Kit. Kit's synthetic fixtures
+keep their existing numeric input versions in test support and tests. Chunksee's test target
+still references `SaveVersion.java26_3`, `java26_2` and `perBlockBiomes`; its adoption PR must
+replace those references with their existing literal fixture versions. That adoption must follow
+Chunksee #586, which removes app main's production use of `DataVersion.flatChunkRoot`.
+Four test-only conveniences become
 internal: `GameAssets.biomeDefinition(_:)`, `World.biomeDefinitions(for:assets:)`,
 `GameAssets.lightingTimeline(_:)`, and `Chunk.surfaceHeights(height:)`. The `LightingTimeline`
 projection returned by the jar-only helper also becomes internal. The complete biome
