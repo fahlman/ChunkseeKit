@@ -68,6 +68,8 @@ in one or all 256 columns. They share the WORLD_SURFACE heightmap and actual-blo
 used by region biome sampling. Missing heightmaps no longer make a section top or unused
 palette entry count as a surface. Empty columns stay unavailable; colors and roof hiding
 remain front-end choices.
+The all-column `surfaceHeights(height:)` convenience becomes internal in the unreleased #360
+cleanup; production clients use the column traversal APIs introduced in v0.40.0.
 
 `Villager.isUnemployed` interprets the explicit unemployed profession through the shared
 identifier rules, retaining unknown values, nitwits, custom professions and raw saved data.
@@ -257,14 +259,14 @@ import ChunkseeKitTestSupport
 let directory = try Fixtures.tempDirectory()
 defer { try? FileManager.default.removeItem(at: directory) }
 let section = Fixtures.section(y: 0, palette: [.string("minecraft:stone")])
-let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [section])
+let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: 5023, sections: [section])
 let bytes = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: chunk)])
 try Fixtures.write(bytes, to: directory.appendingPathComponent("r.0.0.mca"))
 ```
 
 Region coordinates passed to `RegionChunk` are local, from 0 through 31. It defaults to zlib
-compression and a fixed timestamp. `chunk` retains its existing `DataVersion.perBlockBiomes`
-default; pass a version explicitly for version-specific fixtures. The helpers expect valid
+compression and a fixed timestamp. `chunk` retains its existing synthetic version default, 5119;
+pass a version explicitly for version-specific fixtures. The helpers expect valid
 packing widths and indices, and write only to caller-supplied paths; tests own their temporary
 directories and cleanup. The CLI executable-location helper remains private to the Kit tests.
 
@@ -492,14 +494,17 @@ This metadata query does not expand timeline tags, validate clock/timeline regis
 evaluate lighting or simulate elapsed time. The savedSkyLighting query below resolves its lighting projection. These unreleased APIs are the metadata prerequisite for
 fahlman/Chunksee#357, tracked in fahlman/ChunkseeKit#175.
 
-`GameAssets.lightingTimeline(_:)` reads a supplied jar's five lighting tracks:
-sun/moon angle, sky-light factor/color and moon phase. The immutable `LightingTimeline` retains
-its own `clockID` and optional `periodTicks`. Pass that clock's saved whole ticks and an explicit
-`SkyLighting` base to `applying(at:to:)`; absent tracks preserve the base. Angles use degrees and
-RGB channels retain float precision. The result is an intermediate attribute layer, without
+`World.savedSkyLighting(assets:)` resolves the world's lighting through five timeline tracks:
+sun/moon angle, sky-light factor/color and moon phase. Its internal `LightingTimeline` projection
+retains its own `clockID` and optional `periodTicks` and applies that clock's saved whole ticks to
+the dimension's `SkyLighting` base; absent tracks preserve the base. Angles use degrees and
+RGB channels retain float precision. This projection is an intermediate attribute layer, without
 final range clamping, weather, spatial effects or rendered brightness. Nonfinite input/results
 remain unavailable. The dimension base comes from `DimensionType.baseSkyLighting` below;
 enabled-pack/tag resolution is supplied by savedSkyLighting below. App drawing remains separate.
+The jar-only `GameAssets.lightingTimeline(_:)` convenience and its `LightingTimeline` result
+are internal after the unreleased #360 cleanup; tests retain direct access to the same reader
+and sampler.
 
 The shared keyframe sampler preserves ordered duplicate-tick jumps, negative-time wrapping,
 constant endpoints and the game's Float arithmetic. Supported easing is linear, constant or
@@ -669,8 +674,9 @@ must rebuild their scan caches when adopting it. This prerequisite for Chunksee 
 block hiding, highlighting, labels and native controls remain app responsibilities.
 
 Starting in v0.39.0, `Chunk.surfaceY(x:z:height:)` returns the highest non-air block's absolute Y in
-one column. `Chunk.surfaceHeights(height:)` returns the same values for all 256 columns, indexed
-by `z * 16 + x`, with each reached nonuniform section decoded once. Both use a decodable
+one column. The internal `Chunk.surfaceHeights(height:)` test convenience returns the same values
+for all 256 columns, indexed by `z * 16 + x`, with each reached nonuniform section decoded once.
+Both use a decodable
 `WORLD_SURFACE` heightmap (first-free-block Y minus one), otherwise the actual referenced blocks.
 The optional build height disambiguates tall-world heightmaps. Empty columns and malformed
 references stay unavailable; air variants are skipped, while plants and water count as surface.
@@ -1784,16 +1790,13 @@ Biome colors come from the supplied game jar and the world's enabled data packs:
 
 ```swift
 let assets = try GameAssets(contentsOf: gameJarURL)
-let definitions = try world.biomeDefinitions(
-    for: ["minecraft:plains", "example:custom_biome"], assets: assets)
+let definitions = try world.biomeDefinitions(assets: assets)
 if let plains = definitions["minecraft:plains"] {
     print(plains.waterColor, plains.temperature, plains.downfall)
 }
-// A jar can also be read without a world or data-pack overrides.
-let jarPlains = assets?.biomeDefinition("plains")
 ```
 
-These APIs read any game/save version whose biome resources parse. Results contain
+This query reads any game/save version whose biome resources parse. Results contain
 unclamped base temperature/downfall, a 24-bit RGB water color, optional grass, foliage and
 dry-foliage overrides, and the grass modifier (`none`, `dark_forest`, or `swamp`). Colors accept
 six-digit `#RRGGBB` strings, signed Int32 values, or three Float channels in 0...1, using the
@@ -1801,7 +1804,7 @@ existing shared conversion. Numeric values are strict: unlike Gson's coercions, 
 integer colors, out-of-range integers/channels, Boolean and nonfinite numbers are unavailable.
 Other biome fields are neither interpreted nor validated.
 
-World lookup canonicalizes requested IDs and reads only those resource payloads. Enabled folder and
+World lookup discovers registered biome IDs and resolves their resource payloads. Enabled folder and
 ZIP packs use the same priority and safe paths as dimension settings. A present malformed
 override or unsupported higher-priority pack prevents lower fallback. A missing
 jar makes vanilla unavailable; higher-priority pack definitions can
@@ -1830,6 +1833,9 @@ release. Malformed definitions remain absent, and an unknown or changed higher p
 lower definition. Cancellation and file-read errors propagate. Retain the returned value as
 a snapshot; reread after changing enabled packs or their contents. Image decoding, color
 caches and tile invalidation remain client-owned.
+The jar-only `GameAssets.biomeDefinition(_:)` and requested-ID
+`World.biomeDefinitions(for:assets:)` conveniences become internal in the unreleased #360 cleanup.
+Clients use the complete snapshot above and select the returned IDs they need.
 
 ### Terrain tint sources (unreleased)
 
@@ -2147,9 +2153,22 @@ invented height, and return nil on overflow. Dimension has typed `chunk(at:)`, `
 Its Codable representation is the qualified string. Syntax matches the official 26.3 codec,
 including empty paths; this does not imply that an identifier exists or is safe as a file path.
 Malformed saved dimension/effect/enchantment IDs are now unavailable instead of being accepted
-as arbitrary strings. `SaveVersion` names verified release numbers and format boundaries;
-`DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
-remain public. These additions are available starting in v0.30.0.
+as arbitrary strings. Raw NBT, region and compression APIs remain public. These additions are
+available starting in v0.30.0.
+
+The unreleased #360 cleanup removes `SaveVersion`, its `DataVersion` alias and
+`Dimension.dataDirectory`, which have no production callers inside Kit. Kit's synthetic fixtures
+keep their existing numeric input versions in test support and tests. Chunksee's test target
+still references `SaveVersion.java26_3`, `java26_2` and `perBlockBiomes`; its adoption PR must
+replace those references with their existing literal fixture versions. That adoption must follow
+Chunksee #586, which removes app main's production use of `DataVersion.flatChunkRoot`.
+Four test-only conveniences become
+internal: `GameAssets.biomeDefinition(_:)`, `World.biomeDefinitions(for:assets:)`,
+`GameAssets.lightingTimeline(_:)`, and `Chunk.surfaceHeights(height:)`. The `LightingTimeline`
+projection returned by the jar-only helper also becomes internal. The complete biome
+snapshot, saved world lighting and column traversal APIs remain public. This is a breaking
+public API change requiring a minor release; it changes no save parsing, saved facts or cache
+interpretation. Existing behavior tests retain access to the internal helpers.
 
 v0.31.0 also adds `ChunkPosition(containingBlockX:blockZ:)` and
 `ChunkPosition.localColumnIndex(blockX:blockZ:)` for clients that have a block column without a

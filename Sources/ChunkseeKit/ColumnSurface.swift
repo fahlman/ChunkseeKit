@@ -11,7 +11,7 @@ extension Chunk {
     /// The same surface query for all 256 columns, indexed by z * 16 + x.
     /// Without a usable heightmap, each reached nonuniform section is unpacked once, and columns
     /// stop at their first non-air block. Water is a surface; this does not strip roofs or shade it.
-    public func surfaceHeights(height: Int? = nil) -> [Int?] {
+    func surfaceHeights(height: Int? = nil) -> [Int?] {
         guard Self.validSurfaceHeight(height) else { return [Int?](repeating: nil, count: 256) }
         return surfaceHeights(at: Array(0..<256), heightmap: surfaceHeightmap(height: height))
     }

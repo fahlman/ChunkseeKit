@@ -2,10 +2,10 @@ import Foundation
 
 /// Immutable lighting projection of a timeline. Other attributes and time markers are
 /// outside this reader; it does not validate a complete game registry or resolve timeline tags.
-public struct LightingTimeline: Sendable, Equatable, WorldTimelineProjection {
+struct LightingTimeline: Sendable, Equatable, WorldTimelineProjection {
     /// This timeline's clock, which need not be the dimension's default clock.
-    public let clockID: String
-    public let periodTicks: Int?
+    let clockID: String
+    let periodTicks: Int?
 
     private let sun: TimelineTrack<Float>?
     private let moon: TimelineTrack<Float>?
@@ -20,7 +20,7 @@ public struct LightingTimeline: Sendable, Equatable, WorldTimelineProjection {
     /// Periodic tracks wrap negative times; nonperiodic tracks hold their first/last values.
     /// Returns nil on nonfinite arithmetic or an unsolvable easing curve, never partial lighting.
     /// No time simulation, final attribute clamping, weather or spatial layers are applied.
-    public func applying(at ticks: Int64, to base: SkyLighting) -> SkyLighting? {
+    func applying(at ticks: Int64, to base: SkyLighting) -> SkyLighting? {
         do {
             let time = TimelineInput.sampleTime(ticks, period: periodTicks)
             return try SkyLighting(
@@ -67,7 +67,7 @@ extension GameAssets {
     /// multiply, and moon-phase override. Other relevant operations are explicitly unavailable.
     /// Limits: 16 MiB JSON, 256 track entries, 4,096 relevant keyframes and Int32 segment endpoints
     /// and lengths. Other tracks/markers are not interpreted. No cache or image decoding is added.
-    public func lightingTimeline(_ identifier: String) -> LightingTimeline? {
+    func lightingTimeline(_ identifier: String) -> LightingTimeline? {
         guard let id = Self.resourceID(identifier),
               let data = resources.read("data/\(id.namespace)/timeline/\(id.path).json") else { return nil }
         return LightingTimeline(json: data)

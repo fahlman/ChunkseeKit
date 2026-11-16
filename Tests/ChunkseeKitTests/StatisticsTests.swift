@@ -49,7 +49,7 @@ import Testing
 
     @Test func unknownUnitsAreNotGuessedFromNames() {
         let values = ["minecraft:custom": ["mod:walk_one_cm": 99, "minecraft:unknown_one_cm": 88, "mod:play_time": 77]]
-        let stats = PlayerStatistics(dataVersion: SaveVersion.java26_3, values: values)
+        let stats = PlayerStatistics(dataVersion: 5023, values: values)
         #expect(stats.distances.isEmpty && stats.values == values)
         #expect(stats.unit(of: "mod:walk_one_cm") == nil)
         #expect(stats.unit(of: "minecraft:unknown_one_cm") == nil)

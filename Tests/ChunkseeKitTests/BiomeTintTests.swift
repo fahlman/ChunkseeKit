@@ -1,6 +1,6 @@
 import ChunkseeKitTestSupport
 import Foundation
-import ChunkseeKit
+@testable import ChunkseeKit
 import Testing
 
 @Suite struct BiomeTintTests {

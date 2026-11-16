@@ -66,7 +66,7 @@ extension GameAssets {
     /// Missing, unsupported or malformed resources return nil. Other biome fields are not
     /// interpreted or validated. Hex strings, integer colors and RGB channel lists are supported;
     /// numeric fields use the same strict primitive conversion as the asset readers.
-    public func biomeDefinition(_ identifier: String) -> BiomeDefinition? {
+    func biomeDefinition(_ identifier: String) -> BiomeDefinition? {
         biomeResource(identifier, decode: BiomeDefinition.init(json:))
     }
 }
@@ -83,7 +83,7 @@ extension World {
     /// Queries with more than 64 enabled packs or 4,096 IDs return no definitions. Resources share
     /// the spawn reader's 16 MiB/file and 64 MiB/query limits. No world files are written,
     /// chunks scanned, images decoded or mutable caches introduced.
-    public func biomeDefinitions(for identifiers: Set<String>, assets: GameAssets?) throws -> [String: BiomeDefinition] {
+    func biomeDefinitions(for identifiers: Set<String>, assets: GameAssets?) throws -> [String: BiomeDefinition] {
         try biomeResources(for: identifiers, assets: assets, decode: BiomeDefinition.init(json:))
     }
 

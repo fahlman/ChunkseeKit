@@ -53,13 +53,17 @@ import Testing
             // Both contracts independently approved at 68844db on #359/6919625016.
             // Folder-discovery status at f67a0dd changes neither cached output; both contracts
             // independently approved on #363/6923420688, with the fingerprint reproduced.
+            // Declaration cleanup at 7af4586 changes neither cached output; both contracts
+            // independently approved on #360/6931158790.
             regionFacts36: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
+                "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
             ],
             blockCounts1: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
+                "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
             ],
         ]
     }
