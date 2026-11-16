@@ -23,8 +23,10 @@ import Testing
         #expect(wolf.health == 40 && wolf.maximumHealth(enchantments: [:]) == 40 && wolf.sittingOrder == true)
         #expect(wolf.appearance == CreatureAppearance(variant: "minecraft:pale") && wolf.collarColor == "orange")
         #expect(wolf.equipment?["body"]?.durability == ItemDurability(remaining: 47, maximum: 64))
-        let bytes = try PropertyListEncoder().encode(RegionContents(containers: [], signs: [], namedCreatures: [wolf]))
-        #expect(try PropertyListDecoder().decode(RegionContents.self, from: bytes).namedCreatures == [wolf])
+        var facts = RegionFacts(dimension: "minecraft:overworld", region: .init(x: 0, z: 0), options: .init())
+        facts.creatures = [wolf]
+        let bytes = try PropertyListEncoder().encode(facts)
+        #expect(try PropertyListDecoder().decode(RegionFacts.self, from: bytes).creatures == [wolf])
     }
 
     @Test func catAndParrotRetainTheirSavedDetails() throws {

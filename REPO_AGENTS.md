@@ -299,6 +299,13 @@ values retain their block-entity identities for repeated lookups. Records-only q
 only their needed upgrades; signs keep saved identity/position while sharing upgraded text, and
 sign/spawner-only reads avoid walking unrelated inventories. `SavedChunkFields` owns root/Level selection, including existing
 field-specific malformed-input precedence. Raw NBT APIs and saved files remain unchanged.
+The #360 contents cleanup uses one shared records-only traversal for `Dimension.containers`
+and `Dimension.contents`; only the latter constructs signs. `RegionContents` retains containers
+and signs, while its unused named-creature and spawner projections are removed as a breaking
+API change requiring a minor release. The full `Dimension.scan` still returns every creature
+and spawner in `RegionFacts`; those readers, cached facts and interpretation contracts remain
+unchanged. Both selective queries retain embedded and separate entity inventories and the same
+format upgrades, ordering and file-error handling.
 The #314 ownership change added no supported format or numeric conversion. The #316 field-codec
 audit in foundation step 4a establishes each game's reader before changing a field family.
 Typed terrain facts expose the explicitly requested used-biome membership, a middle-column
