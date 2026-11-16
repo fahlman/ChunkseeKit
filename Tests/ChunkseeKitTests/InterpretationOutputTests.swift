@@ -348,8 +348,10 @@ import Testing
         let dimension = Dimension(id: "example:world", url: root)
         try BlockCountFixture.writeMixedRegion(in: dimension)
         let counts = try dimension.countBlocks(region: BlockCountFixture.region, matching: BlockCountFixture.ids)
-        // The first witness is deliberately pending independent review on #359.
-        try check(counts, version: RegionBlockCounts.interpretationVersion, baselines: [:], propertyListBaselines: [:])
+        // Independently reconstructed from the fixture's expected counts on #359/6919625016.
+        let version = InterpretationVersion(domain: "blockCounts", revision: 1, generatedFacts: "", dependencies: [terrain2])
+        try check(counts, version: RegionBlockCounts.interpretationVersion, baselines: [:],
+                  propertyListBaselines: [version: "c910ab79f831d6cdee938eeafdd40a9043fcd43bb0d935348321024a6e244861"])
     }
 
     private struct MaterialOutput: Encodable {
