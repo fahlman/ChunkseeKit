@@ -42,6 +42,13 @@ public struct BlockCountIndex: Sendable {
         }
     }
 
+    /// A match is one chunk/group row, including distinct groups in the same chunk.
+    /// The full total and the limited nearest rows come from the same retained counts.
+    public struct DepositMatches: Sendable, Equatable {
+        public let totalCount: Int
+        public let nearest: [ChunkDeposit]
+    }
+
     public let dimension: String
     public private(set) var regions: [RegionPosition: Region] = [:]
 
@@ -97,7 +104,15 @@ public struct BlockCountIndex: Sendable {
     /// never displaces a nearer match. Different windows can query this same snapshot independently.
     public func nearestDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
                                 from origin: BlockSearchOrigin, limit: Int) -> [ChunkDeposit] {
-        guard limit > 0, !groups.isEmpty else { return [] }
+        guard limit > 0 else { return [] }
+        return matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit).nearest
+    }
+
+    /// Counts every matching row before limiting nearest membership. A nonpositive limit
+    /// requests only the total; unsearched regions are not counted as zero-match results.
+    public func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
+                                 from origin: BlockSearchOrigin, limit: Int) -> DepositMatches {
+        guard !groups.isEmpty else { return DepositMatches(totalCount: 0, nearest: []) }
         var found: [ChunkDeposit] = []
         for entry in regions.values {
             guard let counts = entry.counts else { continue }
@@ -107,10 +122,11 @@ public struct BlockCountIndex: Sendable {
                 }
             }
         }
-        return Self.nearest(found, from: origin, limit: limit)
+        return DepositMatches(totalCount: found.count, nearest: Self.nearest(found, from: origin, limit: limit))
     }
 
     private static func nearest(_ values: [ChunkDeposit], from origin: BlockSearchOrigin, limit: Int) -> [ChunkDeposit] {
+        guard limit > 0 else { return [] }
         let ranked = values.map { (value: $0, distance: origin.distance(to: $0.chunk)) }.sorted {
             if $0.distance != $1.distance { return $0.distance < $1.distance }
             return ($0.value.chunk.x, $0.value.chunk.z, $0.value.deposit.block.id)

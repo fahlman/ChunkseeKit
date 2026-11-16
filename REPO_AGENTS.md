@@ -137,9 +137,14 @@ remain distinct; failures/invalidation retain last good values without claiming 
 Deletion removes contributions. Clients own file stamps, source/task lifetimes and scheduling.
 BlockSearchOrigin owns finite X/Z distance and occupied-region ring ordering. nearestDeposits
 ranks by chunk-center distance before the client limit, with chunk X/Z and group ID tie breaks.
+matchingDeposits returns both that nearest list and the full matching chunk/group-row total
+from one grouping pass. Nonpositive limits return only the total; nearestDeposits keeps its
+existing empty-list behavior. Totals describe currently retained counts, including last-good
+values after a failed refresh, not an estimate for unsearched regions.
 Raw counts are shared; origin and grouping are query inputs, so windows order independently.
 The app owns captured-player/fixed-map-center lifetime and the main-index-first background pass.
-These are breaking unreleased APIs in the single #359/#576/#581 minor-release/cache revision.
+The compact count APIs were released in the single 0.90.0 #359/#576/#581 cache revision.
+The additive query-total result changes no saved-fact interpretation or cache contract.
 
 `ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
 failed-read retention, selected deletion and complete cross-region aggregates. Its public
