@@ -1,4 +1,5 @@
 import ChunkseeKitTestSupport
+import CryptoKit
 import Foundation
 import Testing
 @testable import ChunkseeKit
@@ -56,11 +57,27 @@ import Testing
             generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574", dependencies: [terrain2])
     }
 
+    private var regionFacts36: InterpretationVersion {
+        .init(domain: "regionFacts", revision: 36,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574", dependencies: [terrain2])
+    }
+
     private func check(_ output: some Encodable, version: InterpretationVersion,
-                       baselines: [InterpretationVersion: String]) throws {
+                       baselines: [InterpretationVersion: String],
+                       propertyListBaselines: [InterpretationVersion: String]) throws {
         let actual = try InterpretationKey.identity(of: output)
-        #expect(baselines[version] == actual,
-                "\(version.domain) revision \(version.revision), output SHA-256: \(actual)")
+        #expect(propertyListBaselines[version] == actual,
+                "\(version.domain) revision \(version.revision), plist output SHA-256: \(actual)")
+        // Keep the former JSON witnesses in tests only. Unchanged reader contracts must
+        // still reproduce them, independently of the new cache-key serialization.
+        if let previous = baselines[version] {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            encoder.nonConformingFloatEncodingStrategy = .convertToString(
+                positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+            let legacy = SHA256.hash(data: try encoder.encode(output)).map { String(format: "%02x", $0) }.joined()
+            #expect(previous == legacy, "\(version.domain) changed its previously witnessed decoded output")
+        }
     }
 
     private struct TerrainOutput: Encodable {
@@ -107,7 +124,8 @@ import Testing
         let chunks = try inputs.map { try Chunk(nbt: NBT.read($0.serialized()).value) }
         try check(chunks.map(TerrainOutput.init), version: Chunk.interpretationVersion,
                   baselines: [terrain1: "ae9a3a62f0596f582fbb599d79c3e54c67561c96aba3cd644fa803883c5aeeff",
-                              terrain2: "ae9a3a62f0596f582fbb599d79c3e54c67561c96aba3cd644fa803883c5aeeff"])
+                              terrain2: "ae9a3a62f0596f582fbb599d79c3e54c67561c96aba3cd644fa803883c5aeeff"],
+                  propertyListBaselines: [terrain2: "5f1c251c8e6ee29525e6d44ecabd120f74dc8049fc94e25e42465c1a7e854c1b"])
     }
 
     private struct LightOutput: Encodable {
@@ -146,7 +164,8 @@ import Testing
         }
         try check(outputs, version: MonsterSpawnLight.interpretationVersion,
                   baselines: [light1: "e2031b194a46173a4fdbb2fe315f70816af820d8081a54cf537b8726bb7ecefb",
-                              light1Terrain2: "e2031b194a46173a4fdbb2fe315f70816af820d8081a54cf537b8726bb7ecefb"])
+                              light1Terrain2: "e2031b194a46173a4fdbb2fe315f70816af820d8081a54cf537b8726bb7ecefb"],
+                  propertyListBaselines: [light1Terrain2: "9b56aedf1ad4e3a8e754c414ab2903ae3c99252ac9bf8daa7bb5d4d3779089da"])
     }
 
     @Test func regionArchiveOutputMatchesItsRevision() throws {
@@ -159,7 +178,7 @@ import Testing
         try fixture.write(fixture.poiChunk, in: .pointsOfInterest, dimension: dimension)
         let facts = try dimension.scan(region: fixture.region,
             options: .init(blockIDs: ["minecraft:diamond_ore", "minecraft:gold_ore"]))
-        let reopened = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
+        let reopened = try PropertyListDecoder().decode(RegionFacts.self, from: PropertyListEncoder().encode(facts))
         #expect(try InterpretationKey.identity(of: reopened) == InterpretationKey.identity(of: facts))
         try check(facts, version: RegionFacts.interpretationVersion,
                   baselines: [regionFacts29: "c0e7507380146274ce8e2148ed89e1c5bf65dd0d7f3a0559690c482ee5019ec3",
@@ -169,7 +188,8 @@ import Testing
                               // The archive embeds its complete interpretation identity.
                               regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520",
                               regionFacts34: "1771b2cce9e3308c4e5a00ced2b402e0a7e4efba6d230cc3491597fc7ea805f2",
-                              regionFacts35: "332a6537d38f40549930defbdebae1dbc2dcf14fed89e2de4742877550d125b7"])
+                              regionFacts35: "332a6537d38f40549930defbdebae1dbc2dcf14fed89e2de4742877550d125b7"],
+                  propertyListBaselines: [regionFacts36: "1754565cfd678ece1cc1912a7d6e11169c97fd93acf43a7b2862dab607bbe2a9"])
     }
 
     private struct NumericCase {
@@ -252,7 +272,8 @@ import Testing
         }
         #expect(rows.count == 434)
         try check(rows, version: Chunk.interpretationVersion,
-                  baselines: [terrain2: "d04dd6272c3deabe0292f97923df3b080ede05e742fd85ec3ee651b9f82ca409"])
+                  baselines: [terrain2: "d04dd6272c3deabe0292f97923df3b080ede05e742fd85ec3ee651b9f82ca409"],
+                  propertyListBaselines: [terrain2: "8042173d4715db2f3d6dd5ce1fc2b3ae3f6dadd6615ec6002ae0e22edbb3789c"])
     }
 
     @Test func numericLightOutputMatchesItsRevision() throws {
@@ -278,7 +299,8 @@ import Testing
         }
         #expect(rows.count == 1736)
         try check(rows, version: MonsterSpawnLight.interpretationVersion,
-                  baselines: [light1Terrain2: "19c9400af6529cb7162d22380b42b519fd3a80c0cef456e24be2334adbe2c5a8"])
+                  baselines: [light1Terrain2: "19c9400af6529cb7162d22380b42b519fd3a80c0cef456e24be2334adbe2c5a8"],
+                  propertyListBaselines: [light1Terrain2: "ae53ead3c78b421bf59307922311d3f249d57c48038e75b16f0efa963593c5f7"])
     }
 
     @Test func numericRegionArchiveOutputMatchesItsRevision() throws {
@@ -293,7 +315,7 @@ import Testing
         let url = dimension.regionURL(.terrain, at: position)
         try Fixtures.write(bytes, to: url)
         let scanned = try dimension.scan(region: position)
-        let facts = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(scanned))
+        let facts = try PropertyListDecoder().decode(RegionFacts.self, from: PropertyListEncoder().encode(scanned))
         #expect(try InterpretationKey.identity(of: facts) == InterpretationKey.identity(of: scanned))
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
         #expect(try Data(contentsOf: url) == Data(bytes))
@@ -320,7 +342,8 @@ import Testing
                               regionFacts32: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts34: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
-                              regionFacts35: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"])
+                              regionFacts35: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"],
+                  propertyListBaselines: [regionFacts36: "0910e59c0f113812296aa50f8951275f486ab7fcab82422dbeb41bf71e4cd57e"])
     }
 
     private struct MaterialOutput: Encodable {
@@ -367,6 +390,7 @@ import Testing
                   version: GameAssets.interpretationVersion,
                   baselines: [assets1: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4",
                               assets2: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4",
-                              assets2VillagerDefaults: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"])
+                              assets2VillagerDefaults: "21b2a5cfcac1160d1035ff73771e624da71c7db8c44def3326cdb04657f8dae4"],
+                  propertyListBaselines: [assets2VillagerDefaults: "b9fafe7a17f775ca987442a329517cb6d37a0296da846902ebd13a233ab7ea59"])
     }
 }

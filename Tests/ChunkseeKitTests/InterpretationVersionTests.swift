@@ -13,10 +13,10 @@ import Testing
         let original = ["z": ["path": "example/a", "name": "Café"], "a": ["d": "4", "c": "3"]]
         let reordered = ["a": ["c": "3", "d": "4"], "z": ["name": "Café", "path": "example/a"]]
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
-        #expect(try InterpretationKey.identity(of: original)
-            == "009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33")
-        #expect(try InterpretationKey.identity(of: [1.25, -2.5])
-            == "6bf41ffa52c6edc6600452cd4f3ce54983f8b48cbc9761f8c15debf2d97e562b")
+        let dictionaryIdentity = try InterpretationKey.identity(of: original)
+        let numberIdentity = try InterpretationKey.identity(of: [1.25, -2.5])
+        #expect(dictionaryIdentity == "009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33")
+        #expect(numberIdentity == "6bf41ffa52c6edc6600452cd4f3ce54983f8b48cbc9761f8c15debf2d97e562b")
     }
 
     @Test func nonfiniteNumbersHaveStableDistinctIdentities() throws {
