@@ -110,10 +110,17 @@ import Testing
         for order in 0..<2 {
             let output = root.appendingPathComponent("identity-\(order).plist")
             let process = Process(), pipe = Pipe()
-            // SwiftPM's generated runner accepts this library selector and Swift Testing filter.
-            // Re-enter only this case, taking its child branch before another process can start.
+            // SwiftPM can load a test bundle through a helper rather than execute the bundle.
+            // Preserve its loader arguments and replace only the filter when re-entering this case.
             process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
-            process.arguments = ["--testing-library", "swift-testing", "--filter", "persistentIdentityAcrossFreshProcesses"]
+            var arguments: [String] = [], index = 1
+            while index < CommandLine.arguments.count {
+                let argument = CommandLine.arguments[index]
+                if argument == "--filter" { index += 2; continue }
+                if !argument.hasPrefix("--filter=") { arguments.append(argument) }
+                index += 1
+            }
+            process.arguments = arguments + ["--filter", "persistentIdentityAcrossFreshProcesses"]
             var environment = ProcessInfo.processInfo.environment
             environment[outputKey] = output.path; environment[orderKey] = String(order)
             process.environment = environment
@@ -122,6 +129,8 @@ import Testing
             let log = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             try #require(process.terminationStatus == 0, "\(String(decoding: log, as: UTF8.self))")
+            try #require(FileManager.default.fileExists(atPath: output.path),
+                "No identity from \(process.executableURL?.path ?? "") \(process.arguments ?? []): \(String(decoding: log, as: UTF8.self))")
             let value = try PropertyListDecoder().decode([String].self, from: Data(contentsOf: output))
             identities.append(try #require(value.first))
         }
