@@ -15,8 +15,10 @@ import Testing
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
         let dictionaryIdentity = try InterpretationKey.identity(of: original)
         let numberIdentity = try InterpretationKey.identity(of: [1.25, -2.5])
-        #expect(dictionaryIdentity == "009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33")
-        #expect(numberIdentity == "6bf41ffa52c6edc6600452cd4f3ce54983f8b48cbc9761f8c15debf2d97e562b")
+        // Former JSON witnesses: dictionary 009788e0156d2ded8379f546db8cc78fa9bafd38dd93d5c8f65466b534df9b33;
+        // numbers 6bf41ffa52c6edc6600452cd4f3ce54983f8b48cbc9761f8c15debf2d97e562b.
+        #expect(dictionaryIdentity == "599ec3698bf4dbf6e94c28546db1407f7fa390d9143d63f018bd3e15643ba7d2")
+        #expect(numberIdentity == "7e2056a789419945af559fea76944db173d59e17ab605fde45c7d90c77e53f97")
     }
 
     @Test func nonfiniteNumbersHaveStableDistinctIdentities() throws {
@@ -97,7 +99,7 @@ import Testing
                 for name in keys { values[name] = .some(name == "a" ? 1.25 : nil) }
                 nested[key] = values
             }
-            let options = RegionScanOptions(blockIDs: Set(keys), biomeIDs: Set(keys), structurePieceIDs: Set(keys))
+            let options = RegionScanOptions(biomeIDs: Set(keys), structurePieceIDs: Set(keys))
             let identity = try InterpretationKey.identity(of: Input(nested: nested, options: options))
             try PropertyListEncoder().encode([identity]).write(to: URL(fileURLWithPath: output))
             return
@@ -153,10 +155,10 @@ import Testing
 
     @Test func regionArchiveIdentityIsIndependentOfSetInsertionOrder() throws {
         var first = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0),
-                                options: .init(blockIDs: Set(["example:a", "example:b"])))
+                                options: .init(biomeIDs: Set(["example:a", "example:b"])))
         first.paletteBlockIDs = Set(["example:a", "example:b", "example:c"])
         var reordered = RegionFacts(dimension: "example:world", region: .init(x: 0, z: 0),
-                                    options: .init(blockIDs: Set(["example:b", "example:a"])))
+                                    options: .init(biomeIDs: Set(["example:b", "example:a"])))
         reordered.paletteBlockIDs = Set(["example:c", "example:b", "example:a"])
         #expect(try InterpretationKey.identity(of: first) == InterpretationKey.identity(of: reordered))
         reordered.paletteBlockIDs.insert("example:d")
@@ -238,11 +240,9 @@ import Testing
     }
 
     @Test func completeScanOptionsHaveStableUnorderedInputs() throws {
-        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]),
-            biomeIDs: Set(["example:dry", "example:wet"]), structurePieceIDs: Set(["example:door", "example:room"]),
+        let original = RegionScanOptions(biomeIDs: Set(["example:dry", "example:wet"]), structurePieceIDs: Set(["example:door", "example:room"]),
             biomeSampleY: 20, height: 384)
-        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]),
-            biomeIDs: Set(["example:wet", "example:dry"]), structurePieceIDs: Set(["example:room", "example:door"]),
+        let reordered = RegionScanOptions(biomeIDs: Set(["example:wet", "example:dry"]), structurePieceIDs: Set(["example:room", "example:door"]),
             biomeSampleY: 20, height: 384)
         #expect(original == reordered)
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
@@ -252,8 +252,6 @@ import Testing
         changed = original
         changed.height = 256
         #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
-        #expect(try InterpretationKey.identity(of: RegionScanOptions(blockIDs: nil))
-            != InterpretationKey.identity(of: RegionScanOptions(blockIDs: [])))
         #expect(try InterpretationKey.identity(of: RegionScanOptions(biomeIDs: nil))
             != InterpretationKey.identity(of: RegionScanOptions(biomeIDs: [])))
         #expect(try InterpretationKey.identity(of: RegionScanOptions(structurePieceIDs: nil))

@@ -20,6 +20,7 @@ enum NotableBlockFixtures {
 
     static func catalog() throws -> NotableBlock.Catalog {
         let jar = try assets([
+            tag("ores", ["#diamond_ores", "#emerald_ores", "#gold_ores", "#lapis_ores"]),
             tag("diamond_ores", ["diamond_ore", "deepslate_diamond_ore"]),
             tag("emerald_ores", ["emerald_ore", "deepslate_emerald_ore"]),
             tag("gold_ores", ["gold_ore", "deepslate_gold_ore", "nether_gold_ore"]),
@@ -29,4 +30,12 @@ enum NotableBlockFixtures {
         for id in NotableBlock.tagIDs { tags[id] = try jar.tag(id, in: "block") }
         return NotableBlock.Catalog(tags: tags)
     }
+}
+
+// Named expectations belong to these fixed fixtures, not the production catalog.
+extension NotableBlock {
+    static let diamond = Self.tag("minecraft:diamond_ores")
+    static let emerald = Self.tag("minecraft:emerald_ores")
+    static let gold = Self.tag("minecraft:gold_ores")
+    static let lapis = Self.tag("minecraft:lapis_ores")
 }

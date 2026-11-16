@@ -89,6 +89,7 @@ struct ResourceTagReader {
         guard !stack.isEmpty else { return .missing }
         guard stack.reduce(0, { $0 + $1.count }) <= 4096 else { return .unavailable }
         var members: [GameTag.Member] = [], indices: [String: Int] = [:]
+        var entries: [GameTag.Entry] = []
         for entry in stack.joined() {
             try Task.checkCancellation()
             let resolved: ResourceRead<GameTag>
@@ -107,6 +108,8 @@ struct ResourceTagReader {
             case .unavailable: return .unavailable
             case .value(let tag):
                 guard budget.consume(tag.members.count) else { return .unavailable }
+                entries.append(.init(id: entry.id, isTag: entry.isTag, required: entry.required,
+                                     members: tag.members))
                 for member in tag.members {
                     if let index = indices[member.id] {
                         // One declaration can require an ID that another mentions optionally.
@@ -119,6 +122,6 @@ struct ResourceTagReader {
                 }
             }
         }
-        return .value(GameTag(members: members))
+        return .value(GameTag(members: members, entries: entries))
     }
 }

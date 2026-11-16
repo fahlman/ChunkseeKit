@@ -1,68 +1,67 @@
 import ChunkseeKit
 
-/// Existing block-search groups. Names and presentation belong to clients.
-/// Group selection is product policy; ore membership comes from the world's block tags.
-/// The app's original measurements on Ryan's Realm found coal, iron, copper and redstone in about
-/// a third of sections, making their counting several times costlier (fahlman/Chunksee#81).
-public enum NotableBlock: String, CaseIterable, Sendable {
-    case diamond, emerald, gold, netherGold, lapis, ancientDebris, spawner, trialSpawner, buddingAmethyst
+/// A search group declared by the game's ore tag, or an explicitly chosen individual block.
+/// Names and presentation belong to clients; there is no maintained list of ore types.
+public enum NotableBlock: Sendable, Hashable {
+    case tag(String)
+    case block(String)
 
-    private var tagID: String? {
-        switch self {
-        case .diamond: "minecraft:diamond_ores"
-        case .emerald: "minecraft:emerald_ores"
-        case .gold: "minecraft:gold_ores"
-        case .lapis: "minecraft:lapis_ores"
-        default: nil
-        }
+    public var resourceID: String {
+        switch self { case .tag(let id), .block(let id): id }
     }
 
-    private var selectedBlockID: String? {
-        switch self {
-        case .netherGold: "minecraft:nether_gold_ore"
-        case .ancientDebris: "minecraft:ancient_debris"
-        case .spawner: "minecraft:spawner"
-        case .trialSpawner: "minecraft:trial_spawner"
-        case .buddingAmethyst: "minecraft:budding_amethyst"
-        default: nil
-        }
+    /// Tags and blocks can have the same resource name without sharing a group identity.
+    public var id: String {
+        switch self { case .tag(let id): "#" + id; case .block(let id): id }
     }
 
-    /// Resolve these through World.tags(for:in:assets:) in the block registry.
-    public static var tagIDs: Set<String> { Set(allCases.compactMap(\.tagID)) }
+    // Ryan's explicit product exceptions (app #576), independent of ore-tag membership.
+    public static let netherGold = Self.block("minecraft:nether_gold_ore")
+    public static let ancientDebris = Self.block("minecraft:ancient_debris")
+    public static let spawner = Self.block("minecraft:spawner")
+    public static let trialSpawner = Self.block("minecraft:trial_spawner")
+    public static let buddingAmethyst = Self.block("minecraft:budding_amethyst")
 
-    /// One world's immutable grouping snapshot. The same catalog supplies the scan IDs and
-    /// the index's grouping policy. Missing tags stay unknown, distinct from valid empty tags.
+    /// Resolve through World.tags(for:in:assets:) in the block registry.
+    public static let tagIDs: Set<String> = ["minecraft:ores"]
+
+    /// One world's immutable grouping snapshot. Raw counts are independent of this value,
+    /// so regrouping already counted IDs requires no scan and never retires the core index.
     public struct Catalog: Sendable, Equatable {
         private let idsByGroup: [NotableBlock: Set<String>]
         private let groupsByID: [String: [NotableBlock]]
+        public let hasOreDefinitions: Bool
 
         public init(tags: [String: GameTag]) {
             var ids: [NotableBlock: Set<String>] = [:]
-            for group in NotableBlock.allCases {
-                if let tagID = group.tagID, let tag = tags[tagID] {
-                    ids[group] = Set(tag.members.map(\.id))
-                } else if let id = group.selectedBlockID {
-                    ids[group] = [id]
-                }
+            let ores = tags["minecraft:ores"]
+            hasOreDefinitions = ores != nil
+            for entry in ores?.entries ?? [] {
+                let group: NotableBlock = entry.isTag ? .tag(entry.id) : .block(entry.id)
+                ids[group, default: []].formUnion(entry.members.map(\.id))
             }
             // The product has a separate Nether Gold search group, even though the game
             // includes that block in gold_ores. No other tag membership is overridden.
-            if let netherGold = NotableBlock.netherGold.selectedBlockID {
-                ids[.gold]?.remove(netherGold)
+            for group in Array(ids.keys) where group != .netherGold {
+                ids[group]?.remove(NotableBlock.netherGold.resourceID)
+            }
+            for group in [NotableBlock.netherGold, .ancientDebris, .spawner, .trialSpawner, .buddingAmethyst] {
+                ids[group] = [group.resourceID]
             }
             idsByGroup = ids
             var reverse: [String: [NotableBlock]] = [:]
-            for group in NotableBlock.allCases.sorted(by: { $0.rawValue < $1.rawValue }) {
+            for group in ids.keys.sorted(by: { $0.id < $1.id }) {
                 for id in ids[group] ?? [] { reverse[id, default: []].append(group) }
             }
             groupsByID = reverse
         }
 
+        public var groups: [NotableBlock] { idsByGroup.keys.sorted { $0.id < $1.id } }
+
         /// Nil means an ore tag was unavailable; an empty set is known empty membership.
         public func ids(for group: NotableBlock) -> Set<String>? { idsByGroup[group] }
 
-        /// The union of readable groups, for RegionScanOptions.blockIDs.
+        /// The requested coverage for Dimension.countBlocks, independent of core scan options.
         public var blockIDs: Set<String> { Set(groupsByID.keys) }
 
         /// A saved ID may belong to multiple tags; each corresponding search group retains it.
@@ -85,7 +84,7 @@ public enum NotableBlock: String, CaseIterable, Sendable {
             self.block = block; self.count = count; self.minY = minY; self.maxY = maxY
         }
 
-        /// Combines the core reader's per-ID counts, ordered by the group's raw value.
+        /// Combines the terrain reader's per-ID counts, ordered by the group's identity.
         /// Blocks outside the supplied catalog are omitted.
         public static func grouped(_ deposits: [ChunkseeKit.BlockDeposit], using catalog: Catalog) -> [Self] {
             var found: [NotableBlock: Self] = [:]
@@ -101,7 +100,7 @@ public enum NotableBlock: String, CaseIterable, Sendable {
                     }
                 }
             }
-            return found.values.sorted { $0.block.rawValue < $1.block.rawValue }
+            return found.values.sorted { $0.block.id < $1.block.id }
         }
     }
 }

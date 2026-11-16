@@ -140,26 +140,34 @@ if query.filter == .pet && query.matches("Summer minecraft:wolf") { /* matching 
 let phrase = SearchQuery(phrase: "red and blue") // CLI-compatible contiguous phrase
 ```
 
-**Notable block groups:** `NotableBlock` keeps the existing nine product search groups.
-Its immutable `Catalog` takes diamond, emerald, gold and lapis membership from the world's
-composed block tags; custom and optional declared IDs count when found in saved blocks. Nether
-gold remains a separate product group and is explicitly removed from the gold group. Ancient
-debris, spawners, trial spawners and budding amethyst remain individually selected product IDs.
-A missing tag returns nil from `ids(for:)`, distinct from a known empty set; there is no fallback
-ore inventory. An ID in multiple tags contributes to each corresponding group.
+**Notable block groups (unreleased):** `NotableBlock` now identifies a game tag or an individual
+block. `Catalog` reads the effective entries of `minecraft:ores`; packs can add/replace groups
+and direct members without code changes. Nested tags use the existing shared composition rules.
+Nether Gold remains separate; ancient debris, spawners, trial spawners and budding amethyst are
+explicit product exceptions. Missing ore definitions do not invent a fallback list. Names and
+symbols remain client choices.
 
-Resolve `NotableBlock.tagIDs` once through `World.tags(for:in:assets:)`, construct a catalog and
-use its `blockIDs` for the scan. Pass that same catalog to `Deposit.grouped(_:using:)`,
-`RegionIndex` and `DimensionIndex`. Counts retain enclosing section-height ranges, not exact
-block positions. Group order uses the group's raw value; labels and symbols remain client choices.
-This intentionally replaces the static `ids`/`byID` APIs and adds required catalog parameters,
-requiring a minor release and app migration. A new resource snapshot needs a new dimension index
-and scans for its current block IDs; replacements made under a different catalog are rejected.
-Core decoding, serialized RegionFacts and its interpretation version are unchanged.
+Counts are independent of the main world index. Read `Dimension.countBlocks(region:matching:)`
+with the catalog's `blockIDs`, persist its `RegionBlockCounts` using a binary property list, and
+include the terrain file stamp and complete count interpretation in the cache identity. Requested
+IDs are retained as coverage, including absent IDs. Unreadable terrain throws; a missing file is
+empty. Entity/POI changes and tag regrouping do not retire these raw counts.
+
+`BlockCountIndex` retains those counts, tracks failed versus unsearched versus complete coverage,
+and selects `nearestDeposits(matching:using:from:limit:)` for a `BlockSearchOrigin`. It ranks before
+the limit, using chunk-center distance and stable coordinate/group tie breaks. Different windows
+can use the same counts with different captured origins. New tag groups over known IDs require
+no rescan; new IDs need coverage. Clients own task sharing, file-stamp invalidation, captured
+origin lifetime, and scheduling the outward pass after the main index.
+
+This is a breaking minor-release change: the fixed ore cases/CaseIterable/rawValue,
+RegionScanOptions.blockIDs, TerrainChunkFacts.blockDeposits, RegionIndex.blocks/catalog,
+DimensionIndex.blocks/catalog/ChunkDeposit and WorldIndex.richestDeposits are removed. Use
+`NotableBlock.tag`/`.block`, `Catalog.groups`, `NotableBlock.id` and the separate count APIs.
 
 **v0.46.0:** `RegionIndex` retains compact search inputs from `RegionFacts`, discarding the large
 terrain grids. `DimensionIndex` combines retained regions, storage totals, portals, biome areas and
-notable deposits. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
+other core facts. Its `updating(available:selected:replacements:)` returns a new snapshot: omitted
 available replacements retain the last good data, selected missing regions are removed, and a nil
 selection reconciles the whole dimension. A partial selection leaves other regions untouched after
 the first completed pass. Call `regionsToRead(available:selected:)` to schedule the reads: the first
@@ -177,11 +185,9 @@ and publication remain outside the index. These values introduce no persisted ca
 
 ```swift
 let caves: Set<String> = ["minecraft:lush_caves"] // example client policy
-let tags = try world.tags(for: NotableBlock.tagIDs, in: "block", assets: assets)
-let blocks = NotableBlock.Catalog(tags: tags)
-let facts = try dimension.scan(region: position, options: .init(blockIDs: blocks.blockIDs))
-let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves, notableBlocks: blocks)
-let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves, notableBlocks: blocks)
+let facts = try dimension.scan(region: position, options: .init(biomeIDs: caves))
+let region = ChunkseeIndex.RegionIndex(facts, caveBiomeIDs: caves)
+let previous = ChunkseeIndex.DimensionIndex(dimension: facts.dimension, caveBiomeIDs: caves)
 let current = previous.updating(available: [facts.region], selected: nil, replacements: [region])
 ```
 
@@ -219,13 +225,8 @@ inferred main-hand copy. `BookContent.searchText` joins saved title, author and 
 The CLI uses these inputs; clients still supply localized names and display formatting.
 
 `SearchQuery.Filter.includes(_:)` supplies creature-category membership, including villagers for
-trade searches. `WorldIndex.richestDeposits(matching:limit:in:)` selects the strongest matching
-deposits across dimensions from arrays in any order. It keeps each
-result's dimension and height bounds. Deposits sort by count descending, then dimension ID,
-chunk X, chunk Z and block-group ID ascending. This makes ties at the result limit stable across
-unchanged saves. The selector ranks matches before limiting each dimension and the combined
-result, using the same internal ordering rule as `DimensionIndex.blocks`. Clients choose the
-result limit, match localized block names to kinds, and convert selected chunks to map pins.
+trade searches. Block selection is now owned by `BlockCountIndex`, described above; it ranks
+nearest results per dimension instead of applying the former world-wide richest cutoff.
 
 Typed search results, remaining CLI adoption and app adoption are tracked in fahlman/Chunksee#214.
 Core decoding and low-level file APIs stay in ChunkseeKit.
@@ -618,14 +619,14 @@ in v0.40.0; app adoption is tracked separately on fahlman/ChunkseeKit#51.
 `Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
 pass. Each chunk payload is decoded once. The result contains containers, signs, spawners,
 compact structure starts, creatures, POIs, inhabited time and readable/legacy format counts. Its
-typed terrain chunks include selected actually used biome IDs, a sampled biome, and block counts
-with the enclosing section-height ranges. It does not choose UI groups,
+typed terrain chunks include selected actually used biome IDs and a sampled biome. Block counts
+have a separate terrain-only pass. It does not choose UI groups,
 combine biome areas, name ores, or run search queries.
 
 ```swift
 let region = RegionPosition(x: -1, z: 2)
 let options = RegionScanOptions(
-    blockIDs: ["minecraft:diamond_ore", "minecraft:deepslate_diamond_ore"],
+    biomeIDs: ["minecraft:lush_caves"], // example client membership policy
     biomeSampleY: overworld.id == "minecraft:the_nether" ? 64 : nil
 )
 let facts = try overworld.scan(region: region, options: options)
@@ -636,7 +637,7 @@ let cacheData = try encoder.encode(facts)
 let restored = try PropertyListDecoder().decode(RegionFacts.self, from: cacheData)
 ```
 
-A nil block-ID set counts all IDs; an empty set skips counting. Nil biome-sampling Y uses the
+Nil biome-sampling Y uses the
 middle column's surface from the shared reader below. Supply a Y for a different sample (for example,
 64 under the Nether roof). Optional `height` is the dimension's actual build height, for decoding
 ambiguous heightmaps; it is never inferred from occupied sections. The used-biome list excludes
@@ -648,7 +649,7 @@ inhabited time and independent saved records remain. Legacy chunks contribute in
 and format counts without enabling legacy terrain decoding.
 
 **Unreleased compact-cache API change (#359):** `TerrainChunkFacts` no longer exposes
-`dataVersion`, `status`, `isFullyGenerated` or `heightmaps`. `RegionFacts.structures` and
+`dataVersion`, `status`, `isFullyGenerated`, `heightmaps` or `blockDeposits`. `RegionFacts.structures` and
 `RegionIndex.structures` contain `StructureFacts`, whose pieces are the requested subset.
 `RegionFormatCounts` retains only readable/legacy counts. `DimensionIndex` no longer concatenates
 structures or creatures; use its per-region contributions. Raw `Chunk` and `StructureStart` APIs
@@ -657,8 +658,7 @@ one minor release and app adoption.
 
 The additive `RegionFacts.paletteBlockIDs` catalog retains declared block IDs from fully generated
 chunks' saved palettes, including unused entries and modded names. It is collected during the same
-section walk, independent of `RegionScanOptions.blockIDs`, without another chunk decode or block
-traversal. It names available palette choices; it does not assert that every name occupies a block.
+section walk without counting block positions. It names available palette choices; it does not assert that every name occupies a block.
 `RegionIndex.paletteBlockIDs` retains the compact regional set and `DimensionIndex.paletteBlockIDs`
 unions the retained regions. Refresh, failed-read retention, replacement and deletion use the same
 rules as the other dimension aggregates. Partial/legacy/unreadable chunks contribute no names.

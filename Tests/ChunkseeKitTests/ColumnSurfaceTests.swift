@@ -46,12 +46,12 @@ import ChunkseeKit
         try Fixtures.write(Fixtures.region(chunks),
                            to: root.appendingPathComponent("dimensions/minecraft/overworld/region/r.0.0.mca"))
         let dimension = try #require(World(contentsOf: root).dimension("minecraft:overworld"))
-        let facts = try dimension.scan(region: .init(x: 0, z: 0), options: .init(blockIDs: []))
+        let facts = try dimension.scan(region: .init(x: 0, z: 0))
         let samples = Dictionary(uniqueKeysWithValues: facts.chunks.map { ($0.position.x, $0.sampledBiome) })
         #expect(samples[0] == .some("minecraft:desert"))
         #expect(samples[1] == .some(nil))
         #expect(samples[2] == .some(nil))
-        let explicit = try dimension.scan(region: .init(x: 0, z: 0), options: .init(blockIDs: [], biomeSampleY: 79))
+        let explicit = try dimension.scan(region: .init(x: 0, z: 0), options: .init(biomeSampleY: 79))
         #expect(explicit.chunks.first?.sampledBiome == "minecraft:snowy_taiga")
     }
 

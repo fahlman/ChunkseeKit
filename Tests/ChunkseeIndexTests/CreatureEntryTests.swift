@@ -51,7 +51,7 @@ import Testing
         try FileManager.default.createDirectory(at: root.appendingPathComponent("dimensions/minecraft/overworld"),
                                                 withIntermediateDirectories: true)
         let dimension = try #require(World(contentsOf: root).dimension("overworld"))
-        let coordinate = RegionPosition(x: 0, z: 0), catalog = NotableBlock.Catalog(tags: [:])
+        let coordinate = RegionPosition(x: 0, z: 0)
         let owner = UUID()
         let records: [NBT] = (0..<4).map { index in
             var fields: [String: NBT] = [
@@ -69,9 +69,9 @@ import Testing
         let file = dimension.regionURL(.entities, at: coordinate)
         try Fixtures.write(Fixtures.region([.init(localX: 0, localZ: 0, nbt: input)]), to: file)
         let bytes = try Data(contentsOf: file)
-        let facts = try dimension.scan(region: coordinate, options: .init(blockIDs: catalog.blockIDs))
-        let region = RegionIndex(facts, caveBiomeIDs: [], notableBlocks: catalog)
-        let index = DimensionIndex(dimension: dimension.id, caveBiomeIDs: [], notableBlocks: catalog)
+        let facts = try dimension.scan(region: coordinate)
+        let region = RegionIndex(facts, caveBiomeIDs: [])
+        let index = DimensionIndex(dimension: dimension.id, caveBiomeIDs: [])
             .updating(available: [coordinate], selected: nil, replacements: [region])
         let retained = try #require(index.regions[coordinate]).creatures
         #expect(retained.map(\.creature.id) == (0..<4).map { "future:mob_\($0)" })

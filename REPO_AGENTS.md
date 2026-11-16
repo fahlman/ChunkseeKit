@@ -106,20 +106,35 @@ that owner; app names, prompts, symbols, category membership and result formatti
 the library. This additive API is available in v0.44.0 and adopted by fahlman/Chunksee#385.
 Retained world-index state and typed result aggregation remain separate work on fahlman/Chunksee#214.
 
-`ChunkseeIndex.NotableBlock` owns the app's nine product search groups. Its immutable Catalog
-consumes the shared block-tag reader's diamond_ores, emerald_ores, gold_ores and lapis_ores;
-there is no copied ore-member list. Nether gold remains its explicitly separate product group,
-removed from gold, and the other individual block groups remain product choices. Missing tags
-stay distinct from known empty tags. Saved members of overlapping tags count in every relevant
-group, including optional declarations whose IDs occur in the save. Deposit groups per-ID counts
-and enclosing section-height bounds in stable group order. Labels and symbols remain client work.
-The same catalog supplies scan blockIDs and RegionIndex/DimensionIndex policy; mismatched
-replacement catalogs are rejected. A resource change requires a fresh dimension index and scans
-for the current IDs. This unreleased #228 change intentionally removes static ids/byID and
-requires catalog parameters on grouped/RegionIndex/DimensionIndex, so it needs a minor release
-and app adoption. Core decoding, serialized RegionFacts and its interpretation version do not
-change. Public tests compose jar/folder/ZIP tags, scan selected IDs, aggregate across groups,
-retain raw palette IDs, and reject contributions from another resource snapshot.
+`ChunkseeIndex.NotableBlock` is a tag or direct-block identity, not a fixed ore enum.
+Its Catalog consumes the composed `minecraft:ores` entries exposed by GameTag, retaining
+immediate effective tag groups and direct members, including pack additions and replacements.
+GameTag.entries reuses ResourceTagReader's existing composition, nesting, optional-reference,
+cycle and budget rules; flattened members remain available to existing consumers. No second
+resource reader or ore list is introduced. The explicit product exceptions remain Nether Gold,
+ancient debris, spawners, trial spawners and budding amethyst. Nether Gold is excluded from
+other groups. Empty tags remain distinct from unavailable definitions. Labels stay client-owned:
+pack `tag.` names or GameNames readable IDs for tags, ordinary block names for direct members.
+
+`Dimension.countBlocks(region:matching:)` owns the independent terrain-only pass. It uses the
+existing normalized chunk/palette counter, skips partial-generation chunks, and does not read
+entity/POI files, containers, biomes, structures or heightmaps. Missing terrain is empty;
+unreadable chunks/files and cancellation throw, never certify incomplete coverage. Its
+RegionBlockCounts property-list archive owns per-ID counts, section-height bounds, requested-ID
+coverage and a separate interpretation (revision 1, depending on the whole terrain contract).
+It declares no additional generated facts; those belong to the terrain dependency. Clients add
+their existing terrain file-stamp primitive to cache identity, not a second staleness rule.
+
+`ChunkseeIndex.BlockCountIndex` retains raw counts independently of core RegionIndex and
+DimensionIndex. Query-time catalogs regroup known IDs without file reads; requested new IDs
+require coverage before completion. Unsearched, completed empty, failed and completed counts
+remain distinct; failures/invalidation retain last good values without claiming fresh coverage.
+Deletion removes contributions. Clients own file stamps, source/task lifetimes and scheduling.
+BlockSearchOrigin owns finite X/Z distance and occupied-region ring ordering. nearestDeposits
+ranks by chunk-center distance before the client limit, with chunk X/Z and group ID tie breaks.
+Raw counts are shared; origin and grouping are query inputs, so windows order independently.
+The app owns captured-player/fixed-map-center lifetime and the main-index-first background pass.
+These are breaking unreleased APIs in the single #359/#576/#581 minor-release/cache revision.
 
 `ChunkseeIndex.RegionIndex` retains compact typed contributions; `DimensionIndex` owns replacement,
 failed-read retention, selected deletion and complete cross-region aggregates. Its public
@@ -127,7 +142,7 @@ regionsToRead method supplies the read set for both the client scheduler and upd
 pass always covers all available regions; a completed empty/failed pass is distinct from never-read.
 A broad pass removes
 all unavailable regions; a partial pass preserves unselected contributions. Replacements must match
-the dimension, selected/available coordinates, explicit cave-membership set and block catalog. Empty successful
+the dimension, selected/available coordinates, explicit cave-membership set. Empty successful
 reads clear old values; an omitted available replacement retains them. Region traversal is X then Z;
 native marker sort/presentation remains a client concern. Portal and biome joins happen after all
 retained contributions are combined. Heightmaps and inhabited-time grids are not retained.
@@ -177,20 +192,11 @@ or saved-ID key; StoredItemTotal uses saved IDs and keeps outer-container counts
 zero-count stack remains a result. This additive API is available in v0.47.0; app adoption follows the
 release on fahlman/Chunksee#214. No reader, inventory selection or cache meaning changes.
 
-SearchSelection owns the inventory-plus-saved-equipment input, saved book/sign search fields,
-creature-filter membership and strongest-deposit selection across dimensions. The CLI consumes
-PlayerInfo.searchableInventory, BookContent.searchText and Sign.searchLines from this module.
-Saved sign whitespace and book line boundaries remain significant to phrase queries; the app can
-trim captions separately. Filter.includes shares creature/pet/villager/trade membership, with
-offer matching still required for trades. `DimensionIndex.ChunkDeposit.orderedBefore` owns
-count-descending deposit order, then dimension ID, chunk X, chunk Z and block-group ID ascending.
-Both DimensionIndex.blocks and WorldIndex.richestDeposits use this internal comparator.
-The world query accepts arrays in any order and ranks matches before limiting each dimension
-and the combined result. This #351 change stabilizes tied membership and removes the earlier
-caller-order precondition without changing public signatures. No region/chunk read, serialized
-fact, interpretation identity or renderer changes. The app
-retains its display limit, localized search labels and marker/title/detail construction. These
-additive APIs are unreleased, with app adoption on fahlman/Chunksee#214. No core reader or cache change.
+SearchSelection owns inventory-plus-saved-equipment inputs, saved book/sign search fields and
+creature-filter membership. The CLI consumes PlayerInfo.searchableInventory, BookContent.searchText
+and Sign.searchLines from this module. Saved whitespace and line boundaries remain significant.
+The old WorldIndex.richestDeposits, DimensionIndex.ChunkDeposit/blocks and RegionIndex.blocks
+APIs are removed in the unreleased cache revision; BlockCountIndex owns nearest selection.
 
 `BiomeSampler` owns 26.3's seed-derived nearest biome-cell selection for four-block palettes.
 It hashes the raw world seed once with Apple's CryptoKit SHA-256 and uses the game's wrapped
@@ -278,7 +284,7 @@ field-specific malformed-input precedence. Raw NBT APIs and saved files remain u
 The #314 ownership change added no supported format or numeric conversion. The #316 field-codec
 audit in foundation step 4a establishes each game's reader before changing a field family.
 Typed terrain facts expose the explicitly requested used-biome membership, a middle-column
-biome sample and per-ID block counts/section bounds. The compact projection does not retain
+biome sample. Block counting has its own terrain-only pass. The compact projection does not retain
 heightmaps or generation metadata. Surface sampling still uses WORLD_SURFACE and the shared
 actual-height/fallback behavior. Incomplete generation contributes readable totals and independent
 saved records, with no empty terrain entry. Unsupported numeric chunks still contribute inhabited
@@ -290,7 +296,8 @@ RegionScanOptions inputs, with nil/all distinct from empty, and both enter persi
 The unused unreadable-format counters and dimension-wide structures/creatures arrays are removed
 explicitly; their per-region contributions remain. These are breaking public changes in the
 unreleased revision-36 cache work (#359), requiring a minor release and app adoption.
-No cache storage or task scheduling is introduced here.
+Block counts and their requested IDs are removed from RegionScanOptions, TerrainChunkFacts
+and the core index; the independent RegionBlockCounts path owns them. No task scheduling is introduced here.
 The revision in `RegionFacts.interpretationVersion` must increase whenever a fact reader changes
 meaning. Its typed `InterpretationVersion` also includes the release tool's generated-fact digest
 and `Chunk.interpretationVersion`, so terrain changes invalidate dependent scans without a copied
@@ -311,10 +318,10 @@ they do not gain a new Decodable contract. `InterpretationKey.identity(of:)` is 
 of persisted SHA-256 identities and canonical binary property-list encoding. It explicitly sorts
 keyed entries into ordered arrays and tags scalar values, independently of the writer's dictionary order.
 Consumers call it once per immutable catalog publication and never configure their own encoder.
-RegionScanOptions sorts its block, biome and structure-piece ID sets when encoding; nil and empty filters remain distinct.
+RegionScanOptions sorts its biome and structure-piece ID sets when encoding; nil and empty filters remain distinct.
 Enchantment definitions are resolved from typed health inputs after reading, so they no longer
 participate in the region scan or its persisted identity.
-Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
+Region and count archives explicitly sort their palette/coverage ID sets.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
 The canonical property-list tree encloses top-level scalars and distinguishes nil, text, booleans
 and numbers. Corresponding Float/Double non-finite inputs agree; all NaN payloads normalize, and

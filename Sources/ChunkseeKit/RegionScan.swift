@@ -64,7 +64,6 @@ extension TerrainChunkFacts {
     init(_ chunk: Chunk, at position: ChunkPosition, options: RegionScanOptions,
          paletteBlockIDs: inout Set<String>) throws {
         var usedBiomes = Set<String>()
-        var deposits: [String: BlockDeposit] = [:]
         for section in chunk.sections {
             try Task.checkCancellation()
             if options.biomeIDs?.isEmpty != true, let biomes = section.biomes {
@@ -75,23 +74,11 @@ extension TerrainChunkFacts {
             }
             guard let blocks = section.blockStates else { continue }
             for state in blocks.palette { paletteBlockIDs.insert(state.id) }
-            let wanted = blocks.palette.indices.filter { options.blockIDs?.contains(blocks.palette[$0].id) ?? true }
-            guard !wanted.isEmpty else { continue }
-            let bottom = section.y.multipliedReportingOverflow(by: 16)
-            let top = bottom.partialValue.addingReportingOverflow(15)
-            guard !bottom.overflow, !top.overflow else { continue }
-            let counts = blocks.paletteCounts()
-            for index in wanted where counts[index] > 0 {
-                let id = blocks.palette[index].id, previous = deposits[id]
-                deposits[id] = BlockDeposit(id: id, count: (previous?.count ?? 0) + counts[index],
-                                           minY: min(previous?.minY ?? bottom.partialValue, bottom.partialValue),
-                                           maxY: max(previous?.maxY ?? top.partialValue, top.partialValue))
-            }
         }
         // The surface query reads only WORLD_SURFACE, using the same actual-height and
         // malformed-map fallback as the raw chunk API. No heightmap is retained in the facts.
         let sampleY = options.biomeSampleY ?? chunk.surfaceY(x: 8, z: 8, height: options.height)
         self.init(position: position, sampledBiome: sampleY.flatMap { chunk.biome(x: 8, y: $0, z: 8) },
-                  biomes: usedBiomes.sorted(), blockDeposits: deposits.values.sorted { $0.id < $1.id })
+                  biomes: usedBiomes.sorted())
     }
 }

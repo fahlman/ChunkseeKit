@@ -176,8 +176,7 @@ import Testing
         try fixture.write(fixture.terrain(), in: .terrain, dimension: dimension)
         try fixture.write(fixture.entityChunk, in: .entities, dimension: dimension)
         try fixture.write(fixture.poiChunk, in: .pointsOfInterest, dimension: dimension)
-        let facts = try dimension.scan(region: fixture.region,
-            options: .init(blockIDs: ["minecraft:diamond_ore", "minecraft:gold_ore"]))
+        let facts = try dimension.scan(region: fixture.region)
         let reopened = try PropertyListDecoder().decode(RegionFacts.self, from: PropertyListEncoder().encode(facts))
         #expect(try InterpretationKey.identity(of: reopened) == InterpretationKey.identity(of: facts))
         try check(facts, version: RegionFacts.interpretationVersion,
@@ -326,14 +325,11 @@ import Testing
         ]]
         for (index, sample) in cases.enumerated() {
             let chunk = chunks[ChunkPosition(x: index % 32, z: index / 32)]
-            let deposit = chunk?.blockDeposits.first
             rows.append([
                 sample.id, chunk == nil ? "unreadable" : "readable", String(facts.inhabitedTimes[index]),
                 numericText(chunk?.position.x), numericText(chunk?.position.z),
-                deposit?.id, numericText(deposit?.count), numericText(deposit?.minY), numericText(deposit?.maxY),
                 chunk?.sampledBiome, chunk?.biomes.joined(separator: ","),
             ])
-            #expect((chunk?.blockDeposits.count ?? 0) <= 1)
         }
         #expect(rows.count == 435)
         try check(rows, version: RegionFacts.interpretationVersion,

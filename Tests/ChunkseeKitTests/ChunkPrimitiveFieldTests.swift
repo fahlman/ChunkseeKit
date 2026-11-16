@@ -47,13 +47,14 @@ import Testing
         let url = dimension.regionURL(.terrain, at: position)
         try Fixtures.write(bytes, to: url)
         let facts = try dimension.scan(region: position)
+        let counts = try dimension.countBlocks(region: position, matching: ["minecraft:stone"])
         #expect(facts.formats.readable == entries.count)
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
         for (index, sample) in SavedNumericSample.all.enumerated() {
             let at = ChunkPosition(x: index % 32, z: index / 32)
-            let terrain = try #require(facts.chunks.first { $0.position == at })
+            #expect(facts.chunks.contains { $0.position == at })
             // Region identity belongs to the file slot even when the saved coordinates differ.
-            #expect(terrain.blockDeposits == [.init(id: "minecraft:stone", count: 4096,
+            #expect(counts.chunks[at] == [.init(id: "minecraft:stone", count: 4096,
                 minY: sample.byteValue * 16, maxY: sample.byteValue * 16 + 15)], "\(sample)")
             #expect(facts.inhabitedTimes[index] == sample.longValue, "\(sample)")
         }
