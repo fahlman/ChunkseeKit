@@ -117,7 +117,7 @@ enum BlockCountFixture {
     static let region = RegionPosition(x: 0, z: 0)
     static let ids: Set<String> = ["minecraft:diamond_ore", "minecraft:gold_ore", "example:absent"]
 
-    static func writeMixedRegion(in dimension: Dimension) throws {
+    static func writeMixedRegion(in dimension: ChunkseeKit.Dimension) throws {
         let diamond = Fixtures.chunk(x: 0, z: 0, sections: [Fixtures.section(y: -2,
             palette: [.string("minecraft:stone"), .string("minecraft:diamond_ore")],
             indices: (0..<4096).map { $0 < 5 ? 1 : 0 })])
