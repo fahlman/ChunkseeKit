@@ -130,6 +130,48 @@ import Testing
         #expect(throws: RegionError.truncatedHeader) { try dimension.region(x: -5, z: 9) }
     }
 
+    @Test(arguments: Dimension.Folder.allCases)
+    func regionDiscoveryDistinguishesEmptyMissingAndFailedFolders(folder: Dimension.Folder) throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "example:discovery", url: root)
+        let directory = dimension.directory(folder)
+        let missing = dimension.readRegionFiles(folder)
+        #expect(missing.isComplete && missing.files.isEmpty)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let empty = dimension.readRegionFiles(folder)
+        #expect(empty.isComplete && empty.files.isEmpty)
+        for name in ["r.4.-2.mca", "r.-1.3.mca", "r.-1.-2.mca", "not-a-region.txt"] {
+            try Fixtures.write([0], to: directory.appendingPathComponent(name))
+        }
+        let found = dimension.readRegionFiles(folder)
+        #expect(found.isComplete)
+        #expect(found.files.map { [$0.x, $0.z] } == [[-1, -2], [-1, 3], [4, -2]])
+        #expect(found.files.map(\.url) == dimension.regionFiles(folder).map(\.url))
+        try FileManager.default.removeItem(at: directory)
+        try Fixtures.write([0], to: directory)
+        let failed = dimension.readRegionFiles(folder)
+        #expect(!failed.isComplete && failed.files.isEmpty)
+        #expect(dimension.regionFiles(folder).isEmpty)
+        // Failure of this source does not change the successful absence of the other folders.
+        for other in Dimension.Folder.allCases where dimension.directory(other) != directory {
+            let independent = dimension.readRegionFiles(other)
+            #expect(independent.isComplete && independent.files.isEmpty)
+        }
+    }
+
+    @Test func regionDiscoveryRetainsPermissionFailure() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "example:permissions", url: root)
+        let directory = dimension.regionDirectory
+        try Fixtures.write([0], to: dimension.regionURL(x: 0, z: 0))
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: directory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path) }
+        let failed = dimension.readRegionFiles()
+        #expect(!failed.isComplete && failed.files.isEmpty)
+    }
+
     @Test func missingLevelDat() throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

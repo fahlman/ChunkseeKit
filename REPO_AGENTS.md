@@ -458,6 +458,11 @@ display labels do not identify this rule. The raw dictionary API stays unchanged
 API is available in v0.32.0; Chunksee's display-name comparison adoption remains on #51.
 
 `Dimension.regionURL(_:x:z:)` owns the `r.x.z.mca` filename under terrain/entities/POI.
+`Dimension.readRegionFiles` returns sorted files and whether discovery completed for that
+individual folder. Missing and empty folders succeed; permission and other listing failures
+cannot establish deletion. The existing `regionFiles` convenience API returns the same files
+without status. Refreshing clients retain previous contributions when discovery is incomplete.
+This additive #363 API changes no saved facts or cache interpretation.
 It accepts region coordinates and returns the path without opening or requiring a file. `region(_:x:z:)`
 uses it and keeps missing-file (`nil`) and read-error behavior; clients need not reproduce filenames.
 
