@@ -60,7 +60,7 @@ extension GeneratedLegacyChunkProofs.Record: CustomTestStringConvertible {
         #expect(try dimension.entities(in: chunk) == dimension.entities(chunkX: position.x, chunkZ: position.z))
         #expect(try dimension.containers(regionX: position.region.x, regionZ: position.region.z) == facts.containers)
         #expect(facts.containers.first?.items.first?.id == "minecraft:short_grass")
-        #expect(facts.chunks.first?.isFullyGenerated == true)
+        #expect(facts.chunks.map(\.position) == [position])
         #expect(facts.inhabitedTimes[position.localZ * 32 + position.localX] == 345)
         let file = try RegionFile(contentsOf: url)
         let terrainNBT = try file.chunkNBT(localX: position.localX, localZ: position.localZ,
