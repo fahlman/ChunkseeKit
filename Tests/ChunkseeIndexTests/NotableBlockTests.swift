@@ -92,11 +92,11 @@ import Testing
         let missing = NotableBlock.Catalog(tags: [:])
         #expect(!missing.hasOreDefinitions && missing.blockIDs.count == 5)
         let emptyJar = try NotableBlockFixtures.assets([NotableBlockFixtures.tag("ores", [])])
-        let empty = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(emptyJar.tag("ores", in: "block"))])
+        let empty = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(try emptyJar.tag("ores", in: "block"))])
         #expect(empty.hasOreDefinitions && empty.blockIDs == missing.blockIDs)
         let childJar = try NotableBlockFixtures.assets([
             NotableBlockFixtures.tag("ores", ["#mod:empty"]), NotableBlockFixtures.tag("mod:empty", [])])
-        let child = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(childJar.tag("ores", in: "block"))])
+        let child = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(try childJar.tag("ores", in: "block"))])
         #expect(child.ids(for: .tag("mod:empty")) == [])
         let bad = try NotableBlockFixtures.assets([
             NotableBlockFixtures.tag("ores", ["#mod:broken"]),
@@ -122,7 +122,7 @@ import Testing
         for name in ["mod:first", "mod:renamed"] {
             let jar = try NotableBlockFixtures.assets([
                 NotableBlockFixtures.tag("ores", ["#" + name]), NotableBlockFixtures.tag(name, ["mod:ore"])])
-            let catalog = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(jar.tag("ores", in: "block"))])
+            let catalog = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(try jar.tag("ores", in: "block"))])
             #expect(index.coverage(of: position, matching: ["mod:ore"]) == .complete)
             #expect(index.regionsToRead(available: [position], matching: ["mod:ore"], from: origin).isEmpty)
             #expect(index.nearestDeposits(matching: [.tag(name)], using: catalog, from: origin, limit: 200)
