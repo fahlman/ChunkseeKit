@@ -8,8 +8,9 @@ public struct BlockDeposit: Sendable, Equatable {
     public let maxY: Int
 }
 
-/// A completed terrain-only count. Empty chunks are omitted; blockIDs records complete coverage
-/// for the region, including requested IDs that were absent. Grouping is a later index operation.
+/// A completed terrain-only count of readable, supported chunks. Empty and unreadable chunks
+/// are omitted; blockIDs records the requested IDs, including those absent from readable chunks.
+/// Grouping is a later index operation.
 /// Cache with the terrain file's fingerprint, this interpretation and the requested ID coverage.
 /// Entity/POI files, ore tags and search origins do not contribute to these raw counts.
 public struct RegionBlockCounts: Sendable, Codable, Equatable {
@@ -50,20 +51,19 @@ public struct RegionBlockCounts: Sendable, Codable, Equatable {
 }
 
 extension Dimension {
-    /// Reads only terrain block palettes. Missing terrain is successfully empty; unreadable
-    /// chunks/files and cancellation throw, so incomplete coverage cannot enter a warm cache.
+    /// Reads only terrain block palettes. Missing terrain is successfully empty; damaged or
+    /// unsupported individual chunks are skipped, as in scan(region:options:). Opening errors
+    /// and cancellation throw, so interrupted reads cannot enter a warm cache.
     /// Fully generated chunks use the same normalized palettes and section counter as before.
     public func countBlocks(region position: RegionPosition, matching blockIDs: Set<String>) throws -> RegionBlockCounts {
         try Task.checkCancellation()
         guard let origin = position.chunkOrigin else { throw RegionScanError.invalidRegion(position) }
         var chunks: [ChunkPosition: [BlockDeposit]] = [:]
-        if !blockIDs.isEmpty, let file = try region(.terrain, x: position.x, z: position.z) {
+        if !blockIDs.isEmpty {
             let omitted = Chunk.keysNotNeededForTerrain.union(["Structures", "Heightmaps", "biomes", "Biomes"])
-            for (x, z) in file.chunkCoordinates {
-                try Task.checkCancellation()
-                guard let nbt = try file.chunkNBT(localX: x, localZ: z, skipping: omitted) else { continue }
-                let chunk = try Chunk(nbt: nbt)
-                guard chunk.isFullyGenerated else { continue }
+            try visitRegionChunks(.terrain, at: position, skipping: omitted) { x, z, nbt in
+                guard case .readable(let chunk) = try RegionTerrainChunk(TerrainChunkInput(nbt)),
+                      chunk.isFullyGenerated else { return }
                 let deposits = try chunk.blockDeposits(matching: blockIDs)
                 if !deposits.isEmpty { chunks[.init(x: origin.x + x, z: origin.z + z)] = deposits }
             }

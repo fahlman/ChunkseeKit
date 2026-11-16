@@ -119,11 +119,16 @@ pack `tag.` names or GameNames readable IDs for tags, ordinary block names for d
 `Dimension.countBlocks(region:matching:)` owns the independent terrain-only pass. It uses the
 existing normalized chunk/palette counter, skips partial-generation chunks, and does not read
 entity/POI files, containers, biomes, structures or heightmaps. Missing terrain is empty;
-unreadable chunks/files and cancellation throw, never certify incomplete coverage. Its
+damaged and unsupported individual chunks are skipped through the same visitor/terrain policy
+as the core scan, preserving readable neighbors. File-opening errors and cancellation throw.
+Requested-ID coverage describes the readable, supported chunks in that source file. Its
 RegionBlockCounts property-list archive owns per-ID counts, section-height bounds, requested-ID
 coverage and a separate interpretation (revision 1, depending on the whole terrain contract).
 It declares no additional generated facts; those belong to the terrain dependency. Clients add
 their existing terrain file-stamp primitive to cache identity, not a second staleness rule.
+InterpretationSourceTests requires independently reviewed entries for both regionFacts and
+blockCounts after every core-source change. InterpretationOutputTests also keeps a count archive
+witness with readable, legacy, damaged and partial-generation neighbors.
 
 `ChunkseeIndex.BlockCountIndex` retains raw counts independently of core RegionIndex and
 DimensionIndex. Query-time catalogs regroup known IDs without file reads; requested new IDs

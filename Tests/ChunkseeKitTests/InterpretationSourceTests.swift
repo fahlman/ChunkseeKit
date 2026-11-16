@@ -6,15 +6,15 @@ import Testing
 /// Output fixtures cannot exercise every reader path. Source changes therefore also
 /// require an explicit review of the cache contract, including unchanged meaning.
 @Suite struct InterpretationSourceTests {
-    @Test func regionFactsSourceHasAReviewedContract() throws {
+    @Test(arguments: [RegionFacts.interpretationVersion, RegionBlockCounts.interpretationVersion])
+    func cachedReaderSourceHasAReviewedContract(version: InterpretationVersion) throws {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let files = try sourceFiles(at: root)
         let digest = try InterpretationKey.identity(of: files)
-        let version = RegionFacts.interpretationVersion
         #expect(reviewedSources[version]?.contains(digest) == true,
                 """
-                Review the complete region-facts contract and add its reviewed source fingerprint,
+                Review the complete \(version.domain) contract and add its reviewed source fingerprint,
                 including after a revision bump. Source SHA-256: \(digest)
                 """)
     }
@@ -69,8 +69,9 @@ import Testing
             }
         }
 
-        // Cover complete current dependency roots, including generated sources. This
-        // intentionally requests review for unrelated core edits instead of keeping a
+        // Cover complete current dependency roots for both contracts, including generated sources.
+        // Each core edit requires a decision for regionFacts and blockCounts independently,
+        // even when the same digest witnesses both. This requests review instead of keeping a
         // field or file allowlist that could miss the next cached reader.
         try include(root.appendingPathComponent("Package.swift"))
         try include(root.appendingPathComponent("Sources/ChunkseeKit", isDirectory: true))

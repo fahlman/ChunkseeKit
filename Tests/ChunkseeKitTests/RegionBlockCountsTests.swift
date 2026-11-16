@@ -58,16 +58,14 @@ import Testing
         #expect(try dimension.countBlocks(region: region, matching: ["example:ore"]).chunks[.init(x: 0, z: 0)]?.first?.count == 4096)
     }
 
-    @Test func corruptTerrainIsAFailureRatherThanACompletedEmptyCount() async throws {
+    @Test func fileOpeningFailureAndCancellationDoNotCompleteCounts() async throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "example:world", url: root), fixture = RegionFactsTests()
         let ids: Set<String> = ["minecraft:diamond_ore"]
         let absent = try dimension.countBlocks(region: fixture.region, matching: ids)
         #expect(absent.chunks.isEmpty && absent.blockIDs == ids)
-        var bytes = try Fixtures.region([.init(localX: 31, localZ: 0, nbt: fixture.terrain())])
-        bytes[8192 + 4] = 99
-        try Fixtures.write(bytes, to: dimension.regionURL(at: fixture.region))
+        try Fixtures.write([0, 1], to: dimension.regionURL(at: fixture.region))
         #expect(throws: (any Error).self) { try dimension.countBlocks(region: fixture.region, matching: ids) }
         let canceled = Task {
             withUnsafeCurrentTask { $0?.cancel() }
@@ -77,6 +75,24 @@ import Testing
         #expect(throws: RegionScanError.invalidRegion(.init(x: Int.max, z: 0))) {
             try dimension.countBlocks(region: .init(x: Int.max, z: 0), matching: ids)
         }
+    }
+
+    @Test func damagedAndLegacyNeighborsDoNotHideReadableCounts() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "example:world", url: root)
+        try BlockCountFixture.writeMixedRegion(in: dimension)
+        let before = try Data(contentsOf: dimension.regionURL(at: BlockCountFixture.region))
+        let facts = try dimension.scan(region: BlockCountFixture.region)
+        let counts = try dimension.countBlocks(region: BlockCountFixture.region, matching: BlockCountFixture.ids)
+        #expect(facts.formats.readable == 3 && facts.formats.legacy == 1)
+        #expect(Set(facts.chunks.map(\.position)) == [.init(x: 0, z: 0), .init(x: 2, z: 0)])
+        #expect(counts.chunks == [
+            .init(x: 0, z: 0): [.init(id: "minecraft:diamond_ore", count: 5, minY: -32, maxY: -17)],
+            .init(x: 2, z: 0): [.init(id: "minecraft:gold_ore", count: 4096, minY: 16, maxY: 31)],
+        ])
+        #expect(counts.blockIDs == BlockCountFixture.ids)
+        #expect(try Data(contentsOf: dimension.regionURL(at: BlockCountFixture.region)) == before)
     }
 
     @Test func countArchiveHasItsOwnVersionAndCanonicalCoverage() throws {
@@ -93,5 +109,33 @@ import Testing
         archive["version"] = version
         let stale = try PropertyListSerialization.data(fromPropertyList: archive, format: .binary, options: 0)
         #expect(throws: (any Error).self) { try PropertyListDecoder().decode(RegionBlockCounts.self, from: stale) }
+    }
+}
+
+/// A real mixed region shared by the behavioral oracle and the count-contract witness.
+enum BlockCountFixture {
+    static let region = RegionPosition(x: 0, z: 0)
+    static let ids: Set<String> = ["minecraft:diamond_ore", "minecraft:gold_ore", "example:absent"]
+
+    static func writeMixedRegion(in dimension: Dimension) throws {
+        let diamond = Fixtures.chunk(x: 0, z: 0, sections: [Fixtures.section(y: -2,
+            palette: [.string("minecraft:stone"), .string("minecraft:diamond_ore")],
+            indices: (0..<4096).map { $0 < 5 ? 1 : 0 })])
+        let legacy = NBT.compound(["DataVersion": .int(1343), "Level": .compound([
+            "xPos": .int(1), "zPos": .int(0), "Sections": .list([.compound([
+                "Y": .byte(0), "Blocks": .byteArray(Array(repeating: 1, count: 4096)),
+            ])]),
+        ])])
+        let gold = Fixtures.chunk(x: 2, z: 0, sections: [Fixtures.section(y: 1, palette: [.string("minecraft:gold_ore")])])
+        let partial = Fixtures.chunk(x: 4, z: 0, sections: [Fixtures.section(y: 1, palette: [.string("minecraft:gold_ore")])],
+            extra: ["status": .string("minecraft:noise")])
+        var bytes = try Fixtures.region([
+            .init(localX: 0, localZ: 0, nbt: diamond), .init(localX: 1, localZ: 0, nbt: legacy),
+            .init(localX: 2, localZ: 0, nbt: gold), .init(localX: 3, localZ: 0, nbt: gold),
+            .init(localX: 4, localZ: 0, nbt: partial),
+        ])
+        let damagedOffset = (Int(bytes[12]) << 16 | Int(bytes[13]) << 8 | Int(bytes[14])) * 4096
+        bytes[damagedOffset + 4] = 99
+        try Fixtures.write(bytes, to: dimension.regionURL(at: region))
     }
 }

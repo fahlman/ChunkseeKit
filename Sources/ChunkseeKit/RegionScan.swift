@@ -18,18 +18,7 @@ extension Dimension {
             "block_entities", "structures", "entities", "TileEntities", "Structures", "Entities",
         ])
 
-        func visit(_ folder: Folder, skipping: Set<String> = [],
-                   body: (Int, Int, NBT) throws -> Void) throws {
-            try Task.checkCancellation()
-            guard let file = try region(folder, x: position.x, z: position.z) else { return }
-            for (x, z) in file.chunkCoordinates {
-                try Task.checkCancellation()
-                guard let nbt = try? file.chunkNBT(localX: x, localZ: z, skipping: skipping) else { continue }
-                try body(x, z, nbt)
-            }
-        }
-
-        try visit(.terrain, skipping: omitted) { x, z, nbt in
+        try visitRegionChunks(.terrain, at: position, skipping: omitted) { x, z, nbt in
             let input = NormalizedChunk(nbt)
             facts.containers += ItemContainer.containers(in: input.records)
             facts.signs += Sign.signs(in: input.records)
@@ -37,9 +26,11 @@ extension Dimension {
             facts.creatures += Creature.creatures(in: input.records.entities)
             facts.inhabitedTimes[z * 32 + x] = input.records.inhabitedTime ?? 0
             let chunk: Chunk
-            do { chunk = try Chunk(input: input.terrain) }
-            catch ChunkError.unsupportedLegacyFormat { facts.formats.legacy += 1; return }
-            catch { return }
+            switch try RegionTerrainChunk(input.terrain) {
+            case .readable(let value): chunk = value
+            case .legacy: facts.formats.legacy += 1; return
+            case .unreadable: return
+            }
             facts.formats.readable += 1
             guard chunk.isFullyGenerated else { return }
             facts.structures += chunk.structureStarts.map { StructureFacts($0, pieceIDs: options.structurePieceIDs) }
@@ -47,12 +38,12 @@ extension Dimension {
                                                options: options, paletteBlockIDs: &facts.paletteBlockIDs)
             facts.chunks.append(terrain)
         }
-        try visit(.entities) { _, _, nbt in
+        try visitRegionChunks(.entities, at: position) { _, _, nbt in
             let entities = NormalizedEntities(nbt)
             facts.containers += ItemContainer.containers(in: entities)
             facts.creatures += Creature.creatures(in: entities)
         }
-        try visit(.pointsOfInterest) { _, _, nbt in
+        try visitRegionChunks(.pointsOfInterest, at: position) { _, _, nbt in
             facts.pointsOfInterest += PointOfInterest.records(inChunk: nbt)
         }
         try Task.checkCancellation()

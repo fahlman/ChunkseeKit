@@ -150,8 +150,10 @@ symbols remain client choices.
 Counts are independent of the main world index. Read `Dimension.countBlocks(region:matching:)`
 with the catalog's `blockIDs`, persist its `RegionBlockCounts` using a binary property list, and
 include the terrain file stamp and complete count interpretation in the cache identity. Requested
-IDs are retained as coverage, including absent IDs. Unreadable terrain throws; a missing file is
-empty. Entity/POI changes and tag regrouping do not retire these raw counts.
+IDs are retained as coverage of readable, supported chunks, including absent IDs. Damaged and
+unsupported individual chunks are skipped by the same rule as the core scan; readable neighbors
+remain. File-opening errors and cancellation throw; a missing file is empty. Entity/POI changes
+and tag regrouping do not retire these raw counts.
 
 `BlockCountIndex` retains those counts, tracks failed versus unsearched versus complete coverage,
 and selects `nearestDeposits(matching:using:from:limit:)` for a `BlockSearchOrigin`. It ranks before

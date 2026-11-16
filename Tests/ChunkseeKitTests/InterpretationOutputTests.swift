@@ -188,7 +188,7 @@ import Testing
                               regionFacts33: "0be1ca5326dd5ab8fb62e6e91aadc9ce562705873bd00483eb7ed1ecd3ae6520",
                               regionFacts34: "1771b2cce9e3308c4e5a00ced2b402e0a7e4efba6d230cc3491597fc7ea805f2",
                               regionFacts35: "332a6537d38f40549930defbdebae1dbc2dcf14fed89e2de4742877550d125b7"],
-                  propertyListBaselines: [regionFacts36: "1754565cfd678ece1cc1912a7d6e11169c97fd93acf43a7b2862dab607bbe2a9"])
+                  propertyListBaselines: [regionFacts36: "40c5dcec19ed56c5aca85545a189e37ca5a36cbb1430a9849c93d7b1752f328d"])
     }
 
     private struct NumericCase {
@@ -339,7 +339,17 @@ import Testing
                               regionFacts33: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts34: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374",
                               regionFacts35: "1b92386b70f6cb06a87b809939cefe34a164592c22b53f8e11d0a9616eca2374"],
-                  propertyListBaselines: [regionFacts36: "0910e59c0f113812296aa50f8951275f486ab7fcab82422dbeb41bf71e4cd57e"])
+                  propertyListBaselines: [regionFacts36: "cfb7a6f004823dca53db761ee7d2c3a2541f12c997377bad10ec6946387486d6"])
+    }
+
+    @Test func blockCountArchiveOutputMatchesItsRevision() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "example:world", url: root)
+        try BlockCountFixture.writeMixedRegion(in: dimension)
+        let counts = try dimension.countBlocks(region: BlockCountFixture.region, matching: BlockCountFixture.ids)
+        // The first witness is deliberately pending independent review on #359.
+        try check(counts, version: RegionBlockCounts.interpretationVersion, baselines: [:], propertyListBaselines: [:])
     }
 
     private struct MaterialOutput: Encodable {
