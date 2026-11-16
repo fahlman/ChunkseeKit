@@ -130,8 +130,8 @@ import Testing
         #expect(throws: RegionError.truncatedHeader) { try dimension.region(x: -5, z: 9) }
     }
 
-    @Test(arguments: Dimension.Folder.allCases)
-    func regionDiscoveryDistinguishesEmptyMissingAndFailedFolders(folder: Dimension.Folder) throws {
+    @Test(arguments: ChunkseeKit.Dimension.Folder.allCases)
+    func regionDiscoveryDistinguishesEmptyMissingAndFailedFolders(folder: ChunkseeKit.Dimension.Folder) throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "example:discovery", url: root)
