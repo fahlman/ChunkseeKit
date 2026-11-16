@@ -30,13 +30,32 @@ public struct Dimension: Sendable {
         }
     }
 
+    /// Discovery status belongs to one folder, independently of the dimension's other folders.
+    public struct RegionFileListing: Sendable {
+        public let files: [(x: Int, z: Int, url: URL)]
+        /// A missing folder is a complete empty listing. Other failures cannot establish removal.
+        public let isComplete: Bool
+    }
+
     /// Coordinates and URLs of every region file in a folder, sorted by coordinates.
+    /// Failed listings return no files; refreshing clients use `readRegionFiles` to retain uncertainty.
     public func regionFiles(_ folder: Folder = .terrain) -> [(x: Int, z: Int, url: URL)] {
+        readRegionFiles(folder).files
+    }
+
+    /// Lists one folder without treating an unreadable folder as a successful empty result.
+    public func readRegionFiles(_ folder: Folder = .terrain) -> RegionFileListing {
         let directory = directory(folder)
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
-        return names.compactMap { name in
+        let names: [String]
+        do { names = try FileManager.default.contentsOfDirectory(atPath: directory.path) }
+        catch {
+            let code = (error as? CocoaError)?.code
+            return RegionFileListing(files: [], isComplete: code == .fileReadNoSuchFile || code == .fileNoSuchFile)
+        }
+        let files: [(x: Int, z: Int, url: URL)] = names.compactMap { name in
             RegionFile.parseCoordinates(name).map { ($0.x, $0.z, directory.appendingPathComponent(name)) }
         }.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
+        return RegionFileListing(files: files, isComplete: true)
     }
 
     /// URL of a region file at region coordinates (not chunk or block coordinates).
