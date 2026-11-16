@@ -26,7 +26,8 @@ public enum Fixtures {
         return .compound(["Y": .byte(Int8(y)), "block_states": .compound(states), "biomes": .compound(biome)])
     }
 
-    public static func chunk(x: Int, z: Int, dataVersion: Int = DataVersion.perBlockBiomes, sections: [NBT],
+    /// The default matches the synthetic per-block-biome layout; tests of other layouts pass their version.
+    public static func chunk(x: Int, z: Int, dataVersion: Int = 5119, sections: [NBT],
                              extra: [String: NBT] = [:]) -> NBT {
         var root: [String: NBT] = [
             "DataVersion": .int(Int32(dataVersion)), "xPos": .int(Int32(x)), "zPos": .int(Int32(z)), "yPos": .int(-4),

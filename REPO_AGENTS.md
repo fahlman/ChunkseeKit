@@ -251,8 +251,7 @@ public block-side constant, independent of renderer pixels. These additive APIs 
 `Identifier` owns the default namespace and 26.3 character validation. Dimension/effect/enchantment
 readers use it; malformed saved identifiers become unavailable. The empty-path codec value is
 retained, but World.dimension still requires a nonempty path and rejects an explicit empty namespace.
-Identifier syntax is not file-path validation. `SaveVersion` owns verified release numbers and
-format boundaries; `DataVersion` remains a source-compatible alias. Unknown newer versions do not
+Identifier syntax is not file-path validation. Unknown newer versions do not
 gain verified health defaults. PlayerInfo and MapItem share the unknown-dimension description
 next to the NBT dimension-tag reader: raw strings and integers remain readable, unsupported tag
 shapes use `?`, and missing values remain absent. This replaces the player's debug-NBT fallback;
@@ -260,6 +259,10 @@ it changes no public signature or RegionFacts value. POI, map banners and paired
 reader; only map banners retain their existing legacy coordinate-compound fallback. Chunk,
 containers, signs and spawners share modern block-entity list/position readers. This adds no
 legacy terrain support. These public APIs are available starting in v0.30.0.
+The unreleased #360 cleanup removes the unused `SaveVersion` catalog, its `DataVersion` alias
+and `Dimension.dataDirectory`. The two fixture callers retain their numeric values in test
+support/tests, where synthetic save inputs belong. This requires a minor release for the public
+API removals; no reader behavior, saved field or cache interpretation changes.
 The CLI structure scan streams each region through `Dimension.forEachChunk`, then uses
 `Chunk.isFullyGenerated` and `structureStarts` after skipping unneeded block data; it does not
 repeat region/chunk reads or apply its own chunk-status or placement rules. Structure-center

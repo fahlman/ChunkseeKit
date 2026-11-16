@@ -257,14 +257,14 @@ import ChunkseeKitTestSupport
 let directory = try Fixtures.tempDirectory()
 defer { try? FileManager.default.removeItem(at: directory) }
 let section = Fixtures.section(y: 0, palette: [.string("minecraft:stone")])
-let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: SaveVersion.java26_3, sections: [section])
+let chunk = Fixtures.chunk(x: 0, z: 0, dataVersion: 5023, sections: [section])
 let bytes = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: chunk)])
 try Fixtures.write(bytes, to: directory.appendingPathComponent("r.0.0.mca"))
 ```
 
 Region coordinates passed to `RegionChunk` are local, from 0 through 31. It defaults to zlib
-compression and a fixed timestamp. `chunk` retains its existing `DataVersion.perBlockBiomes`
-default; pass a version explicitly for version-specific fixtures. The helpers expect valid
+compression and a fixed timestamp. `chunk` retains its existing synthetic version default, 5119;
+pass a version explicitly for version-specific fixtures. The helpers expect valid
 packing widths and indices, and write only to caller-supplied paths; tests own their temporary
 directories and cleanup. The CLI executable-location helper remains private to the Kit tests.
 
@@ -2147,9 +2147,13 @@ invented height, and return nil on overflow. Dimension has typed `chunk(at:)`, `
 Its Codable representation is the qualified string. Syntax matches the official 26.3 codec,
 including empty paths; this does not imply that an identifier exists or is safe as a file path.
 Malformed saved dimension/effect/enchantment IDs are now unavailable instead of being accepted
-as arbitrary strings. `SaveVersion` names verified release numbers and format boundaries;
-`DataVersion` remains an alias for source compatibility. Raw NBT, region and compression APIs
-remain public. These additions are available starting in v0.30.0.
+as arbitrary strings. Raw NBT, region and compression APIs remain public. These additions are
+available starting in v0.30.0.
+
+The unreleased #360 cleanup removes `SaveVersion`, its `DataVersion` alias and
+`Dimension.dataDirectory`, which have no production callers. Synthetic fixtures keep their
+existing numeric input versions in test support and tests. This is a breaking public API change
+requiring a minor release; it changes no save parsing, saved facts or cache interpretation.
 
 v0.31.0 also adds `ChunkPosition(containingBlockX:blockZ:)` and
 `ChunkPosition.localColumnIndex(blockX:blockZ:)` for clients that have a block column without a

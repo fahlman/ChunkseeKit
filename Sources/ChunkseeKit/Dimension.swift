@@ -19,8 +19,6 @@ public struct Dimension: Sendable {
     public var regionDirectory: URL { url.appendingPathComponent("region") }
     public var entitiesDirectory: URL { url.appendingPathComponent("entities") }
     public var poiDirectory: URL { url.appendingPathComponent("poi") }
-    /// Per-dimension saved data (raids, world border, chunk tickets), 26.1+.
-    public var dataDirectory: URL { url.appendingPathComponent("data") }
 
     public func directory(_ folder: Folder) -> URL {
         switch folder {
