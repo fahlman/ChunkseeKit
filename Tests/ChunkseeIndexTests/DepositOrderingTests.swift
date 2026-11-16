@@ -14,8 +14,10 @@ import Testing
         let available = Set(facts.map(\.region))
         let index = BlockCountIndex(dimension: fixture.dimension.id).updating(available: available, replacements: facts)
         let west = try #require(BlockSearchOrigin(x: 8, z: 8)), east = try #require(BlockSearchOrigin(x: 219 * 16 + 8, z: 8))
-        let fromWest = index.nearestDeposits(matching: [.diamond], using: catalog, from: west, limit: 200)
-        let fromEast = index.nearestDeposits(matching: [.diamond], using: catalog, from: east, limit: 200)
+        let westMatches = index.matchingDeposits(matching: [.diamond], using: catalog, from: west, limit: 200)
+        let eastMatches = index.matchingDeposits(matching: [.diamond], using: catalog, from: east, limit: 200)
+        let fromWest = westMatches.nearest, fromEast = eastMatches.nearest
+        #expect(westMatches.totalCount == 220 && eastMatches.totalCount == 220)
         #expect(fromWest.map(\.chunk.x) == Array(0..<200))
         #expect(fromWest.first?.deposit.count == 1 && fromWest.last?.deposit.count == 1000)
         #expect(fromEast.map(\.chunk.x) == Array((20..<220).reversed()))
@@ -23,9 +25,13 @@ import Testing
         #expect(index.regionsToRead(available: available, matching: catalog.blockIDs, from: east).isEmpty)
         for limit in [0, -1] {
             #expect(index.nearestDeposits(matching: [.diamond], using: catalog, from: west, limit: limit).isEmpty)
+            let totalOnly = index.matchingDeposits(matching: [.diamond], using: catalog, from: west, limit: limit)
+            #expect(totalOnly.nearest.isEmpty && totalOnly.totalCount == 220)
         }
-        #expect(index.nearestDeposits(matching: [], using: catalog, from: west, limit: 200).isEmpty)
-        #expect(index.nearestDeposits(matching: [.ancientDebris], using: catalog, from: west, limit: 200).isEmpty)
+        for groups in [Set<NotableBlock>(), [.ancientDebris]] {
+            let none = index.matchingDeposits(matching: groups, using: catalog, from: west, limit: 200)
+            #expect(none.nearest.isEmpty && none.totalCount == 0)
+        }
         #expect(BlockSearchOrigin(x: .nan, z: 0) == nil && BlockSearchOrigin(x: 0, z: .infinity) == nil)
     }
 
@@ -47,7 +53,9 @@ import Testing
         let rebuilt = BlockCountIndex(dimension: fixture.dimension.id).updating(available: available, replacements: reordered)
         let refreshed = initial.updating(available: available, replacements: Array(reordered.prefix(1)))
         for index in [initial, rebuilt, refreshed] {
-            let results = index.nearestDeposits(matching: [.diamond, .emerald], using: catalog, from: origin, limit: 5)
+            let matches = index.matchingDeposits(matching: [.diamond, .emerald], using: catalog, from: origin, limit: 5)
+            let results = matches.nearest
+            #expect(matches.totalCount == 6)
             #expect(results.map(\.chunk.x) == [0, 0, -1, -1, 1])
             #expect(results.map(\.deposit.block) == [.diamond, .emerald, .diamond, .emerald, .diamond])
             #expect(results.allSatisfy { $0.deposit.minY == -32 && $0.deposit.maxY == -17 })
@@ -70,6 +78,7 @@ import Testing
         let failed = changed.updating(available: [position], replacements: [], failed: [position])
         #expect(failed.coverage(of: position, matching: catalog.blockIDs) == .failed)
         #expect(failed.regions[position]?.counts == first.regions[position]?.counts)
+        #expect(failed.matchingDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).totalCount == 1)
         #expect(failed.regionsToRead(available: [position], matching: catalog.blockIDs, from: origin).isEmpty)
         #expect(failed.invalidating([position]).regionsToRead(available: [position], matching: catalog.blockIDs, from: origin) == [position])
         try Fixtures.write(Fixtures.region([]), to: fixture.dimension.regionURL(at: position))
@@ -77,6 +86,7 @@ import Testing
         let cleared = failed.updating(available: [position], replacements: [empty])
         #expect(cleared.coverage(of: position, matching: catalog.blockIDs) == .complete)
         #expect(cleared.nearestDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).isEmpty)
+        #expect(cleared.matchingDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).totalCount == 0)
         #expect(first.nearestDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).count == 1)
         #expect(first.updating(available: [], replacements: facts).regions.isEmpty)
         let foreign = BlockCountIndex(dimension: "example:another").updating(available: [position], replacements: facts)
