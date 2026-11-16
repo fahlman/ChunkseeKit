@@ -47,7 +47,7 @@ import Testing
         let url = dimension.regionURL(.terrain, at: position)
         try Fixtures.write(bytes, to: url)
         let facts = try dimension.scan(region: position)
-        #expect(facts.formats.readable == entries.count && facts.formats.unreadableTerrain == 0)
+        #expect(facts.formats.readable == entries.count)
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
         for (index, sample) in SavedNumericSample.all.enumerated() {
             let at = ChunkPosition(x: index % 32, z: index / 32)
@@ -109,7 +109,7 @@ import Testing
         }
         try Fixtures.write(Fixtures.region(entries), to: dimension.regionURL(.terrain, at: position))
         let facts = try dimension.scan(region: position)
-        #expect(facts.chunks.isEmpty && facts.formats.unreadableTerrain == entries.count)
+        #expect(facts.chunks.isEmpty && facts.formats.readable == 0)
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: 0, regionZ: 0)))
         for (index, entry) in entries.enumerated() {
             #expect(Chunk.inhabitedTime(in: entry.nbt) == source[index].1)

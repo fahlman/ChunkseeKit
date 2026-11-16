@@ -50,11 +50,11 @@ import Testing
         #expect(index.containers.map(\.x) == [496, 512])
         #expect(index.storage.map(\.id) == ["minecraft:diamond"])
         #expect(index.storage.first?.count == 7 && index.storage.first?.containers == 2)
-        #expect(index.signs.count == 2 && index.spawners.count == 2 && index.structures.count == 2)
-        #expect(index.creatures.count == 4)
-        #expect(index.creatures.filter { $0.group == .pet }.count == 2)
-        #expect(index.creatures.filter { $0.group == .mob }.map(\.creature.id) == ["minecraft:sheep", "minecraft:sheep"])
-        #expect(index.creatures.first?.creature.x == -528)
+        #expect(index.signs.count == 2 && index.spawners.count == 2 && structures(index).count == 2)
+        #expect(creatures(index).count == 4)
+        #expect(creatures(index).filter { $0.group == .pet }.count == 2)
+        #expect(creatures(index).filter { $0.group == .mob }.map(\.creature.id) == ["minecraft:sheep", "minecraft:sheep"])
+        #expect(creatures(index).first?.creature.x == -528)
         #expect(index.regions[a]?.creatures.count == 2)
         #expect(index.formats == .init(readable: 2, legacy: 0))
         #expect(index.blocks.map(\.deposit.count) == [5, 2])
@@ -84,28 +84,26 @@ import Testing
         let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
             .updating(available: [a, b], selected: nil,
                       replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
-        #expect(initial.creatures.count == 3 && initial.creatures.allSatisfy { $0.group == .mob })
-        let original = try #require(initial.creatures.first { $0.creature.uuid == uuid })
+        #expect(creatures(initial).count == 3 && creatures(initial).allSatisfy { $0.group == .mob })
+        let original = try #require(creatures(initial).first { $0.creature.uuid == uuid })
         #expect(original.creature.appearance?.variant == "example:spotted")
-        #expect(initial.creatures.filter { $0.creature.id == "minecraft:sheep" }
+        #expect(creatures(initial).filter { $0.creature.id == "minecraft:sheep" }
             .allSatisfy { $0.creature.appearance?.variant == "minecraft:black" })
-        let acrossWorld = WorldIndex(dimensions: [overworld: initial]).all(\.creatures)
-        #expect(acrossWorld.count == 3 && acrossWorld.allSatisfy { $0.dimension == overworld })
 
         try world.entities(chunkX: 0, values: [custom(x: 9, variant: "example:striped")])
         let refreshed = initial.updating(available: [a, b], selected: [a],
                                          replacements: [try world.scan(a, caves: caves)])
-        #expect(refreshed.creatures.count == 2)
-        let moved = try #require(refreshed.creatures.first { $0.id == original.id })
+        #expect(creatures(refreshed).count == 2)
+        let moved = try #require(creatures(refreshed).first { $0.id == original.id })
         #expect(moved.creature.x == 9 && moved.creature.appearance?.variant == "example:striped")
-        #expect(initial.creatures.count == 3 && original.creature.x == 1)
+        #expect(creatures(initial).count == 3 && original.creature.x == 1)
         let failed = refreshed.updating(available: [a, b], selected: [a], replacements: [])
-        #expect(failed.creatures == refreshed.creatures)
+        #expect(creatures(failed) == creatures(refreshed))
         let deleted = refreshed.updating(available: [a], selected: [b], replacements: [])
-        #expect(deleted.creatures.map(\.id) == [original.id])
+        #expect(creatures(deleted).map(\.id) == [original.id])
         try world.entities(chunkX: 0, values: [])
         let emptied = deleted.updating(available: [a], selected: [a], replacements: [try world.scan(a, caves: caves)])
-        #expect(emptied.creatures.isEmpty)
+        #expect(creatures(emptied).isEmpty)
     }
 
     @Test func partialReplacementMatchesACompletePassAndLeavesOldSnapshotIntact() throws {
@@ -238,10 +236,20 @@ import Testing
         #expect(deleted.updating(available: [], selected: nil, replacements: []).paletteBlockIDs.isEmpty)
     }
 
+    private func creatures(_ index: DimensionIndex) -> [CreatureEntry] {
+        index.regions.keys.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
+            .flatMap { index.regions[$0]!.creatures }
+    }
+
+    private func structures(_ index: DimensionIndex) -> [StructureFacts] {
+        index.regions.keys.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
+            .flatMap { index.regions[$0]!.structures }
+    }
+
     private func expectEquivalent(_ a: DimensionIndex, _ b: DimensionIndex) {
         #expect(Set(a.regions.keys) == Set(b.regions.keys))
         #expect(a.containers == b.containers && a.storage == b.storage && a.signs == b.signs)
-        #expect(a.spawners == b.spawners && a.structures == b.structures && a.creatures == b.creatures)
+        #expect(a.spawners == b.spawners && structures(a) == structures(b) && creatures(a) == creatures(b))
         #expect(a.pointsOfInterest == b.pointsOfInterest && a.portals == b.portals)
         #expect(a.biomes == b.biomes && a.caveBiomes == b.caveBiomes && a.formats == b.formats)
         #expect(a.blocks == b.blocks)

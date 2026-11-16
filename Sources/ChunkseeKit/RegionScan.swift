@@ -7,7 +7,7 @@ public enum RegionScanError: Error, Equatable {
 
 extension Dimension {
     /// Decodes each present terrain/entity/POI chunk once. Missing files are empty; unreadable
-    /// individual chunks are counted and skipped. Opening errors and cancellation throw, so a
+    /// individual chunks are skipped. Opening errors and cancellation throw, so a
     /// failed/partial scan can never be mistaken for a completed cache entry.
     public func scan(region position: RegionPosition, options: RegionScanOptions = .init()) throws -> RegionFacts {
         try Task.checkCancellation()
@@ -19,22 +19,17 @@ extension Dimension {
         ])
 
         func visit(_ folder: Folder, skipping: Set<String> = [],
-                   body: (Int, Int, NBT) throws -> Void) throws -> Int {
+                   body: (Int, Int, NBT) throws -> Void) throws {
             try Task.checkCancellation()
-            guard let file = try region(folder, x: position.x, z: position.z) else { return 0 }
-            var unreadable = 0
+            guard let file = try region(folder, x: position.x, z: position.z) else { return }
             for (x, z) in file.chunkCoordinates {
                 try Task.checkCancellation()
-                guard let nbt = try? file.chunkNBT(localX: x, localZ: z, skipping: skipping) else {
-                    unreadable += 1
-                    continue
-                }
+                guard let nbt = try? file.chunkNBT(localX: x, localZ: z, skipping: skipping) else { continue }
                 try body(x, z, nbt)
             }
-            return unreadable
         }
 
-        let unreadable = try visit(.terrain, skipping: omitted) { x, z, nbt in
+        try visit(.terrain, skipping: omitted) { x, z, nbt in
             let input = NormalizedChunk(nbt)
             facts.containers += ItemContainer.containers(in: input.records)
             facts.signs += Sign.signs(in: input.records)
@@ -44,24 +39,22 @@ extension Dimension {
             let chunk: Chunk
             do { chunk = try Chunk(input: input.terrain) }
             catch ChunkError.unsupportedLegacyFormat { facts.formats.legacy += 1; return }
-            catch { facts.formats.unreadableTerrain += 1; return }
+            catch { return }
             facts.formats.readable += 1
-            if chunk.isFullyGenerated { facts.structures += chunk.structureStarts }
+            guard chunk.isFullyGenerated else { return }
+            facts.structures += chunk.structureStarts.map { StructureFacts($0, pieceIDs: options.structurePieceIDs) }
             let terrain = try TerrainChunkFacts(chunk, at: .init(x: origin.x + x, z: origin.z + z),
                                                options: options, paletteBlockIDs: &facts.paletteBlockIDs)
             facts.chunks.append(terrain)
         }
-        facts.formats.unreadableTerrain += unreadable
-        let unreadableEntities = try visit(.entities) { _, _, nbt in
+        try visit(.entities) { _, _, nbt in
             let entities = NormalizedEntities(nbt)
             facts.containers += ItemContainer.containers(in: entities)
             facts.creatures += Creature.creatures(in: entities)
         }
-        facts.formats.unreadableEntities = unreadableEntities
-        let unreadablePOIs = try visit(.pointsOfInterest) { _, _, nbt in
+        try visit(.pointsOfInterest) { _, _, nbt in
             facts.pointsOfInterest += PointOfInterest.records(inChunk: nbt)
         }
-        facts.formats.unreadablePointsOfInterest = unreadablePOIs
         try Task.checkCancellation()
         return facts
     }
@@ -70,45 +63,35 @@ extension Dimension {
 extension TerrainChunkFacts {
     init(_ chunk: Chunk, at position: ChunkPosition, options: RegionScanOptions,
          paletteBlockIDs: inout Set<String>) throws {
-        var heights: [String: [Int]] = [:]
-        for name in chunk.heightmapNames {
-            if let height = options.height { heights[name] = chunk.heightmap(name, height: height) }
-            else { heights[name] = chunk.heightmap(name) }
-        }
         var usedBiomes = Set<String>()
         var deposits: [String: BlockDeposit] = [:]
-        if chunk.isFullyGenerated {
-            for section in chunk.sections {
-                try Task.checkCancellation()
-                if let biomes = section.biomes {
-                    for (index, count) in biomes.paletteCounts().enumerated() where count > 0 {
-                        usedBiomes.insert(biomes.palette[index])
-                    }
-                }
-                guard let blocks = section.blockStates else { continue }
-                for state in blocks.palette { paletteBlockIDs.insert(state.id) }
-                let wanted = blocks.palette.indices.filter { options.blockIDs?.contains(blocks.palette[$0].id) ?? true }
-                guard !wanted.isEmpty else { continue }
-                let bottom = section.y.multipliedReportingOverflow(by: 16)
-                let top = bottom.partialValue.addingReportingOverflow(15)
-                guard !bottom.overflow, !top.overflow else { continue }
-                let counts = blocks.paletteCounts()
-                for index in wanted where counts[index] > 0 {
-                    let id = blocks.palette[index].id, previous = deposits[id]
-                    deposits[id] = BlockDeposit(id: id, count: (previous?.count ?? 0) + counts[index],
-                                               minY: min(previous?.minY ?? bottom.partialValue, bottom.partialValue),
-                                               maxY: max(previous?.maxY ?? top.partialValue, top.partialValue))
+        for section in chunk.sections {
+            try Task.checkCancellation()
+            if options.biomeIDs?.isEmpty != true, let biomes = section.biomes {
+                for (index, count) in biomes.paletteCounts().enumerated() where count > 0 {
+                    let id = biomes.palette[index]
+                    if options.biomeIDs?.contains(id) ?? true { usedBiomes.insert(id) }
                 }
             }
+            guard let blocks = section.blockStates else { continue }
+            for state in blocks.palette { paletteBlockIDs.insert(state.id) }
+            let wanted = blocks.palette.indices.filter { options.blockIDs?.contains(blocks.palette[$0].id) ?? true }
+            guard !wanted.isEmpty else { continue }
+            let bottom = section.y.multipliedReportingOverflow(by: 16)
+            let top = bottom.partialValue.addingReportingOverflow(15)
+            guard !bottom.overflow, !top.overflow else { continue }
+            let counts = blocks.paletteCounts()
+            for index in wanted where counts[index] > 0 {
+                let id = blocks.palette[index].id, previous = deposits[id]
+                deposits[id] = BlockDeposit(id: id, count: (previous?.count ?? 0) + counts[index],
+                                           minY: min(previous?.minY ?? bottom.partialValue, bottom.partialValue),
+                                           maxY: max(previous?.maxY ?? top.partialValue, top.partialValue))
+            }
         }
-        let sampledBiome = chunk.isFullyGenerated ? Self.sampleBiome(chunk, heights: heights, y: options.biomeSampleY) : nil
-        self.init(position: position, dataVersion: chunk.dataVersion, status: chunk.status, isFullyGenerated: chunk.isFullyGenerated,
-                  sampledBiome: sampledBiome, biomes: usedBiomes.sorted(), blockDeposits: deposits.values.sorted { $0.id < $1.id },
-                  heightmaps: heights)
-    }
-
-    private static func sampleBiome(_ chunk: Chunk, heights: [String: [Int]], y requested: Int?) -> String? {
-        guard let y = requested ?? chunk.surfaceY(x: 8, z: 8, heightmap: heights["WORLD_SURFACE"]) else { return nil }
-        return chunk.biome(x: 8, y: y, z: 8)
+        // The surface query reads only WORLD_SURFACE, using the same actual-height and
+        // malformed-map fallback as the raw chunk API. No heightmap is retained in the facts.
+        let sampleY = options.biomeSampleY ?? chunk.surfaceY(x: 8, z: 8, height: options.height)
+        self.init(position: position, sampledBiome: sampleY.flatMap { chunk.biome(x: 8, y: $0, z: 8) },
+                  biomes: usedBiomes.sorted(), blockDeposits: deposits.values.sorted { $0.id < $1.id })
     }
 }

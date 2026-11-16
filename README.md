@@ -617,9 +617,9 @@ in v0.40.0; app adoption is tracked separately on fahlman/ChunkseeKit#51.
 
 `Dimension.scan(region:options:)` reads the terrain, entities and POIs for one region in a single
 pass. Each chunk payload is decoded once. The result contains containers, signs, spawners,
-placed structure starts, creatures, POIs, inhabited time and format counts. Its typed terrain
-chunks include decoded heightmaps, actually used biome IDs (including cave biomes), a sampled
-biome, and block counts with the enclosing section-height ranges. It does not choose UI groups,
+compact structure starts, creatures, POIs, inhabited time and readable/legacy format counts. Its
+typed terrain chunks include selected actually used biome IDs, a sampled biome, and block counts
+with the enclosing section-height ranges. It does not choose UI groups,
 combine biome areas, name ores, or run search queries.
 
 ```swift
@@ -630,17 +630,30 @@ let options = RegionScanOptions(
 )
 let facts = try overworld.scan(region: region, options: options)
 print(facts.containers.count, facts.creatures.count, facts.formats.legacy)
-let cacheData = try JSONEncoder().encode(facts)
-let restored = try JSONDecoder().decode(RegionFacts.self, from: cacheData)
+let encoder = PropertyListEncoder()
+encoder.outputFormat = .binary
+let cacheData = try encoder.encode(facts)
+let restored = try PropertyListDecoder().decode(RegionFacts.self, from: cacheData)
 ```
 
 A nil block-ID set counts all IDs; an empty set skips counting. Nil biome-sampling Y uses the
 middle column's surface from the shared reader below. Supply a Y for a different sample (for example,
 64 under the Nether roof). Optional `height` is the dimension's actual build height, for decoding
 ambiguous heightmaps; it is never inferred from occupied sections. The used-biome list excludes
-unused palette entries. Partial-generation chunks keep metadata/heightmaps but contribute no
-structure, sampled-biome, used-biome or deposit search facts. Legacy chunks contribute inhabited
-time and format counts without enabling legacy terrain decoding.
+unused palette entries. `biomeIDs` selects the retained membership independently of the sample:
+nil keeps all used IDs, while an empty set keeps none. `structurePieceIDs` similarly selects the
+pieces retained in `StructureFacts`; its bounds always enclose the complete original start.
+Partial-generation chunks contribute no terrain records or structures, but their readable totals,
+inhabited time and independent saved records remain. Legacy chunks contribute inhabited time
+and format counts without enabling legacy terrain decoding.
+
+**Unreleased compact-cache API change (#359):** `TerrainChunkFacts` no longer exposes
+`dataVersion`, `status`, `isFullyGenerated` or `heightmaps`. `RegionFacts.structures` and
+`RegionIndex.structures` contain `StructureFacts`, whose pieces are the requested subset.
+`RegionFormatCounts` retains only readable/legacy counts. `DimensionIndex` no longer concatenates
+structures or creatures; use its per-region contributions. Raw `Chunk` and `StructureStart` APIs
+are unchanged. RegionFacts interpretation revision 36 rejects previous archives; this requires
+one minor release and app adoption.
 
 The additive `RegionFacts.paletteBlockIDs` catalog retains declared block IDs from fully generated
 chunks' saved palettes, including unused entries and modded names. It is collected during the same
@@ -725,15 +738,18 @@ and chunk read paths do not change. A minor release and consumer adoption are re
 `RegionScanOptions`, `MonsterSpawnLight`, `BiomeDefinition` and `MapItem` support whole-value `Hashable` and
 `Encodable` keys, so clients need not copy their fields by hand. Call
 `try InterpretationKey.identity(of: completeKey)` for a persisted SHA-256 identity. Kit owns
-the compact JSON formatting and recursive dictionary-key ordering; clients never configure
-an encoder for keys. Compute immutable catalog identities once when publishing them. These new
+canonical binary property-list encoding and explicit recursive key sorting; clients never
+configure an encoder for keys. Compute immutable catalog identities once when publishing them. These new
 conformances do not add a separate decodable persistence contract for game values.
-RegionScanOptions encodes its unordered block-ID set in sorted order; nil (all blocks) remains
-distinct from an empty set (no block counting). Enchantment definitions are resolved after reading
+RegionScanOptions encodes its unordered block, biome and structure-piece ID sets in sorted order;
+nil (all) remains distinct from an empty selection. Enchantment definitions are resolved after reading
 the saved health inputs and do not belong in a region cache key.
 Region archives likewise sort their block-ID sets without changing the decoded facts or envelope
 shape. Ordered arrays retain their order; custom Encodable inputs must define any set ordering.
-An encoding failure throws rather than returning a shared fallback key.
+Scalars are enclosed and tagged, so missing values, numbers and literal text remain distinct.
+Corresponding Float/Double non-finite values agree, and NaN payloads normalize. An encoding
+failure throws rather than returning a shared fallback key. This property-list change retires
+old JSON-based identities once; there is no conversion of old app-owned storage.
 
 `InterpretationOutputTests` records fixed decoded-output digests by the complete frozen contract:
 terrain blocks/biomes/surfaces/heightmaps, saved light and light checks, the complete region archive,

@@ -26,6 +26,51 @@ import Testing
         #expect(try InterpretationKey.identity(of: Float.infinity) == keys[0])
         #expect(try InterpretationKey.identity(of: -Float.infinity) == keys[1])
         #expect(try InterpretationKey.identity(of: Float.nan) == keys[2])
+        for (index, spelling) in ["Infinity", "-Infinity", "NaN"].enumerated() {
+            #expect(try InterpretationKey.identity(of: spelling) != keys[index])
+        }
+        #expect(try InterpretationKey.identity(of: Double(bitPattern: 0x7ff8_0000_0000_0001)) == keys[2])
+    }
+
+    @Test func canonicalFormIsAPropertyListWithDistinctTypedValues() throws {
+        let bytes = try InterpretationKey.canonicalData(for: ["b": [2, 1], "a": [3, 4]])
+        #expect(bytes.starts(with: Data("bplist00".utf8)))
+        var format = PropertyListSerialization.PropertyListFormat.xml
+        let decoded = try PropertyListSerialization.propertyList(from: bytes, format: &format)
+        #expect(format == .binary && decoded is [Any])
+        let nilValue: String? = nil
+        let identities = try [
+            InterpretationKey.identity(of: nilValue), InterpretationKey.identity(of: "$null"),
+            InterpretationKey.identity(of: ""), InterpretationKey.identity(of: [String]()),
+            InterpretationKey.identity(of: [String: String]()), InterpretationKey.identity(of: false),
+            InterpretationKey.identity(of: 0), InterpretationKey.identity(of: "0"),
+            InterpretationKey.identity(of: UInt64.max), InterpretationKey.identity(of: Int64.max),
+        ]
+        #expect(Set(identities).count == identities.count)
+        #expect(try InterpretationKey.identity(of: [nilValue]) != InterpretationKey.identity(of: ["$null"]))
+        #expect(try InterpretationKey.identity(of: [1, 2]) != InterpretationKey.identity(of: [2, 1]))
+        #expect(try InterpretationKey.identity(of: ["a": 1]) != InterpretationKey.identity(of: ["a": 2]))
+        #expect(try InterpretationKey.identity(of: 0.0) == InterpretationKey.identity(of: -0.0))
+        #expect(try InterpretationKey.identity(of: Int64(42)) == InterpretationKey.identity(of: UInt8(42)))
+    }
+
+    @Test func explicitlyNestedContainersAndSuperEncodersKeepTheirValues() throws {
+        struct Nested: Encodable {
+            enum Key: String, CodingKey { case groups, payload }
+            let number: Int
+            func encode(to encoder: any Encoder) throws {
+                var root = encoder.container(keyedBy: Key.self)
+                var groups = root.nestedUnkeyedContainer(forKey: .groups)
+                var entry = groups.nestedContainer(keyedBy: Key.self)
+                try entry.encode(number, forKey: .payload)
+                try "base".encode(to: root.superEncoder())
+                var nested = groups.nestedUnkeyedContainer()
+                try nested.encodeNil()
+                try Data([1, 2, 3]).encode(to: nested.superEncoder())
+            }
+        }
+        #expect(try InterpretationKey.identity(of: Nested(number: 1)) == InterpretationKey.identity(of: Nested(number: 1)))
+        #expect(try InterpretationKey.identity(of: Nested(number: 1)) != InterpretationKey.identity(of: Nested(number: 2)))
     }
 
     @Test func encodingFailuresStillPropagateWithoutAFallbackIdentity() throws {
@@ -137,8 +182,12 @@ import Testing
     }
 
     @Test func completeScanOptionsHaveStableUnorderedInputs() throws {
-        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]), biomeSampleY: 20, height: 384)
-        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]), biomeSampleY: 20, height: 384)
+        let original = RegionScanOptions(blockIDs: Set(["example:a", "example:b"]),
+            biomeIDs: Set(["example:dry", "example:wet"]), structurePieceIDs: Set(["example:door", "example:room"]),
+            biomeSampleY: 20, height: 384)
+        let reordered = RegionScanOptions(blockIDs: Set(["example:b", "example:a"]),
+            biomeIDs: Set(["example:wet", "example:dry"]), structurePieceIDs: Set(["example:room", "example:door"]),
+            biomeSampleY: 20, height: 384)
         #expect(original == reordered)
         #expect(try InterpretationKey.identity(of: original) == InterpretationKey.identity(of: reordered))
         var changed = original
@@ -149,5 +198,15 @@ import Testing
         #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
         #expect(try InterpretationKey.identity(of: RegionScanOptions(blockIDs: nil))
             != InterpretationKey.identity(of: RegionScanOptions(blockIDs: [])))
+        #expect(try InterpretationKey.identity(of: RegionScanOptions(biomeIDs: nil))
+            != InterpretationKey.identity(of: RegionScanOptions(biomeIDs: [])))
+        #expect(try InterpretationKey.identity(of: RegionScanOptions(structurePieceIDs: nil))
+            != InterpretationKey.identity(of: RegionScanOptions(structurePieceIDs: [])))
+        changed = original
+        changed.biomeIDs = ["example:dry"]
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
+        changed = original
+        changed.structurePieceIDs = ["example:door"]
+        #expect(try InterpretationKey.identity(of: original) != InterpretationKey.identity(of: changed))
     }
 }

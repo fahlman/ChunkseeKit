@@ -40,8 +40,6 @@ public struct DimensionIndex: Sendable {
     public private(set) var storage: [StoredItemTotal] = []
     public private(set) var signs: [Sign] = []
     public private(set) var spawners: [Spawner] = []
-    public private(set) var structures: [StructureStart] = []
-    public private(set) var creatures: [CreatureEntry] = []
     public private(set) var pointsOfInterest: [PointOfInterest] = []
     public private(set) var portals: [NetherPortal] = []
     public private(set) var biomes: [ChunkPosition: String] = [:]
@@ -95,8 +93,6 @@ public struct DimensionIndex: Sendable {
             next.containers += region.containers
             next.signs += region.signs
             next.spawners += region.spawners
-            next.structures += region.structures
-            next.creatures += region.creatures
             next.pointsOfInterest += region.pointsOfInterest
             next.biomes.merge(region.biomes) { $1 }
             next.caveBiomes.merge(region.caveBiomes) { $1 }

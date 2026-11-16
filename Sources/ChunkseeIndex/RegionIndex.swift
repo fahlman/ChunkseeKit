@@ -8,7 +8,7 @@ public struct RegionIndex: Sendable {
     public let containers: [ItemContainer]
     public let signs: [Sign]
     public let spawners: [Spawner]
-    public let structures: [StructureStart]
+    public let structures: [StructureFacts]
     public let creatures: [CreatureEntry]
     public let pointsOfInterest: [PointOfInterest]
     public let biomes: [ChunkPosition: String]

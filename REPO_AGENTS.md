@@ -22,6 +22,13 @@ Ryan's rules, approved 2026-10-25:
 - **No self-made maintenance.** A new Minecraft version should need no code change, or at
   most one tool run.
 
+Ryan's storage rule, approved 2026-11-15 (fahlman/Chunksee#581): the app and Kit write
+property lists for their own persistence and cache identities, never JSON. Existing JSON stores
+start fresh; do not add conversions. External Minecraft and service JSON remains readable.
+AssetJSON's transient decoder normalization and legacyTextData's reproduction of Minecraft's
+historical sign/book spelling belong to that external-input exception, not storage or keys.
+Agent check scripts and evidence are outside this product rule.
+
 ChunkseeKit owns reading and interpreting game data; ChunkseeIndex aggregates its typed
 facts. Clients choose presentation, including language and deliberate fallback colors or
 symbols. Establish format behavior from the game's own definitions and code.
@@ -270,12 +277,20 @@ sign/spawner-only reads avoid walking unrelated inventories. `SavedChunkFields` 
 field-specific malformed-input precedence. Raw NBT APIs and saved files remain unchanged.
 The #314 ownership change added no supported format or numeric conversion. The #316 field-codec
 audit in foundation step 4a establishes each game's reader before changing a field family.
-Typed terrain facts expose used biome IDs, an explicitly chosen middle-column biome sample,
-per-ID block counts/section bounds, heightmaps and generation metadata. UI categories, cave-area
-joining and search stay outside the core. Incomplete generation contributes metadata, not terrain
-search facts; unsupported numeric chunks still contribute inhabited time and format counts. Missing files are
-empty, unreadable chunks are counted, and file-open failures/cancellation throw instead of
-returning a cacheable partial value. No cache storage or task scheduling is introduced here.
+Typed terrain facts expose the explicitly requested used-biome membership, a middle-column
+biome sample and per-ID block counts/section bounds. The compact projection does not retain
+heightmaps or generation metadata. Surface sampling still uses WORLD_SURFACE and the shared
+actual-height/fallback behavior. Incomplete generation contributes readable totals and independent
+saved records, with no empty terrain entry. Unsupported numeric chunks still contribute inhabited
+time and legacy totals. Missing files are empty; unreadable individual chunks are skipped, while
+file-open failures/cancellation throw instead of returning a cacheable partial value.
+StructureFacts retains the full start's bounds before filtering its requested pieces; raw
+StructureStart and Chunk APIs remain intact. Biome and structure-piece selections are explicit
+RegionScanOptions inputs, with nil/all distinct from empty, and both enter persisted identities.
+The unused unreadable-format counters and dimension-wide structures/creatures arrays are removed
+explicitly; their per-region contributions remain. These are breaking public changes in the
+unreleased revision-36 cache work (#359), requiring a minor release and app adoption.
+No cache storage or task scheduling is introduced here.
 The revision in `RegionFacts.interpretationVersion` must increase whenever a fact reader changes
 meaning. Its typed `InterpretationVersion` also includes the release tool's generated-fact digest
 and `Chunk.interpretationVersion`, so terrain changes invalidate dependent scans without a copied
@@ -293,16 +308,17 @@ retire a cache too. No release number, runtime UUID or randomized hash is an ide
 Consumers retain whole interpretation values plus their actual inputs. `RegionScanOptions`, `MonsterSpawnLight`,
 `BiomeDefinition` and `MapItem` supply Hashable and Encodable conformances for whole-value keys;
 they do not gain a new Decodable contract. `InterpretationKey.identity(of:)` is the single owner
-of persisted SHA-256 identities, compact JSON formatting and recursive dictionary-key ordering.
+of persisted SHA-256 identities and canonical binary property-list encoding. It explicitly sorts
+keyed entries into ordered arrays and tags scalar values, independently of the writer's dictionary order.
 Consumers call it once per immutable catalog publication and never configure their own encoder.
-RegionScanOptions sorts its block-ID set when encoding; nil and empty filters remain distinct.
+RegionScanOptions sorts its block, biome and structure-piece ID sets when encoding; nil and empty filters remain distinct.
 Enchantment definitions are resolved from typed health inputs after reading, so they no longer
 participate in the region scan or its persisted identity.
 Region archives also sort their block-ID sets, preserving the envelope shape and decoded facts.
 Custom Encodable inputs define their own unordered collection encoding; ordered arrays stay ordered.
-Non-finite numbers encode as the strings Infinity, -Infinity and NaN, matching typed JSON archives;
-finite encodings and existing identities stay unchanged. Inputs admitting both numeric values and
-literal strings in one encoded position must preserve type tags, as TextComponent.Argument does.
+The canonical property-list tree encloses top-level scalars and distinguishes nil, text, booleans
+and numbers. Corresponding Float/Double non-finite inputs agree; all NaN payloads normalize, and
+ordered arrays retain their order. This new encoding retires previous JSON-based identities once.
 Encoding errors throw instead of sharing a fallback identity. InterpretationOutputTests ties fixed
 terrain, light, region-archive and resolved-asset output digests to each complete frozen contract,
 including its owning reader revision and generated/dependent identities. Changed covered output

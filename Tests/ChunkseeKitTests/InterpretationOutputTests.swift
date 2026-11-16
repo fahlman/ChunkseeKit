@@ -300,17 +300,16 @@ import Testing
         let chunks = Dictionary(uniqueKeysWithValues: facts.chunks.map { ($0.position, $0) })
         var rows: [[String?]] = [[
             "formats", String(facts.formats.readable), String(facts.formats.legacy),
-            String(facts.formats.unreadableTerrain), String(facts.formats.unreadableEntities),
-            String(facts.formats.unreadablePointsOfInterest), facts.paletteBlockIDs.sorted().joined(separator: ","),
+            facts.paletteBlockIDs.sorted().joined(separator: ","),
         ]]
         for (index, sample) in cases.enumerated() {
             let chunk = chunks[ChunkPosition(x: index % 32, z: index / 32)]
             let deposit = chunk?.blockDeposits.first
             rows.append([
                 sample.id, chunk == nil ? "unreadable" : "readable", String(facts.inhabitedTimes[index]),
-                numericText(chunk?.position.x), numericText(chunk?.position.z), chunk?.status,
+                numericText(chunk?.position.x), numericText(chunk?.position.z),
                 deposit?.id, numericText(deposit?.count), numericText(deposit?.minY), numericText(deposit?.maxY),
-                chunk?.sampledBiome, chunk?.biomes.joined(separator: ","), numericText(chunk?.isFullyGenerated),
+                chunk?.sampledBiome, chunk?.biomes.joined(separator: ","),
             ])
             #expect((chunk?.blockDeposits.count ?? 0) <= 1)
         }
