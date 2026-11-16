@@ -548,7 +548,8 @@ import ChunkseeKitTestSupport
         let before = try [Data(contentsOf: terrainURL), Data(contentsOf: entityURL)]
         let facts = try dimension.scan(region: region)
         #expect(facts.paletteBlockIDs == ["minecraft:short_grass"])
-        #expect(facts.chunks.first?.blockDeposits.first?.id == "minecraft:short_grass")
+        let counts = try dimension.countBlocks(region: region, matching: ["minecraft:short_grass"])
+        #expect(counts.chunks[.init(x: 0, z: 0)]?.first?.id == "minecraft:short_grass")
         #expect(facts.chunks.first?.biomes == ["minecraft:deep_warm_ocean"]) // The earlier biome step is already past.
         #expect(facts.containers.count == 2 && facts.containers.allSatisfy { $0.items.first?.id == "minecraft:short_grass" })
         #expect(facts.creatures.first?.equipment?["mainhand"]?.id == "minecraft:short_grass")

@@ -52,25 +52,4 @@ import Testing
         }
     }
 
-    @Test func richestMatchingDepositsCompeteAcrossDimensionsAndRespectTheLimit() {
-        struct Content: Sendable { var blocks: [DimensionIndex.ChunkDeposit] = [] }
-        func deposit(_ block: NotableBlock, _ count: Int) -> DimensionIndex.ChunkDeposit {
-            .init(chunk: .init(x: -1, z: 2), deposit: .init(block: block, count: count, minY: -48, maxY: -33))
-        }
-        let index = WorldIndex(dimensions: [
-            "minecraft:overworld": Content(blocks: [deposit(.gold, 100), deposit(.diamond, 9), deposit(.diamond, 3)]),
-            "custom:caves": Content(blocks: [deposit(.diamond, 12), deposit(.emerald, 5)]),
-            "minecraft:the_end": Content(),
-        ])
-        let best = index.richestDeposits(matching: [.diamond, .emerald], limit: 3, in: \.blocks)
-        #expect(best.map(\.dimension) == ["custom:caves", "minecraft:overworld", "custom:caves"])
-        #expect(best.map { $0.value.deposit.count } == [12, 9, 5])
-        #expect(best.allSatisfy { $0.value.chunk == ChunkPosition(x: -1, z: 2) && $0.value.deposit.minY == -48 })
-        #expect(index.richestDeposits(matching: [.diamond], limit: 1, in: \.blocks).first?.value.deposit.count == 12)
-        #expect(index.richestDeposits(matching: [.diamond], limit: 0, in: \.blocks).isEmpty)
-        #expect(index.richestDeposits(matching: [.diamond], limit: -1, in: \.blocks).isEmpty)
-        #expect(index.richestDeposits(matching: [], limit: 5, in: \.blocks).isEmpty)
-        #expect(index.richestDeposits(matching: [.ancientDebris], limit: 5, in: \.blocks).isEmpty)
-        #expect(WorldIndex<Content>().richestDeposits(matching: [.diamond], limit: 5, in: \.blocks).isEmpty)
-    }
 }

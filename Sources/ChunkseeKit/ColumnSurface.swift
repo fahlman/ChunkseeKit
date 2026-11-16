@@ -16,7 +16,7 @@ extension Chunk {
         return surfaceHeights(at: Array(0..<256), heightmap: surfaceHeightmap(height: height))
     }
 
-    /// Region scans already decoded the heightmaps for their typed facts.
+    /// Reuses a decoded surface map for the column traversal.
     func surfaceY(x: Int, z: Int, heightmap: [Int]?) -> Int? {
         surfaceHeights(at: [ChunkSection.blockIndex(x: x, y: 0, z: z)], heightmap: heightmap)[0]
     }

@@ -6,15 +6,15 @@ import Testing
 /// Output fixtures cannot exercise every reader path. Source changes therefore also
 /// require an explicit review of the cache contract, including unchanged meaning.
 @Suite struct InterpretationSourceTests {
-    @Test func regionFactsSourceHasAReviewedContract() throws {
+    @Test(arguments: [RegionFacts.interpretationVersion, RegionBlockCounts.interpretationVersion])
+    func cachedReaderSourceHasAReviewedContract(version: InterpretationVersion) throws {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let files = try sourceFiles(at: root)
         let digest = try InterpretationKey.identity(of: files)
-        let version = RegionFacts.interpretationVersion
         #expect(reviewedSources[version]?.contains(digest) == true,
                 """
-                Review the complete region-facts contract and add its reviewed source fingerprint,
+                Review the complete \(version.domain) contract and add its reviewed source fingerprint,
                 including after a revision bump. Source SHA-256: \(digest)
                 """)
     }
@@ -34,6 +34,11 @@ import Testing
         let regionFacts35 = InterpretationVersion(domain: "regionFacts", revision: 35,
             generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574",
             dependencies: [terrain])
+        let regionFacts36 = InterpretationVersion(domain: "regionFacts", revision: 36,
+            generatedFacts: "5c5168ccdb0d4407fc19f2e7decc7178dd453dd4a3327b4136e9bf2a44c99574",
+            dependencies: [terrain])
+        let blockCounts1 = InterpretationVersion(domain: "blockCounts", revision: 1,
+            generatedFacts: "", dependencies: [terrain])
         return [
             // Published source 30e2b22861a92da0fed92aa518340d617b850da9.
             regionFacts: ["c05630d57eee90a0d9d3ae21a7469f1207d793fa99b4762f9258fa665fa94cd0"],
@@ -45,6 +50,9 @@ import Testing
                 "438ed31afd03de0227db610f9a4cc37c1cadb9ca65ca44c97e979d05626566e7",
                 "ac0b6d32689f5780001382fffea3b7ebbb8ae5cba77e6e909ed7e991b07f0bc9",
             ],
+            // Both contracts independently approved at 68844db on #359/6919625016.
+            regionFacts36: ["f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704"],
+            blockCounts1: ["f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704"],
         ]
     }
 
@@ -69,8 +77,9 @@ import Testing
             }
         }
 
-        // Cover complete current dependency roots, including generated sources. This
-        // intentionally requests review for unrelated core edits instead of keeping a
+        // Cover complete current dependency roots for both contracts, including generated sources.
+        // Each core edit requires a decision for regionFacts and blockCounts independently,
+        // even when the same digest witnesses both. This requests review instead of keeping a
         // field or file allowlist that could miss the next cached reader.
         try include(root.appendingPathComponent("Package.swift"))
         try include(root.appendingPathComponent("Sources/ChunkseeKit", isDirectory: true))

@@ -5,103 +5,125 @@ import Foundation
 import Testing
 
 @Suite struct DepositOrderingTests {
-    @Test func unchangedDepositsKeepTheirOrderAndLimitedMembershipAfterRefresh() throws {
-        let root = try Fixtures.tempDirectory()
-        defer { try? FileManager.default.removeItem(at: root) }
-        try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
-            "LevelName": .string("Deposit order")
-        ])]), to: root.appendingPathComponent("level.dat"))
+    @Test func nearestBeforeLimitIncludesPoorNearbyChunksAndSupportsTwoOrigins() throws {
+        let fixture = try CountsFixture()
+        defer { fixture.remove() }
         let catalog = try NotableBlockFixtures.catalog()
-        let dimensions = ["minecraft:overworld", "minecraft:the_nether"]
-        let positions: [ChunkPosition] = [
-            .init(x: 1, z: 1), .init(x: -1, z: 0), .init(x: -2, z: 1), .init(x: 0, z: 0),
-            .init(x: -2, z: 0), .init(x: 1, z: 0), .init(x: 0, z: 1), .init(x: -1, z: 1),
-        ]
-        for dimension in dimensions {
-            let directory = dimension.replacingOccurrences(of: ":", with: "/")
+        let positions = (0..<220).map { ChunkPosition(x: $0, z: 0) }
+        let facts = try fixture.write(positions, includeEmerald: false, ids: catalog.blockIDs)
+        let available = Set(facts.map(\.region))
+        let index = BlockCountIndex(dimension: fixture.dimension.id).updating(available: available, replacements: facts)
+        let west = try #require(BlockSearchOrigin(x: 8, z: 8)), east = try #require(BlockSearchOrigin(x: 219 * 16 + 8, z: 8))
+        let fromWest = index.nearestDeposits(matching: [.diamond], using: catalog, from: west, limit: 200)
+        let fromEast = index.nearestDeposits(matching: [.diamond], using: catalog, from: east, limit: 200)
+        #expect(fromWest.map(\.chunk.x) == Array(0..<200))
+        #expect(fromWest.first?.deposit.count == 1 && fromWest.last?.deposit.count == 1000)
+        #expect(fromEast.map(\.chunk.x) == Array((20..<220).reversed()))
+        #expect(index.nearestDeposits(matching: [.diamond], using: catalog, from: west, limit: 200) == fromWest)
+        #expect(index.regionsToRead(available: available, matching: catalog.blockIDs, from: east).isEmpty)
+        for limit in [0, -1] {
+            #expect(index.nearestDeposits(matching: [.diamond], using: catalog, from: west, limit: limit).isEmpty)
+        }
+        #expect(index.nearestDeposits(matching: [], using: catalog, from: west, limit: 200).isEmpty)
+        #expect(index.nearestDeposits(matching: [.ancientDebris], using: catalog, from: west, limit: 200).isEmpty)
+        #expect(BlockSearchOrigin(x: .nan, z: 0) == nil && BlockSearchOrigin(x: 0, z: .infinity) == nil)
+    }
+
+    @Test func tiesAndLimitedMembershipSurviveArchiveOrderAndPartialReplacement() throws {
+        let fixture = try CountsFixture()
+        defer { fixture.remove() }
+        let catalog = try NotableBlockFixtures.catalog()
+        let positions: [ChunkPosition] = [.init(x: 1, z: 0), .init(x: -1, z: 0), .init(x: 0, z: 0)]
+        let facts = try fixture.write(positions, includeEmerald: true, ids: catalog.blockIDs)
+        let available = Set(facts.map(\.region)), origin = try #require(BlockSearchOrigin(x: 8, z: 8))
+        let initial = BlockCountIndex(dimension: fixture.dimension.id).updating(available: available, replacements: facts)
+        let reordered = try facts.reversed().map { counts in
+            var archive = try #require(PropertyListSerialization.propertyList(
+                from: PropertyListEncoder().encode(counts), format: nil) as? [String: Any])
+            archive["chunks"] = Array(try #require(archive["chunks"] as? [[String: Any]]).reversed())
+            return try PropertyListDecoder().decode(RegionBlockCounts.self, from:
+                PropertyListSerialization.data(fromPropertyList: archive, format: .binary, options: 0))
+        }
+        let rebuilt = BlockCountIndex(dimension: fixture.dimension.id).updating(available: available, replacements: reordered)
+        let refreshed = initial.updating(available: available, replacements: Array(reordered.prefix(1)))
+        for index in [initial, rebuilt, refreshed] {
+            let results = index.nearestDeposits(matching: [.diamond, .emerald], using: catalog, from: origin, limit: 5)
+            #expect(results.map(\.chunk.x) == [0, 0, -1, -1, 1])
+            #expect(results.map(\.deposit.block) == [.diamond, .emerald, .diamond, .emerald, .diamond])
+            #expect(results.allSatisfy { $0.deposit.minY == -32 && $0.deposit.maxY == -17 })
+        }
+    }
+
+    @Test func unsearchedFailureEmptyAndDeletedCoverageAreSeparate() throws {
+        let fixture = try CountsFixture()
+        defer { fixture.remove() }
+        let catalog = try NotableBlockFixtures.catalog(), position = RegionPosition(x: 0, z: 0)
+        let origin = try #require(BlockSearchOrigin(x: 8, z: 8))
+        let facts = try fixture.write([.init(x: 0, z: 0)], includeEmerald: false, ids: catalog.blockIDs)
+        let fresh = BlockCountIndex(dimension: fixture.dimension.id)
+        #expect(fresh.coverage(of: position, matching: catalog.blockIDs) == .unsearched)
+        let first = fresh.updating(available: [position], replacements: facts)
+        #expect(first.coverage(of: position, matching: catalog.blockIDs) == .complete)
+        let changed = first.invalidating([position])
+        #expect(changed.coverage(of: position, matching: catalog.blockIDs) == .unsearched)
+        #expect(changed.regions[position]?.counts == first.regions[position]?.counts)
+        let failed = changed.updating(available: [position], replacements: [], failed: [position])
+        #expect(failed.coverage(of: position, matching: catalog.blockIDs) == .failed)
+        #expect(failed.regions[position]?.counts == first.regions[position]?.counts)
+        #expect(failed.regionsToRead(available: [position], matching: catalog.blockIDs, from: origin).isEmpty)
+        #expect(failed.invalidating([position]).regionsToRead(available: [position], matching: catalog.blockIDs, from: origin) == [position])
+        try Fixtures.write(Fixtures.region([]), to: fixture.dimension.regionURL(at: position))
+        let empty = try fixture.dimension.countBlocks(region: position, matching: catalog.blockIDs)
+        let cleared = failed.updating(available: [position], replacements: [empty])
+        #expect(cleared.coverage(of: position, matching: catalog.blockIDs) == .complete)
+        #expect(cleared.nearestDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).isEmpty)
+        #expect(first.nearestDeposits(matching: [.diamond], using: catalog, from: origin, limit: 200).count == 1)
+        #expect(first.updating(available: [], replacements: facts).regions.isEmpty)
+        let foreign = BlockCountIndex(dimension: "example:another").updating(available: [position], replacements: facts)
+        #expect(foreign.regions.isEmpty)
+    }
+
+    @Test func sparseOccupiedRegionsAreOrderedByOutwardRings() throws {
+        let index = BlockCountIndex(dimension: "example:world")
+        let origin = try #require(BlockSearchOrigin(x: -1, z: -1))
+        let positions: Set<RegionPosition> = [.init(x: 0, z: 0), .init(x: -1, z: -1),
+            .init(x: 100_000, z: -100_000), .init(x: -2, z: -1)]
+        #expect(index.regionsToRead(available: positions, matching: ["example:ore"], from: origin) == [
+            .init(x: -1, z: -1), .init(x: -2, z: -1), .init(x: 0, z: 0), .init(x: 100_000, z: -100_000)])
+        #expect(index.regionsToRead(available: positions, matching: [], from: origin).isEmpty)
+    }
+
+    private struct CountsFixture {
+        let root: URL
+        let dimension: ChunkseeKit.Dimension
+
+        init() throws {
+            root = try Fixtures.tempDirectory()
+            try Fixtures.writeGzippedNBT(.compound(["Data": .compound(["LevelName": .string("Counts")])]),
+                to: root.appendingPathComponent("level.dat"))
+            try FileManager.default.createDirectory(at: root.appendingPathComponent("dimensions/minecraft/overworld/region"),
+                withIntermediateDirectories: true)
+            dimension = try #require(World(contentsOf: root).dimension("overworld"))
+        }
+
+        func remove() { try? FileManager.default.removeItem(at: root) }
+
+        func write(_ positions: [ChunkPosition], includeEmerald: Bool, ids: Set<String>) throws -> [RegionBlockCounts] {
             for (region, chunks) in Dictionary(grouping: positions, by: \.region) {
                 let entries = chunks.map { position in
-                    let count = position == .init(x: 1, z: 1) ? 7 : 4
-                    let indices = [Int](repeating: 1, count: count) + [Int](repeating: 2, count: 4)
-                        + [Int](repeating: 0, count: 4096 - count - 4)
+                    let count = position.x == 0 ? 1 : 1000
+                    let emerald = includeEmerald ? 4 : 0
+                    let indices = [Int](repeating: 1, count: count) + [Int](repeating: 2, count: emerald)
+                        + [Int](repeating: 0, count: 4096 - count - emerald)
                     let section = Fixtures.section(y: -2, palette: ["air", "diamond_ore", "emerald_ore"].map {
                         .compound(["Name": .string("minecraft:" + $0)])
                     }, indices: indices)
                     return Fixtures.RegionChunk(localX: position.localX, localZ: position.localZ,
                         nbt: Fixtures.chunk(x: position.x, z: position.z, sections: [section]))
                 }
-                try Fixtures.write(try Fixtures.region(entries), to: root.appendingPathComponent(
-                    "dimensions/\(directory)/region/r.\(region.x).\(region.z).mca"))
+                try Fixtures.write(Fixtures.region(entries), to: dimension.regionURL(at: region))
             }
+            return try Set(positions.map(\.region)).map { try dimension.countBlocks(region: $0, matching: ids) }
         }
-
-        var original: [String: DimensionIndex] = [:]
-        var rebuilt: [String: DimensionIndex] = [:]
-        var refreshed: [String: DimensionIndex] = [:]
-        let world = try World(contentsOf: root)
-        for id in dimensions {
-            let dimension = try #require(world.dimension(id))
-            let facts = try dimension.regionFiles().map {
-                try dimension.scan(region: .init(x: $0.x, z: $0.z), options: .init(blockIDs: catalog.blockIDs))
-            }
-            let available = Set(facts.map(\.region))
-            let parts = facts.map { RegionIndex($0, caveBiomeIDs: [], notableBlocks: catalog) }
-            let empty = DimensionIndex(dimension: id, caveBiomeIDs: [], notableBlocks: catalog)
-            let first = empty.updating(available: available, selected: nil, replacements: parts)
-            original[id] = first
-
-            // Reversing the saved archive's chunks rebuilds each region dictionary with the
-            // same facts in a different insertion order, without changing any ore counts.
-            let reordered = try facts.reversed().map { facts in
-                var archive = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(facts)) as? [String: Any])
-                let chunks = try #require(archive["chunks"] as? [[String: Any]])
-                archive["chunks"] = Array(chunks.reversed())
-                let decoded = try JSONDecoder().decode(RegionFacts.self,
-                    from: JSONSerialization.data(withJSONObject: archive))
-                return RegionIndex(decoded, caveBiomeIDs: [], notableBlocks: catalog)
-            }
-            rebuilt[id] = empty.updating(available: available, selected: nil, replacements: reordered)
-            refreshed[id] = first.updating(available: available, selected: [.init(x: -1, z: 0)],
-                                           replacements: reordered)
-        }
-
-        let rich = deposit(.diamond, 7, x: 1, z: 1)
-        var expected = [rich]
-        for x in [-2, -1, 0, 1] {
-            for z in [0, 1] {
-                if x != 1 || z != 1 { expected.append(deposit(.diamond, 4, x: x, z: z)) }
-                expected.append(deposit(.emerald, 4, x: x, z: z))
-            }
-        }
-        for snapshots in [original, rebuilt, refreshed] {
-            for value in snapshots.values { #expect(value.blocks == expected) }
-            for order in [dimensions, Array(dimensions.reversed())] {
-                var catalog: [String: DimensionIndex] = [:]
-                for id in order { catalog[id] = snapshots[id] }
-                let best = WorldIndex(dimensions: catalog)
-                    .richestDeposits(matching: [.diamond, .emerald], limit: 5, in: \.blocks)
-                #expect(best.map(\.dimension) == [dimensions[0], dimensions[1], dimensions[0], dimensions[0], dimensions[0]])
-                #expect(best.map(\.value) == [rich, rich, deposit(.diamond, 4, x: -2, z: 0),
-                    deposit(.emerald, 4, x: -2, z: 0), deposit(.diamond, 4, x: -2, z: 1)])
-            }
-        }
-    }
-
-    @Test func unsortedDimensionArraysAreRankedBeforeTheirLimit() {
-        struct Content: Sendable { var blocks: [DimensionIndex.ChunkDeposit] }
-        let input = [deposit(.emerald, 4, x: 2, z: 0), deposit(.diamond, 4, x: -1, z: 2),
-                     deposit(.emerald, 4, x: -1, z: 0), deposit(.diamond, 4, x: -1, z: 0),
-                     deposit(.gold, 90, x: 3, z: 0), deposit(.diamond, 9, x: 8, z: 8)]
-        let id = "example:caves"
-        for values in [input, Array(input.reversed())] {
-            let world = WorldIndex(dimensions: [id: Content(blocks: values)])
-            let best = world.richestDeposits(matching: [.diamond, .emerald], limit: 3, in: \.blocks)
-            #expect(best.map(\.value) == [deposit(.diamond, 9, x: 8, z: 8),
-                deposit(.diamond, 4, x: -1, z: 0), deposit(.emerald, 4, x: -1, z: 0)])
-        }
-    }
-
-    private func deposit(_ block: NotableBlock, _ count: Int, x: Int, z: Int) -> DimensionIndex.ChunkDeposit {
-        .init(chunk: .init(x: x, z: z), deposit: .init(block: block, count: count, minY: -32, maxY: -17))
     }
 }

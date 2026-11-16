@@ -15,7 +15,7 @@ import Testing
         defer { world.remove() }
         try world.terrain(chunkX: 31, count: 2)
         try world.terrain(chunkX: 32, count: 5)
-        let neverRead = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let neverRead = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
         let available: Set<RegionPosition> = [a, b]
         #expect(neverRead.regionsToRead(available: available, selected: [a]) == available)
         #expect(neverRead.regionsToRead(available: available, selected: []) == available)
@@ -44,21 +44,19 @@ import Testing
         try world.poi(x: 512)
         let negative = RegionPosition(x: -2, z: 0)
         let parts = try [negative, a, b].map { try world.scan($0, caves: caves) }
-        let index = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let index = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
             .updating(available: [negative, a, b], selected: nil, replacements: Array(parts.reversed()))
         #expect(index.regions.count == 3)
         #expect(index.containers.map(\.x) == [496, 512])
         #expect(index.storage.map(\.id) == ["minecraft:diamond"])
         #expect(index.storage.first?.count == 7 && index.storage.first?.containers == 2)
-        #expect(index.signs.count == 2 && index.spawners.count == 2 && index.structures.count == 2)
-        #expect(index.creatures.count == 4)
-        #expect(index.creatures.filter { $0.group == .pet }.count == 2)
-        #expect(index.creatures.filter { $0.group == .mob }.map(\.creature.id) == ["minecraft:sheep", "minecraft:sheep"])
-        #expect(index.creatures.first?.creature.x == -528)
+        #expect(index.signs.count == 2 && index.spawners.count == 2 && structures(index).count == 2)
+        #expect(creatures(index).count == 4)
+        #expect(creatures(index).filter { $0.group == .pet }.count == 2)
+        #expect(creatures(index).filter { $0.group == .mob }.map(\.creature.id) == ["minecraft:sheep", "minecraft:sheep"])
+        #expect(creatures(index).first?.creature.x == -528)
         #expect(index.regions[a]?.creatures.count == 2)
         #expect(index.formats == .init(readable: 2, legacy: 0))
-        #expect(index.blocks.map(\.deposit.count) == [5, 2])
-        #expect(index.blocks.allSatisfy { $0.deposit.block == .diamond && $0.deposit.minY == 0 && $0.deposit.maxY == 15 })
         #expect(index.portals.count == 1 && index.portals.first?.blocks.count == 4)
         #expect(index.biomeAreas.count == 2)
         #expect(Set(index.biomeAreas.map(\.biomeID)) == ["minecraft:plains", "minecraft:lush_caves"])
@@ -81,31 +79,29 @@ import Testing
         }
         try world.entities(chunkX: 0, values: [custom(x: 1, variant: "example:spotted"), sheep(x: 3), sheep(x: .nan)])
         try world.entities(chunkX: 32, values: [sheep(x: 513)])
-        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
             .updating(available: [a, b], selected: nil,
                       replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
-        #expect(initial.creatures.count == 3 && initial.creatures.allSatisfy { $0.group == .mob })
-        let original = try #require(initial.creatures.first { $0.creature.uuid == uuid })
+        #expect(creatures(initial).count == 3 && creatures(initial).allSatisfy { $0.group == .mob })
+        let original = try #require(creatures(initial).first { $0.creature.uuid == uuid })
         #expect(original.creature.appearance?.variant == "example:spotted")
-        #expect(initial.creatures.filter { $0.creature.id == "minecraft:sheep" }
+        #expect(creatures(initial).filter { $0.creature.id == "minecraft:sheep" }
             .allSatisfy { $0.creature.appearance?.variant == "minecraft:black" })
-        let acrossWorld = WorldIndex(dimensions: [overworld: initial]).all(\.creatures)
-        #expect(acrossWorld.count == 3 && acrossWorld.allSatisfy { $0.dimension == overworld })
 
         try world.entities(chunkX: 0, values: [custom(x: 9, variant: "example:striped")])
         let refreshed = initial.updating(available: [a, b], selected: [a],
                                          replacements: [try world.scan(a, caves: caves)])
-        #expect(refreshed.creatures.count == 2)
-        let moved = try #require(refreshed.creatures.first { $0.id == original.id })
+        #expect(creatures(refreshed).count == 2)
+        let moved = try #require(creatures(refreshed).first { $0.id == original.id })
         #expect(moved.creature.x == 9 && moved.creature.appearance?.variant == "example:striped")
-        #expect(initial.creatures.count == 3 && original.creature.x == 1)
+        #expect(creatures(initial).count == 3 && original.creature.x == 1)
         let failed = refreshed.updating(available: [a, b], selected: [a], replacements: [])
-        #expect(failed.creatures == refreshed.creatures)
+        #expect(creatures(failed) == creatures(refreshed))
         let deleted = refreshed.updating(available: [a], selected: [b], replacements: [])
-        #expect(deleted.creatures.map(\.id) == [original.id])
+        #expect(creatures(deleted).map(\.id) == [original.id])
         try world.entities(chunkX: 0, values: [])
         let emptied = deleted.updating(available: [a], selected: [a], replacements: [try world.scan(a, caves: caves)])
-        #expect(emptied.creatures.isEmpty)
+        #expect(creatures(emptied).isEmpty)
     }
 
     @Test func partialReplacementMatchesACompletePassAndLeavesOldSnapshotIntact() throws {
@@ -116,7 +112,7 @@ import Testing
         try world.poi(x: 511)
         try world.poi(x: 512)
         let first = try world.scan(a, caves: caves), second = try world.scan(b, caves: caves)
-        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
         let initial = empty.updating(available: [a, b], selected: nil, replacements: [first, second])
         try world.terrain(chunkX: 32, count: 7, biome: "minecraft:desert")
         try world.poi(x: 512, type: "minecraft:home")
@@ -139,7 +135,7 @@ import Testing
         defer { world.remove() }
         try world.terrain(chunkX: 31, count: 2)
         try world.terrain(chunkX: 32, count: 5)
-        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
             .updating(available: [a, b], selected: nil,
                       replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
         let selections: [Set<RegionPosition>?] = [nil, [a]]
@@ -160,7 +156,7 @@ import Testing
         #expect(cleared.regions.count == 2 && cleared.regions[a]?.containers.isEmpty == true)
         #expect(cleared.storage.first?.count == 5 && cleared.formats.readable == 1)
         let gone = cleared.updating(available: [], selected: nil, replacements: [])
-        #expect(gone.regions.isEmpty && gone.containers.isEmpty && gone.blocks.isEmpty && gone.biomeAreas.isEmpty)
+        #expect(gone.regions.isEmpty && gone.containers.isEmpty && gone.biomeAreas.isEmpty)
     }
 
     @Test func replacementsOutsideThePassOrWithDifferentIdentityOrPolicyAreIgnored() throws {
@@ -170,7 +166,7 @@ import Testing
         try world.terrain(chunkX: 32, count: 5)
         try world.terrain(chunkX: 31, count: 9, dimension: "the_nether")
         let first = try world.scan(a, caves: caves), second = try world.scan(b, caves: caves)
-        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let initial = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
             .updating(available: [a], selected: nil, replacements: [first])
         let foreign = try world.scan(a, caves: caves, dimension: "the_nether")
         let otherPolicy = try world.scan(a, caves: [])
@@ -194,7 +190,7 @@ import Testing
             ])])
         ]))]), to: dimension.regionURL(at: legacyRegion))
         let legacy = try world.scan(legacyRegion, caves: caves)
-        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
         let legacyOnly = empty.updating(available: [legacyRegion], selected: nil, replacements: [legacy])
         #expect(legacyOnly.formats.isOnlyLegacy && legacyOnly.formats.legacy == 1)
         let combined = legacyOnly.updating(available: [a, legacyRegion], selected: [a],
@@ -202,7 +198,7 @@ import Testing
         #expect(combined.formats == .init(readable: 1, legacy: 1) && !combined.formats.isOnlyLegacy)
         #expect(combined.biomeAreas.count == 1 && combined.biomeAreas.first?.chunkCount == 1)
         #expect(combined.biomes[.init(x: 31, z: 0)] == "minecraft:lush_caves")
-        let surfaceOnly = DimensionIndex(dimension: overworld, caveBiomeIDs: [], notableBlocks: world.catalog)
+        let surfaceOnly = DimensionIndex(dimension: overworld, caveBiomeIDs: [])
             .updating(available: [a], selected: nil, replacements: [try world.scan(a, caves: [])])
         #expect(surfaceOnly.caveBiomes.isEmpty && surfaceOnly.biomeAreas.count == 1)
     }
@@ -212,13 +208,12 @@ import Testing
         defer { world.remove() }
         try world.terrain(chunkX: 31, count: 2, unusedBlockID: "minecraft:oak_leaves")
         try world.terrain(chunkX: 32, count: 5, unusedBlockID: "example:ruby_block")
-        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves, notableBlocks: world.catalog)
+        let empty = DimensionIndex(dimension: overworld, caveBiomeIDs: caves)
         let initial = empty.updating(available: [a, b], selected: nil,
                                     replacements: [try world.scan(a, caves: caves), try world.scan(b, caves: caves)])
         let common: Set<String> = ["minecraft:air", "minecraft:stone", "minecraft:diamond_ore"]
         #expect(initial.paletteBlockIDs == common.union(["minecraft:oak_leaves", "example:ruby_block"]))
         #expect(initial.regions[a]?.paletteBlockIDs == common.union(["minecraft:oak_leaves"]))
-        #expect(initial.blocks.map(\.deposit.count) == [5, 2])
         let failed = initial.updating(available: [a, b], selected: [b], replacements: [])
         #expect(failed.paletteBlockIDs == initial.paletteBlockIDs)
 
@@ -238,13 +233,22 @@ import Testing
         #expect(deleted.updating(available: [], selected: nil, replacements: []).paletteBlockIDs.isEmpty)
     }
 
+    private func creatures(_ index: DimensionIndex) -> [CreatureEntry] {
+        index.regions.keys.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
+            .flatMap { index.regions[$0]!.creatures }
+    }
+
+    private func structures(_ index: DimensionIndex) -> [StructureFacts] {
+        index.regions.keys.sorted { ($0.x, $0.z) < ($1.x, $1.z) }
+            .flatMap { index.regions[$0]!.structures }
+    }
+
     private func expectEquivalent(_ a: DimensionIndex, _ b: DimensionIndex) {
         #expect(Set(a.regions.keys) == Set(b.regions.keys))
         #expect(a.containers == b.containers && a.storage == b.storage && a.signs == b.signs)
-        #expect(a.spawners == b.spawners && a.structures == b.structures && a.creatures == b.creatures)
+        #expect(a.spawners == b.spawners && structures(a) == structures(b) && creatures(a) == creatures(b))
         #expect(a.pointsOfInterest == b.pointsOfInterest && a.portals == b.portals)
         #expect(a.biomes == b.biomes && a.caveBiomes == b.caveBiomes && a.formats == b.formats)
-        #expect(a.blocks == b.blocks)
         #expect(a.paletteBlockIDs == b.paletteBlockIDs)
         #expect(Set(a.biomeAreas.map(\.id)) == Set(b.biomeAreas.map(\.id)))
         #expect(a.biomeAreas.map(\.chunkCount).sorted() == b.biomeAreas.map(\.chunkCount).sorted())
@@ -252,9 +256,7 @@ import Testing
 
     private struct SavedWorld {
         let root: URL
-        let catalog: NotableBlock.Catalog
         init() throws {
-            catalog = try NotableBlockFixtures.catalog()
             root = try Fixtures.tempDirectory()
             try Fixtures.writeGzippedNBT(.compound(["Data": .compound([
                 "LevelName": .string("Shared index"), "DataVersion": .int(5023)
@@ -269,8 +271,7 @@ import Testing
             try #require(try World(contentsOf: root).dimension(id))
         }
         func scan(_ region: RegionPosition, caves: Set<String>, dimension id: String = "overworld") throws -> RegionIndex {
-            RegionIndex(try dimension(id).scan(region: region,
-                options: .init(blockIDs: catalog.blockIDs)), caveBiomeIDs: caves, notableBlocks: catalog)
+            RegionIndex(try dimension(id).scan(region: region), caveBiomeIDs: caves)
         }
         func terrain(chunkX: Int, count: Int, biome: String = "minecraft:plains", dimension id: String = "overworld",
                      unusedBlockID: String? = nil) throws {

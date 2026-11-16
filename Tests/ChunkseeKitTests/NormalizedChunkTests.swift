@@ -99,7 +99,7 @@ import Testing
         } else {
             #expect(facts.chunks.isEmpty && facts.formats.readable == 0)
             #expect(facts.formats.legacy == (kind == .numeric ? 1 : 0))
-            #expect(facts.formats.unreadableTerrain == (kind == .numeric ? 0 : 1))
+            #expect(facts.formats.readable == 0)
         }
         #expect(try Data(contentsOf: url) == original)
     }

@@ -2,58 +2,68 @@ import Foundation
 
 /// Choices that affect a region scan's result. Include these in a consumer's cache key.
 public struct RegionScanOptions: Sendable, Hashable, Encodable {
-    /// nil counts every block ID; an empty set skips block counting. Properties are combined by ID.
-    public var blockIDs: Set<String>?
+    /// nil retains every used biome; an empty set retains none. Surface sampling is independent.
+    public var biomeIDs: Set<String>?
+    /// nil retains every structure piece; an empty set retains only the complete start's bounds.
+    public var structurePieceIDs: Set<String>?
     /// nil samples the middle column at its surface; a supplied Y samples that height instead.
     public var biomeSampleY: Int?
     /// The dimension's actual build height, when known. Never infer it from occupied sections.
     public var height: Int?
 
-    public init(blockIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil) {
-        self.blockIDs = blockIDs; self.biomeSampleY = biomeSampleY; self.height = height
+    public init(biomeIDs: Set<String>? = nil,
+                structurePieceIDs: Set<String>? = nil, biomeSampleY: Int? = nil, height: Int? = nil) {
+        self.biomeIDs = biomeIDs; self.structurePieceIDs = structurePieceIDs
+        self.biomeSampleY = biomeSampleY; self.height = height
     }
 
-    private enum CodingKeys: String, CodingKey { case blockIDs, biomeSampleY, height }
+    private enum CodingKeys: String, CodingKey { case biomeIDs, structurePieceIDs, biomeSampleY, height }
 
     /// Sets have no semantic order. Keep their persisted identity stable without requiring
     /// clients to copy option fields. InterpretationKey owns the persisted dictionary ordering.
     public func encode(to encoder: any Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encodeIfPresent(blockIDs?.sorted(), forKey: .blockIDs)
+        try values.encodeIfPresent(biomeIDs?.sorted(), forKey: .biomeIDs)
+        try values.encodeIfPresent(structurePieceIDs?.sorted(), forKey: .structurePieceIDs)
         try values.encodeIfPresent(biomeSampleY, forKey: .biomeSampleY)
         try values.encodeIfPresent(height, forKey: .height)
     }
 }
 
-/// The count and enclosing section-height range of a block ID, without UI categories or labels.
-public struct BlockDeposit: Sendable, Equatable {
-    public let id: String
-    public let count: Int
-    public let minY: Int
-    public let maxY: Int
-}
-
-/// Typed terrain facts for one readable modern chunk. Partial generation retains metadata only.
+/// Compact terrain facts for one fully generated, readable chunk.
 public struct TerrainChunkFacts: Sendable, Equatable {
     /// Position of the region-file entry, rather than an unchecked coordinate in its payload.
     public let position: ChunkPosition
-    public let dataVersion: Int?
-    public let status: String?
-    public let isFullyGenerated: Bool
     public let sampledBiome: String?
-    /// Every actually referenced biome, including cave biomes; unused palette names are omitted.
+    /// Actually referenced members of the requested biome set; unused palette names are omitted.
     public let biomes: [String]
-    public let blockDeposits: [BlockDeposit]
-    /// First-free-block Y at each column (z * 16 + x). Ambiguous or invalid maps are absent.
-    public let heightmaps: [String: [Int]]
+}
+
+/// A structure's complete bounds and the explicitly requested subset of its pieces.
+/// Use StructureStart or Chunk.structureStarts when every raw piece is needed.
+public struct StructureFacts: Sendable, Equatable {
+    public let id: String
+    public let chunkX: Int
+    public let chunkZ: Int
+    public let bounds: BlockBox?
+    public let pieces: [StructureStart.Piece]
+
+    init(_ start: StructureStart, pieceIDs: Set<String>?) {
+        id = start.id; chunkX = start.chunkX; chunkZ = start.chunkZ
+        // Filtering the raw start first would shrink its bounds to the selected pieces.
+        bounds = start.bounds
+        pieces = pieceIDs.map { ids in start.pieces.filter { ids.contains($0.id) } } ?? start.pieces
+    }
+
+    init(id: String, chunkX: Int, chunkZ: Int, bounds: BlockBox?, pieces: [StructureStart.Piece]) {
+        self.id = id; self.chunkX = chunkX; self.chunkZ = chunkZ
+        self.bounds = bounds; self.pieces = pieces
+    }
 }
 
 public struct RegionFormatCounts: Sendable, Equatable {
     public internal(set) var readable = 0
     public internal(set) var legacy = 0
-    public internal(set) var unreadableTerrain = 0
-    public internal(set) var unreadableEntities = 0
-    public internal(set) var unreadablePointsOfInterest = 0
 }
 
 /// One pass over a region's terrain, entities and POIs, ready for a consumer's transforms/cache.
@@ -66,7 +76,7 @@ public struct RegionFacts: Sendable, Codable {
     /// Bump the revision whenever a fact reader changes meaning, even with the same serialized
     /// shape. Generated facts and the terrain reader contribute their own identities.
     public static let interpretationVersion = InterpretationVersion(
-        domain: "regionFacts", revision: 35, generatedFacts: GeneratedInterpretationDigests.regionFacts,
+        domain: "regionFacts", revision: 36, generatedFacts: GeneratedInterpretationDigests.regionFacts,
         dependencies: [Chunk.interpretationVersion])
 
     public let dimension: String
@@ -75,12 +85,12 @@ public struct RegionFacts: Sendable, Codable {
     public internal(set) var containers: [ItemContainer] = []
     public internal(set) var signs: [Sign] = []
     public internal(set) var spawners: [Spawner] = []
-    public internal(set) var structures: [StructureStart] = []
+    public internal(set) var structures: [StructureFacts] = []
     public internal(set) var creatures: [Creature] = []
     public internal(set) var pointsOfInterest: [PointOfInterest] = []
     public internal(set) var chunks: [TerrainChunkFacts] = []
     /// Declared block IDs in fully generated chunks' saved palettes, including unused entries.
-    /// Independent of the block-count filter; this catalog does not prove a block occupies a position.
+    /// This catalog does not prove a block occupies a position. Counts have their own reader.
     public internal(set) var paletteBlockIDs: Set<String> = []
     /// 1,024 local entries, z * 32 + x. Includes legacy Level metadata; unavailable entries are 0.
     public internal(set) var inhabitedTimes = [Int](repeating: 0, count: 1024)
@@ -96,13 +106,14 @@ public struct RegionFacts: Sendable, Codable {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
                 debugDescription: "RegionFacts interpretation version is stale or unsupported"))
         }
-        guard archive.inhabitedTimes.count == 1024,
-              archive.chunks.allSatisfy({ $0.heightmaps.values.allSatisfy { $0.count == 256 } }) else {
+        guard archive.inhabitedTimes.count == 1024 else {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
                 debugDescription: "RegionFacts contains an invalid grid size"))
         }
         self.init(dimension: archive.dimension, region: archive.region,
-                  options: .init(blockIDs: archive.blockIDs.map { Set($0) }, biomeSampleY: archive.biomeSampleY, height: archive.height))
+                  options: .init(biomeIDs: archive.biomeIDs.map { Set($0) },
+                                 structurePieceIDs: archive.structurePieceIDs.map { Set($0) },
+                                 biomeSampleY: archive.biomeSampleY, height: archive.height))
         containers = archive.containers; signs = archive.signs; spawners = archive.spawners
         structures = archive.structures.map(\.value); creatures = archive.creatures
         pointsOfInterest = archive.pointsOfInterest; chunks = archive.chunks.map(\.value)
@@ -117,7 +128,8 @@ private struct Archive: Codable {
     var version: InterpretationVersion
     var dimension: String
     var region: RegionPosition
-    var blockIDs: [String]?
+    var biomeIDs: [String]?
+    var structurePieceIDs: [String]?
     var biomeSampleY: Int?
     var height: Int?
     var containers: [ItemContainer]
@@ -133,7 +145,8 @@ private struct Archive: Codable {
 
     init(_ value: RegionFacts) {
         version = RegionFacts.interpretationVersion; dimension = value.dimension; region = value.region
-        blockIDs = value.options.blockIDs?.sorted(); biomeSampleY = value.options.biomeSampleY; height = value.options.height
+        biomeSampleY = value.options.biomeSampleY; height = value.options.height
+        biomeIDs = value.options.biomeIDs?.sorted(); structurePieceIDs = value.options.structurePieceIDs?.sorted()
         containers = value.containers; signs = value.signs; spawners = value.spawners
         structures = value.structures.map(StructureRecord.init); creatures = value.creatures
         pointsOfInterest = value.pointsOfInterest; chunks = value.chunks.map(ChunkRecord.init)
@@ -143,41 +156,25 @@ private struct Archive: Codable {
 }
 
 private struct FormatRecord: Codable {
-    var readable: Int, legacy: Int, unreadableTerrain: Int, unreadableEntities: Int, unreadablePointsOfInterest: Int
+    var readable: Int, legacy: Int
     init(_ v: RegionFormatCounts) {
-        readable = v.readable; legacy = v.legacy; unreadableTerrain = v.unreadableTerrain
-        unreadableEntities = v.unreadableEntities; unreadablePointsOfInterest = v.unreadablePointsOfInterest
+        readable = v.readable; legacy = v.legacy
     }
     var value: RegionFormatCounts {
-        RegionFormatCounts(readable: readable, legacy: legacy, unreadableTerrain: unreadableTerrain,
-                           unreadableEntities: unreadableEntities, unreadablePointsOfInterest: unreadablePointsOfInterest)
+        RegionFormatCounts(readable: readable, legacy: legacy)
     }
-}
-
-private struct DepositRecord: Codable {
-    var id: String
-    var count: Int, minY: Int, maxY: Int
-    init(_ v: BlockDeposit) { id = v.id; count = v.count; minY = v.minY; maxY = v.maxY }
-    var value: BlockDeposit { BlockDeposit(id: id, count: count, minY: minY, maxY: maxY) }
 }
 
 private struct ChunkRecord: Codable {
     var position: ChunkPosition
-    var dataVersion: Int?
-    var status: String?
-    var isFullyGenerated: Bool
     var sampledBiome: String?
     var biomes: [String]
-    var blockDeposits: [DepositRecord]
-    var heightmaps: [String: [Int]]
     init(_ v: TerrainChunkFacts) {
-        position = v.position; dataVersion = v.dataVersion; status = v.status; isFullyGenerated = v.isFullyGenerated
-        sampledBiome = v.sampledBiome; biomes = v.biomes; blockDeposits = v.blockDeposits.map(DepositRecord.init)
-        heightmaps = v.heightmaps
+        position = v.position
+        sampledBiome = v.sampledBiome; biomes = v.biomes
     }
     var value: TerrainChunkFacts {
-        TerrainChunkFacts(position: position, dataVersion: dataVersion, status: status, isFullyGenerated: isFullyGenerated,
-                          sampledBiome: sampledBiome, biomes: biomes, blockDeposits: blockDeposits.map(\.value), heightmaps: heightmaps)
+        TerrainChunkFacts(position: position, sampledBiome: sampledBiome, biomes: biomes)
     }
 }
 
@@ -196,7 +193,24 @@ private struct PieceRecord: Codable {
 private struct StructureRecord: Codable {
     var id: String
     var chunkX: Int, chunkZ: Int
+    var bounds: BoxRecord?
     var pieces: [PieceRecord]
-    init(_ v: StructureStart) { id = v.id; chunkX = v.chunkX; chunkZ = v.chunkZ; pieces = v.pieces.map(PieceRecord.init) }
-    var value: StructureStart { StructureStart(id: id, chunkX: chunkX, chunkZ: chunkZ, pieces: pieces.map(\.value)) }
+    init(_ v: StructureFacts) {
+        id = v.id; chunkX = v.chunkX; chunkZ = v.chunkZ
+        bounds = v.bounds.map(BoxRecord.init); pieces = v.pieces.map(PieceRecord.init)
+    }
+    var value: StructureFacts {
+        StructureFacts(id: id, chunkX: chunkX, chunkZ: chunkZ, bounds: bounds?.value, pieces: pieces.map(\.value))
+    }
+}
+
+private struct BoxRecord: Codable {
+    var minX: Int, minY: Int, minZ: Int, maxX: Int, maxY: Int, maxZ: Int
+    init(_ v: BlockBox) {
+        minX = v.minX; minY = v.minY; minZ = v.minZ
+        maxX = v.maxX; maxY = v.maxY; maxZ = v.maxZ
+    }
+    var value: BlockBox {
+        BlockBox(minX: minX, minY: minY, minZ: minZ, maxX: maxX, maxY: maxY, maxZ: maxZ)
+    }
 }

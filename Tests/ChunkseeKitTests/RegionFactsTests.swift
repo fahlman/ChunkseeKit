@@ -58,14 +58,14 @@ import Testing
                            to: dimension.regionURL(folder, at: region))
     }
 
-    @Test func oneResultMatchesTheExistingReadersAndCountsOnlyUsedBiomesAndBlocks() throws {
+    @Test func oneResultMatchesTheExistingReadersAndRetainsOnlyUsedBiomes() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
         try write(terrain(), in: .terrain, dimension: dimension)
         try write(entityChunk, in: .entities, dimension: dimension)
         try write(poiChunk, in: .pointsOfInterest, dimension: dimension)
-        let facts = try dimension.scan(region: region, options: .init(blockIDs: ["minecraft:diamond_ore", "minecraft:gold_ore"]))
+        let facts = try dimension.scan(region: region)
         let old = try dimension.contents(regionX: region.x, regionZ: region.z)
         #expect(facts.dimension == dimension.id && facts.region == region)
         #expect(facts.containers == old.containers && facts.signs == old.signs && facts.spawners == old.spawners)
@@ -75,16 +75,15 @@ import Testing
         #expect(facts.creatures.first?.health == 6 && facts.creatures.first?.maximumHealth(enchantments: [:]) != nil)
         #expect(facts.pointsOfInterest == PointOfInterest.records(inChunk: poiChunk))
         #expect(facts.inhabitedTimes == (try dimension.inhabitedTimes(regionX: region.x, regionZ: region.z)))
-        #expect(facts.structures == (try Chunk(nbt: terrain())).structureStarts)
+        #expect(facts.structures == (try Chunk(nbt: terrain())).structureStarts.map { StructureFacts($0, pieceIDs: nil) })
         let chunk = try #require(facts.chunks.first)
         #expect(chunk.position == ChunkPosition(x: -1, z: 0))
         #expect(chunk.biomes == ["minecraft:lush_caves", "minecraft:plains"])
         #expect(chunk.sampledBiome == "minecraft:plains")
-        #expect(chunk.heightmaps["WORLD_SURFACE"] == [Int](repeating: 64, count: 256))
-        #expect(chunk.blockDeposits == [BlockDeposit(id: "minecraft:diamond_ore", count: 128, minY: 48, maxY: 63)])
         #expect(facts.formats.readable == 1 && facts.formats.legacy == 0)
 
-        let encoder = JSONEncoder(), decoder = JSONDecoder()
+        let encoder = PropertyListEncoder(), decoder = PropertyListDecoder()
+        encoder.outputFormat = .binary
         let decoded = try decoder.decode(RegionFacts.self, from: encoder.encode(facts))
         #expect(decoded.options == facts.options && decoded.chunks == facts.chunks)
         #expect(decoded.containers == facts.containers && decoded.signs == facts.signs && decoded.spawners == facts.spawners)
@@ -108,13 +107,11 @@ import Testing
             .init(localX: 2, localZ: 0, nbt: .compound(["DataVersion": .int(5023)])),
         ]), to: dimension.regionURL(at: region))
         let facts = try dimension.scan(region: region)
-        #expect(facts.formats.readable == 1 && facts.formats.legacy == 1 && facts.formats.unreadableTerrain == 1)
-        #expect(facts.inhabitedTimes[1] == 7200 && facts.inhabitedTimes[3] == 0)
-        #expect(facts.chunks.first?.isFullyGenerated == false)
-        #expect(facts.chunks.first?.sampledBiome == nil && facts.chunks.first?.biomes.isEmpty == true)
-        #expect(facts.chunks.first?.blockDeposits.isEmpty == true && facts.structures.isEmpty)
+        #expect(facts.formats.readable == 1 && facts.formats.legacy == 1)
+        #expect(facts.inhabitedTimes[0] == 2400 && facts.inhabitedTimes[1] == 7200 && facts.inhabitedTimes[3] == 0)
+        #expect(facts.chunks.isEmpty && facts.structures.isEmpty)
         #expect(facts.paletteBlockIDs.isEmpty)
-        #expect(facts.containers.count == 1) // metadata still reads without claiming structures were built
+        #expect(facts.containers.count == 1 && facts.signs.count == 1 && facts.spawners.count == 1)
     }
 
     @Test func missingTerrainDoesNotHideEntityOrPOIOnlyRegionsAndBrokenFilesAreExplicit() throws {
@@ -131,25 +128,93 @@ import Testing
         var broken = try Fixtures.region([.init(localX: 0, localZ: 0, nbt: terrain())])
         broken[8192 + 4] = 99 // an unreadable chunk, beside independently readable entity/POI files
         try Fixtures.write(broken, to: dimension.regionURL(at: region))
-        #expect(try dimension.scan(region: region).formats.unreadableTerrain == 1)
+        let skipped = try dimension.scan(region: region)
+        #expect(skipped.chunks.isEmpty && skipped.formats.readable == 0)
+        #expect(skipped.containers == facts.containers && skipped.creatures == facts.creatures)
+        #expect(skipped.pointsOfInterest == facts.pointsOfInterest)
         try Fixtures.write([0, 1], to: dimension.regionURL(at: region))
         #expect(throws: RegionError.truncatedHeader) { try dimension.scan(region: region) }
     }
 
-    @Test func samplingAndCountingChoicesAreExplicitAndPersisted() throws {
+    @Test func samplingChoicesAreExplicitAndPersisted() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:the_nether", url: root)
         try write(terrain(), in: .terrain, dimension: dimension)
-        let facts = try dimension.scan(region: region, options: .init(blockIDs: [], biomeSampleY: 48, height: 384))
+        let facts = try dimension.scan(region: region, options: .init(biomeSampleY: 48, height: 384))
         #expect(facts.chunks.first?.sampledBiome == "minecraft:lush_caves")
-        #expect(facts.chunks.first?.blockDeposits.isEmpty == true)
         #expect(facts.options.biomeSampleY == 48 && facts.options.height == 384)
-        let all = try dimension.scan(region: region)
-        #expect(Set(all.chunks.first?.blockDeposits.map(\.id) ?? []) == ["minecraft:air", "minecraft:diamond_ore"])
         #expect(throws: RegionScanError.invalidHeight(0)) { try dimension.scan(region: region, options: .init(height: 0)) }
         #expect(throws: RegionScanError.invalidRegion(.init(x: Int.max, z: 0))) {
             try dimension.scan(region: .init(x: Int.max, z: 0))
+        }
+    }
+
+    @Test func retainedBiomeMembershipDoesNotChangeTheSurfaceSample() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        try write(terrain(), in: .terrain, dimension: dimension)
+        let selections: [Set<String>?] = [nil, [], ["minecraft:lush_caves", "minecraft:deep_dark"]]
+        for selection in selections {
+            let options = RegionScanOptions(biomeIDs: selection, height: 384)
+            let facts = try dimension.scan(region: region, options: options)
+            let chunk = try #require(facts.chunks.first)
+            #expect(chunk.sampledBiome == "minecraft:plains")
+            let used: Set<String> = ["minecraft:lush_caves", "minecraft:plains"]
+            #expect(chunk.biomes == (selection.map { used.intersection($0) } ?? used).sorted())
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            let restored = try PropertyListDecoder().decode(RegionFacts.self, from: encoder.encode(facts))
+            #expect(restored.options == options && restored.chunks == facts.chunks)
+        }
+    }
+
+    @Test func compactStructuresKeepCompleteBoundsAndOnlyRequestedPieces() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        var fields = try #require(terrain().compound)
+        fields["structures"] = .compound(["starts": .compound(["example:ruin": .compound([
+            "id": .string("example:ruin"), "ChunkX": .int(-1), "ChunkZ": .int(0),
+            "Children": .list([
+                .compound(["id": .string("example:wall"), "BB": .intArray([-32, 20, -20, 20, 90, 30])]),
+                .compound(["id": .string("example:door"), "BB": .intArray([-2, 60, 0, 0, 63, 1])]),
+            ]),
+        ])])])
+        let saved = NBT.compound(fields)
+        let raw = try #require(Chunk(nbt: saved).structureStarts.first)
+        try write(saved, in: .terrain, dimension: dimension)
+        let selections: [Set<String>?] = [nil, [], ["example:door"]]
+        for selection in selections {
+            let facts = try dimension.scan(region: region, options: .init(structurePieceIDs: selection))
+            let compact = try #require(facts.structures.first)
+            #expect(compact.id == raw.id && compact.chunkX == raw.chunkX && compact.chunkZ == raw.chunkZ)
+            #expect(compact.bounds == raw.bounds)
+            #expect(compact.pieces == raw.pieces.filter { selection?.contains($0.id) ?? true })
+            let restored = try PropertyListDecoder().decode(RegionFacts.self, from: PropertyListEncoder().encode(facts))
+            #expect(restored.structures == facts.structures && restored.options == facts.options)
+        }
+        #expect(try Chunk(nbt: saved).structureStarts == [raw])
+    }
+
+    @Test func compactScanPreservesSurfaceSamplingWithMissingOrMalformedHeightmaps() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: "minecraft:overworld", url: root)
+        let maps: [NBT?] = [terrain()["Heightmaps"], nil,
+                           .compound(["WORLD_SURFACE": .longArray([0]), "OTHER": .longArray([0])])]
+        for map in maps {
+            var fields = try #require(terrain().compound)
+            fields["Heightmaps"] = map
+            let saved = NBT.compound(fields), raw = try Chunk(nbt: saved)
+            try write(saved, in: .terrain, dimension: dimension)
+            for height in [nil, 384] as [Int?] {
+                let facts = try dimension.scan(region: region, options: .init(biomeIDs: [], height: height))
+                let expected = raw.surfaceY(x: 8, z: 8, height: height).flatMap { raw.biome(x: 8, y: $0, z: 8) }
+                #expect(facts.chunks.first?.sampledBiome == expected)
+                #expect(facts.chunks.first?.biomes.isEmpty == true)
+            }
         }
     }
 
@@ -205,7 +270,7 @@ import Testing
         #expect(facts.sampledBiome == "minecraft:plains")
     }
 
-    @Test func paletteCatalogKeepsUnusedAndModdedNamesRegardlessOfCountingChoices() throws {
+    @Test func paletteCatalogKeepsUnusedAndModdedNamesWithoutCounting() throws {
         let root = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let dimension = Dimension(id: "minecraft:overworld", url: root)
@@ -223,14 +288,9 @@ import Testing
             .init(localX: 0, localZ: 0, nbt: Fixtures.chunk(x: -32, z: 0, dataVersion: 5023, sections: [section, duplicate])),
             .init(localX: 1, localZ: 0, nbt: partial)
         ]), to: dimension.regionURL(at: region))
-        let choices: [Set<String>?] = [nil, [], ["minecraft:diamond_ore"]]
-        for selected in choices {
-            let facts = try dimension.scan(region: region, options: .init(blockIDs: selected))
-            #expect(facts.paletteBlockIDs == ["minecraft:stone", "minecraft:oak_leaves", "example:glowing_brick"])
-            let deposits = try #require(facts.chunks.first).blockDeposits
-            #expect(deposits.map(\.id) == (selected == nil ? ["minecraft:stone"] : []))
-            let restored = try JSONDecoder().decode(RegionFacts.self, from: JSONEncoder().encode(facts))
-            #expect(restored.paletteBlockIDs == facts.paletteBlockIDs)
-        }
+        let facts = try dimension.scan(region: region)
+        #expect(facts.paletteBlockIDs == ["minecraft:stone", "minecraft:oak_leaves", "example:glowing_brick"])
+        let restored = try PropertyListDecoder().decode(RegionFacts.self, from: PropertyListEncoder().encode(facts))
+        #expect(restored.paletteBlockIDs == facts.paletteBlockIDs)
     }
 }

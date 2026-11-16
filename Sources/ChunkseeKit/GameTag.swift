@@ -10,6 +10,22 @@ public struct GameTag: Sendable, Equatable {
         public let required: Bool
     }
     public let members: [Member]
+    /// Effective declarations after pack composition, with each readable reference resolved.
+    /// Missing optional references are omitted; valid empty references remain. A tag entry's
+    /// members include its nested tags, so consumers can group by the game's declared tags
+    /// without rebuilding composition or maintaining their own list of subgroup names.
+    public let entries: [Entry]
+
+    public struct Entry: Sendable, Equatable {
+        public let id: String
+        public let isTag: Bool
+        public let required: Bool
+        public let members: [Member]
+    }
+
+    init(members: [Member], entries: [Entry] = []) {
+        self.members = members; self.entries = entries
+    }
 }
 
 extension GameAssets {
