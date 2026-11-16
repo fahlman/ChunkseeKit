@@ -262,7 +262,12 @@ legacy terrain support. These public APIs are available starting in v0.30.0.
 The unreleased #360 cleanup removes the unused `SaveVersion` catalog, its `DataVersion` alias
 and `Dimension.dataDirectory`. The two fixture callers retain their numeric values in test
 support/tests, where synthetic save inputs belong. This requires a minor release for the public
-API removals; no reader behavior, saved field or cache interpretation changes.
+API removals; no reader behavior, saved field or cache interpretation changes. The four test-only
+conveniences `GameAssets.biomeDefinition`, `World.biomeDefinitions(for:assets:)`,
+`GameAssets.lightingTimeline` and `Chunk.surfaceHeights(height:)` are internal in this cleanup,
+along with the jar-only helper's `LightingTimeline` result type. Their existing behavior tests
+use `@testable import ChunkseeKit`. Production clients use the
+public complete-biome snapshot, saved-world lighting and column traversal APIs.
 The CLI structure scan streams each region through `Dimension.forEachChunk`, then uses
 `Chunk.isFullyGenerated` and `structureStarts` after skipping unneeded block data; it does not
 repeat region/chunk reads or apply its own chunk-status or placement rules. Structure-center
@@ -491,8 +496,9 @@ This additive API is available in v0.36.0; app adoption remains on #51. Reader/c
 absolute Y. Invalid context or overflowing coordinates are unavailable; no legacy terrain support
 is added. The explicit-height overload is additive public API.
 
-`Chunk.surfaceY(x:z:height:)` and `surfaceHeights(height:)` share the WORLD_SURFACE reader and
-actual-block fallback. Surface means the highest non-air block, including plants and water,
+`Chunk.surfaceY(x:z:height:)` and the internal `surfaceHeights(height:)` test convenience share
+the WORLD_SURFACE reader and actual-block fallback. Surface means the highest non-air block,
+including plants and water,
 matching 26.3 Heightmap.Types/NOT_AIR; MOTION_BLOCKING is not an equivalent fallback. Empty
 columns remain unavailable. Single-column reads inspect only that column; batched reads unpack
 each reached nonuniform section once. RegionScan uses the same owner for its surface biome
@@ -558,7 +564,7 @@ The shared parser accepts consumer readers so consolidation does not eagerly val
 change later answers near the query budget. Tag expansion, null/default policy and trade amount
 evaluation stay with their existing owners. No generated data or interpretation identity changes.
 
-`LightingTimeline` and `SkyLighting` own the five sun/moon/sky-light timeline attributes for
+Internal `LightingTimeline` and public `SkyLighting` own the five sun/moon/sky-light timeline attributes for
 fahlman/Chunksee#357. GameAssets reads definitions independently of version labels; the same immutable sampler
 handles scalar, RGB and discrete tracks, preserving clock identity, periodic wrap and ordered
 duplicate-tick jumps. Linear/constant/cubic-Bezier easing and the documented simple modifiers
@@ -716,10 +722,11 @@ known empty tags remain empty. This is not proof of saved usage or custom-genera
 Dimension.vanillaBiomes and its hand-copied inventories are removed, an intentional breaking
 API change requiring a minor release and app adoption. No per-snapshot biome list is maintained.
 
-`BiomeDefinition`, `GameAssets.biomeDefinition` and `World.biomeDefinitions(for:assets:)` expose
+`BiomeDefinition` and public `World.biomeDefinitions(assets:)` expose
 base temperature/downfall, RGB water and optional grass/foliage/dry-foliage colors,
-and the saved grass modifier from any version whose resources parse. World queries canonicalize
-only requested IDs and use the saved enabled-pack list. Save/jar version labels do not suppress
+and the saved grass modifier from any version whose resources parse. World queries discover
+registered IDs and use the saved enabled-pack list. Internal single-jar/requested-ID conveniences
+share the reader for focused tests. Save/jar version labels do not suppress
 readable definitions, including for older or unlabeled saves. A missing jar makes vanilla
 unavailable without discarding higher-priority pack overrides. No biome-color table, scan,
 cache or game-registry validator is added. The shared AssetJSON/RGBColor reader handles the

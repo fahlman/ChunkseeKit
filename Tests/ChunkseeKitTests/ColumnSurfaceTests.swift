@@ -1,7 +1,7 @@
 import Foundation
 import ChunkseeKitTestSupport
 import Testing
-import ChunkseeKit
+@testable import ChunkseeKit
 
 @Suite struct ColumnSurfaceTests {
     @Test func defaultNamespaceAirDoesNotSupplyASurface() throws {

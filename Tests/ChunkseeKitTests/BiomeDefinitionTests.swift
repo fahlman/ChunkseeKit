@@ -1,5 +1,5 @@
 import Foundation
-import ChunkseeKit
+@testable import ChunkseeKit
 import ChunkseeKitTestSupport
 import Testing
 
