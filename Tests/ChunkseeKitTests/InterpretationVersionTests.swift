@@ -81,6 +81,53 @@ import Testing
         #expect(throws: Invalid.Failure.self) { try InterpretationKey.identity(of: Invalid()) }
     }
 
+    @Test func persistentIdentityAcrossFreshProcesses() throws {
+        let outputKey = "CHUNKSEE_IDENTITY_PROBE_OUTPUT"
+        let orderKey = "CHUNKSEE_IDENTITY_PROBE_REVERSED"
+        if let output = ProcessInfo.processInfo.environment[outputKey] {
+            struct Input: Encodable {
+                let nested: [String: [String: Double?]]
+                let options: RegionScanOptions
+            }
+            let reversed = ProcessInfo.processInfo.environment[orderKey] == "1"
+            let keys = reversed ? ["z", "a"] : ["a", "z"]
+            var nested: [String: [String: Double?]] = [:]
+            for key in keys {
+                var values: [String: Double?] = [:]
+                for name in keys { values[name] = .some(name == "a" ? 1.25 : nil) }
+                nested[key] = values
+            }
+            let options = RegionScanOptions(blockIDs: Set(keys), biomeIDs: Set(keys), structurePieceIDs: Set(keys))
+            let identity = try InterpretationKey.identity(of: Input(nested: nested, options: options))
+            try PropertyListEncoder().encode([identity]).write(to: URL(fileURLWithPath: output))
+            return
+        }
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var identities: [String] = []
+        for order in 0..<2 {
+            let output = root.appendingPathComponent("identity-\(order).plist")
+            let process = Process(), pipe = Pipe()
+            // SwiftPM's generated runner accepts this library selector and Swift Testing filter.
+            // Re-enter only this case, taking its child branch before another process can start.
+            process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            process.arguments = ["--testing-library", "swift-testing", "--filter", "persistentIdentityAcrossFreshProcesses"]
+            var environment = ProcessInfo.processInfo.environment
+            environment[outputKey] = output.path; environment[orderKey] = String(order)
+            process.environment = environment
+            process.standardOutput = pipe; process.standardError = pipe
+            try process.run()
+            let log = pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            try #require(process.terminationStatus == 0, "\(String(decoding: log, as: UTF8.self))")
+            let value = try PropertyListDecoder().decode([String].self, from: Data(contentsOf: output))
+            identities.append(try #require(value.first))
+        }
+        #expect(identities.count == 2 && identities[0] == identities[1])
+    }
+
     @Test func publishedContractsSurviveReopeningAndRemainDistinct() throws {
         let versions = [Chunk.interpretationVersion, MonsterSpawnLight.interpretationVersion,
                         GameAssets.interpretationVersion, RegionFacts.interpretationVersion]
