@@ -61,7 +61,8 @@ extension Dimension {
             let omitted = Chunk.keysNotNeededForTerrain.union(["Structures", "Heightmaps", "biomes", "Biomes"])
             for (x, z) in file.chunkCoordinates {
                 try Task.checkCancellation()
-                let chunk = try Chunk(nbt: file.chunkNBT(localX: x, localZ: z, skipping: omitted))
+                guard let nbt = try file.chunkNBT(localX: x, localZ: z, skipping: omitted) else { continue }
+                let chunk = try Chunk(nbt: nbt)
                 guard chunk.isFullyGenerated else { continue }
                 let deposits = try chunk.blockDeposits(matching: blockIDs)
                 if !deposits.isEmpty { chunks[.init(x: origin.x + x, z: origin.z + z)] = deposits }
