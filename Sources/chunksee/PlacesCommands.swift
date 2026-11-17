@@ -28,12 +28,7 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
             fail("this world needs both an Overworld and a Nether")
         }
         var discovery = RegionDiscovery()
-        func readPortals(in dimension: ChunkseeKit.Dimension) throws -> [NetherPortal]? {
-            guard let regions = discovery.files(in: dimension, folder: .pointsOfInterest) else { return nil }
-            let points = try regions.flatMap { try dimension.pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
-            return NetherPortal.portals(from: points, in: dimension.id)
-        }
-        let overworldPortals = try readPortals(in: overworld), netherPortals = try readPortals(in: nether)
+        let overworldPortals = try discovery.portals(in: overworld), netherPortals = try discovery.portals(in: nether)
         var borders: [String: WorldBorder] = [:]
         for dimension in [overworld, nether] { borders[dimension.id] = try world.worldBorder(of: dimension) }
         func describe(_ p: NetherPortal) -> String { "(\(Int(p.centerX.rounded(.down))), \(p.minY), \(Int(p.centerZ.rounded(.down))))" }

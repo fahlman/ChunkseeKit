@@ -125,4 +125,14 @@ import ChunkseeKit
         #expect(result.standardError.isEmpty)
         #expect(result.output == "Overworld: 0 portals\nNether: 0 portals\n")
     }
+
+    @Test func damagedRegionIsNotRelabelledAsAFailedFolderListing() throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 0)], nether: [])
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data([0]).write(to: root.appendingPathComponent("poi/r.0.0.mca"))
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 1)
+        #expect(result.standardError.contains("truncatedHeader"))
+        #expect(!result.standardError.contains("could not list region folder"))
+    }
 }

@@ -14,6 +14,14 @@ struct RegionDiscovery {
         return listing.files
     }
 
+    mutating func portals(in dimension: ChunkseeKit.Dimension) throws -> [NetherPortal]? {
+        do { return try dimension.netherPortals() }
+        catch let error as CocoaError where error.code == .fileReadUnknown && error.filePath == dimension.poiDirectory.path {
+            unavailable.append(dimension.poiDirectory)
+            return nil
+        }
+    }
+
     func finish() throws {
         if !unavailable.isEmpty { throw Failure(folders: unavailable) }
     }

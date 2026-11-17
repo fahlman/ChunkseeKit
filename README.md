@@ -1310,6 +1310,11 @@ for portal in overworldPortals {
 }
 ```
 
+`Dimension.netherPortals()` returns an empty list for a missing or empty POI folder.
+If the folder cannot be listed, it throws `CocoaError.Code.fileReadUnknown` with `filePath`
+naming that folder. Errors opening individual region files propagate unchanged. An
+unavailable folder does not establish that there are no destination portals.
+
 To classify the return as well, use `portal.roundTrip(into: netherPortals,
 returningThrough: overworldPortals, dimensionTypes: types, borders: borders)`. It returns `.twoWay(target:block:)`,
 `.oneWay(target:block:returning:)`, `.returnUnknown(target:block:)`, or `.wouldCreateNewPortal(destination:)`.
