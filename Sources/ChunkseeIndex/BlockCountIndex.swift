@@ -103,35 +103,59 @@ public struct BlockCountIndex: Sendable {
     /// then apply the caller's limit. Equal distances use chunk X/Z and group identity; richness
     /// never displaces a nearer match. Different windows can query this same snapshot independently.
     public func nearestDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                from origin: BlockSearchOrigin, limit: Int) -> [ChunkDeposit] {
+                                from origin: BlockSearchOrigin, limit: Int) throws -> [ChunkDeposit] {
+        try Task.checkCancellation()
         guard limit > 0 else { return [] }
-        return matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit).nearest
+        return try matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit).nearest
     }
 
     /// Counts every matching row before limiting nearest membership. A nonpositive limit
     /// requests only the total; unsearched regions are not counted as zero-match results.
+    /// Cancellation stops between chunks and throughout ranking, without returning a partial result.
     public func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                 from origin: BlockSearchOrigin, limit: Int) -> DepositMatches {
+                                 from origin: BlockSearchOrigin, limit: Int) throws -> DepositMatches {
+        try matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit,
+                             checkingCancellation: { try Task.checkCancellation() })
+    }
+
+    /// The internal check permits deterministic cancellation tests without racing a large workload.
+    func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
+                          from origin: BlockSearchOrigin, limit: Int,
+                          checkingCancellation checkCancellation: () throws -> Void) rethrows -> DepositMatches {
+        try checkCancellation()
         guard !groups.isEmpty else { return DepositMatches(totalCount: 0, nearest: []) }
         var found: [ChunkDeposit] = []
         for entry in regions.values {
+            try checkCancellation()
             guard let counts = entry.counts else { continue }
             for (chunk, values) in counts.chunks {
+                try checkCancellation()
                 for deposit in NotableBlock.Deposit.grouped(values, using: catalog) where groups.contains(deposit.block) {
                     found.append(.init(chunk: chunk, deposit: deposit))
                 }
             }
         }
-        return DepositMatches(totalCount: found.count, nearest: Self.nearest(found, from: origin, limit: limit))
+        return try DepositMatches(totalCount: found.count,
+                                  nearest: Self.nearest(found, from: origin, limit: limit,
+                                                        checkingCancellation: checkCancellation))
     }
 
-    private static func nearest(_ values: [ChunkDeposit], from origin: BlockSearchOrigin, limit: Int) -> [ChunkDeposit] {
+    private static func nearest(_ values: [ChunkDeposit], from origin: BlockSearchOrigin, limit: Int,
+                                checkingCancellation checkCancellation: () throws -> Void) rethrows -> [ChunkDeposit] {
+        try checkCancellation()
         guard limit > 0 else { return [] }
-        let ranked = values.map { (value: $0, distance: origin.distance(to: $0.chunk)) }.sorted {
+        let ranked = try values.map {
+            try checkCancellation()
+            return (value: $0, distance: origin.distance(to: $0.chunk))
+        }.sorted {
+            try checkCancellation()
             if $0.distance != $1.distance { return $0.distance < $1.distance }
             return ($0.value.chunk.x, $0.value.chunk.z, $0.value.deposit.block.id)
                 < ($1.value.chunk.x, $1.value.chunk.z, $1.value.deposit.block.id)
         }
-        return ranked.prefix(limit).map(\.value)
+        return try ranked.prefix(limit).map {
+            try checkCancellation()
+            return $0.value
+        }
     }
 }
