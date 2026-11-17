@@ -57,17 +57,21 @@ import Testing
             // independently approved on #360/6931158790.
             // Selective contents queries at 93181a8 leave both cached readers unchanged;
             // both contracts independently approved on #360/6931548376.
+            // Portal convenience-reader errors at 9924ee8 do not reach either cached reader;
+            // both contracts independently approved on #370/6940477263.
             regionFacts36: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
                 "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
                 "0d88602f60e823c87849220945d062330ab9ec72d67346c89acb40fbe6e33c8b",
+                "f297e6792f8f5fae732873fa242bcd2038a7242446790f7cfb18fb03bb918be9",
             ],
             blockCounts1: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
                 "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
                 "0d88602f60e823c87849220945d062330ab9ec72d67346c89acb40fbe6e33c8b",
+                "f297e6792f8f5fae732873fa242bcd2038a7242446790f7cfb18fb03bb918be9",
             ],
         ]
     }
