@@ -286,6 +286,15 @@ repeat region/chunk reads or apply its own chunk-status or placement rules. Stru
 X/Z coordinates use the same public single-axis conversion without inventing a height.
 CLI item/text searches share inventory-plus-equipment selection and a deduplicated union of
 terrain/entity region coordinates. ChunkseeKit's existing readers own item and region formats.
+CLI folder discovery consumes `Dimension.readRegionFiles`; the library alone decides whether
+a folder listing is complete. Commands retain output from readable folders and dimensions,
+then report unavailable folders on stderr and exit nonzero. Missing or empty region folders
+remain successful. Portal listings keep the readable side and leave its destination unknown
+when the other side's folder is unavailable; they do not predict creation from failed discovery.
+`Dimension.netherPortals()` owns the POI read loop and throws `CocoaError.Code.fileReadUnknown`
+with the POI folder's `filePath` on discovery failure. The CLI collects only that error;
+individual region errors continue to propagate through the library's throwing method.
+This does not change the existing handling of individual malformed records.
 CLI scan totals use `PalettedContainer.paletteCounts()` directly over packed data rather than
 expand an array of every block index before counting.
 `NetherPortal.destination`, link and roundTrip require resolved dimension types and saved border

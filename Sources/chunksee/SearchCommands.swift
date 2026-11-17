@@ -4,7 +4,7 @@ import ChunkseeIndex
 
 /// Commands that search containers, players, signs and books.
 
-func findCommand(_ world: World, _ arguments: Arguments) {
+func findCommand(_ world: World, _ arguments: Arguments) throws {
         let query = SearchQuery(phrase: arguments.text(1))
         func matches(_ item: ItemStack) -> Bool {
             query.matches(item.id) || (item.customName.map(query.matches) ?? false)
@@ -23,8 +23,9 @@ func findCommand(_ world: World, _ arguments: Arguments) {
         }
         let dims = arguments.dimensions(2, in: world)
         var total = 0
+        var discovery = RegionDiscovery()
         for dim in dims {
-            for region in searchRegions(in: dim) {
+            for region in searchRegions(in: dim, discovery: &discovery) {
                 for container in (try? dim.containers(regionX: region.x, regionZ: region.z)) ?? [] {
                     let found = summary(container.items)
                     guard !found.isEmpty else { continue }
@@ -35,9 +36,10 @@ func findCommand(_ world: World, _ arguments: Arguments) {
             }
         }
         print("\(total) containers")
+        try discovery.finish()
 }
 
-func textCommand(_ world: World, _ arguments: Arguments) {
+func textCommand(_ world: World, _ arguments: Arguments) throws {
         let query = SearchQuery(phrase: arguments.text(1))
         func books(_ items: [ItemStack]) -> [String] {
             items.flatMap(\.allItems).compactMap { item in
@@ -53,8 +55,9 @@ func textCommand(_ world: World, _ arguments: Arguments) {
         }
         let dims = arguments.dimensions(2, in: world)
         var total = 0
+        var discovery = RegionDiscovery()
         for dim in dims {
-            for region in searchRegions(in: dim) {
+            for region in searchRegions(in: dim, discovery: &discovery) {
                 guard let contents = try? dim.contents(regionX: region.x, regionZ: region.z) else { continue }
                 for sign in contents.signs {
                     let lines = sign.searchLines
@@ -71,4 +74,5 @@ func textCommand(_ world: World, _ arguments: Arguments) {
             }
         }
         print("\(total) matches")
+        try discovery.finish()
 }

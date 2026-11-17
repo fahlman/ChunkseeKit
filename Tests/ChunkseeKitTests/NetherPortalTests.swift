@@ -1,9 +1,33 @@
 import Foundation
 import Testing
+import ChunkseeKitTestSupport
 @testable import ChunkseeKit
 
 @Suite struct NetherPortalTests {
     typealias Block = NetherPortal.Block
+
+    @Test func unavailablePoiFolderThrowsAnErrorNamingTheFolder() throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: NetherPortal.overworld, url: root)
+        try Data().write(to: dimension.poiDirectory)
+        do {
+            _ = try dimension.netherPortals()
+            Issue.record("An unavailable POI folder must not report no portals")
+        } catch let error as CocoaError {
+            #expect(error.code == .fileReadUnknown)
+            #expect(error.filePath == dimension.poiDirectory.path)
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func missingAndEmptyPoiFoldersHaveNoPortals(_ empty: Bool) throws {
+        let root = try Fixtures.tempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dimension = Dimension(id: NetherPortal.overworld, url: root)
+        if empty { try FileManager.default.createDirectory(at: dimension.poiDirectory, withIntermediateDirectories: true) }
+        #expect(try dimension.netherPortals().isEmpty)
+    }
 
     /// A 2-wide, 3-tall portal along X with its bottom-left block at (x, y, z).
     func frame(_ dimension: String, x: Int, y: Int, z: Int) -> NetherPortal {

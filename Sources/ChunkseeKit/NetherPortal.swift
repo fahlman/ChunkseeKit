@@ -203,8 +203,14 @@ private struct BorderBounds {
 
 extension Dimension {
     /// Every Nether portal in this dimension, from its `poi` files.
+    /// Missing or empty folders contain no portals. An unavailable listing throws
+    /// `CocoaError.Code.fileReadUnknown` with `filePath` naming the folder; region errors propagate.
     public func netherPortals() throws -> [NetherPortal] {
-        let points = try regionFiles(.pointsOfInterest).flatMap { try pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
+        let listing = readRegionFiles(.pointsOfInterest)
+        guard listing.isComplete else {
+            throw CocoaError(.fileReadUnknown, userInfo: [NSFilePathErrorKey: poiDirectory.path])
+        }
+        let points = try listing.files.flatMap { try pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
         return NetherPortal.portals(from: points, in: id)
     }
 }

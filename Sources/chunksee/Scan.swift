@@ -20,8 +20,7 @@ struct ScanTally: Sendable {
 
 /// Decodes every chunk in a dimension. Region files are independent, so up to one per core is
 /// scanned at a time; each region is read and decoded on a single task.
-func scan(_ dimension: ChunkseeKit.Dimension) async -> ScanTally {
-    let regions = dimension.regionFiles()
+func scan(_ dimension: ChunkseeKit.Dimension, regions: [(x: Int, z: Int, url: URL)]) async -> ScanTally {
     let width = max(1, ProcessInfo.processInfo.activeProcessorCount)
     return await withTaskGroup(of: ScanTally.self) { group in
         var next = regions.startIndex
@@ -70,10 +69,12 @@ func scanRegion(x rx: Int, z rz: Int, url: URL, in dimension: ChunkseeKit.Dimens
     return tally
 }
 
-func scanCommand(_ world: World, _ arguments: Arguments) async {
+func scanCommand(_ world: World, _ arguments: Arguments) async throws {
         let dims = arguments.dimensions(1, in: world)
+        var discovery = RegionDiscovery()
         for dim in dims {
-            let tally = await scan(dim)
+            guard let regions = discovery.files(in: dim) else { continue }
+            let tally = await scan(dim, regions: regions)
             print("\(dim.id): \(tally.chunks) chunks, \(tally.sections) sections, \(tally.entityChunks) chunks with entities")
             // Ties sort by name so the output is the same on every run.
             let byCount: ((key: String, value: Int), (key: String, value: Int)) -> Bool = {
@@ -82,4 +83,5 @@ func scanCommand(_ world: World, _ arguments: Arguments) async {
             for (id, n) in tally.blockCounts.sorted(by: byCount).prefix(8) { print("  \(n)\t\(id)") }
             for (e, n) in tally.errors.sorted(by: byCount) { print("  ERROR ×\(n): \(e)") }
         }
+        try discovery.finish()
 }

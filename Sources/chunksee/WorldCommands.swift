@@ -4,7 +4,7 @@ import ChunkseeKit
 /// Commands about the world as a whole and its players.
 
 func summaryAssetsCommand(_ world: World, _ arguments: Arguments) throws {
-    summaryCommand(world, assets: try suppliedGameAssets(arguments))
+    try summaryCommand(world, assets: suppliedGameAssets(arguments))
 }
 
 func suppliedGameAssets(_ arguments: Arguments) throws -> GameAssets? {
@@ -20,7 +20,7 @@ func suppliedGameAssets(_ arguments: Arguments) throws -> GameAssets? {
     return assets
 }
 
-func summaryCommand(_ world: World, assets: GameAssets? = nil) {
+func summaryCommand(_ world: World, assets: GameAssets? = nil) throws {
         let l = world.level
         print("Name:            \(l.name ?? "?")")
         print("Version:         \(l.versionName ?? "?") (data version \(l.dataVersion.map(String.init) ?? "?"))")
@@ -52,12 +52,15 @@ func summaryCommand(_ world: World, assets: GameAssets? = nil) {
         }
         if l.wasModded { print("Modded:          yes (\(l.serverBrands.joined(separator: ", ")))") }
         print("Dimensions:")
+        var discovery = RegionDiscovery()
         for d in world.dimensions() {
+            guard let regions = discovery.files(in: d) else { continue }
             let border = (try? world.worldBorder(of: d)).flatMap { $0?.isLimited == true ? $0 : nil }
                 .map { ", border \(Int($0.size)) blocks around \(Int($0.centerX)), \(Int($0.centerZ))" } ?? ""
-            print("  \(d.id): \(d.regionFiles().count) region files\(border)")
+            print("  \(d.id): \(regions.count) region files\(border)")
         }
         print("Players with data: \(world.playerUUIDs().count)")
+        try discovery.finish()
 }
 
 func rulesCommand(_ world: World, _ arguments: Arguments) throws {
