@@ -92,4 +92,37 @@ import ChunkseeKit
         #expect(result.status == 0)
         #expect(result.output == "Overworld: 1 portals\n  (801, 64, 0) -> ?\nNether: 0 portals\n")
     }
+
+    @Test(arguments: [false, true])
+    func unavailableDestinationPreservesReadablePortalsWithoutPredictingCreation(_ unreadableNether: Bool) throws {
+        let root = try world(overworld: [frame(NetherPortal.overworld, x: 0)], nether: [frame(NetherPortal.nether, x: 0)])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let failed = (unreadableNether ? root.appendingPathComponent("DIM-1") : root).appendingPathComponent("poi")
+        try FileManager.default.removeItem(at: failed)
+        try Data().write(to: failed)
+
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 1)
+        #expect(result.standardError.contains("could not list region folder: \(failed.path)"))
+        #expect(result.output.contains("\(unreadableNether ? "Overworld" : "Nether"): 1 portals\n  (1, 64, 0) -> ?\n"))
+        #expect(!result.output.contains("0 portals"))
+        #expect(!result.output.contains("would create"))
+        #expect(!result.output.contains("no portal in range"))
+    }
+
+    @Test(arguments: [false, true])
+    func missingAndEmptyPoiFoldersRemainSuccessful(_ empty: Bool) throws {
+        let root = try world(overworld: [], nether: [])
+        defer { try? FileManager.default.removeItem(at: root) }
+        if empty {
+            for dimension in [root, root.appendingPathComponent("DIM-1")] {
+                try FileManager.default.createDirectory(at: dimension.appendingPathComponent("poi"), withIntermediateDirectories: true)
+            }
+        }
+
+        let result = try Fixtures.runCLI(root, command: "portals")
+        #expect(result.status == 0)
+        #expect(result.standardError.isEmpty)
+        #expect(result.output == "Overworld: 0 portals\nNether: 0 portals\n")
+    }
 }

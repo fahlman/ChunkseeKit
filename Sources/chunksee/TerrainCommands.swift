@@ -29,11 +29,13 @@ func blockCommand(_ world: World, _ arguments: Arguments) throws {
         if let be = chunk.blockEntity(x: x, y: y, z: z) { print("Block entity: \(be.id ?? "?")") }
 }
 
-func timeCommand(_ world: World, _ arguments: Arguments) async {
+func timeCommand(_ world: World, _ arguments: Arguments) async throws {
         // Chunks where players spent the most time; regions are read in parallel.
         let dim = arguments.dimension(1, in: world)
+        var discovery = RegionDiscovery()
+        guard let regions = discovery.files(in: dim) else { return try discovery.finish() }
         let chunks = await withTaskGroup(of: [(x: Int, z: Int, ticks: Int)].self) { group in
-            for region in dim.regionFiles() {
+            for region in regions {
                 group.addTask {
                     // Read into a local first: Swift 6.4 release builds can misread values captured
                     // next to an awaited call in task-group children (see fahlman/Chunksee#6).
@@ -51,11 +53,13 @@ func timeCommand(_ world: World, _ arguments: Arguments) async {
         }
 }
 
-func structuresCommand(_ world: World, _ arguments: Arguments) {
+func structuresCommand(_ world: World, _ arguments: Arguments) throws {
         let dims = arguments.dimensions(1, in: world)
+        var discovery = RegionDiscovery()
         for dim in dims {
+            guard let regions = discovery.files(in: dim) else { continue }
             var byKind: [String: [StructureStart]] = [:]
-            for region in dim.regionFiles() {
+            for region in regions {
                 try? dim.forEachChunk(regionX: region.x, regionZ: region.z, skipping: Chunk.keysNotNeededForStructures) { _, _, nbt in
                     guard let chunk = try? Chunk(nbt: nbt), chunk.isFullyGenerated else { return }
                     for start in chunk.structureStarts { byKind[start.id, default: []].append(start) }
@@ -72,4 +76,5 @@ func structuresCommand(_ world: World, _ arguments: Arguments) {
                 print("  \(starts.count)\t\(id)  \(places.joined(separator: " "))\(starts.count > 4 ? " …" : "")")
             }
         }
+        try discovery.finish()
 }

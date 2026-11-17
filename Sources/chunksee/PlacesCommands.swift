@@ -4,11 +4,13 @@ import ChunkseeIndex
 
 /// Commands about points of interest, portals and creatures.
 
-func poiCommand(_ world: World, _ arguments: Arguments) {
+func poiCommand(_ world: World, _ arguments: Arguments) throws {
         let dims = arguments.dimensions(1, in: world)
+        var discovery = RegionDiscovery()
         for dim in dims {
+            guard let regions = discovery.files(in: dim, folder: .pointsOfInterest) else { continue }
             var byType: [String: [PointOfInterest]] = [:]
-            for (x, z, _) in dim.regionFiles(.pointsOfInterest) {
+            for (x, z, _) in regions {
                 for poi in (try? dim.pointsOfInterest(regionX: x, regionZ: z)) ?? [] { byType[poi.type, default: []].append(poi) }
             }
             print("\(dim.id): \(byType.values.reduce(0) { $0 + $1.count }) points of interest")
@@ -17,6 +19,7 @@ func poiCommand(_ world: World, _ arguments: Arguments) {
                 print("  \(list.count)\t\(type)  \(places)\(list.count > 3 ? " …" : "")")
             }
         }
+        try discovery.finish()
 }
 
 func portalsCommand(_ world: World, _ arguments: Arguments) throws {
@@ -24,13 +27,23 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
         guard let overworld = world.dimension("overworld"), let nether = world.dimension("the_nether") else {
             fail("this world needs both an Overworld and a Nether")
         }
-        let overworldPortals = try overworld.netherPortals(), netherPortals = try nether.netherPortals()
+        var discovery = RegionDiscovery()
+        func readPortals(in dimension: ChunkseeKit.Dimension) throws -> [NetherPortal]? {
+            guard let regions = discovery.files(in: dimension, folder: .pointsOfInterest) else { return nil }
+            let points = try regions.flatMap { try dimension.pointsOfInterest(regionX: $0.x, regionZ: $0.z) }
+            return NetherPortal.portals(from: points, in: dimension.id)
+        }
+        let overworldPortals = try readPortals(in: overworld), netherPortals = try readPortals(in: nether)
         var borders: [String: WorldBorder] = [:]
         for dimension in [overworld, nether] { borders[dimension.id] = try world.worldBorder(of: dimension) }
         func describe(_ p: NetherPortal) -> String { "(\(Int(p.centerX.rounded(.down))), \(p.minY), \(Int(p.centerZ.rounded(.down))))" }
-        func show(_ portals: [NetherPortal], _ candidates: [NetherPortal], back: [NetherPortal], label: String) {
+        func show(_ portals: [NetherPortal], _ candidates: [NetherPortal]?, back: [NetherPortal], label: String) {
             print("\(label): \(portals.count) portals")
             for portal in portals {
+                guard let candidates else {
+                    print("  \(describe(portal)) -> ?")
+                    continue
+                }
                 switch portal.roundTrip(into: candidates, returningThrough: back, dimensionTypes: types, borders: borders) {
                 case .twoWay(let target, _)?:
                     print("  \(describe(portal)) -> \(describe(target))")
@@ -52,12 +65,14 @@ func portalsCommand(_ world: World, _ arguments: Arguments) throws {
                 }
             }
         }
-        show(overworldPortals, netherPortals, back: overworldPortals, label: "Overworld")
-        show(netherPortals, overworldPortals, back: netherPortals, label: "Nether")
+        if let overworldPortals { show(overworldPortals, netherPortals, back: overworldPortals, label: "Overworld") }
+        if let netherPortals { show(netherPortals, overworldPortals, back: netherPortals, label: "Nether") }
+        try discovery.finish()
 }
 
-func creaturesCommand(_ world: World, _ arguments: Arguments) {
+func creaturesCommand(_ world: World, _ arguments: Arguments) throws {
         let dim = arguments.dimension(1, in: world)
+        var discovery = RegionDiscovery()
         var kinds: [String: Int] = [:]
         func show(_ creature: Creature, at block: BlockPosition?, carrier: UUID?) {
             kinds[creature.id, default: 0] += 1
@@ -69,7 +84,7 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
             let shoulder = carrier.map { " on shoulder of \($0.uuidString.lowercased())" } ?? ""
             print("\(creature.id)\(creature.customName.map { " \"\($0)\"" } ?? "") at \(position)\(owner)\(shoulder)")
         }
-        for region in searchRegions(in: dim) {
+        for region in searchRegions(in: dim, discovery: &discovery) {
             for creature in (try? dim.creatures(regionX: region.x, regionZ: region.z)) ?? [] {
                 show(creature, at: BlockPosition(x: creature.x, y: creature.y, z: creature.z), carrier: nil)
             }
@@ -86,4 +101,5 @@ func creaturesCommand(_ world: World, _ arguments: Arguments) {
             }
         }
         for (kind, count) in kinds.sorted(by: byCount) { print("\(count) \(kind)") }
+        try discovery.finish()
 }

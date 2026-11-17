@@ -76,7 +76,7 @@ do {
         guard let command = commands.first(where: { $0.name == name }) else { fail(usage) }
         try await command.run(world, arguments)
     } else {
-        summaryCommand(world)
+        try summaryCommand(world)
     }
 } catch {
     fail("error: \(error)")
