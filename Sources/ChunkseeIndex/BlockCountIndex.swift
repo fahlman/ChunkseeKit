@@ -103,32 +103,25 @@ public struct BlockCountIndex: Sendable {
     /// then apply the caller's limit. Equal distances use chunk X/Z and group identity; richness
     /// never displaces a nearer match. Different windows can query this same snapshot independently.
     public func nearestDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                from origin: BlockSearchOrigin, limit: Int) -> [ChunkDeposit] {
-        nearestDeposits(matching: groups, using: catalog, from: origin, limit: limit, checkingCancellation: {})
-    }
-
-    /// The client owns cancellation; the same grouping and ordering rules apply.
-    public func nearestDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                from origin: BlockSearchOrigin, limit: Int,
-                                checkingCancellation checkCancellation: () throws -> Void) rethrows -> [ChunkDeposit] {
-        try checkCancellation()
+                                from origin: BlockSearchOrigin, limit: Int) throws -> [ChunkDeposit] {
+        try Task.checkCancellation()
         guard limit > 0 else { return [] }
-        return try matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit,
-                                    checkingCancellation: checkCancellation).nearest
+        return try matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit).nearest
     }
 
     /// Counts every matching row before limiting nearest membership. A nonpositive limit
     /// requests only the total; unsearched regions are not counted as zero-match results.
+    /// Cancellation stops between chunks and throughout ranking, without returning a partial result.
     public func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                 from origin: BlockSearchOrigin, limit: Int) -> DepositMatches {
-        matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit, checkingCancellation: {})
+                                 from origin: BlockSearchOrigin, limit: Int) throws -> DepositMatches {
+        try matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit,
+                             checkingCancellation: { try Task.checkCancellation() })
     }
 
-    /// A client can stop a superseded query between chunks and throughout ranking by throwing
-    /// from its cancellation check. No incomplete total or nearest list is returned on cancellation.
-    public func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
-                                 from origin: BlockSearchOrigin, limit: Int,
-                                 checkingCancellation checkCancellation: () throws -> Void) rethrows -> DepositMatches {
+    /// The internal check permits deterministic cancellation tests without racing a large workload.
+    func matchingDeposits(matching groups: Set<NotableBlock>, using catalog: NotableBlock.Catalog,
+                          from origin: BlockSearchOrigin, limit: Int,
+                          checkingCancellation checkCancellation: () throws -> Void) rethrows -> DepositMatches {
         try checkCancellation()
         guard !groups.isEmpty else { return DepositMatches(totalCount: 0, nearest: []) }
         var found: [ChunkDeposit] = []
