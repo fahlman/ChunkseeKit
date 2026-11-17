@@ -125,7 +125,7 @@ import Testing
             let catalog = NotableBlock.Catalog(tags: ["minecraft:ores": try #require(try jar.tag("ores", in: "block"))])
             #expect(index.coverage(of: position, matching: ["mod:ore"]) == .complete)
             #expect(index.regionsToRead(available: [position], matching: ["mod:ore"], from: origin).isEmpty)
-            #expect(index.nearestDeposits(matching: [.tag(name)], using: catalog, from: origin, limit: 200)
+            #expect(try index.nearestDeposits(matching: [.tag(name)], using: catalog, from: origin, limit: 200)
                 .first?.deposit.count == 1)
         }
         #expect(index.coverage(of: position, matching: ["mod:ore", "mod:new"]) == .unsearched)
