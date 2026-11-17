@@ -240,8 +240,8 @@ extension Chunk {
 }
 
 extension Dimension {
-    /// Every container in one region; see `contents(regionX:regionZ:)`.
+    /// Every container in one region, without constructing unrelated signs or creature facts.
     public func containers(regionX: Int, regionZ: Int) throws -> [ItemContainer] {
-        try contents(regionX: regionX, regionZ: regionZ).containers
+        try readContents(regionX: regionX, regionZ: regionZ, includingSigns: false).containers
     }
 }

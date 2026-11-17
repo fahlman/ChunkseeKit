@@ -55,15 +55,19 @@ import Testing
             // independently approved on #363/6923420688, with the fingerprint reproduced.
             // Declaration cleanup at 7af4586 changes neither cached output; both contracts
             // independently approved on #360/6931158790.
+            // Selective contents queries at 93181a8 leave both cached readers unchanged;
+            // both contracts independently approved on #360/6931548376.
             regionFacts36: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
                 "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
+                "0d88602f60e823c87849220945d062330ab9ec72d67346c89acb40fbe6e33c8b",
             ],
             blockCounts1: [
                 "f7bd5746857c071c6c30aabb2574a16f3dec37eaa23b9d8cf8f2d16fa0e8d704",
                 "1afee1b98ad4077e0632b43c7761dd5cf8b9a77474a41033319e475e3af6f1da",
                 "57fe841781d121f9c5f5c10ec32b85476d0d2f976e2854e531fc948a718f79f7",
+                "0d88602f60e823c87849220945d062330ab9ec72d67346c89acb40fbe6e33c8b",
             ],
         ]
     }

@@ -57,7 +57,7 @@ import Testing
         #expect(found.containers[0].items.map(\.customName) == ["Bright", "Old Gem"])
         #expect(found.containers[1].items.first?.customName == "Bright")
         #expect(found.signs.map(\.front) == [["North"], ["Old sign", "", "", ""]])
-        #expect(found.namedCreatures.map(\.customName) == ["Summer"])
+        #expect(try dimension.creatures(regionX: 0, regionZ: 0).map(\.customName) == ["Summer"])
     }
 
     @Test func mapBannersAndWrittenPagesUseComponentsButDraftPagesStayLiteral() throws {

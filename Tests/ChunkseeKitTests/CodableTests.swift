@@ -18,9 +18,10 @@ import Testing
         ])])))
         let contents = RegionContents(
             containers: [ItemContainer(kind: "minecraft:chest", x: 1, y: 2, z: 3, items: [item], customName: nil, isSealedLoot: false, isEntity: false)],
-            signs: [Sign(kind: "minecraft:sign", x: 0, y: 64, z: 0, front: ["Hi", "", "", ""])],
-            namedCreatures: [Creature(id: "minecraft:wolf", x: 1.5, y: 64, z: 2.5, customName: "Summer", owner: UUID(), health: 7.5)])
+            signs: [Sign(kind: "minecraft:sign", x: 0, y: 64, z: 0, front: ["Hi", "", "", ""])])
         #expect(try roundTrip(contents))
+        #expect(try roundTrip(Creature(id: "minecraft:wolf", x: 1.5, y: 64, z: 2.5,
+                                     customName: "Summer", owner: UUID(), health: 7.5)))
         #expect(try roundTrip(PointOfInterest(type: "minecraft:home", x: 1, y: 2, z: 3, freeTickets: 0)))
     }
 

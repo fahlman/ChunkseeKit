@@ -1025,7 +1025,7 @@ let x = BlockPosition.coordinate(containing: -8.7)     // -9
 
 ```swift
 // Monster spawners and the mob each spawns (nil for an empty one); trial spawners aren't included.
-for spawner in try overworld.contents(regionX: 0, regionZ: 0).spawners {
+for spawner in try overworld.scan(region: .init(x: 0, z: 0)).spawners {
     print(spawner.mob ?? "empty", spawner.x, spawner.y, spawner.z)
 }
 ```
@@ -1055,6 +1055,14 @@ for item in contents.containers.flatMap(\.allItems) {
     if let book = item.book { print(book.title ?? "book and quill", book.author ?? "", book.pages.count) }
 }
 ```
+
+The unreleased #360 contents cleanup limits `RegionContents` to containers and signs.
+Its unused `namedCreatures` and `spawners` members are removed; use `Dimension.creatures`
+for creatures, or `Dimension.scan(region:)` for the complete saved facts including spawners.
+This is a breaking API change requiring a minor release. `Dimension.containers` uses the same
+traversal without constructing signs. Both queries retain terrain-embedded and separate entity
+containers, their saved order and the shared format upgrades; no creature or spawner reader is
+removed, and the full scan's result and cache contract remain unchanged.
 
 ### Creatures
 
