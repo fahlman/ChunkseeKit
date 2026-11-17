@@ -141,6 +141,13 @@ matchingDeposits returns both that nearest list and the full matching chunk/grou
 from one grouping pass. Nonpositive limits return only the total; nearestDeposits keeps its
 existing empty-list behavior. Totals describe currently retained counts, including last-good
 values after a failed refresh, not an estimate for unsearched regions.
+Both query methods accept a defaulted synchronous `checkingCancellation` closure and rethrow
+its error. Clients can pass `Task.checkCancellation` to stop superseded work between chunks,
+while computing distances, during sorting and while assembling the limited result. Cancellation
+never returns a partial total or nearest list. Existing calls without a check keep their result
+and nonthrowing behavior. This changes no raw counts, saved-fact interpretation or cache archive;
+task scheduling and the decision to cancel remain with the client. App adoption is required for
+the warm-search failure recorded in fahlman/Chunksee#586 and fahlman/ChunkseeKit#372.
 Raw counts are shared; origin and grouping are query inputs, so windows order independently.
 The app owns captured-player/fixed-map-center lifetime and the main-index-first background pass.
 The compact count APIs were released in the single 0.90.0 #359/#576/#581 cache revision.

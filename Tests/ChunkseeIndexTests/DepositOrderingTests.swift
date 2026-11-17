@@ -103,6 +103,83 @@ import Testing
         #expect(index.regionsToRead(available: positions, matching: [], from: origin).isEmpty)
     }
 
+    @Test func checkedQueriesKeepCompleteTotalsAndNearestMembership() throws {
+        let fixture = try CountsFixture()
+        defer { fixture.remove() }
+        let catalog = try NotableBlockFixtures.catalog()
+        let facts = try fixture.write((0..<12).map { .init(x: $0, z: 0) },
+                                      includeEmerald: true, ids: catalog.blockIDs)
+        let index = BlockCountIndex(dimension: fixture.dimension.id)
+            .updating(available: Set(facts.map(\.region)), replacements: facts)
+        for x in [8, 184] {
+            let origin = try #require(BlockSearchOrigin(x: Double(x), z: 8))
+            for groups in [Set<NotableBlock>(), [.diamond], [.diamond, .emerald], [.ancientDebris]] {
+                for limit in [-1, 0, 1, 5, 200] {
+                    let expected = index.matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit)
+                    let checked = try index.matchingDeposits(matching: groups, using: catalog, from: origin, limit: limit,
+                                                             checkingCancellation: { try Task.checkCancellation() })
+                    #expect(checked == expected)
+                    let nearest = try index.nearestDeposits(matching: groups, using: catalog, from: origin, limit: limit,
+                                                            checkingCancellation: { try Task.checkCancellation() })
+                    #expect(nearest == expected.nearest)
+                }
+            }
+        }
+    }
+
+    @Test func cancellationRethrowsBeforeAndDuringGroupingAndRanking() throws {
+        struct Stopped: Error, Equatable { let checkpoint: Int }
+        let fixture = try CountsFixture()
+        defer { fixture.remove() }
+        let catalog = try NotableBlockFixtures.catalog()
+        let facts = try fixture.write((0..<64).map { .init(x: $0, z: 0) },
+                                      includeEmerald: true, ids: catalog.blockIDs)
+        let index = BlockCountIndex(dimension: fixture.dimension.id)
+            .updating(available: Set(facts.map(\.region)), replacements: facts)
+        let origin = try #require(BlockSearchOrigin(x: 8, z: 8)), groups: Set<NotableBlock> = [.diamond, .emerald]
+        var totalOnlyChecks = 0, allChecks = 0
+        let total = index.matchingDeposits(matching: groups, using: catalog, from: origin, limit: 0,
+                                          checkingCancellation: { totalOnlyChecks += 1 })
+        let complete = index.matchingDeposits(matching: groups, using: catalog, from: origin, limit: 8,
+                                             checkingCancellation: { allChecks += 1 })
+        #expect(total.totalCount == 128 && complete.totalCount == total.totalCount && complete.nearest.count == 8)
+        #expect(totalOnlyChecks > 1 && allChecks > totalOnlyChecks)
+        // Choose early, middle and late checkpoints from completed calls, without tying the
+        // contract to a fixed polling frequency, dictionary traversal or sorting algorithm.
+        for stop in Set([0, totalOnlyChecks / 2, totalOnlyChecks, allChecks / 2, allChecks - 1]) {
+            var checks = 0
+            let failure = Stopped(checkpoint: stop)
+            #expect(throws: failure) {
+                try index.matchingDeposits(matching: groups, using: catalog, from: origin, limit: 8) {
+                    let checkpoint = checks
+                    checks += 1
+                    if checkpoint == stop { throw failure }
+                }
+            }
+            #expect(checks == stop + 1)
+        }
+        for limit in [-1, 0, 8] {
+            #expect(throws: Stopped(checkpoint: 0)) {
+                try index.nearestDeposits(matching: groups, using: catalog, from: origin, limit: limit) {
+                    throw Stopped(checkpoint: 0)
+                }
+            }
+        }
+    }
+
+    @Test func cancelledTaskDoesNotPublishACompletedEmptyResult() async throws {
+        let index = BlockCountIndex(dimension: "minecraft:overworld")
+        let catalog = NotableBlock.Catalog(tags: [:]), origin = try #require(BlockSearchOrigin(x: 8, z: 8))
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            #expect(throws: CancellationError.self) {
+                try index.matchingDeposits(matching: [], using: catalog, from: origin, limit: 200,
+                                          checkingCancellation: { try Task.checkCancellation() })
+            }
+        }
+        await task.value
+    }
+
     private struct CountsFixture {
         let root: URL
         let dimension: ChunkseeKit.Dimension
